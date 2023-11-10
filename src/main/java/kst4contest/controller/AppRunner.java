@@ -1,12 +1,12 @@
 package kst4contest.controller;
 
-import kst4contest.view.Main;
+import kst4contest.view.Kst4ContestApplication;
 
 public class AppRunner {
 
 	public static void main(String[] args) {
 		
-		Main.main(args);
+		Kst4ContestApplication.main(args);
 
 	}
 

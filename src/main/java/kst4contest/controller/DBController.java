@@ -8,15 +8,29 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 
+import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMember;
+import kst4contest.utils.ApplicationFileUtils;
 
 public class DBController {
+
+	/**
+	 * Name of the database file.
+	 */
+	public static final String DATABASE_FILE = "praktiKST.db";
+
+	/**
+	 * Resource path for the database
+	 */
+	public static final String DATABASE_RESOURCE = "/praktiKST.db";
 
 	private static final DBController dbcontroller = new DBController();
 	private static Connection connection;
 //    private static final String DB_PATH = System.getProperty("praktiKST.db");
-	private static final String DB_PATH = ("praktiKST.db");
+	private static final String DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
 
+
+/*
 	static {
 		try {
 			Class.forName("org.sqlite.JDBC");
@@ -25,6 +39,7 @@ public class DBController {
 			e.printStackTrace();
 		}
 	}
+ */
 
 	public DBController() {
 		initDBConnection();
@@ -48,6 +63,11 @@ public class DBController {
 
 	private void initDBConnection() {
 		try {
+			ApplicationFileUtils.copyResourceIfRequired(
+					ApplicationConstants.APPLICATION_NAME,
+					DATABASE_RESOURCE,
+					DATABASE_FILE
+			);
 			if (connection != null)
 				return;
 			System.out.println("Creating Connection to Database...");

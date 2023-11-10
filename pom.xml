@@ -23,7 +23,7 @@
         <link.name>${project.artifactId}</link.name>
         <launcher>${project.artifactId}</launcher>
         <appName>${project.artifactId}</appName>
-        <main.class>kst4contest.view.Main</main.class>
+        <main.class>kst4contest.view.Kst4ContestApplication</main.class>
         <java.version>17</java.version>
         <required.maven.version>3.6.3</required.maven.version>
         <jar.filename>${project.artifactId}-${project.version}</jar.filename>

@@ -18,6 +18,8 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import kst4contest.ApplicationConstants;
+import kst4contest.utils.ApplicationFileUtils;
 import org.w3c.dom.Comment;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -35,12 +37,23 @@ import javafx.collections.ObservableList;
 public class ChatPreferences {
 
 	/**
+	 * Name of file to store preferences in.
+	 */
+	public static final String PREFERENCES_FILE = "preferences.xml";
+
+	/**
+	 * Resource with the example properties xml file.
+	 */
+	public static final String PREFERENCE_RESOURCE = "/praktiKSTpreferences.xml";
+
+	/**
 	 * Default constructor will set the default values (also for predefined texts
 	 * and shorts) automatically at initialization
 	 * 
 	 * TODO: delete this from the kst4contest.view/Main.java!
 	 */
 	public ChatPreferences() {
+		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, PREFERENCES_FILE);
 
 //		shortcuts[2] = "pse";
 //		shortcuts[3] = "turn";
@@ -109,7 +122,7 @@ public class ChatPreferences {
 
 	String programVersion = "Chat is powered by ON4KST \n\nUsage is free. You are welcome to support: \n\n- my project (donations, bugreports, good ideas are welcome), \n- ON4KST Servers, \n- AirScout developers and \n- OV3T (best AS-data provider of the world). \n\n73 de DO5AMF, Marc (DM5M / DARC X08)";
 	String logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = "udpReaderBackup.txt";
-	String storeAndRestorePreferencesFileName = "praktiKSTpreferences.xml";
+	String storeAndRestorePreferencesFileName = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, PREFERENCES_FILE);
 	String chatState; // working variable only for use by primarystage (title bar)
 //	ObservableStringValue chatState;
 
