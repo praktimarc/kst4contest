@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<praktiKST>
+    <station>
+        <LoginCallSign>DO5SA</LoginCallSign>
+        <LoginPassword>kst4contest.test</LoginPassword>
+        <LoginDisplayedName>Paule</LoginDisplayedName>
+        <LoginLocator>JO51DI</LoginLocator>
+        <ChatCategory>2</ChatCategory>
+    </station>
+    <logsynch>
+        <logsynch_fileBasedWkdCallInterpreterFileNameReadOnly>SimpleLogFile.txt</logsynch_fileBasedWkdCallInterpreterFileNameReadOnly>
+        <logsynch_storeWorkedCallSignsFileNameUDPMessageBackup>udpReaderBackup.txt</logsynch_storeWorkedCallSignsFileNameUDPMessageBackup>
+        <logsynch_fileBasedWkdCallInterpreterEnabled>true</logsynch_fileBasedWkdCallInterpreterEnabled>
+        <logsynch_ucxUDPWkdCallListenerPort>12060</logsynch_ucxUDPWkdCallListenerPort>
+        <logsynch_ucxUDPWkdCallListenerEnabled>true</logsynch_ucxUDPWkdCallListenerEnabled>
+    </logsynch>
+    <trxSynchUCX>
+        <trxSynch_ucxLogUDPListenerEnabled>true</trxSynch_ucxLogUDPListenerEnabled>
+        <trxSynch_defaultMYQRGValue>144.010.00</trxSynch_defaultMYQRGValue>
+    </trxSynchUCX>
+    <AirScoutQuerier>
+        <asQry_airScoutCommunicationEnabled>true</asQry_airScoutCommunicationEnabled>
+        <asQry_airScoutServerName>KST</asQry_airScoutServerName>
+        <asQry_airScoutClientName>KST</asQry_airScoutClientName>
+        <asQry_airScoutUDPPort>9872</asQry_airScoutUDPPort>
+        <asQry_airScoutBandValue>1440000</asQry_airScoutBandValue>
+    </AirScoutQuerier>
+    <shortCuts>
+        <t>Hi OM,</t>
+        <t>pse</t>
+        <t>turn</t>
+        <t>ant</t>
+        <t>my</t>
+        <t>dir</t>
+        <t>sked</t>
+        <t>ssb</t>
+        <t>cw</t>
+        <t>try</t>
+        <t>agn</t>
+        <t>nw</t>
+        <t>qrg</t>
+        <t>beaming</t>
+        <t>calling</t>
+        <t>lsn to</t>
+        <t>qsb</t>
+        <t>rpt</t>
+        <t>nr</t>
+        <t>ur</t>
+        <t>I</t>
+        <t>hear</t>
+        <t>you</t>
+        <t>weak</t>
+        <t>nil, sry</t>
+        <t>maybe</t>
+        <t>later</t>
+        <t>tmw</t>
+        <t>rrr</t>
+        <t>tnx</t>
+        <t>qso</t>
+        <t>73</t>
+        <t>?</t>
+        <t>!</t>
+        <t>,</t>
+        <t>/SETNAME MYQRG</t>
+        <t>MYQRG</t>
+    </shortCuts>
+    <textSnippets>
+        <t>Hi OM, try sked 2m? Ur QRG?</t>
+        <t>Hi OM, try sked 70cms? Ur QRG?</t>
+        <t>Hi OM, try sked 23cms? Ur QRG?</t>
+        <t>I am calling cq to ur dir, pse lsn to MYLOCATOR at MYQRG</t>
+        <t>pse ur qrg?</t>
+        <t>rrr, I move to your qrg nw, pse ant dir MYLOCATOR</t>
+        <t>Hrd you but many qrm here, pse agn</t>
+        <t>I turn my ant to you now</t>
+        <t>Sry, strong qrm by local station, may try MYQRG</t>
+        <t>Sry, in qso nw, pse qrx, I will meep you</t>
+        <t>Ur ant my dir MYLOCATOR nw?</t>
+        <t>nil?</t>
+        <t>No cw op here, pse can we use ssb?</t>
+        <t>No chance in ssb, can we use cw?</t>
+        <t>Nil till now, are you calling?</t>
+        <t>Nil here, tnx try, maybe later!</t>
+        <t>Nil, I will look for an ap and meep you then</t>
+        <t>There will be an AP in </t>
+        <t>Tnx fb qso, all ok, 73 es gl!</t>
+    </textSnippets>
+    <beaconCQ>
+        <beaconCQText>_.~'"´"'~.__.~'´ CQ CQ CQ de MYCALL, pse call us at MYQRG `'~.__.~'"`"'~._</beaconCQText>
+        <beaconCQIntervalMinutes>5</beaconCQIntervalMinutes>
+        <beaconCQEnabled>false</beaconCQEnabled>
+    </beaconCQ>
+    <beaconUnworkedstations>
+        <beaconUnworkedstationsText>Hi OM, pse Sked at MYQRG or your QRG</beaconUnworkedstationsText>
+        <beaconUnworkedstationsIntervalMinutes>20</beaconUnworkedstationsIntervalMinutes>
+        <beaconUnworkedstationsEnabled>false</beaconUnworkedstationsEnabled>
+        <beaconUnworkedstationsPrefix>OE</beaconUnworkedstationsPrefix>
+    </beaconUnworkedstations>
+</praktiKST>

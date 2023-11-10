@@ -1,0 +1,18 @@
+# Fleet IDE
+.fleet
+
+# Intellij
+.idea
+*.iml
+
+# Eclipse
+.project
+.classpath
+
+# Maven
+target
+
+
+debug.out
+.DS_Store
+
