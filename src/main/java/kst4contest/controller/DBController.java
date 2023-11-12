@@ -27,7 +27,8 @@ public class DBController {
 	private static final DBController dbcontroller = new DBController();
 	private static Connection connection;
 //    private static final String DB_PATH = System.getProperty("praktiKST.db");
-	private static final String DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
+	private static String DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
+
 
 
 /*
@@ -71,7 +72,17 @@ public class DBController {
 			if (connection != null)
 				return;
 			System.out.println("Creating Connection to Database...");
-			connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+
+			DB_PATH  = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
+			 connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+
+			//connection = DriverManager.getConnection("jdbc:sqlite:" + "C:\\Users\\prakt\\.praktiKST\\praktiKST.db");
+
+
+
+
+			System.out.println("[DBH, Info]: Path = " + DB_PATH);
+
 			if (!connection.isClosed())
 				System.out.println("...Connection established");
 		} catch (SQLException e) {
@@ -91,6 +102,8 @@ public class DBController {
 				}
 			}
 		});
+
+
 	}
 
 //	private void handleDB() {
