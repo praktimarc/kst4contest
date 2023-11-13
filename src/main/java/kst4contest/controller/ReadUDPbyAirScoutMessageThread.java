@@ -106,8 +106,9 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 
 			if (received.contains("ASSETPATH") || received.contains("ASWATCHLIST")) {
 				// do nothing, that is your own message
-			} else if (received.contains("ASNEAREST:")) {
+			} else if (received.contains("ASNEAREST:")) { //answer by airscout
 				processASUDPMessage(received);
+
 //				System.out.println("[ReadUSPASTh, info:] received AS String " + received);
 
 				AirPlaneReflectionInfo apReflectInfoForChatMember;

@@ -18,9 +18,9 @@ import kst4contest.model.ClusterMessage;
 
 /**
  * 
- * This thread is responsible for processing rx and tx messages, synchronize tx
- * and rx and saving the whole chat content in a textfile and write the text to
- * the stdio.
+ * This thread is responsible for processing received messages.
+ * It checks all messages from server for their functional contest, such as commands to build or change the userlist
+ * or their settings, get clustermessages and sure the content of all chatmessages, which are delivered.
  * 
  */
 public class MessageBusManagementThread extends Thread {
@@ -195,7 +195,8 @@ public class MessageBusManagementThread extends Thread {
 	/**
 	 * Builds UserList and gets meta informations out of the chat, as far as it is
 	 * possible. \n This is the only place where the Chatmember-List will be written
-	 * 
+	 *
+	 * Old Method for port 23000, raw text interface without any comfort, no longer used
 	 * @param messageToProcess
 	 */
 	private void processRXMessage23000(ChatMessage messageToProcess) {
@@ -362,7 +363,11 @@ public class MessageBusManagementThread extends Thread {
 
 //				this.client.getChatMemberTable().put(splittedMessageLine[2], newMember); //TODO: map -> List
 
-				this.client.getLst_chatMemberList().add(newMember);
+				//the own call will not be in the list
+				if (!client.getChatPreferences().getLoginCallSign().equals(newMember.getCallSign())) {
+					this.client.getLst_chatMemberList().add(newMember);
+				}
+
 
 				this.client.getDbHandler().storeChatMember(newMember);
 
@@ -380,22 +385,29 @@ public class MessageBusManagementThread extends Thread {
 			if (splittedMessageLine[0].contains(USERENTEREDCHAT) || splittedMessageLine[0].contains(USERENTEREDCHAT2)) {
 //				System.out.println("MSGBUS: User detected");
 
-				ChatMember newMember = new ChatMember();
+				/**
+				 * The own callsign will not be hold in the userlist any more
+				 */
+				if (!client.getChatPreferences().getLoginCallSign().equals(splittedMessageLine[2])) {
 
-				newMember.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
-				newMember.setCallSign(splittedMessageLine[2]);
-				newMember.setName(splittedMessageLine[3]);
-				newMember.setQra(splittedMessageLine[4]);
-				newMember.setState(Integer.parseInt(splittedMessageLine[5]));
-				newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
 
-				newMember = this.client.getDbHandler().fetchChatMemberWkdDataForOnlyOneCallsignFromDB(newMember);
+					ChatMember newMember = new ChatMember();
 
-				this.client.getLst_chatMemberList().add(newMember);
+					newMember.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+					newMember.setCallSign(splittedMessageLine[2]);
+					newMember.setName(splittedMessageLine[3]);
+					newMember.setQra(splittedMessageLine[4]);
+					newMember.setState(Integer.parseInt(splittedMessageLine[5]));
+					newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
 
-				this.client.getDbHandler().storeChatMember(newMember);
+					newMember = this.client.getDbHandler().fetchChatMemberWkdDataForOnlyOneCallsignFromDB(newMember);
 
-//				this.client.getChatMemberTable().put(splittedMessageLine[2], newMember); 
+					this.client.getLst_chatMemberList().add(newMember);
+					this.client.getDbHandler().storeChatMember(newMember);
+				}
+
+
+//				this.client.getChatMemberTable().put(splittedMessageLine[2], newMember);
 
 //				System.out.println("[MSGBUSMGT:] New entered User detected and added to list ["
 //						+ this.client.getChatMemberTable().size() + "] :" + newMember.getCallSign());
@@ -459,25 +471,27 @@ public class MessageBusManagementThread extends Thread {
 					dummy.setCallSign("SERVER");
 					dummy.setName("Sysop");
 					newMessage.setSender(dummy);
+
 				} else {
 
-					ChatMember temp = new ChatMember();
-					temp.setCallSign(splittedMessageLine[3]);
+					ChatMember sender = new ChatMember();
+					sender.setCallSign(splittedMessageLine[3]);
 
-					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), temp);
+					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), sender);
 
 					if (index != -1) {
-
+						//user found in the chatmember list
 						newMessage.setSender(this.client.getLst_chatMemberList().get(index)); // set sender to member of
 																								// b4 init list
 					} else {
-						
-						if (!temp.getCallSign().equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
-							temp.setCallSign("[n/a]" + temp.getCallSign());
+						//user not found in chatmember list
+						if (!sender.getCallSign().equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
+							sender.setCallSign("[n/a]" + sender.getCallSign());
+							// if someone sent a message without being in the userlist (cause
+							// on4kst missed implementing....), callsign will be marked
+						} else {
+							newMessage.setSender(sender); //my own call is the sender
 						}
-						
-						newMessage.setSender(temp); // if someone sent a message without being in the userlist (cause
-													// on4kst missed implementing....)
 					}
 
 //					newMessage.setSender(this.client.getChatMemberTable().get(splittedMessageLine[3]));
@@ -487,7 +501,7 @@ public class MessageBusManagementThread extends Thread {
 				newMessage.setMessageText(splittedMessageLine[6]);
 
 				if (splittedMessageLine[7].equals("0")) {
-					// message is not directed to anyone
+					// message is not directed to anyone, move it to the cq messages
 					ChatMember dummy = new ChatMember();
 					dummy.setCallSign("ALL");
 					newMessage.setReceiver(dummy);
@@ -496,20 +510,35 @@ public class MessageBusManagementThread extends Thread {
 
 				} else {
 
-					ChatMember temp2 = new ChatMember();
-					temp2.setCallSign(splittedMessageLine[7]);
+					ChatMember receiver = new ChatMember();
+					receiver.setCallSign(splittedMessageLine[7]);
 
-					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), temp2);
+					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), receiver);
 
 					if (index != -1) {
 						newMessage.setReceiver(this.client.getLst_chatMemberList().get(index));// -1: Member left Chat
 																								// before...
 					} else {
-						temp2.setCallSign(temp2.getCallSign() + "(left)");
-						newMessage.setReceiver(temp2);
+
+
+						if (receiver.getCallSign().equals(client.getChatPreferences().getLoginCallSign())) {
+							/**
+							 * If mycallsign sent a message to the server, server will publish that message and
+							 * send it to all chatmember including me.
+							 * As mycall is not in the userlist,  the message would not been displayed if I handle
+							 * it in the next case (marking left user, just for information). But I want an echo.
+							 */
+
+							receiver.setCallSign(client.getChatPreferences().getLoginCallSign());
+							newMessage.setReceiver(receiver);
+						} else {
+							//this are user which left chat but had been adressed by this message
+							receiver.setCallSign(receiver.getCallSign() + "(left)");
+							newMessage.setReceiver(receiver);
+						}
 					}
 
-					System.out.println("message directed to: " + newMessage.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessage.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
+//					System.out.println("message directed to: " + newMessage.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessage.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
 
 					if (newMessage.getReceiver().getCallSign()
 							.equals(this.client.getChatPreferences().getLoginCallSign())) {
@@ -518,8 +547,8 @@ public class MessageBusManagementThread extends Thread {
 
 						System.out.println("message directed to me: " + newMessage.getReceiver().getCallSign() + ".");
 
-					} else if (newMessage.getSender().getCallSign().toUpperCase() // if you sent the message, it will be sorted in to
-																	// the "to you message list"
+					} else if (newMessage.getSender().getCallSign().toUpperCase() // if you sent the message to another station, it will be sorted in to
+																	// the "to me message list" with modified messagetext, added rxers callsign
 							.equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
 						String originalMessage = newMessage.getMessageText();
 						newMessage
