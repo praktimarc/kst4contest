@@ -156,11 +156,11 @@ public class Kst4ContestApplication extends Application {
 				SimpleStringProperty airPlaneInfo = new SimpleStringProperty();
 
 				if (cellDataFeatures.getValue().getAirPlaneReflectInfo().getRisingAirplanes() == null) {
-					airPlaneInfo.setValue(" ");
+					airPlaneInfo.setValue("nil");
 				}
 
 				else if (cellDataFeatures.getValue().getAirPlaneReflectInfo().getRisingAirplanes().size() <= 0) {
-					airPlaneInfo.setValue(" ");
+					airPlaneInfo.setValue("nil");
 				} else {
 					String apInfoText = ""
 							+ cellDataFeatures.getValue().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
@@ -427,7 +427,7 @@ public class Kst4ContestApplication extends Application {
 		 * timer_chatMemberTableSortTimer -->
 		 * This part fixes a javafx bug. The update of the Chatmember fields is (for any
 		 * reason) not visible in the ui. Its neccessarry to sort the table in intervals
-		 * to keep the table up to date. Otherwise 
+		 * to keep the table up to date.
 		 */
 
 		timer_chatMemberTableSortTimer = new Timer();
@@ -833,59 +833,36 @@ public class Kst4ContestApplication extends Application {
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
 				SimpleStringProperty airPlaneInfo = new SimpleStringProperty();
-				
-				try {
-					cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes();
-				} catch (NullPointerException e) {
-					airPlaneInfo.setValue(" ");
-					isnull = true;
-				}
-				
-//				if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes() == null) {
-//					airPlaneInfo.setValue(" ");
-//				}
 
-//				else 
-				try {
-					if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
-							.size() <= 0) {
-						airPlaneInfo.setValue(" ");}
-					
-				} catch (NullPointerException e) {
-					airPlaneInfo.setValue(" ");
-					isnull = true;
+				if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes() == null) {
+					airPlaneInfo.setValue("nil");
 				}
-//					if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
-//						.size() <= 0) {
-//					airPlaneInfo.setValue(" ");
-//				} 
-			
-//				else 
-				if (!isnull) {
+
+				else if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().size() <= 0) {
+					airPlaneInfo.setValue("nil");
+				} else {
 					String apInfoText = ""
-							+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
-									.get(0).getArrivingDurationMinutes()
-							+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo()
-									.getRisingAirplanes().get(0).getPotential()
+							+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
+							.getArrivingDurationMinutes()
+							+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
+							.getPotential()
 							+ "%)";
-//					
-//					
-					if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
-							.size() > 1) {
+//
+//
+					if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().size() > 1) {
 						apInfoText += " / "
-								+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
-										.get(1).getArrivingDurationMinutes()
-								+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo()
-										.getRisingAirplanes().get(1).getPotential()
+								+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(1)
+								.getArrivingDurationMinutes()
+								+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
+								.get(1).getPotential()
 								+ "%)";
 					}
 
 					airPlaneInfo.setValue(apInfoText);
-				} else {
-					airPlaneInfo.setValue(" "); //no planes rising
 				}
 
 				return airPlaneInfo;
+
 			}
 		});
 		/**
@@ -1143,23 +1120,23 @@ public class Kst4ContestApplication extends Application {
 					}
 				});
 
-		TableColumn<ChatMessage, String> nameCol = new TableColumn<ChatMessage, String>("Name");
-		nameCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
-
-			@Override
-			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
-				SimpleStringProperty name = new SimpleStringProperty();
-
-				if (cellDataFeatures.getValue().getSender() != null) {
-
-					name.setValue(cellDataFeatures.getValue().getSender().getName());
-				} else {
-
-					name.setValue("");// TODO: Prevents a bug of not setting all values as a default
-				}
-				return name;
-			}
-		});
+//		TableColumn<ChatMessage, String> nameCol = new TableColumn<ChatMessage, String>("Name");
+//		nameCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+//
+//			@Override
+//			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+//				SimpleStringProperty name = new SimpleStringProperty();
+//
+//				if (cellDataFeatures.getValue().getSender() != null) {
+//
+//					name.setValue(cellDataFeatures.getValue().getSender().getName());
+//				} else {
+//
+//					name.setValue("");// TODO: Prevents a bug of not setting all values as a default
+//				}
+//				return name;
+//			}
+//		});
 
 		TableColumn<ChatMessage, String> qrgTXerCol = new TableColumn<ChatMessage, String>("Last QRG TX");
 		qrgTXerCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -1254,7 +1231,7 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		tbl_toOtherMSGTable.getColumns().addAll(timeCol, callSignTRCVCol, qrgTXerCol, workedTXCol, callSignRCVRCol,
-				qrgRXerCol, workedRXCol, nameCol, msgCol);
+				qrgRXerCol, workedRXCol, msgCol);
 
 		ObservableList<ChatMessage> toOtherMSGList = chatcontroller.getLst_toOtherMessageList();
 		tbl_toOtherMSGTable.setItems(toOtherMSGList);

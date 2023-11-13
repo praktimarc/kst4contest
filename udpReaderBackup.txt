@@ -1,0 +1,3 @@
+
+9A5R;Zeljko;JN95MM;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM5M;Marc;JN49FL;StringProperty [value: 144.243 ];true;true;false;false;false;false;false;false

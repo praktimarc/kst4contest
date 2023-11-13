@@ -620,7 +620,7 @@ public class ChatController {
 			 */
 //			Timer ASQueryTimer;
 			ASQueryTimer = new Timer();
-			ASQueryTimer.schedule(new AirScoutPeriodicalAPReflectionInquirerTask(this), 10000, 5000);
+			ASQueryTimer.schedule(new AirScoutPeriodicalAPReflectionInquirerTask(this), 10000, 12000);
 			// 60000 * intervalInMinutes = IntervalInMillis
 
 			/**
