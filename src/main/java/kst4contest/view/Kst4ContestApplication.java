@@ -834,31 +834,35 @@ public class Kst4ContestApplication extends Application {
 			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
 				SimpleStringProperty airPlaneInfo = new SimpleStringProperty();
 
-				if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes() == null) {
-					airPlaneInfo.setValue("nil");
-				}
-
-				else if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().size() <= 0) {
-					airPlaneInfo.setValue("nil");
-				} else {
-					String apInfoText = ""
-							+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
-							.getArrivingDurationMinutes()
-							+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
-							.getPotential()
-							+ "%)";
-//
-//
-					if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().size() > 1) {
-						apInfoText += " / "
-								+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(1)
-								.getArrivingDurationMinutes()
-								+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
-								.get(1).getPotential()
-								+ "%)";
+				try {
+					if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes() == null) {
+						airPlaneInfo.setValue("nil");
 					}
 
-					airPlaneInfo.setValue(apInfoText);
+					else if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().size() <= 0) {
+						airPlaneInfo.setValue("nil");
+					} else {
+						String apInfoText = ""
+								+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
+								.getArrivingDurationMinutes()
+								+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0)
+								.getPotential()
+								+ "%)";
+//
+//
+						if (cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().size() > 1) {
+							apInfoText += " / "
+									+ cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(1)
+									.getArrivingDurationMinutes()
+									+ " (" + cellDataFeatures.getValue().getSender().getAirPlaneReflectInfo().getRisingAirplanes()
+									.get(1).getPotential()
+									+ "%)";
+						}
+
+						airPlaneInfo.setValue(apInfoText);
+					}
+				} catch (NullPointerException thereIsNoApReflectionInfo) {
+					//e.g. in case of mycall it´s not possible to set!
 				}
 
 				return airPlaneInfo;

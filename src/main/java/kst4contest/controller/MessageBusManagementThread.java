@@ -490,6 +490,9 @@ public class MessageBusManagementThread extends Thread {
 							// if someone sent a message without being in the userlist (cause
 							// on4kst missed implementing....), callsign will be marked
 						} else {
+							AirPlaneReflectionInfo preventNullpointerExc = new AirPlaneReflectionInfo();
+							preventNullpointerExc.setAirPlanesReachableCntr(0);
+							sender.setAirPlaneReflectInfo(preventNullpointerExc);
 							newMessage.setSender(sender); //my own call is the sender
 						}
 					}
@@ -540,25 +543,31 @@ public class MessageBusManagementThread extends Thread {
 
 //					System.out.println("message directed to: " + newMessage.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessage.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
 
-					if (newMessage.getReceiver().getCallSign()
-							.equals(this.client.getChatPreferences().getLoginCallSign())) {
+					try {
+						if (newMessage.getReceiver().getCallSign()
+								.equals(this.client.getChatPreferences().getLoginCallSign())) {
 
-						this.client.getLst_toMeMessageList().add(0, newMessage);
+							this.client.getLst_toMeMessageList().add(0, newMessage);
 
-						System.out.println("message directed to me: " + newMessage.getReceiver().getCallSign() + ".");
+							System.out.println("message directed to me: " + newMessage.getReceiver().getCallSign() + ".");
 
-					} else if (newMessage.getSender().getCallSign().toUpperCase() // if you sent the message to another station, it will be sorted in to
-																	// the "to me message list" with modified messagetext, added rxers callsign
-							.equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
-						String originalMessage = newMessage.getMessageText();
-						newMessage
-								.setMessageText("(>" + newMessage.getReceiver().getCallSign() + ")" + originalMessage);
-						this.client.getLst_toMeMessageList().add(0, newMessage); // TODO:check
+						} else if (newMessage.getSender().getCallSign().toUpperCase()
+								.equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
+							String originalMessage = newMessage.getMessageText();
+							newMessage
+									.setMessageText("(>" + newMessage.getReceiver().getCallSign() + ")" + originalMessage);
+							this.client.getLst_toMeMessageList().add(0, newMessage);
+							// if you sent the message to another station, it will be sorted in to
+							// the "to me message list" with modified messagetext, added rxers callsign
 
-					} else {
-						this.client.getLst_toOtherMessageList().add(0, newMessage);
+						} else {
+							this.client.getLst_toOtherMessageList().add(0, newMessage);
 
 //						System.out.println("MSGBS bgfx: tx call = " + newMessage.getSender().getCallSign() + " / rx call = " + newMessage.getReceiver().getCallSign());
+						}
+					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
+						System.out.println("MSGBS bgfx, catched error: referenced user left the chat during messageprocessing: ");
+						referenceDeletedByUserLeftChatDuringMessageprocessing.printStackTrace();
 					}
 
 					// sdtout to me message-List
@@ -613,24 +622,13 @@ public class MessageBusManagementThread extends Thread {
 						} else {
 							/**
 							 * User is in the list...
-							 * 
 							 */
 							this.client.getLst_chatMemberList().get(index).setFrequency(qrg);
 							System.out.println("[MSGBUSMGT:] Frequency for " + splittedMessageLine[3] + " setted: "
 									+ locatedFrequencies);
-
-//							this.client.getLst_chatMemberList().
-
-//							ChatMember dummy = new ChatMember();
-//							
-//							dummy.setAirPlaneReflectInfo(new AirPlaneReflectionInfo()); //TODO: check if this is neccessary
-//							this.client.getLst_chatMemberList().add(dummy); // TODO: Bugfix for UI actualization, maybe we dont need that any more
-//							this.client.getLst_chatMemberList().remove(dummy);
-//							this.client.getLst_chatMemberList().sorted();
-
-//							
 						}
 					}
+
 				}
 
 				// TODO: Next: get frequency infos out of name?
@@ -822,9 +820,13 @@ public class MessageBusManagementThread extends Thread {
 				int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(),
 						stateChangeMember);
 
-				this.client.getLst_chatMemberList().get(index).setName(stateChangeMember.getName());
-				this.client.getLst_chatMemberList().get(index).setQra(stateChangeMember.getQra());
-				this.client.getLst_chatMemberList().get(index).setState(stateChangeMember.getState());
+				//-1 could be the case if mycall is processed
+				if (index != -1) {
+					this.client.getLst_chatMemberList().get(index).setName(stateChangeMember.getName());
+					this.client.getLst_chatMemberList().get(index).setQra(stateChangeMember.getQra());
+					this.client.getLst_chatMemberList().get(index).setState(stateChangeMember.getState());
+				}
+
 
 //				this.client.getChatMemberTable().get(stateChangeMember.getCallSign())
 //						.setName(stateChangeMember.getName());
