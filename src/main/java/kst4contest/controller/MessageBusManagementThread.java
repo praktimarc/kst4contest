@@ -822,9 +822,13 @@ public class MessageBusManagementThread extends Thread {
 				int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(),
 						stateChangeMember);
 
-				this.client.getLst_chatMemberList().get(index).setName(stateChangeMember.getName());
-				this.client.getLst_chatMemberList().get(index).setQra(stateChangeMember.getQra());
-				this.client.getLst_chatMemberList().get(index).setState(stateChangeMember.getState());
+				//-1 could be the case if mycall is processed
+				if (index != -1) {
+					this.client.getLst_chatMemberList().get(index).setName(stateChangeMember.getName());
+					this.client.getLst_chatMemberList().get(index).setQra(stateChangeMember.getQra());
+					this.client.getLst_chatMemberList().get(index).setState(stateChangeMember.getState());
+				}
+
 
 //				this.client.getChatMemberTable().get(stateChangeMember.getCallSign())
 //						.setName(stateChangeMember.getName());
