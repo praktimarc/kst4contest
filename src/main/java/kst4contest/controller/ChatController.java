@@ -18,6 +18,7 @@ import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ChatPreferences;
 import kst4contest.model.ClusterMessage;
+import kst4contest.utils.PlayAudioUtils;
 
 import java.io.*;
 
@@ -231,6 +232,12 @@ public class ChatController {
 	private ChatController chatController;
 	private MessageBusManagementThread messageProcessor;
 	private ReadUDPbyAirScoutMessageThread airScoutUDPReaderThread;
+
+	private PlayAudioUtils playAudioUtils = new PlayAudioUtils();
+
+	public PlayAudioUtils getPlayAudioUtils() {
+		return playAudioUtils;
+	}
 
 	private TimerTask userActualizationTask;
 

@@ -15,6 +15,7 @@ import kst4contest.model.AirPlaneReflectionInfo;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ClusterMessage;
+import kst4contest.utils.PlayAudioUtils;
 
 /**
  * 
@@ -544,14 +545,30 @@ public class MessageBusManagementThread extends Thread {
 //					System.out.println("message directed to: " + newMessage.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessage.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
 
 					try {
+						/**
+						 * message is directed to me, will be put in the "to me" messagelist
+						 */
 						if (newMessage.getReceiver().getCallSign()
 								.equals(this.client.getChatPreferences().getLoginCallSign())) {
 
 							this.client.getLst_toMeMessageList().add(0, newMessage);
 
+							if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
+								this.client.getPlayAudioUtils().playNoiseLauncher('P');
+							}
+							if (this.client.getChatPreferences().isNotify_playCWCallsignsOnRxedPMs()) {
+								this.client.getPlayAudioUtils().playCWLauncher(" " + " " + newMessage.getSender().getCallSign().toUpperCase());
+							}
+							if (this.client.getChatPreferences().isNotify_playVoiceCallsignsOnRxedPMs()) {
+								this.client.getPlayAudioUtils().playVoiceLauncher( "?" + newMessage.getSender().getCallSign().toUpperCase());
+							}
+
 							System.out.println("message directed to me: " + newMessage.getReceiver().getCallSign() + ".");
 
 						} else if (newMessage.getSender().getCallSign().toUpperCase()
+								/**
+								 * message from me will appear in the PM window, too, with (>CALLSIGN) before
+								 */
 								.equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
 							String originalMessage = newMessage.getMessageText();
 							newMessage
@@ -566,7 +583,7 @@ public class MessageBusManagementThread extends Thread {
 //						System.out.println("MSGBS bgfx: tx call = " + newMessage.getSender().getCallSign() + " / rx call = " + newMessage.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-						System.out.println("MSGBS bgfx, catched error: referenced user left the chat during messageprocessing: ");
+						System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing: ");
 						referenceDeletedByUserLeftChatDuringMessageprocessing.printStackTrace();
 					}
 

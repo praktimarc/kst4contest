@@ -2,12 +2,13 @@ package kst4contest.view;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.util.*;
 
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import kst4contest.controller.ChatController;
 import kst4contest.controller.Utils4KST;
 import javafx.application.Application;
@@ -71,6 +72,8 @@ import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ClusterMessage;
+import kst4contest.utils.PlayAudioUtils;
+
 
 public class Kst4ContestApplication extends Application {
 
@@ -740,8 +743,6 @@ public class Kst4ContestApplication extends Application {
 							if (item.contains(chatcontroller.getChatPreferences().getLoginCallSign())) {
 								this.setTextFill(Color.GREEN);
 
-//	                            AudioClip sound = new AudioClip(getClass().getResource("/K.mp3").toExternalForm());
-//	                            sound.play();
 
 							}
 							setText(item);
@@ -882,12 +883,18 @@ public class Kst4ContestApplication extends Application {
 						if (!isEmpty()) {
 							this.setTextFill(Color.BLACK);
 							// Get fancy and change color based on data
-							if (item.contains("100%")) {
-								this.setTextFill(Color.BLUEVIOLET);
-							} else if (item.contains("75%") && !item.contains("100%")) {
-								this.setTextFill(Color.RED);
-							} else if (item.contains("50%") && ((!item.contains("100%")) || (!item.contains("75%")))) {
-								this.setTextFill(Color.ORANGE);
+
+							try {
+								if (item.contains("100%")) {
+									this.setTextFill(Color.BLUEVIOLET);
+								} else if (item.contains("75%") && !item.contains("100%")) {
+									this.setTextFill(Color.RED);
+								} else if (item.contains("50%") && ((!item.contains("100%")) || (!item.contains("75%")))) {
+									this.setTextFill(Color.ORANGE);
+								}
+
+							} catch (Exception exc) {
+								//TODO: on nullpointerexcteption dont to that
 							}
 
 							setText(item);
@@ -1876,8 +1883,324 @@ public class Kst4ContestApplication extends Application {
 
 	}
 
+	private Queue<Media> musicList = new LinkedList<Media>();
+	private MediaPlayer mediaPlayer ;
+
+	private void playCWLauncher(String playThisChars) {
+
+		char[] playThisInCW = playThisChars.toUpperCase().toCharArray();
+
+		for (char letterToPlay: playThisInCW){
+			switch (letterToPlay){
+				case 'A':
+					musicList.add(new Media(new File ("LTTRA.mp3").toURI().toString()));
+					break;
+				case 'B':
+					musicList.add(new Media(new File ("LTTRB.mp3").toURI().toString()));
+					break;
+				case 'C':
+					musicList.add(new Media(new File ("LTTRC.mp3").toURI().toString()));
+					break;
+				case 'D':
+					musicList.add(new Media(new File ("LTTRD.mp3").toURI().toString()));
+					break;
+				case 'E':
+					musicList.add(new Media(new File ("LTTRE.mp3").toURI().toString()));
+					break;
+				case 'F':
+					musicList.add(new Media(new File ("LTTRF.mp3").toURI().toString()));
+					break;
+				case 'G':
+					musicList.add(new Media(new File ("LTTRG.mp3").toURI().toString()));
+					break;
+				case 'H':
+					musicList.add(new Media(new File ("LTTRH.mp3").toURI().toString()));
+					break;
+				case 'I':
+					musicList.add(new Media(new File ("LTTRI.mp3").toURI().toString()));
+					break;
+				case 'J':
+					musicList.add(new Media(new File ("LTTRJ.mp3").toURI().toString()));
+					break;
+				case 'K':
+					musicList.add(new Media(new File ("LTTRK.mp3").toURI().toString()));
+					break;
+				case 'L':
+					musicList.add(new Media(new File ("LTTRL.mp3").toURI().toString()));
+					break;
+				case 'M':
+					musicList.add(new Media(new File ("LTTRM.mp3").toURI().toString()));
+					break;
+				case 'N':
+					musicList.add(new Media(new File ("LTTRN.mp3").toURI().toString()));
+					break;
+				case 'O':
+					musicList.add(new Media(new File ("LTTRO.mp3").toURI().toString()));
+					break;
+				case 'P':
+					musicList.add(new Media(new File ("LTTRP.mp3").toURI().toString()));
+					break;
+				case 'Q':
+					musicList.add(new Media(new File ("LTTRQ.mp3").toURI().toString()));
+					break;
+				case 'R':
+					musicList.add(new Media(new File ("LTTRR.mp3").toURI().toString()));
+					break;
+				case 'S':
+					musicList.add(new Media(new File ("LTTRS.mp3").toURI().toString()));
+					break;
+				case 'T':
+					musicList.add(new Media(new File ("LTTRT.mp3").toURI().toString()));
+					break;
+				case 'U':
+					musicList.add(new Media(new File ("LTTRU.mp3").toURI().toString()));
+					break;
+				case 'V':
+					musicList.add(new Media(new File ("LTTRV.mp3").toURI().toString()));
+					break;
+				case 'W':
+					musicList.add(new Media(new File ("LTTRW.mp3").toURI().toString()));
+					break;
+				case 'X':
+					musicList.add(new Media(new File ("LTTRX.mp3").toURI().toString()));
+					break;
+				case 'Y':
+					musicList.add(new Media(new File ("LTTRY.mp3").toURI().toString()));
+					break;
+				case 'Z':
+					musicList.add(new Media(new File ("LTTRZ.mp3").toURI().toString()));
+					break;
+				case '1':
+					musicList.add(new Media(new File ("LTTR1.mp3").toURI().toString()));
+					break;
+				case '2':
+					musicList.add(new Media(new File ("LTTR2.mp3").toURI().toString()));
+					break;
+				case '3':
+					musicList.add(new Media(new File ("LTTR3.mp3").toURI().toString()));
+					break;
+				case '4':
+					musicList.add(new Media(new File ("LTTR4.mp3").toURI().toString()));
+					break;
+				case '5':
+					musicList.add(new Media(new File ("LTTR5.mp3").toURI().toString()));
+					break;
+				case '6':
+					musicList.add(new Media(new File ("LTTR6.mp3").toURI().toString()));
+					break;
+				case '7':
+					musicList.add(new Media(new File ("LTTR7.mp3").toURI().toString()));
+					break;
+				case '8':
+					musicList.add(new Media(new File ("LTTR8.mp3").toURI().toString()));
+					break;
+				case '9':
+					musicList.add(new Media(new File ("LTTR9.mp3").toURI().toString()));
+					break;
+				case '0':
+					musicList.add(new Media(new File ("LTTR0.mp3").toURI().toString()));
+					break;
+				case '/':
+					musicList.add(new Media(new File ("LTTRSTROKE.mp3").toURI().toString()));
+					break;
+				case ' ':
+					musicList.add(new Media(new File ("LTTRSPACE.mp3").toURI().toString()));
+					break;
+				default:
+					System.out.println("[KST4ContestApp, warning, letter not defined:] cwLetters = " + Arrays.toString(playThisInCW));
+			}
+		}
+		playMusic();
+//		mediaPlayer.dispose();
+
+	}
+
+	/**
+	 * Plays a voice file for each char in the string (only EN alphabetic and numbers) except some specials: <br/><br/>
+	 *
+	 * 	case '!': BELL<br/>
+	 *  case '?': YOUGOTMAIL<br/>
+	 * 	case '#': HELLO<br/>
+	 * 	case '*': 73 bye<br/>
+	 * 	case '$': STROKEPORTABLE<br/>
+	 * @param playThisChars
+	 */
+	private void playVoiceLauncher(String playThisChars) {
+
+		char[] playThisInCW = playThisChars.toUpperCase().toCharArray();
+
+		for (char letterToPlay: playThisInCW){
+			switch (letterToPlay){
+				case '!':
+					musicList.add(new Media(new File ("VOICEBELL.mp3").toURI().toString()));
+					break;
+				case '?':
+					musicList.add(new Media(new File ("VOICEYOUGOTMAIL.mp3").toURI().toString()));
+					break;
+				case '#':
+					musicList.add(new Media(new File ("VOICEHELLO.mp3").toURI().toString()));
+					break;
+				case '*':
+					musicList.add(new Media(new File ("VOICE73.mp3").toURI().toString()));
+					break;
+				case '$':
+					musicList.add(new Media(new File ("VOICESTROKEPORTABLE.mp3").toURI().toString()));
+					break;
+				case 'A':
+					musicList.add(new Media(new File ("VOICEA.mp3").toURI().toString()));
+					break;
+				case 'B':
+					musicList.add(new Media(new File ("VOICEB.mp3").toURI().toString()));
+					break;
+				case 'C':
+					musicList.add(new Media(new File ("VOICEC.mp3").toURI().toString()));
+					break;
+				case 'D':
+					musicList.add(new Media(new File ("VOICED.mp3").toURI().toString()));
+					break;
+				case 'E':
+					musicList.add(new Media(new File ("VOICEE.mp3").toURI().toString()));
+					break;
+				case 'F':
+					musicList.add(new Media(new File ("VOICEF.mp3").toURI().toString()));
+					break;
+				case 'G':
+					musicList.add(new Media(new File ("VOICEG.mp3").toURI().toString()));
+					break;
+				case 'H':
+					musicList.add(new Media(new File ("VOICEH.mp3").toURI().toString()));
+					break;
+				case 'I':
+					musicList.add(new Media(new File ("VOICEI.mp3").toURI().toString()));
+					break;
+				case 'J':
+					musicList.add(new Media(new File ("VOICEJ.mp3").toURI().toString()));
+					break;
+				case 'K':
+					musicList.add(new Media(new File ("VOICEK.mp3").toURI().toString()));
+					break;
+				case 'L':
+					musicList.add(new Media(new File ("VOICEL.mp3").toURI().toString()));
+					break;
+				case 'M':
+					musicList.add(new Media(new File ("VOICEM.mp3").toURI().toString()));
+					break;
+				case 'N':
+					musicList.add(new Media(new File ("VOICEN.mp3").toURI().toString()));
+					break;
+				case 'O':
+					musicList.add(new Media(new File ("VOICEO.mp3").toURI().toString()));
+					break;
+				case 'P':
+					musicList.add(new Media(new File ("VOICEP.mp3").toURI().toString()));
+					break;
+				case 'Q':
+					musicList.add(new Media(new File ("VOICEQ.mp3").toURI().toString()));
+					break;
+				case 'R':
+					musicList.add(new Media(new File ("VOICER.mp3").toURI().toString()));
+					break;
+				case 'S':
+					musicList.add(new Media(new File ("VOICES.mp3").toURI().toString()));
+					break;
+				case 'T':
+					musicList.add(new Media(new File ("VOICET.mp3").toURI().toString()));
+					break;
+				case 'U':
+					musicList.add(new Media(new File ("VOICEU.mp3").toURI().toString()));
+					break;
+				case 'V':
+					musicList.add(new Media(new File ("VOICEV.mp3").toURI().toString()));
+					break;
+				case 'W':
+					musicList.add(new Media(new File ("VOICEW.mp3").toURI().toString()));
+					break;
+				case 'X':
+					musicList.add(new Media(new File ("VOICEX.mp3").toURI().toString()));
+					break;
+				case 'Y':
+					musicList.add(new Media(new File ("VOICEY.mp3").toURI().toString()));
+					break;
+				case 'Z':
+					musicList.add(new Media(new File ("VOICEZ.mp3").toURI().toString()));
+					break;
+				case '1':
+					musicList.add(new Media(new File ("VOICE1.mp3").toURI().toString()));
+					break;
+				case '2':
+					musicList.add(new Media(new File ("VOICE2.mp3").toURI().toString()));
+					break;
+				case '3':
+					musicList.add(new Media(new File ("VOICE3.mp3").toURI().toString()));
+					break;
+				case '4':
+					musicList.add(new Media(new File ("VOICE4.mp3").toURI().toString()));
+					break;
+				case '5':
+					musicList.add(new Media(new File ("VOICE5.mp3").toURI().toString()));
+					break;
+				case '6':
+					musicList.add(new Media(new File ("VOICE6.mp3").toURI().toString()));
+					break;
+				case '7':
+					musicList.add(new Media(new File ("VOICE7.mp3").toURI().toString()));
+					break;
+				case '8':
+					musicList.add(new Media(new File ("VOICE8.mp3").toURI().toString()));
+					break;
+				case '9':
+					musicList.add(new Media(new File ("VOICE9.mp3").toURI().toString()));
+					break;
+				case '0':
+					musicList.add(new Media(new File ("VOICE0.mp3").toURI().toString()));
+					break;
+				case '/':
+					musicList.add(new Media(new File ("VOICESTROKE.mp3").toURI().toString()));
+					break;
+//				case ' ':
+//					musicList.add(new Media(new File ("VOICESPACE.mp3").toURI().toString()));
+//					break;
+				default:
+					System.out.println("[KST4ContestApp, warning, letter not defined:] cwLetters = " + Arrays.toString(playThisInCW));
+			}
+		}
+		playMusic();
+//		mediaPlayer.dispose();
+
+	}
+
+//	protected static final int SAMPLE_RATE = 16 * 1024;
+
+
+
+
+	private void playMusic() {
+
+
+//		System.out.println("Kst4ContestApplication.playMusic");
+		if(musicList.peek() == null)
+		{
+			return;
+		}
+		mediaPlayer = new MediaPlayer(musicList.poll());
+		mediaPlayer.setRate(1.0);
+
+		mediaPlayer.setOnReady(() -> {
+			mediaPlayer.play();
+			mediaPlayer.setOnEndOfMedia(() -> {
+//				mediaPlayer.dispose();
+				playMusic();
+				if (musicList.isEmpty()) {
+//					mediaPlayer.dispose();
+				}
+			});
+		});
+
+	}
+
 	@Override
-	public void start(Stage primaryStage) throws InterruptedException, IOException {
+	public void start(Stage primaryStage) throws InterruptedException, IOException, URISyntaxException {
+
 //		this.primaryStage = primaryStage;
 //		ChatCategory category = new ChatCategory(0); //TODO: get the Category out of the preferences-object
 
@@ -1888,6 +2211,9 @@ public class Kst4ContestApplication extends Application {
 //		ownChatMemberObject.setQra("JO51IJ");
 
 		chatcontroller = new ChatController(ownChatMemberObject); // instantiate the Chatcontroller with the user object
+
+		this.chatcontroller.getPlayAudioUtils().playNoiseLauncher('!');
+
 //		chatcontroller.execute(); //TODO:THAT IS THE MAIN POINT WHERE THE CHAT WILL BE STARTED --- MOVED TO CONNECT BUTTON EVENTHANDLER
 
 //		System.out.println(chatcontroller.getChatMemberTable().size());
@@ -2717,14 +3043,40 @@ public class Kst4ContestApplication extends Application {
 		grdPnlNotify.setPadding(new Insets(10, 10, 10, 10));
 		grdPnlNotify.setVgap(5);
 		grdPnlNotify.setHgap(5);
+		grdPnlNotify.add(generateLabeledSeparator(100, "Notification settings"), 0, 0, 2, 1);
 
-		Label lblNitificationInfo = new Label(
-				"Switch bands, prefix worked by others alert, direction notifications, notification pattern matchers");
+//		Label lblNitificationInfo = new Label(
+//				"Switch bands, prefix worked by others alert, direction notifications, notification pattern matchers");
 //        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
-		grdPnlNotify.add(generateLabeledSeparator(100, "Notification settings"), 0, 0, 2, 1);
-		grdPnlNotify.add(lblNitificationInfo, 0, 1);
+		Label lblNotifyEnableSimpleSounds = new Label("Enable audio notifications at: startup, new personal messages, other");
+		Label lblNotifyCWSounds = new Label("Enable CW callsign spelling for new personal messages");
+		Label lblNotifyVoiceSounds = new Label("Enable phonetic callsign spelling for new personal messages");
+
+
+		CheckBox chkBxEnableNotifySimpleSounds = new CheckBox();
+		chkBxEnableNotifySimpleSounds.setSelected(this.chatcontroller.getChatPreferences().isNotify_playSimpleSounds());
+
+		chkBxEnableNotifySimpleSounds.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+
+				chatcontroller.getChatPreferences()
+						.setNotify_playSimpleSounds(chkBxEnableNotifySimpleSounds.isSelected());
+				System.out.println("[Main.java, Info]: Notification simplesounds enabled: " + newValue);
+			}
+		});
+
+
+		grdPnlNotify.add(lblNotifyEnableSimpleSounds, 0, 1);
+		grdPnlNotify.add(chkBxEnableNotifySimpleSounds, 1, 1);
+
+
+//		grdPnlNotify.add(lblNitificationInfo, 0, 1);
 //        grdPnltrx.add(chkBxEnableTRXMsgbyUCX, 1, 1);
+
+
+
 
 		VBox vbxNotify = new VBox();
 		vbxNotify.setPadding(new Insets(10, 10, 10, 10));
@@ -3188,6 +3540,8 @@ public class Kst4ContestApplication extends Application {
 //				event.consume();
 			} else {
 				System.out.println("closewindowevent: Platform.exit");
+
+
 				Platform.exit();
 			}
 		}
