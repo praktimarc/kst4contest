@@ -164,6 +164,13 @@ public class ChatPreferences {
 	 * Notification prefs
 	 */
 
+	//Audio section
+	boolean notify_playSimpleSounds = true;
+	boolean notify_playCWCallsignsOnRxedPMs = true;
+	boolean notify_playVoiceCallsignsOnRxedPMs = true;
+
+
+
 	/**
 	 * Shortcuts and Textsnippets prefs
 	 */
@@ -197,6 +204,8 @@ public class ChatPreferences {
 //		
 //		MYQRG = mYQRG;
 //	}
+
+
 
 	public String getLoginCallSign() {
 		return loginCallSign;
@@ -265,6 +274,30 @@ public class ChatPreferences {
 	public void setLogsynch_storeWorkedCallSignsFileNameUDPMessageBackup(
 			String logsynch_storeWorkedCallSignsFileNameUDPMessageBackup) {
 		this.logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = logsynch_storeWorkedCallSignsFileNameUDPMessageBackup;
+	}
+
+	public boolean isNotify_playSimpleSounds() {
+		return notify_playSimpleSounds;
+	}
+
+	public boolean isNotify_playCWCallsignsOnRxedPMs() {
+		return notify_playCWCallsignsOnRxedPMs;
+	}
+
+	public boolean isNotify_playVoiceCallsignsOnRxedPMs() {
+		return notify_playVoiceCallsignsOnRxedPMs;
+	}
+
+	public void setNotify_playSimpleSounds(boolean notify_playSimpleSounds) {
+		this.notify_playSimpleSounds = notify_playSimpleSounds;
+	}
+
+	public void setNotify_playCWCallsignsOnRxedPMs(boolean notify_playCWCallsignsOnRxedPMs) {
+		this.notify_playCWCallsignsOnRxedPMs = notify_playCWCallsignsOnRxedPMs;
+	}
+
+	public void setNotify_playVoiceCallsignsOnRxedPMs(boolean notify_playVoiceCallsignsOnRxedPMs) {
+		this.notify_playVoiceCallsignsOnRxedPMs = notify_playVoiceCallsignsOnRxedPMs;
 	}
 
 	/**
@@ -603,6 +636,27 @@ public class ChatPreferences {
 		      asQry_airScoutBandValue.setTextContent(this.getAirScout_asBandString());
 		      AirScoutQuerier.appendChild(asQry_airScoutBandValue);
 
+
+			/**
+			 * Notifications
+			 */
+
+			Element notifications = doc.createElement("notifications");
+				rootElement.appendChild(notifications);
+
+				Element notify_SimpleAudioNotificationsEnabled = doc.createElement("notify_SimpleAudioNotificationsEnabled");
+			notify_SimpleAudioNotificationsEnabled.setTextContent(this.isNotify_playSimpleSounds()+"");
+			notifications.appendChild(notify_SimpleAudioNotificationsEnabled);
+
+				Element notify_CWCallSignAudioNotificationsEnabled = doc.createElement("notify_CWCallsignAudioNotificationsEnabled");
+			notify_CWCallSignAudioNotificationsEnabled.setTextContent(this.isNotify_playCWCallsignsOnRxedPMs()+"");
+			notifications.appendChild(notify_CWCallSignAudioNotificationsEnabled);
+
+			Element notify_VoiceCallSignAudioNotificationsEnabled = doc.createElement("notify_VoiceCallsignAudioNotificationsEnabled");
+			notify_VoiceCallSignAudioNotificationsEnabled.setTextContent(this.isNotify_playVoiceCallsignsOnRxedPMs()+"");
+			notifications.appendChild(notify_VoiceCallSignAudioNotificationsEnabled);
+
+
 		      /**
 		       * Shortcuts
 		       */
@@ -904,6 +958,56 @@ public class ChatPreferences {
 					}
 				}
 			}
+
+			/**
+			 * Case notifications
+			 */
+
+			list = doc.getElementsByTagName("notifications");
+			if (list.getLength() != 0) {
+
+				for (int temp = 0; temp < list.getLength(); temp++) {
+
+					Node node = list.item(temp);
+
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+
+						Element element = (Element) node;
+
+						String notify_simpleAudioNotificationsEnabled = element.getElementsByTagName("notify_SimpleAudioNotificationsEnabled").item(0)
+								.getTextContent();
+
+						if (notify_simpleAudioNotificationsEnabled.equals("true")) {
+							notify_playSimpleSounds = true;
+						} else {
+							notify_playSimpleSounds = false;
+						}
+
+						String notify_cwAudioNotificationsEnabled = element.getElementsByTagName("notify_CWCallsignAudioNotificationsEnabled").item(0)
+								.getTextContent();
+
+						if (notify_cwAudioNotificationsEnabled.equals("true")) {
+							notify_playCWCallsignsOnRxedPMs = true;
+						} else {
+							notify_playCWCallsignsOnRxedPMs = false;
+						}
+
+						String notify_voiceAudioNotificationsEnabled = element.getElementsByTagName("notify_VoiceCallsignAudioNotificationsEnabled").item(0)
+								.getTextContent();
+
+						if (notify_voiceAudioNotificationsEnabled.equals("true")) {
+							notify_playVoiceCallsignsOnRxedPMs = true;
+						} else {
+							notify_playVoiceCallsignsOnRxedPMs = false;
+						}
+
+						System.out.println(
+								"[ChatPreferences, info]: Set the audionotifications simple: " + notify_playSimpleSounds + ", CW: " + notify_playCWCallsignsOnRxedPMs + ", Voice: " + notify_playVoiceCallsignsOnRxedPMs);
+
+					}
+				}
+			}
+
 
 			/**
 			 * Case AirScout querier
