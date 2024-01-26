@@ -563,6 +563,13 @@ public class MessageBusManagementThread extends Thread {
 								this.client.getPlayAudioUtils().playVoiceLauncher( "?" + newMessage.getSender().getCallSign().toUpperCase());
 							}
 
+							if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
+								if (newMessage.getMessageText().toUpperCase().contains("//BELL")) {
+									this.client.getPlayAudioUtils().playVoiceLauncher("!");
+								}
+							}
+
+
 							System.out.println("message directed to me: " + newMessage.getReceiver().getCallSign() + ".");
 
 						} else if (newMessage.getSender().getCallSign().toUpperCase()

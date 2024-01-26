@@ -2445,8 +2445,6 @@ public class Kst4ContestApplication extends Application {
 					.getSelectionModel();
 			privateChatselectionModelChatMessage.setSelectionMode(SelectionMode.SINGLE);
 
-//			tbl_chatMember.getda
-
 			ObservableList<ChatMessage> selectedChatMessageList = privateChatselectionModelChatMessage
 					.getSelectedItems();
 			selectedChatMessageList.addListener(new ListChangeListener<ChatMessage>() {
@@ -2456,13 +2454,34 @@ public class Kst4ContestApplication extends Application {
 						// do nothing, that was a deselection-event!
 					} else {
 
-						txt_chatMessageUserInput.clear();
-						txt_chatMessageUserInput.setText("/cq "
-								+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
-						System.out.println("privChat selected ChatMember: "
-								+ selectedChatMemberPrivateChat.getList().get(0).getSender());
-						// selectedChatMemberList.clear();
+						/**
+						 * We need a special trick here. Since the private message list is a messagelist only for my own callsign, it´s not useful to show a sender and receiver.
+						 * But if you choose a line with a message which you sent do another station, the default mechanism will type "/cq MYOWNCALL" to the textfield and if you are sleepy,
+						 * you wouldnt remark that you sent a message to yourself. Thatswhy the rx-callsign (in brackets) will be extracted out of your sended message and added to the sendmessage-field.
+						 * Thats what happening in line with //here1
+						 * Your own sent texts will look like this:
+						 *
+						 * (>ON4KST) Hi team! Nice to meet you
+						 *
+						 */
+
+						if (selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()) ) {
+							System.out.println("privChat selected ChatMember: was own object..." + "rx was: " + selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))));
+
+							txt_chatMessageUserInput.clear();
+							txt_chatMessageUserInput.setText("/cq "
+									+ selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))) + " "); //here1
+
+						} else {
+
+							txt_chatMessageUserInput.clear();
+							txt_chatMessageUserInput.setText("/cq "
+									+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
+							System.out.println("privChat selected ChatMember: "
+									+ selectedChatMemberPrivateChat.getList().get(0).getSender());
+							// selectedChatMemberList.clear();
 //						selectionModelChatMember.clearSelection(0);
+						}
 					}
 				}
 			});
@@ -2480,8 +2499,52 @@ public class Kst4ContestApplication extends Application {
 				}
 			}, new Date(), 5000);
 
+
+			TableView<ChatMessage> tbl_generalMessageTable = new TableView<ChatMessage>();
+			tbl_generalMessageTable = initChatGeneralMSGTable();
+
+			tbl_generalMessageTable.addEventHandler(MouseEvent.MOUSE_CLICKED, new EventHandler<MouseEvent>() {
+
+				@Override
+				public void handle(MouseEvent t) {
+					if (t.getButton() == MouseButton.SECONDARY) {
+						chatMemberContextMenu.show(primaryStage, t.getScreenX(), t.getScreenY());
+
+					}
+				}
+			});
+
+			TableViewSelectionModel<ChatMessage> generalChatselectionModelChatMessage = tbl_generalMessageTable
+					.getSelectionModel();
+			privateChatselectionModelChatMessage.setSelectionMode(SelectionMode.SINGLE);
+
+			ObservableList<ChatMessage> selectedChatMessageListGeneralChat = generalChatselectionModelChatMessage
+					.getSelectedItems();
+			selectedChatMessageListGeneralChat.addListener(new ListChangeListener<ChatMessage>() {
+				@Override
+				public void onChanged(Change<? extends ChatMessage> selectedChatMemberGeneralChat) {
+					if (generalChatselectionModelChatMessage.getSelectedItems().isEmpty()) {
+						// do nothing, that was a deselection-event!
+					} else {
+
+						txt_chatMessageUserInput.clear();
+						txt_chatMessageUserInput.setText("/cq "
+								+ selectedChatMemberGeneralChat.getList().get(0).getSender().getCallSign() + " ");
+						System.out.println("privChat selected ChatMember: "
+								+ selectedChatMemberGeneralChat.getList().get(0).getSender());
+						// selectedChatMemberList.clear();
+//						selectionModelChatMember.clearSelection(0);
+					}
+				}
+			});
+
+
+
 			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
-					initChatGeneralMSGTable());
+					tbl_generalMessageTable);
+			//Changed to add contextmenu to cq message table
+//			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
+//					initChatGeneralMSGTable());
 
 			bPaneChatWindow.setCenter(mainWindowLeftSplitPane);
 
