@@ -1,5 +1,10 @@
 package kst4contest.locatorUtils;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.Locale;
+
 /**
  * Location class with methods allowing conversion to and from Maidenhead
  * locator (grid squares) based off of
@@ -204,6 +209,28 @@ public class Location {
   }
 
   /**
+   * @param locator1 6 letter location string
+   *                 @param locator2 6 letter location string
+   * @return great circle distance in kilometers
+   */
+  public double getDistanceKmByTwoLocatorStrings(String locator1,String locator2 ) {
+    Location loc1 = new Location(locator1);
+    Location loc2 = new Location(locator2);
+
+    Locale locale  = new Locale("en", "UK");
+    String pattern = "###.##";
+
+    DecimalFormat decimalFormat = (DecimalFormat)
+            NumberFormat.getNumberInstance(locale);
+    decimalFormat.applyPattern(pattern);
+
+    String format = decimalFormat.format(loc1.getDistanceKm(loc2));
+
+//    return df.format(number);
+    return Double.parseDouble(format);
+  }
+
+  /**
    * @param loc2
    *          second location
    * @return great circle distance in nautical miles
@@ -276,6 +303,19 @@ public class Location {
    */
   public double getBearing(final Location loc2) {
     return getBearing(this, loc2);
+  }
+
+
+  /**
+   *
+   * @return bearing in degrees
+   */
+  public double getBearingOfTwoLocatorStrings(String locator1, String locator2) {
+
+    Location loc1 = new Location(locator1);
+    Location loc2 = new Location(locator2);
+
+    return getBearing(loc1, loc2);
   }
 
   /**
