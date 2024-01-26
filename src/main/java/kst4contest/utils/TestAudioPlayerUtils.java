@@ -1,4 +1,4 @@
-package kst4contest.test;
+package kst4contest.utils;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
