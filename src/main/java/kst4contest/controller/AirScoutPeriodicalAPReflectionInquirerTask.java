@@ -42,7 +42,9 @@ public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 		String asWatchListStringSuffix = asWatchListString;
 
 		String host = "255.255.255.255";
-		int port = 9872;
+//		int port = 9872;
+		int port = client.getChatPreferences().getAirScout_asCommunicationPort();
+//		System.out.println("<<<<<<<<<<<<<<<<<<<<ASPERI: " + port);
 
 //		byte[] message = "ASSETPATH: \"KST\" \"AS\" 1440000,DO5AMF,JN49GL,OK1MZM,JN89IW ".getBytes(); Original, ging
 		InetAddress address;

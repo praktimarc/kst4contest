@@ -6,6 +6,7 @@ import java.util.Comparator;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import kst4contest.ApplicationConstants;
 import kst4contest.model.AirPlane;
 import kst4contest.model.AirPlaneReflectionInfo;
 import kst4contest.model.ChatMember;
@@ -30,6 +31,8 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 
 	public ReadUDPbyAirScoutMessageThread(int localPort, ChatController client, String ASIdentificator,
 			String ChatClientIdentificator) {
+
+
 		this.localPort = localPort;
 		this.client = client;
 		this.ASIdentificator = ASIdentificator;
@@ -38,6 +41,7 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 
 	@Override
 	public void interrupt() {
+		System.out.println("ReadUDP");
 		super.interrupt();
 		try {
 			if (this.socket != null) {
@@ -89,6 +93,12 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 				}
 				
 				socket.receive(packet);
+
+
+
+
+
+
 			} catch (SocketTimeoutException e2) {
 				// this will catch the repeating Sockettimeoutexception...nothing to do
 //				e2.printStackTrace();
@@ -103,6 +113,12 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 //			packet = new DatagramPacket(buf, buf.length, address, port);
 			String received = new String(packet.getData(), packet.getOffset(), packet.getLength());
 			received = received.trim();
+
+			if (received.contains(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
+				System.out.println("ReadUdpByASMsgTh, Info: got poison, now dieing....");
+				break;
+			}
+
 
 			if (received.contains("ASSETPATH") || received.contains("ASWATCHLIST")) {
 				// do nothing, that is your own message

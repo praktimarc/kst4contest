@@ -992,9 +992,7 @@ public class MessageBusManagementThread extends Thread {
 		String messageLine;
 
 		while (true) {
-			
-			
-			
+
 				try {
 					messageTextRaw = client.getMessageRXBus().take();
 					

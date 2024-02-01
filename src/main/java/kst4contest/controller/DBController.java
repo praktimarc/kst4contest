@@ -63,6 +63,9 @@ public class DBController {
 	}
 
 	private void initDBConnection() {
+
+		System.out.println("DBH: initiate new db connection");
+
 		try {
 			ApplicationFileUtils.copyResourceIfRequired(
 					ApplicationConstants.APPLICATION_NAME,
