@@ -91,48 +91,7 @@ public class ReadThread extends Thread {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-            	
-//            	try {
-//					sleep(3000);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-            	
-//            	try {
-//            		System.out.println("RDTH: try new socket");
-//            		this.client.getSocket().close();
-//            		this.client.getSocket().close();
-//            		this.client.setSocket(new Socket(this.client.getHostname(), this.client.getPort()));
-//            		socket.connect(new InetSocketAddress(this.client.getHostname(), this.client.getPort()));
-//            		System.out.println("[Readthread, Warning:] new socket connected? -> " + socket.isConnected());
-            		
-//            		input = socket.getInputStream();            
-//                    reader = new BufferedReader(new InputStreamReader(input));
-//            		
-//					this.sleep(5000);
-//				} catch (IOException | InterruptedException e2) {
-//					// TODO Auto-generated catch block
-//					System.out.println("fucktah");
-//					e2.printStackTrace();
-//				}
-//            	try {
-//					sleep(2000);
-//				} catch (InterruptedException e1) {
-//					// TODO Auto-generated catch block
-//					e1.printStackTrace();
-//				}
-//            	try {
-//            		this.client.getSocket().close();
-//					this.client.setSocket(new Socket(this.client.getHostname(), this.client.getPort()));
-//				} catch (UnknownHostException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				} catch (IOException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-            	
+
             }
 
         }

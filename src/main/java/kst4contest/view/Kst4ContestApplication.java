@@ -2,13 +2,12 @@ package kst4contest.view;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
 import java.util.*;
 
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import kst4contest.ApplicationConstants;
 import kst4contest.controller.ChatController;
 import kst4contest.controller.Utils4KST;
 import javafx.application.Application;
@@ -72,7 +71,6 @@ import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ClusterMessage;
-import kst4contest.utils.PlayAudioUtils;
 
 
 public class Kst4ContestApplication extends Application {
@@ -444,7 +442,7 @@ public class Kst4ContestApplication extends Application {
 
 					try {
 						
-//						tbl_chatMemberTable.sort();
+						tbl_chatMemberTable.sort();
 
 					} catch (Exception e) {
 						System.out.println("[Main.java, Warning:] Table sorting (actualizing) failed this time.");
@@ -454,7 +452,7 @@ public class Kst4ContestApplication extends Application {
 
 				});
 			}
-		}, new Date(), 3000);
+		}, new Date(), 10000);
 
 		tbl_chatMemberTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		tbl_chatMemberTable.autosize();
@@ -1606,8 +1604,21 @@ public class Kst4ContestApplication extends Application {
 		Menu fileMenu = new Menu("File");
 
 		// create menuitems
-		MenuItem m1 = new MenuItem("Disconnect");
-		m1.setDisable(true);
+		menuItemFileDisconnect = new MenuItem("Disconnect");
+		menuItemFileDisconnect.setDisable(true);
+
+		if (chatcontroller.isConnectedAndLoggedIn() || chatcontroller.isConnectedAndNOTLoggedIn()) {
+			menuItemFileDisconnect.setDisable(false);
+		} if (chatcontroller.isDisconnected()) {
+			menuItemFileDisconnect.setDisable(true);
+		}
+		menuItemFileDisconnect.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
+				menuItemFileDisconnect.setDisable(true);
+			}
+		});
+
 
 		MenuItem m10 = new MenuItem("Exit + disconnect");
 		m10.setOnAction(new EventHandler<ActionEvent>() {
@@ -1617,7 +1628,7 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		// add menu items to menu
-		fileMenu.getItems().add(m1);
+		fileMenu.getItems().add(menuItemFileDisconnect);
 		fileMenu.getItems().add(m10);
 
 		Menu optionsMenu = new Menu("Options");
@@ -1771,6 +1782,7 @@ public class Kst4ContestApplication extends Application {
 
 	}
 
+	MenuItem menuItemFileDisconnect;
 	TextField txt_chatMessageUserInput = new TextField();
 	TextField txt_ownqrg = new TextField();
 	TextField txt_myQTF = new TextField();
@@ -3113,8 +3125,8 @@ public class Kst4ContestApplication extends Application {
 //        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
 		Label lblNotifyEnableSimpleSounds = new Label("Enable audio notifications at: startup, new personal messages, other");
-		Label lblNotifyCWSounds = new Label("Enable CW callsign spelling for new personal messages");
-		Label lblNotifyVoiceSounds = new Label("Enable phonetic callsign spelling for new personal messages");
+		Label lblNotifyEnableCWSounds = new Label("Enable CW callsign spelling for new personal messages");
+		Label lblNotifyEnableVoiceSounds = new Label("Enable phonetic callsign spelling for new personal messages");
 
 
 		CheckBox chkBxEnableNotifySimpleSounds = new CheckBox();
@@ -3131,8 +3143,41 @@ public class Kst4ContestApplication extends Application {
 		});
 
 
+		CheckBox chkBxEnableNotifyCWSounds = new CheckBox();
+		chkBxEnableNotifyCWSounds.setSelected(this.chatcontroller.getChatPreferences().isNotify_playCWCallsignsOnRxedPMs());
+
+		chkBxEnableNotifyCWSounds.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+
+				chatcontroller.getChatPreferences()
+						.setNotify_playCWCallsignsOnRxedPMs(chkBxEnableNotifyCWSounds.isSelected());
+				System.out.println("[Main.java, Info]: Notification CW Callsigns enabled: " + newValue);
+			}
+		});
+
+		CheckBox chkBxEnableNotifyVoiceSounds = new CheckBox();
+		chkBxEnableNotifyVoiceSounds.setSelected(this.chatcontroller.getChatPreferences().isNotify_playVoiceCallsignsOnRxedPMs());
+
+		chkBxEnableNotifyVoiceSounds.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+
+				chatcontroller.getChatPreferences()
+						.setNotify_playVoiceCallsignsOnRxedPMs(chkBxEnableNotifyVoiceSounds.isSelected());
+				System.out.println("[Main.java, Info]: Notification Voice Callsigns enabled: " + newValue);
+			}
+		});
+
+
 		grdPnlNotify.add(lblNotifyEnableSimpleSounds, 0, 1);
 		grdPnlNotify.add(chkBxEnableNotifySimpleSounds, 1, 1);
+
+		grdPnlNotify.add(lblNotifyEnableCWSounds, 0, 2);
+		grdPnlNotify.add(chkBxEnableNotifyCWSounds, 1, 2);
+
+		grdPnlNotify.add(lblNotifyEnableVoiceSounds, 0, 3);
+		grdPnlNotify.add(chkBxEnableNotifyVoiceSounds, 1, 3);
 
 
 //		grdPnlNotify.add(lblNitificationInfo, 0, 1);
@@ -3162,6 +3207,7 @@ public class Kst4ContestApplication extends Application {
 		TableView<String> tblVw_shortcuts = new TableView<String>();
 		tblVw_shortcuts = initShortcutTable();
 		tblVw_shortcuts.setItems(this.chatcontroller.getChatPreferences().getLst_txtShortCutBtnList());
+
 
 		Button btn_Short_addLine = new Button("Add new shorcut-button");
 		btn_Short_addLine.setOnAction(new EventHandler<ActionEvent>() {
@@ -3439,23 +3485,51 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		Button btnOptionspnlDisconnect = new Button("Disconnect & close Chat");
-		btnOptionspnlDisconnect.setDisable(false);
-
 		btnOptionspnlDisconnect.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 				closeWindowEvent(null);
+
+//				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
 
 			}
 		});
 
+
 		Button btnOptionspnlDisconnectOnly = new Button("Disconnect");
 		btnOptionspnlDisconnectOnly.setDisable(true);
+		menuItemFileDisconnect.setDisable(true);
 
-		btnOptionspnlDisconnect.setOnAction(new EventHandler<ActionEvent>() {
+		if (chatcontroller.isDisconnected()) {
+
+			btnOptionspnlDisconnectOnly.setDisable(true);
+			menuItemFileDisconnect.setDisable(true);
+
+		} else if (chatcontroller.isConnectedAndNOTLoggedIn()) {
+			btnOptionspnlDisconnectOnly.setDisable(true);
+			menuItemFileDisconnect.setDisable(true);
+		}
+
+		else if (chatcontroller.isConnectedAndLoggedIn()) {
+			btnOptionspnlDisconnectOnly.setDisable(false);
+			menuItemFileDisconnect.setDisable(false);
+		}
+
+		btnOptionspnlDisconnectOnly.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-				closeWindowEvent(null);
+//				closeWindowEvent(null);
+//				System.out.println("UI: disc requested");
+				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
+
+				txtFldCallSign.setDisable(false);
+				txtFldPassword.setDisable(false);
+				txtFldName.setDisable(false);
+				txtFldLocator.setDisable(false);
+				choiceBxChatChategory.setDisable(false);
+				btnOptionspnlConnect.setDisable(false);
+				btnOptionspnlDisconnect.setDisable(false);
+				btnOptionspnlDisconnectOnly.setDisable(true);
 
 			}
 		});
@@ -3491,6 +3565,10 @@ public class Kst4ContestApplication extends Application {
 				try {
 					chatcontroller.execute(); // TODO:THAT IS THE MAIN POINT WHERE THE CHAT WILL BE STARTED...MUST CATCH
 												// Passwordfailedexc in future
+
+					btnOptionspnlDisconnectOnly.setDisable(false);
+					menuItemFileDisconnect.setDisable(false);
+
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

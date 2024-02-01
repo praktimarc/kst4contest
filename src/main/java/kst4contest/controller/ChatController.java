@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
@@ -92,7 +93,8 @@ public class ChatController {
 
 	/**
 	 * Handles the disconnect of either the chat (Case DISCONNECTONLY) or the
-	 * complete application life including all threads (case CLOSEALL)
+	 * complete application life including all threads (case CLOSEALL)<br/><br/>
+	 * Look in ApplicationConstants for the DISCSTRINGS
 	 * 
 	 * @param action: "CLOSEALL" or "DISCONNECTONLYCHAT", on application close event
 	 *                (Settings Window closed), Disconnect on Disconnect-Button
@@ -102,7 +104,56 @@ public class ChatController {
 
 		this.setDisconnectionPerformedByUser(true);
 
-		if (action.equals("CLOSEALL")) {
+		try {
+			/**
+			 * Kill UCX packetreader by sending poison pill to the reader thread
+			 */
+			DatagramSocket dsocket;
+
+			String host = "255.255.255.255";
+			int port = chatPreferences.getLogsynch_ucxUDPWkdCallListenerPort();
+			InetAddress address;
+
+			address = InetAddress.getByName("255.255.255.255");
+			DatagramPacket packet = new DatagramPacket(ApplicationConstants.DISCONNECT_RDR_POISONPILL.getBytes(), ApplicationConstants.DISCONNECT_RDR_POISONPILL.length(), address, port);
+			dsocket = new DatagramSocket();
+			dsocket.setBroadcast(true);
+			dsocket.send(packet);
+//			dsocket.send(packet);
+			dsocket.close();
+
+			readUDPbyUCXThread.interrupt();
+
+		} catch (Exception error) {
+			System.out.println("Chatcrontroller, ERROR: unable to send poison pill to ucxThread");
+		}
+
+		try {
+			/**
+			 * Kill AS packetreader by sending poison pill to the reader thread
+			 */
+			DatagramSocket dsocket;
+
+			String host = "255.255.255.255";
+			int port = chatPreferences.getAirScout_asCommunicationPort();
+			InetAddress address;
+
+			address = InetAddress.getByName("255.255.255.255");
+			DatagramPacket packet = new DatagramPacket(ApplicationConstants.DISCONNECT_RDR_POISONPILL.getBytes(), ApplicationConstants.DISCONNECT_RDR_POISONPILL.length(), address, port);
+			dsocket = new DatagramSocket();
+			dsocket.setBroadcast(true);
+			dsocket.send(packet);
+			dsocket.close();
+		} catch (Exception error) {
+			System.out.println("Chatcrontroller, ERROR: unable to send poison pill to ucxThread");
+		}
+
+
+		if (action.equals(ApplicationConstants.DISCSTRING_DISCONNECT_AND_CLOSE)) {
+
+			this.lst_chatMemberList.clear();;
+			this.lst_clusterMemberList.clear();
+
 			this.setDisconnected(true);
 			this.setConnectedAndLoggedIn(false);
 			this.setConnectedAndNOTLoggedIn(false);
@@ -120,9 +171,8 @@ public class ChatController {
 			messageRXBus.add(killThreadPoisonPillMsg); //kills messageprocessor
 			messageTXBus.add(killThreadPoisonPillMsg); //kills writethread
 
-			writeThread.interrupt();
-
-			readThread.interrupt();
+//			writeThread.interrupt();
+//			readThread.interrupt();
 
 			beaconTimer.purge();
 			beaconTimer.cancel();
@@ -160,27 +210,30 @@ public class ChatController {
 				// TODO Auto-generated catch block
 				e2.printStackTrace();
 			}
-		} else if (action.equals("JUSTDSICCAUSEPWWRONG")){
+		} else if (action.equals(ApplicationConstants.DISCSTRING_DISCONNECTONLY)){
+
+			this.lst_chatMemberList.clear();;
+			this.lst_clusterMemberList.clear();
+
 
 			this.setDisconnected(true);
 			this.setConnectedAndLoggedIn(false);
-			this.setConnectedAndNOTLoggedIn(true);
+			this.setConnectedAndNOTLoggedIn(false);
 			// disconnect telnet and kill all sockets and connections
-			
+
 			keepAliveTimer.cancel();
 			keepAliveTimer.purge();
-			
+
 			ChatMessage killThreadPoisonPillMsg = new ChatMessage();
 			killThreadPoisonPillMsg.setMessageText("POISONPILL_KILLTHREAD");
 			killThreadPoisonPillMsg.setMessageSenderName("POISONPILL_KILLTHREAD");
-			
+
 			messageRXBus.clear();
 			messageTXBus.clear();
 			messageRXBus.add(killThreadPoisonPillMsg); //kills messageprocessor
 			messageTXBus.add(killThreadPoisonPillMsg); //kills writethread
 
 			writeThread.interrupt();
-
 			readThread.interrupt();
 
 			beaconTimer.purge();
@@ -193,24 +246,34 @@ public class ChatController {
 			userActualizationtimer.purge();
 			userActualizationtimer.cancel();
 
-			userActualizationtimer.purge();
-			userActualizationtimer.cancel();
-
 //			consoleReader.interrupt();
-			messageProcessor.interrupt();
-			
-			readUDPbyUCXThread.interrupt();
-			
-			airScoutUDPReaderThread.interrupt();
-			
-			dbHandler.closeDBConnection();
+//			messageProcessor.interrupt();
+
+			readUDPbyUCXThread.interrupt(); //need poisonpill?
+			airScoutUDPReaderThread.interrupt(); //need poisonpill?
+
+//			dbHandler.closeDBConnection();
+//			this.dbHandler = null;
+
+
+			try {
+
+				if (socket != null) {
+					socket.close();
+				}
+
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (Exception e2) {
+				// TODO Auto-generated catch block
+				e2.printStackTrace();
+			}
 
 		}
 
 	}
 
-	// private String userName = "DO5AMF";
-//	private String password = "uxskezcj";
 	private String userName;
 	private String password;
 	private String showedName;
@@ -219,8 +282,8 @@ public class ChatController {
 	private String chatState;
 
 	private String hostname = "109.90.0.130";
-	private String praktiKSTVersion = "wtKST 3.1.4.6";
-//	private String praktiKSTVersion = "praktiKST 1.0";
+//	private String praktiKSTVersion = "wtKST 3.1.4.6";
+	private String praktiKSTVersion = "praktiKST 0.9b";
 	private String praktiKSTVersionInfo = "2022-10 - 2022-12\ndeveloped by DO5AMF, Marc\nContact: praktimarc@gmail.com\nDonations via paypal are welcome";
 
 	private int port = 23001; // kst4contest.test 4 23001
@@ -560,6 +623,8 @@ public class ChatController {
 //		getLst_toAllMessageList().add(Test);
 
 		try {
+			setDisconnectionPerformedByUser(false);
+
 			dbHandler = new DBController();
 
 			messageRXBus = new LinkedBlockingQueue<ChatMessage>();
@@ -580,7 +645,7 @@ public class ChatController {
 			writeThread.setName("Writethread-telnetwriter");
 			writeThread.start();
 
-			readUDPbyUCXThread = new ReadUDPbyUCXMessageThread(12060, this);
+			readUDPbyUCXThread = new ReadUDPbyUCXMessageThread(chatPreferences.getLogsynch_ucxUDPWkdCallListenerPort(), this);
 			readUDPbyUCXThread.setName("readUDPbyUCXThread");
 			readUDPbyUCXThread.start();
 
@@ -588,7 +653,7 @@ public class ChatController {
 			messageProcessor.setName("messagebusManagementThread");
 			messageProcessor.start();
 
-			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(9872, this, "AS", "KST");
+			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(chatPreferences.getAirScout_asCommunicationPort(), this, "AS", "KST");
 			airScoutUDPReaderThread.setName("airscoutudpreaderThread");
 			airScoutUDPReaderThread.start();
 
@@ -639,7 +704,7 @@ public class ChatController {
 
 				@Override
 				public void run() {
-//					System.out.println("[Chatcontroller, info: ] periodical socketcheck");
+					System.out.println("[Chatcontroller, info: ] periodical socketcheck");
 
 					Thread.currentThread().setName("SocketcheckTimer");
 
@@ -652,13 +717,6 @@ public class ChatController {
 							chatController.setConnectedAndLoggedIn(false);
 							chatController.getLst_chatMemberList().clear();
 
-//							messageProcessor.interrupt();
-//							chatController.getReadThread().interrupt();
-//							chatController.getWriteThread().interrupt();
-
-//							keepAliveTimer.wait();
-
-//							chatController.getstat
 							System.out.println("[Chatcontroller, Warning: ] Socket closed or disconnected");
 						
 							ChatMessage killThreadPoisonPillMsg = new ChatMessage();

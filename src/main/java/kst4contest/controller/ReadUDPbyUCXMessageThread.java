@@ -9,6 +9,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import kst4contest.ApplicationConstants;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -43,7 +44,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		super.interrupt();
 		try {
 			if (this.socket != null) {
-				
+				System.out.println(">>>>>>>>>>>>>>ReadUdpbyUCS: closing socket");
 				this.socket.close();
 			}
 		} catch (Exception e) {
@@ -54,6 +55,8 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 	
 	public void run() {
 
+
+
 		Thread.currentThread().setName("ReadUDPByUCXLogThread");
 		
 		DatagramSocket socket = null;
@@ -63,7 +66,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 		try {
 			socket = new DatagramSocket(12060);
-			socket.setSoTimeout(11000); //TODO try for end properly
+			socket.setSoTimeout(2000); //TODO try for end properly
 		}
 		
 		catch (SocketException e) {
@@ -75,22 +78,32 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			
 			boolean timeOutIndicator = false;
 			
-			if (this.client.isDisconnectionPerformedByUser()) {
-				break;//TODO: what if it´s not the finally closage but a band channel change?
-			}
 //			packet = new DatagramPacket(buf, buf.length); //TODO: Changed that due to memory leak, check if all works (seems like that)
 //    		 DatagramPacket packet  = new DatagramPacket(SRPDefinitions.BYTE_BUFFER_MAX_LENGTH); //TODO: Changed that due to memory leak, check if all works (seems like that)
 			try {
 				socket.receive(packet);
+
 			} catch (SocketTimeoutException e2) {
-				
+
 				timeOutIndicator = true;
 				// this will catch the repeating Sockettimeoutexception...nothing to do
 //				e2.printStackTrace();
-			} 
+			}
 			catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} catch (NullPointerException nE) {
+				// TODO Auto-generated catch block
+				nE.printStackTrace();
+				System.out.println("ReadUdpByUCXTH: Socket not ready");
+
+				try {
+					socket = new DatagramSocket(12060);
+					socket.setSoTimeout(2000);
+				} catch (SocketException e) {
+					throw new RuntimeException(e);
+				}
+
 			}
 
 			InetAddress address = packet.getAddress();
@@ -99,9 +112,16 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			String received = new String(packet.getData(), packet.getOffset(), packet.getLength());
 			received = received.trim();
 
-//			System.out.println("recvudpucx");
+			if (this.client.isDisconnectionPerformedByUser()) {
+				break;//TODO: what if it´s not the finally closage but a band channel change?
+			}
 
-			
+			if (received.contains(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
+				System.out.println("ReadUdpByUCX, Info: got poison, now dieing....");
+				timeOutIndicator = true;
+				break;
+			}
+
 			if (!timeOutIndicator) {
 				processUCXUDPMessage(received);
 			} else {
