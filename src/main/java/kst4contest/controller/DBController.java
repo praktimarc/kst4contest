@@ -29,8 +29,6 @@ public class DBController {
 //    private static final String DB_PATH = System.getProperty("praktiKST.db");
 	private static String DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
 
-
-
 /*
 	static {
 		try {

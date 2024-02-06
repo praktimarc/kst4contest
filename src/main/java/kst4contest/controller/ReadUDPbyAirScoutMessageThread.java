@@ -116,6 +116,11 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 
 			if (received.contains(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
 				System.out.println("ReadUdpByASMsgTh, Info: got poison, now dieing....");
+				try {
+					terminateConnection();
+				} catch (Exception e) {
+					System.out.println("ASUDPRDR: catched error " + e.getMessage());
+				}
 				break;
 			}
 
@@ -277,9 +282,13 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 		return apInfo;
 	}
 
-	public boolean terminateConnection() throws IOException {
+	public boolean terminateConnection() {
 
-		this.socket.close();
+		try {
+			this.socket.close();
+		} catch (Exception e) {
+			System.out.println("udpbyas: catched " + e.getMessage());
+		}
 
 		return true;
 	}

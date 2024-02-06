@@ -130,12 +130,15 @@ public class ChatPreferences {
 	 * Station preferences
 	 */
 
+	boolean loginAFKState = false; //always start as here
 	String loginCallSign = "do5amf";
 	String loginPassword = "";
 	String loginName = "Marc";
 	String loginLocator = "jn49fk";
+
 	ChatCategory loginChatCategory = new ChatCategory(2);
 	IntegerProperty actualQTF = new SimpleIntegerProperty(360); // will be updated by user at runtime!
+
 
 	/**
 	 * Log Synch preferences
@@ -206,6 +209,13 @@ public class ChatPreferences {
 //	}
 
 
+	public boolean isLoginAFKState() {
+		return loginAFKState;
+	}
+
+	public void setLoginAFKState(boolean loginAFKState) {
+		this.loginAFKState = loginAFKState;
+	}
 
 	public String getLoginCallSign() {
 		return loginCallSign;
@@ -302,8 +312,7 @@ public class ChatPreferences {
 
 	/**
 	 * actualQTF, int, QTF in degrees
-	 * 
-	 * @param actualQTF, int, QTF in degrees
+	 *
 	 */
 
 	public StringProperty getMYQRG() {

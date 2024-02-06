@@ -11,6 +11,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ObservableStringValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import kst4contest.ApplicationConstants;
@@ -514,7 +516,6 @@ public class ChatController {
 
 //		this.category = ChatCategory.VUHF;
 		this.userName = ownChatMemberObject.getName();
-//		this.password = "uxskezcj";
 		this.hostname = "www.on4kst.info";
 		this.port = port;
 	}
@@ -522,11 +523,12 @@ public class ChatController {
 	/**
 	 * This constructor is used by the Main()-Class of the praktiKST javaFX-gui.
 	 * 
-	 * @param setCategory
+	 *
 	 * @param setOwnChatMemberObject
 	 */
 	public ChatController(ChatMember setOwnChatMemberObject) {
 		super();
+		dbHandler = new DBController();
 
 		chatPreferences = new ChatPreferences();
 		chatPreferences.readPreferencesFromXmlFile(); // set the praktikst Prefs by file or default if file is corrupted
@@ -610,6 +612,12 @@ public class ChatController {
 
 	public void execute() throws InterruptedException, IOException {
 
+//		messageBus = new SimpleStringProperty("_____est connection");
+
+//		ObservableStringValue test = new SimpleStringProperty("test");
+
+//		eventBus = test;
+
 		chatController = this;
 
 		// This block constructs a sample message
@@ -625,7 +633,7 @@ public class ChatController {
 		try {
 			setDisconnectionPerformedByUser(false);
 
-			dbHandler = new DBController();
+//			dbHandler = new DBController(); //TODO: old place to instantiuate the dbcontroller
 
 			messageRXBus = new LinkedBlockingQueue<ChatMessage>();
 			messageTXBus = new LinkedBlockingQueue<ChatMessage>();
@@ -942,10 +950,10 @@ public class ChatController {
 				}
 
 				/**
-				 * 
+				 *
 				 * This creates the list of the worked stations which had to be displayed in the
 				 * settings menu. TODO: May make this List editable
-				 * 
+				 *
 				 */
 
 				getWorkedDataFromDb.forEach((key, value) -> {
@@ -963,7 +971,7 @@ public class ChatController {
 				/* Try the not exceptional way to iterate */
 //				for (ChatMember chatMemberAvl : new ArrayList<ChatMember>(getLst_chatMemberList())) {
 //					if (getWorkedDataFromDb.containsKey(chatMemberAvl.getCallSign())) {
-//						
+//
 //					}
 //				}
 

@@ -11,11 +11,13 @@ import java.util.regex.Pattern;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.ObservableList;
+import kst4contest.ApplicationConstants;
 import kst4contest.model.AirPlaneReflectionInfo;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ClusterMessage;
 import kst4contest.utils.PlayAudioUtils;
+import kst4contest.view.Kst4ContestApplication;
 
 /**
  * 
@@ -900,6 +902,10 @@ public class MessageBusManagementThread extends Thread {
 					client.getLst_toMeMessageList().add(pwErrorMsg);
 					client.getLst_toAllMessageList().add(pwErrorMsg);
 				}
+
+//				Kst4ContestApplication.alertWindowEvent("Password was wrong. Pse check!");
+
+				client.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
 				
 //				this.client.disconnect();
 			}
