@@ -45,11 +45,11 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		try {
 			if (this.socket != null) {
 				System.out.println(">>>>>>>>>>>>>>ReadUdpbyUCS: closing socket");
-				this.socket.close();
+				terminateConnection();
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println("UCXUDPRDR: catched error " + e.getMessage());
 		}
 	}
 	
@@ -97,11 +97,26 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 				nE.printStackTrace();
 				System.out.println("ReadUdpByUCXTH: Socket not ready");
 
+
+
 				try {
-					socket = new DatagramSocket(12060);
+					socket = new DatagramSocket(client.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort());
 					socket.setSoTimeout(2000);
 				} catch (SocketException e) {
-					throw new RuntimeException(e);
+					System.out.println("[ReadUDPByUCSMsgTH, Error]: socket in use or something:");
+					e.printStackTrace();
+
+					try {
+						socket = new DatagramSocket(null);
+						socket.setReuseAddress(true);
+						socket.bind(new InetSocketAddress(client.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort()));
+						socket.receive(packet);
+						socket.setSoTimeout(3000);
+					} catch (Exception ex) {
+						System.out.println("ReadUDPByUCXMsgTh: Could not solve that. Program Restart needed.");
+						throw new RuntimeException(ex);
+					}
+
 				}
 
 			}
@@ -112,14 +127,18 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			String received = new String(packet.getData(), packet.getOffset(), packet.getLength());
 			received = received.trim();
 
-			if (this.client.isDisconnectionPerformedByUser()) {
-				break;//TODO: what if it´s not the finally closage but a band channel change?
-			}
+
+//			System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<recv " + received);
 
 			if (received.contains(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
 				System.out.println("ReadUdpByUCX, Info: got poison, now dieing....");
+				socket.close();
 				timeOutIndicator = true;
 				break;
+			}
+
+			if (this.client.isDisconnectionPerformedByUser()) {
+				break;//TODO: what if it´s not the finally closage but a band channel change?
 			}
 
 			if (!timeOutIndicator) {

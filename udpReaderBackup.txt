@@ -3,3 +3,6 @@
 DM5M;Marc;JN49FL;StringProperty [value: 144.243 ];true;true;false;false;false;false;false;false
 DM5M;Marc;JO51JL;StringProperty [value: null];true;true;false;false;false;false;false;false
 DM5M;Marc;JO51JL;StringProperty [value: null];true;true;true;false;false;false;false;false
+DM5M;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0GEB;Marc;JO51IJ;StringProperty [value: 144.174 ];true;true;false;false;false;false;false;false
+DF0GEB;Marc;JO51IJ;StringProperty [value: 144.174 ];true;true;true;false;false;false;false;false

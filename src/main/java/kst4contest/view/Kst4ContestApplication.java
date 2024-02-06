@@ -5,10 +5,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
 
+import javafx.beans.value.ObservableStringValue;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import kst4contest.ApplicationConstants;
 import kst4contest.controller.ChatController;
+import kst4contest.controller.DBController;
 import kst4contest.controller.Utils4KST;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -74,6 +76,9 @@ import kst4contest.model.ClusterMessage;
 
 
 public class Kst4ContestApplication extends Application {
+//	private static final Kst4ContestApplication dbcontroller = new DBController();
+
+
 
 	String chatState;
 	ChatController chatcontroller;
@@ -1632,8 +1637,49 @@ public class Kst4ContestApplication extends Application {
 		fileMenu.getItems().add(m10);
 
 		Menu optionsMenu = new Menu("Options");
-		MenuItem options1 = new MenuItem("Set QRG as name in Chat");
+		menuItemOptionsSetFrequencyAsName = new MenuItem("Set QRG as name in Chat");
+		menuItemOptionsSetFrequencyAsName.setDisable(true);
+		menuItemOptionsSetFrequencyAsName.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+
+				ChatMessage sendMe = new ChatMessage();
+				sendMe.setMessageDirectedToServer(false);
+				sendMe.setMessageText("/SETNAME " + chatcontroller.getChatPreferences().getMYQRG().getValue());
+
+				chatcontroller.getMessageTXBus().add(sendMe);
+
+			}
+		});
+
+
+		menuItemOptionsAwayBack = new MenuItem("Show me as away in chat");
+
+
 		MenuItem options10 = new MenuItem("Show options");
+
+		menuItemOptionsAwayBack.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+
+				ChatMessage sendMe = new ChatMessage();
+				sendMe.setMessageDirectedToServer(false);
+
+				if (chatcontroller.getChatPreferences().isLoginAFKState()) {
+
+					menuItemOptionsAwayBack.setText("Show me as AWAY FROM chat!");
+					chatcontroller.getChatPreferences().setLoginAFKState(false);
+					sendMe.setMessageText("/BACK");
+
+				} else {
+
+					menuItemOptionsAwayBack.setText("Show me as ACTIVE in chat!");
+					chatcontroller.getChatPreferences().setLoginAFKState(true);
+					sendMe.setMessageText("/AWAY");
+				}
+
+				chatcontroller.getMessageTXBus().add(sendMe);
+
+			}
+		});
 		options10.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 				if (settingsStage.isShowing()) {
@@ -1644,7 +1690,7 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-		optionsMenu.getItems().addAll(options1, options10);
+		optionsMenu.getItems().addAll(menuItemOptionsSetFrequencyAsName, menuItemOptionsAwayBack, options10);
 
 		Menu macroMenu = new Menu("Macros");
 
@@ -1782,7 +1828,11 @@ public class Kst4ContestApplication extends Application {
 
 	}
 
+//	SimpleStringProperty messageBusOfChatCtrl = messageBus;
 	MenuItem menuItemFileDisconnect;
+	MenuItem menuItemOptionsAwayBack;
+
+	MenuItem menuItemOptionsSetFrequencyAsName;
 	TextField txt_chatMessageUserInput = new TextField();
 	TextField txt_ownqrg = new TextField();
 	TextField txt_myQTF = new TextField();
@@ -1794,6 +1844,8 @@ public class Kst4ContestApplication extends Application {
 	Stage clusterAndQSOMonStage;
 
 	Stage settingsStage;
+
+
 
 	/**
 	 * Generates buttons out of pre made Strings, one button per given string in the
@@ -2217,10 +2269,6 @@ public class Kst4ContestApplication extends Application {
 //		ChatCategory category = new ChatCategory(0); //TODO: get the Category out of the preferences-object
 
 		ChatMember ownChatMemberObject = new ChatMember();
-//		ownChatMemberObject.setCallSign("DM5M");
-//		ownChatMemberObject.setPassword("antennen");
-//		ownChatMemberObject.setName("QRO 15dBd");
-//		ownChatMemberObject.setQra("JO51IJ");
 
 		chatcontroller = new ChatController(ownChatMemberObject); // instantiate the Chatcontroller with the user object
 
@@ -2411,7 +2459,12 @@ public class Kst4ContestApplication extends Application {
 						}
 
 						else {
-							chatState = "DISCONNECTED, CHECK YOUR INTERNET-CONNECTION!";
+							chatState = "DISCONNECTED!";
+							chatcontroller.getChatPreferences().setChatState(chatState);
+						}
+						if (chatcontroller.isDisconnected()) {
+							chatState = "DISCONNECTED!";
+							chatcontroller.getChatPreferences().setChatState(chatState);
 						}
 
 						primaryStage.setTitle(chatcontroller.getChatPreferences().getChatState());
@@ -3499,20 +3552,24 @@ public class Kst4ContestApplication extends Application {
 		Button btnOptionspnlDisconnectOnly = new Button("Disconnect");
 		btnOptionspnlDisconnectOnly.setDisable(true);
 		menuItemFileDisconnect.setDisable(true);
+		menuItemOptionsAwayBack.setDisable(true);
 
 		if (chatcontroller.isDisconnected()) {
 
 			btnOptionspnlDisconnectOnly.setDisable(true);
 			menuItemFileDisconnect.setDisable(true);
+			menuItemOptionsAwayBack.setDisable(true);
 
 		} else if (chatcontroller.isConnectedAndNOTLoggedIn()) {
 			btnOptionspnlDisconnectOnly.setDisable(true);
 			menuItemFileDisconnect.setDisable(true);
+			menuItemOptionsAwayBack.setDisable(true);
 		}
 
 		else if (chatcontroller.isConnectedAndLoggedIn()) {
 			btnOptionspnlDisconnectOnly.setDisable(false);
 			menuItemFileDisconnect.setDisable(false);
+			menuItemOptionsAwayBack.setDisable(false);
 		}
 
 		btnOptionspnlDisconnectOnly.setOnAction(new EventHandler<ActionEvent>() {
@@ -3530,7 +3587,8 @@ public class Kst4ContestApplication extends Application {
 				btnOptionspnlConnect.setDisable(false);
 				btnOptionspnlDisconnect.setDisable(false);
 				btnOptionspnlDisconnectOnly.setDisable(true);
-
+				menuItemOptionsSetFrequencyAsName.setDisable(true);
+				menuItemOptionsAwayBack.setDisable(true);
 			}
 		});
 
@@ -3563,11 +3621,16 @@ public class Kst4ContestApplication extends Application {
 						+ choiceBxChatChategory.getSelectionModel().getSelectedItem());
 
 				try {
+
+
+
 					chatcontroller.execute(); // TODO:THAT IS THE MAIN POINT WHERE THE CHAT WILL BE STARTED...MUST CATCH
 												// Passwordfailedexc in future
 
 					btnOptionspnlDisconnectOnly.setDisable(false);
 					menuItemFileDisconnect.setDisable(false);
+					menuItemOptionsAwayBack.setDisable(false);
+					menuItemOptionsSetFrequencyAsName.setDisable(false);
 
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
@@ -3585,7 +3648,8 @@ public class Kst4ContestApplication extends Application {
 				choiceBxChatChategory.setDisable(true);
 				btnOptionspnlConnect.setDisable(true);
 				btnOptionspnlDisconnect.setDisable(false);
-
+				chatcontroller.setConnectedAndLoggedIn(true);
+				chatcontroller.setDisconnected(false);
 			}
 		});
 
@@ -3688,6 +3752,24 @@ public class Kst4ContestApplication extends Application {
 		}
 //        }
 	}
+
+	/**
+	 * Informs a user about a warning, shows given String in simple alertwindow
+	 *
+	 */
+	public static void alertWindowEvent(String warning) {
+		System.out.println("Alert due to ... " + warning);
+
+//        if(storageModel.dataSetChanged()) {  // if the dataset has changed, alert the user with a popup
+		Alert alert = new Alert(Alert.AlertType.WARNING);
+		alert.getButtonTypes().remove(ButtonType.OK);
+//		alert.getButtonTypes().add(ButtonType.CANCEL);
+//		alert.getButtonTypes().add(ButtonType.YES);
+		alert.setTitle("WARNING");
+		alert.setContentText(String.format(warning));
+
+	}
+
 
 	public static void main(String[] args) {
 		launch(args);
