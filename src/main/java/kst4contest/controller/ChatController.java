@@ -16,11 +16,7 @@ import javafx.beans.value.ObservableStringValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import kst4contest.ApplicationConstants;
-import kst4contest.model.ChatCategory;
-import kst4contest.model.ChatMember;
-import kst4contest.model.ChatMessage;
-import kst4contest.model.ChatPreferences;
-import kst4contest.model.ClusterMessage;
+import kst4contest.model.*;
 import kst4contest.utils.PlayAudioUtils;
 
 import java.io.*;
@@ -45,6 +41,7 @@ public class ChatController {
 	 */
 //	private int category = ChatCategory.VUHF;
 
+			private UpdateInformation updateInformation;
 	private ChatPreferences chatPreferences;
 
 	private ChatCategory category;
@@ -59,6 +56,14 @@ public class ChatController {
 
 	public void setDisconnectionPerformedByUser(boolean disconnectionPerformedByUser) {
 		this.disconnectionPerformedByUser = disconnectionPerformedByUser;
+	}
+
+	public UpdateInformation getUpdateInformation() {
+		return updateInformation;
+	}
+
+	public void setUpdateInformation(UpdateInformation updateInformation) {
+		this.updateInformation = updateInformation;
 	}
 
 	public String getChatState() {
@@ -284,7 +289,6 @@ public class ChatController {
 	private String chatState;
 
 	private String hostname = "109.90.0.130";
-//	private String praktiKSTVersion = "wtKST 3.1.4.6";
 	private String praktiKSTVersion = "praktiKST 0.9b";
 	private String praktiKSTVersionInfo = "2022-10 - 2022-12\ndeveloped by DO5AMF, Marc\nContact: praktimarc@gmail.com\nDonations via paypal are welcome";
 
@@ -506,9 +510,9 @@ public class ChatController {
 	}
 
 	public ChatController() {
-		super();
 
-		category = new ChatCategory(2);
+		super();
+category = new ChatCategory(2);
 		ownChatMemberObject = new ChatMember();
 		ownChatMemberObject.setCallSign(userName);
 		ownChatMemberObject.setName(showedName);
@@ -528,6 +532,13 @@ public class ChatController {
 	 */
 	public ChatController(ChatMember setOwnChatMemberObject) {
 		super();
+
+		UpdateChecker checkForUpdates = new UpdateChecker(this);
+
+		if (checkForUpdates.downloadLatestVersionInfoXML()) {
+			updateInformation = checkForUpdates.parseUpdateXMLFile();
+		};
+
 		dbHandler = new DBController();
 
 		chatPreferences = new ChatPreferences();

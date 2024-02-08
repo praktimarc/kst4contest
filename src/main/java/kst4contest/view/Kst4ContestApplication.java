@@ -6,6 +6,7 @@ import java.net.URISyntaxException;
 import java.util.*;
 
 import javafx.beans.value.ObservableStringValue;
+import javafx.scene.control.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import kst4contest.ApplicationConstants;
@@ -28,31 +29,10 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
-import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.SelectionMode;
-import javafx.scene.control.Separator;
-import javafx.scene.control.SplitPane;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.control.TableCell;
-import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableColumn.CellEditEvent;
-import javafx.scene.control.TableView;
 import javafx.scene.control.TableView.TableViewSelectionModel;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -1742,7 +1722,7 @@ public class Kst4ContestApplication extends Application {
 		help5.setDisable(true);
 		MenuItem help6 = new MenuItem("Contact the author using default mail app");
 		MenuItem help8 = new MenuItem("Join kst4Contest newsgroup");
-		MenuItem help9 = new MenuItem("Download the changelog / roadmap");
+//		MenuItem help9 = new MenuItem("Download the changelog / roadmap");
 
 		// Changelog
 		// https://e.pcloud.link/publink/show?code=XZwAoWZIap9DYqDlhhwncqAxLbU6STOh2PV
@@ -1752,12 +1732,7 @@ public class Kst4ContestApplication extends Application {
 
 				getHostServices().showDocument("https://www.paypal.com/paypalme/do5amf");
 
-//				Alert a = new Alert(AlertType.INFORMATION);
-//		        
-//		        a.setTitle("About this software");
-//		        a.setHeaderText("Who made it and how can you support it?");
-//		        a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
-//		        a.show();
+
 			}
 		});
 
@@ -1766,12 +1741,6 @@ public class Kst4ContestApplication extends Application {
 
 				getHostServices().showDocument("http://www.x08.de");
 
-//				Alert a = new Alert(AlertType.INFORMATION);
-//		        
-//		        a.setTitle("About this software");
-//		        a.setHeaderText("Who made it and how can you support it?");
-//		        a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
-//		        a.show();
 			}
 		});
 
@@ -1791,14 +1760,14 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-		help9.setOnAction(new EventHandler<ActionEvent>() {
-			public void handle(ActionEvent event) {
-
-				getHostServices()
-						.showDocument("https://e.pcloud.link/publink/show?code=XZwAoWZIap9DYqDlhhwncqAxLbU6STOh2PV");
-
-			}
-		});
+//		help9.setOnAction(new EventHandler<ActionEvent>() {
+//			public void handle(ActionEvent event) {
+//
+//				getHostServices()
+//						.showDocument("https://e.pcloud.link/publink/show?code=XZwAoWZIap9DYqDlhhwncqAxLbU6STOh2PV");
+//
+//			}
+//		});
 
 		MenuItem help10 = new MenuItem("About...");
 		help10.setOnAction(new EventHandler<ActionEvent>() {
@@ -1807,14 +1776,14 @@ public class Kst4ContestApplication extends Application {
 				Alert a = new Alert(AlertType.INFORMATION);
 
 				a.setTitle("About kst4contest");
-				a.setHeaderText("ON4KST Chatclient by DO5AMF");
+				a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER + ": ON4KST Chatclient by DO5AMF");
 				a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
 				a.show();
 			}
 		});
 
 //		helpMenu.getItems().add(help1);
-		helpMenu.getItems().addAll(help2, help4, help5, help6, help8, help9, help10);
+		helpMenu.getItems().addAll(help2, help4, help5, help6, help8, help10);
 
 //		helpMenu.getItems().add(help2);
 //		helpMenu.getItems().add(help4);
@@ -1842,6 +1811,8 @@ public class Kst4ContestApplication extends Application {
 	FlowPane flwPane_textSnippets;
 
 	Stage clusterAndQSOMonStage;
+
+	Stage stage_updateStage;
 
 	Stage settingsStage;
 
@@ -2675,6 +2646,9 @@ public class Kst4ContestApplication extends Application {
 			e.printStackTrace();
 		}
 
+		/**
+		 * Window Cluster & qso of the other
+		 */
 		clusterAndQSOMonStage = new Stage();
 //		clusterAndQSOMonStage.initStyle(StageStyle.UTILITY);
 		clusterAndQSOMonStage.setTitle("Cluster & QSO of the other");
@@ -2686,11 +2660,104 @@ public class Kst4ContestApplication extends Application {
 		clusterAndQSOMonStage.setScene(new Scene(pnl_directedMSGWin, 700, 500));
 		clusterAndQSOMonStage.show();
 
+		/**
+		 * end Window Cluster & qso of the other
+		 */
+
+		/**
+		 * Window updates
+		 */
+		stage_updateStage = new Stage();
+//		clusterAndQSOMonStage.initStyle(StageStyle.UTILITY);
+		stage_updateStage.setTitle("Update information");
+//		SplitPane pnl_directedMSGWin = new SplitPane();
+//		apnl_directedMSGWin.setOrientation(Orientation.VERTICAL);
+
+//		pnl_directedMSGWin.getItems().addAll(initDXClusterTable(), initChatToOtherMSGTable());
+
+		stage_updateStage.setAlwaysOnTop(true);
+
+		Label lblUpdateInfo = new Label("Update aviable!");
+		Label lblUpdateInfo2 = new Label("Your Software version: ");
+		Label lblUpdateInfo3 = new Label("Newest Software version: ");
+		Label lblUpdateInfoChanges = new Label("Major Changes: ");
+		Label lblUpdateInfoAdminMessage = new Label("Admin Message: ");
+		Label lblUpdateInfoDownload = new Label("Downloadable here: " );
+
+
+		TreeView treeView = new TreeView();
+
+		GridPane upd_gridPaneUpd = new GridPane();
+
+		upd_gridPaneUpd.setPadding(new Insets(10, 10, 10, 10));
+		upd_gridPaneUpd.setVgap(5);
+		upd_gridPaneUpd.setHgap(5);
+
+
+		VBox vbxUpdateWindow = new VBox();
+		vbxUpdateWindow.setSpacing(30);
+
+
+		vbxUpdateWindow.getChildren().add(upd_gridPaneUpd);
+		upd_gridPaneUpd.add(lblUpdateInfo, 0,0,1,1);
+		upd_gridPaneUpd.add(lblUpdateInfo2, 0,1,1,1);
+		upd_gridPaneUpd.add(new Label("kst4Contest " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER+""), 1,1,1,1);
+		upd_gridPaneUpd.add(lblUpdateInfo3, 0,2,1,1);
+		upd_gridPaneUpd.add(new Label("kst4Contest " + chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer()+""), 1,2,1,1);
+		upd_gridPaneUpd.add(lblUpdateInfoChanges, 0,3,1,1);
+		upd_gridPaneUpd.add(new Label(chatcontroller.getUpdateInformation().getMajorChanges()), 1,3,1,1);
+		upd_gridPaneUpd.add(lblUpdateInfoAdminMessage, 0,4,1,1);
+		upd_gridPaneUpd.add(new Label(chatcontroller.getUpdateInformation().getAdminMessage()), 1,4,1,1);
+		upd_gridPaneUpd.add(lblUpdateInfoDownload, 0,5,1,1);
+
+		Hyperlink link = new Hyperlink("Download here");
+		link.setOnAction(e -> {
+			getHostServices().showDocument(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
+//			System.out.println("The Hyperlink was clicked!");
+		});
+
+//		TextField upd_txtfldUpdateDownloadLink = new TextField(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
+//		upd_txtfldUpdateDownloadLink.setEditable(false);
+
+		upd_gridPaneUpd.add(link, 1,5,1,1);
+
+
+
+//		vbxUpdateWindow.getChildren().addAll(lblUpdateInfo, lblUpdateInfo2, lblUpdateInfo3, lblUpdateInfoChanges, lblUpdateInfoAdminMessage, lblUpdateInfoDownload);
+		vbxUpdateWindow.getChildren().add(treeView);
+
+		TreeItem rootItem = new TreeItem(ApplicationConstants.APPLICATION_NAME);
+		TreeItem latestVersionNumber = new TreeItem<>(chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer());
+		TreeItem adminMessage = new TreeItem<>(chatcontroller.getUpdateInformation().getAdminMessage());
+		TreeItem majorChanges = new TreeItem<>(chatcontroller.getUpdateInformation().getMajorChanges());
+		TreeItem latestVersionPathOnWebserver = new TreeItem<>(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
+
+
+
+		rootItem.getChildren().add(latestVersionNumber);
+		rootItem.getChildren().add(adminMessage);
+		rootItem.getChildren().add(majorChanges);
+		rootItem.getChildren().add(latestVersionPathOnWebserver);
+
+		treeView.setRoot(rootItem);
+
+		stage_updateStage.setScene(new Scene(vbxUpdateWindow, 640, 480));
+
+		if (chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() > ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER) {
+			stage_updateStage.show();
+		} else {
+			//nothing to do
+		}
+
+		/**
+		 * end Window Update
+		 */
+
+
 		/*****************************************************************************
 		 * 
 		 * Settings Scene
-		 * 
-		 * 
+		 *
 		 ****************************************************************************/
 		settingsStage = new Stage();
 		settingsStage.setTitle("Change Client seetings");
