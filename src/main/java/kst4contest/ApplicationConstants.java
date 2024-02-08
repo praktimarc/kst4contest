@@ -6,6 +6,14 @@ public class ApplicationConstants {
      */
     public static final String APPLICATION_NAME = "praktiKST";
 
+    /**
+     * Name of file to store preferences in.
+     */
+    public static final double APPLICATION_CURRENTVERSIONNUMBER = 0.9;
+
+    public static final String VERSIONINFOURLFORUPDATES_KST4CONTEST = "https://do5amf.funkerportal.de/kst4ContestVersionInfo.xml";
+    public static final String VERSIONINFDOWNLOADEDLOCALFILE  = "kst4ContestVersionInfo.xml";
+
     public static final String DISCSTRING_DISCONNECT_AND_CLOSE = "CLOSEALL";
     public static final String DISCSTRING_DISCONNECT_DUE_PAWWORDERROR = "JUSTDSICCAUSEPWWRONG";
     public static final String DISCSTRING_DISCONNECTONLY = "ONLYDISCONNECT";

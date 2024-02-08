@@ -46,6 +46,8 @@ public class ChatPreferences {
 	 */
 	public static final String PREFERENCE_RESOURCE = "/praktiKSTpreferences.xml";
 
+
+
 	/**
 	 * Default constructor will set the default values (also for predefined texts
 	 * and shorts) automatically at initialization
@@ -207,6 +209,8 @@ public class ChatPreferences {
 //		
 //		MYQRG = mYQRG;
 //	}
+
+
 
 
 	public boolean isLoginAFKState() {
