@@ -22,10 +22,10 @@ public class ChatMember {
 	long activityCounter; // time of last activity in epochtimesec
 	Date lastActivity; // time of last activity in epochtimesec
 	Date lastActualizationTimeOfThisMember; // time of last state change if that member
-	int qrb;
+	Double qrb;
 	int state;
 
-	int QTFdirection; // antenna direction in deg
+	Double QTFdirection; // antenna direction in deg
 	int[] workedCategories; // Chatcategory where the station is in the log, see kst4contest.model.ChatCategory
 
 	boolean worked; // true if the callsign is logged already - for temporary worked processing
@@ -153,19 +153,19 @@ public class ChatMember {
 		this.lastActualizationTimeOfThisMember = lastActualizationTimeOfThisMember;
 	}
 
-	public int getQrb() {
+	public Double getQrb() {
 		return qrb;
 	}
 
-	public void setQrb(int qrb) {
+	public void setQrb(Double qrb) {
 		this.qrb = qrb;
 	}
 
-	public int getQTFdirection() {
+	public Double getQTFdirection() {
 		return QTFdirection;
 	}
 
-	public void setQTFdirection(int qTFdirection) {
+	public void setQTFdirection(Double qTFdirection) {
 		QTFdirection = qTFdirection;
 	}
 

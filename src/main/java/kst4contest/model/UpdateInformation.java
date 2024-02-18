@@ -3,11 +3,31 @@ package kst4contest.model;
 import java.util.ArrayList;
 
 public class UpdateInformation {
-    double latestVersionNumberOnServer;
-    String adminMessage, majorChanges,latestVersionPathOnWebserver;
-    ArrayList<String> needUpdateResourcesSinceLastVersion;
-    ArrayList<String[]> featureRequest;
-    ArrayList<String[]> bugRequests;
+    double latestVersionNumberOnServer = 100; //dummy value to prevent nullpointerexc
+    String adminMessage ="";
+        String majorChanges ="";
+        String latestVersionPathOnWebserver="";
+    ArrayList<String> needUpdateResourcesSinceLastVersion = new ArrayList<String>();
+    ArrayList<String[]> featureRequest = new ArrayList<String[]>();
+    ArrayList<String[]> bugRequests = new ArrayList<String[]>();
+    ArrayList<String[]> changeLog = new ArrayList<String[]>();
+    ArrayList<String[]> bugList = new ArrayList<String[]>();
+
+    public ArrayList<String[]> getBugList() {
+        return bugList;
+    }
+
+    public void setBugList(ArrayList<String[]> bugList) {
+        this.bugList = bugList;
+    }
+
+    public ArrayList<String[]> getChangeLog() {
+        return changeLog;
+    }
+
+    public void setChangeLog(ArrayList<String[]> changeLog) {
+        this.changeLog = changeLog;
+    }
 
     public double getLatestVersionNumberOnServer() {
         return latestVersionNumberOnServer;

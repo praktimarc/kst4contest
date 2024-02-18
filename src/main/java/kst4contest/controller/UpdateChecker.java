@@ -20,6 +20,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 
 public class UpdateChecker {
 
@@ -115,9 +116,112 @@ public class UpdateChecker {
                     }
                 }
             }
+
+/**
+ * Section changeLog
+ */
+
+            list = doc.getElementsByTagName("changeLog");
+            ArrayList<String[]> changeLogArrayList = new ArrayList<String[]>();
+
+            if (list.getLength() != 0) {
+
+                for (int temp = 0; temp < list.getLength(); temp++) {
+
+                    Node node = list.item(temp);
+
+                    Element element = (Element) node;
+                        int childNodeCounter = 0; //need an extra counter due to childnodes are counted...no idea, how
+                        String[] aChangeLogEntry = new String[7];
+                        aChangeLogEntry[0] = "";
+                        aChangeLogEntry[1] = "Date: ";
+                        aChangeLogEntry[2] = "Desc: ";
+                        aChangeLogEntry[3] = "Added: ";
+                        aChangeLogEntry[4] = "Changed: ";
+                        aChangeLogEntry[5] = "Fixed: ";
+                        aChangeLogEntry[6] = "Removed: ";
+
+                    for (int i = 0; i < element.getChildNodes().getLength(); i++) {
+
+                        if (element.getChildNodes().item(i).getNodeType() == Node.ELEMENT_NODE) {
+//                            System.out.println(element.getChildNodes().item(i).getTextContent() + " <<<<<<<<<<<<<<<<<< " + i + " / " + childNodeCounter);
+//                            System.out.println(element.getChildNodes().item(i).getNodeName());
+                            aChangeLogEntry[childNodeCounter] = aChangeLogEntry[childNodeCounter] + element.getChildNodes().item(i).getTextContent();
+                            childNodeCounter++;
+                        }
+                    }
+                    changeLogArrayList.add(aChangeLogEntry);
+                }
+                updateInfos.setChangeLog(changeLogArrayList);
+            }
+
+/**
+ * Section Buglist
+ */
+
+            list = doc.getElementsByTagName("bug");
+            ArrayList<String[]> bugFixArrayList = new ArrayList<String[]>();
+
+            if (list.getLength() != 0) {
+
+                for (int temp = 0; temp < list.getLength(); temp++) {
+
+                    Node node = list.item(temp);
+
+                    Element element = (Element) node;
+                    int childNodeCounter = 0; //need an extra counter due to childnodes are counted...no idea, how
+                    String[] aChangeLogEntry = new String[3];
+                    aChangeLogEntry[0] = "";
+                    aChangeLogEntry[1] = "State: ";
+
+
+                    for (int i = 0; i < element.getChildNodes().getLength(); i++) {
+
+                        if (element.getChildNodes().item(i).getNodeType() == Node.ELEMENT_NODE) {
+                            System.out.println(element.getChildNodes().item(i).getTextContent() + " <<<<<<<<<<<<<<<<<< " + i + " / " + childNodeCounter);
+//                            System.out.println(element.getChildNodes().item(i).getNodeName());
+                            aChangeLogEntry[childNodeCounter] = aChangeLogEntry[childNodeCounter] + element.getChildNodes().item(i).getTextContent();
+                            childNodeCounter++;
+                        }
+                    }
+                    bugFixArrayList.add(aChangeLogEntry);
+                }
+                updateInfos.setBugList(bugFixArrayList);
+            }
+
+
         } catch (Exception e) {
             System.out.println(e.getMessage());
+            e.printStackTrace();
         }
+
+        String[] testEntry = new String[7];
+        testEntry[0] = "0.99";
+        testEntry[1] = "2022-09";
+        testEntry[2] = "researched the Chatprotocol";
+        testEntry[3] = "addednothing";
+        testEntry[4] = "changedsome";
+        testEntry[5] = "fixedxed";
+        testEntry[6] = "removedYourMom";
+
+        String[] testEntry2 = new String[7];
+        testEntry2[0] = "0.29";
+        testEntry2[1] = "2033-09";
+        testEntry2[2] = "tested";
+        testEntry2[3] = "addednotashing";
+        testEntry2[4] = "changeasdsome";
+        testEntry2[5] = "fixedxeds";
+        testEntry2[6] = "removedYosssurMom";
+
+//        changeLogArrayList.add(testEntry);
+//        changeLogArrayList.add(testEntry2);
+
+
+
+
+
+
+
 
         return updateInfos;
     }

@@ -226,7 +226,6 @@ public class Location {
 
     String format = decimalFormat.format(loc1.getDistanceKm(loc2));
 
-//    return df.format(number);
     return Double.parseDouble(format);
   }
 
@@ -340,6 +339,21 @@ public class Location {
         - Math.sin(loc1.getLatitude().getRadians())
         * Math.cos(loc2.getLatitude().getRadians())
         * Math.cos(dLon);
-    return (Angle.radiansToDegrees(Math.atan2(y, x)) + 360) % 360;
+
+    double bearing = (Angle.radiansToDegrees(Math.atan2(y, x)) + 360) % 360;
+
+//    return bearing;
+
+
+    Locale locale  = new Locale("en", "UK");
+    String pattern = "###.##";
+
+    DecimalFormat decimalFormat = (DecimalFormat)
+            NumberFormat.getNumberInstance(locale);
+    decimalFormat.applyPattern(pattern);
+
+    String format = decimalFormat.format(bearing);
+
+    return Double.parseDouble(format);
   }
 }

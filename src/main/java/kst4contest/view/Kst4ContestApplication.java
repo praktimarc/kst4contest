@@ -4,14 +4,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.function.Predicate;
 
-import javafx.beans.value.ObservableStringValue;
 import javafx.scene.control.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import kst4contest.ApplicationConstants;
 import kst4contest.controller.ChatController;
-import kst4contest.controller.DBController;
 import kst4contest.controller.Utils4KST;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -69,6 +68,173 @@ public class Kst4ContestApplication extends Application {
 	Timer timer_buildWindowTitle;
 	Timer timer_chatMemberTableSortTimer; // need that because javafx bug, it´s the only way to actualize the table...
 	Timer timer_updatePrivatemessageTable; // same here
+	VBox selectedCallSignFurtherInfoPane = new VBox();
+
+	private BorderPane generateFurtherInfoAbtSelectedCallsignBP(ChatMember selectedCallSignInfoStageChatMember) {
+
+		selectedCallSignInfoBorderPane = new BorderPane();
+
+		SplitPane selectedCallSignSplitPane = new SplitPane();
+		selectedCallSignSplitPane.setOrientation(Orientation.VERTICAL);
+
+		TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable = initFurtherInfoAbtCallsignMSGTable();
+
+//		ChatMember dummy = new ChatMember();
+//		dummy.setCallSign("DM5M");
+//		dummy.setQra("JO51IJ");
+//		dummy.setQrb(0.0);
+//		dummy.setQTFdirection(0.0);
+//		dummy.setName("me");
+//		dummy.setState(0);
+//
+//		selectedCallSignInfoStageChatMember = dummy;
+
+
+		Label selectedCallSignInfoLblQTFInfo = new Label("QTF:" + selectedCallSignInfoStageChatMember.getQTFdirection() + " deg");
+//		System.out.println("qtfinfolabel should show: " + selectedCallSignInfoStageChatMember.getQrb());
+
+		Label selectedCallSignInfoLblQRBInfo = new Label("QRB: " + selectedCallSignInfoStageChatMember.getQrb() + " km");
+
+
+
+		GridPane selectedCallSignDownerSiteGridPane = new GridPane();
+		selectedCallSignDownerSiteGridPane.setHgap(10);
+		selectedCallSignDownerSiteGridPane.setVgap(2);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQTFInfo, 0,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQRBInfo, 0,1,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Label("last activity dateTime"), 0,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Label("last activity duration"), 0,3,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Button("show path in AS"), 1,0,1,3);
+		selectedCallSignDownerSiteGridPane.add(new Label("publicmsgCount"), 3,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Label("toMeMsgCount"), 3,1,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Label("fromMeMSGCount"), 3,2,1,1);
+//		HBox selectedCallSignDownerSiteHBox = new HBox();
+//		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQRBInfo);
+//		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQTFInfo);
+
+		selectedCallSignSplitPane.getItems().add(initFurtherInfoAbtCallsignMSGTable);
+		selectedCallSignSplitPane.getItems().add(selectedCallSignDownerSiteGridPane);
+
+
+		selectedCallSignInfoBorderPane.setCenter(selectedCallSignSplitPane);
+
+		HBox selectedCallSignInfoBottomControlsBox = new HBox();
+		selectedCallSignInfoBottomControlsBox.setSpacing(10);
+//		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Always on top"));
+
+		ToggleGroup selectedCallSignInfoFilterMessagesRadioGrp = new ToggleGroup();
+		RadioButton selectedCallSignFilterToMeMsgRB = new RadioButton("pm to me ");
+		selectedCallSignFilterToMeMsgRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
+		RadioButton selectedCallSignFilterMsgToOtherRB = new RadioButton("pm to other");
+		selectedCallSignFilterMsgToOtherRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
+		RadioButton selectedCallSignFilterMsgpublic = new RadioButton("public msgs");
+		selectedCallSignFilterMsgpublic.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
+		RadioButton selectedCallSignNoFilterRB = new RadioButton("nothing");
+		selectedCallSignNoFilterRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
+		selectedCallSignNoFilterRB.setSelected(true); //TODO: that behavior as default selection could be made preferencable
+
+		selectedCallSignInfoFilterMessagesRadioGrp.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+			@Override
+			public void changed(ObservableValue<? extends Toggle> observableValue, Toggle toggle, Toggle t1) {
+
+				RadioButton radioButton = (RadioButton) selectedCallSignInfoFilterMessagesRadioGrp.getSelectedToggle();
+				if (radioButton.equals(selectedCallSignFilterToMeMsgRB)) {
+					chatcontroller.getLst_selectedCallSignInfofilteredMessageList().setPredicate(new Predicate<ChatMessage>() {
+						@Override
+						public boolean test(ChatMessage chatMessage) {
+
+							if (((chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign())) || (chatMessage.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))
+									) && ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) || (chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())))) {
+								return true;
+							}
+
+							else return false;
+						}
+					});
+
+					System.out.println(t1 + " filter to me was selected <<<<<<<<<<<<<<<<<<<");
+				} else if (radioButton.equals(selectedCallSignFilterMsgToOtherRB)) {
+
+					chatcontroller.getLst_selectedCallSignInfofilteredMessageList().setPredicate(new Predicate<ChatMessage>() {
+						@Override
+						public boolean test(ChatMessage chatMessage) {
+
+							if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) && (!chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))) {
+								return true;
+							} else if ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) && (!chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))) {
+								return true;
+							}
+
+							else return false;
+						}
+					});
+
+					System.out.println(t1 + " filter to other was selected <<<<<<<<<<<<<<<<<<<");
+				} else if (radioButton.equals(selectedCallSignFilterMsgpublic)) {
+
+					chatcontroller.getLst_selectedCallSignInfofilteredMessageList().setPredicate(new Predicate<ChatMessage>() {
+						@Override
+						public boolean test(ChatMessage chatMessage) {
+
+							if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (chatMessage.getReceiver().getCallSign().equals("ALL"))) {
+								return true;
+							}
+
+							else return false;
+						}
+					});
+
+
+					System.out.println(t1 + " filter to public was selected <<<<<<<<<<<<<<<<<<<");
+				} else {
+					System.out.println(t1 + " no filter was selected <<<<<<<<<<<<<<<<<<<");
+					chatcontroller.getLst_selectedCallSignInfofilteredMessageList().setPredicate(new Predicate<ChatMessage>() {
+						@Override
+						public boolean test(ChatMessage chatMessage) {
+
+							if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) ||
+									chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) {
+								return true;
+							}
+
+							else return false;
+						}
+					});
+				}
+			}
+		});
+
+
+		selectedCallSignInfoBottomControlsBox.getChildren().add(new Label("Messages of " + selectedCallSignInfoStageChatMember.getCallSign() + " -> Filter:  "));
+		selectedCallSignInfoBottomControlsBox.getChildren().add(selectedCallSignNoFilterRB);
+		selectedCallSignInfoBottomControlsBox.getChildren().add(selectedCallSignFilterToMeMsgRB);
+		selectedCallSignInfoBottomControlsBox.getChildren().add(selectedCallSignFilterMsgToOtherRB);
+		selectedCallSignInfoBottomControlsBox.getChildren().add(selectedCallSignFilterMsgpublic);
+
+//		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Filter messages to me"));
+//		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Filter messages to Other"));
+		selectedCallSignInfoBorderPane.setTop(selectedCallSignInfoBottomControlsBox);
+
+		chatcontroller.getLst_selectedCallSignInfofilteredMessageList().setPredicate(new Predicate<ChatMessage>() {
+			/**
+			 * This is the filter "nothing" option. It will get all communication of a callsign to all directions
+			 *
+			 * @param chatMessage the input argument
+			 * @return
+			 */
+			@Override
+			public boolean test(ChatMessage chatMessage) {
+
+				if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) ||
+						chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) {
+					return true;
+				}
+				else return false;
+			}
+		});
+
+		return selectedCallSignInfoBorderPane;
+	}
 
 	private TableView<ChatMember> initChatMemberTable() {
 
@@ -451,7 +617,7 @@ public class Kst4ContestApplication extends Application {
 	 * created out of exact one array-entry). These are initialized by the
 	 * chatpreferences object out of the config-xml
 	 * 
-	 * @param menuTexts
+	 *
 	 * @return
 	 */
 //	private ContextMenu initChatMemberTableContextMenu(String[] menuTexts) { old mechanic
@@ -495,6 +661,75 @@ public class Kst4ContestApplication extends Application {
 //		return chatMemberContextMenu;
 //
 //	}
+
+	private Stage initializeFurtherInfoOnSelectedChatMemberStage(ChatMember selectedChatMember) {
+		try {
+
+
+//		stage_selectedCallSignInfoStage = new Stage();
+//		stage_selectedCallSignInfoStage.close();
+
+		stage_selectedCallSignInfoStage.setTitle("Further info on "+ selectedChatMember.getCallSign());
+		Label selectedCallSignInfoLblQTFInfo = new Label("QTF: " + selectedChatMember.getQTFdirection() + " deg");
+		Label selectedCallSignInfoLblQRBInfo = new Label("QRB: " + selectedChatMember.getQrb() + " km");
+
+
+		AnchorPane selectedCallSignInfoPane = new AnchorPane();
+		BorderPane selectedCallSignInfoBorderPane = new BorderPane();
+		selectedCallSignInfoPane.getChildren().add(selectedCallSignInfoBorderPane);
+
+		SplitPane selectedCallSignSplitPane = new SplitPane();
+		selectedCallSignSplitPane.setOrientation(Orientation.VERTICAL);
+
+		TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable = initFurtherInfoAbtCallsignMSGTable();
+
+
+		GridPane selectedCallSignDownerSiteGridPane = new GridPane();
+			selectedCallSignDownerSiteGridPane.setHgap(10);
+			selectedCallSignDownerSiteGridPane.setVgap(2);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQTFInfo, 0,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQRBInfo, 0,1,1,1);
+			selectedCallSignDownerSiteGridPane.add(new Label("last activity dateTime"), 0,2,1,1);
+			selectedCallSignDownerSiteGridPane.add(new Label("last activity duration"), 0,3,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Button("show path in AS"), 1,0,1,3);
+			selectedCallSignDownerSiteGridPane.add(new Label("publicmsgCount"), 3,0,1,1);
+			selectedCallSignDownerSiteGridPane.add(new Label("toMeMsgCount"), 3,1,1,1);
+			selectedCallSignDownerSiteGridPane.add(new Label("fromMeMSGCount"), 3,2,1,1);
+//		HBox selectedCallSignDownerSiteHBox = new HBox();
+//		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQRBInfo);
+//		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQTFInfo);
+
+			selectedCallSignSplitPane.getItems().add(initFurtherInfoAbtCallsignMSGTable);
+		selectedCallSignSplitPane.getItems().add(selectedCallSignDownerSiteGridPane);
+
+
+		selectedCallSignInfoBorderPane.setCenter(selectedCallSignSplitPane);
+
+		HBox selectedCallSignInfoBottomControlsBox = new HBox();
+		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Always on top"));
+		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Filter messages to me"));
+		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Filter messages to Other"));
+		selectedCallSignInfoBorderPane.setBottom(selectedCallSignInfoBottomControlsBox);
+
+
+		stage_selectedCallSignInfoStage.setScene(new Scene(selectedCallSignInfoPane, 500, 400));
+		stage_selectedCallSignInfoStage.setAlwaysOnTop(false);
+
+		if (!stage_selectedCallSignInfoStage.isShowing()) {
+
+			stage_selectedCallSignInfoStage.show();
+		}
+
+			stage_selectedCallSignInfoStage.show();
+		return stage_selectedCallSignInfoStage;
+		}
+
+		catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("There occured an error due to the selected callsign had been deleted!");
+			return stage_selectedCallSignInfoStage;
+		}
+	}
 
 	/**
 	 * Initializes the right click contextmenu for the chatmember-table, sets the
@@ -548,6 +783,185 @@ public class Kst4ContestApplication extends Application {
 		return chatMemberContextMenu;
 
 	}
+
+	private TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable() {
+
+		TableView<ChatMessage> tbl_furtherInfoAbtCallsignMSGTable = new TableView<ChatMessage>();
+		tbl_furtherInfoAbtCallsignMSGTable.setTooltip(new Tooltip("Messages of selected station are shown here"));
+
+		TableColumn<ChatMessage, String> timeCol = new TableColumn<ChatMessage, String>("Time");
+		timeCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				SimpleStringProperty time = new SimpleStringProperty();
+
+				time.setValue(new Utils4KST()
+						.time_convertEpochToReadable(cellDataFeatures.getValue().getMessageGeneratedTime()));
+
+				return time;
+			}
+		});
+
+		TableColumn<ChatMessage, String> callSignTRCVCol = new TableColumn<ChatMessage, String>("Call TX");
+		callSignTRCVCol
+				.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+					@Override
+					public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+						SimpleStringProperty callSign = new SimpleStringProperty();
+
+						if (cellDataFeatures.getValue().getSender() != null) {
+
+							callSign.setValue(cellDataFeatures.getValue().getSender().getCallSign());
+						} else {
+
+							callSign.setValue("");// TODO: Prevents a bug of not setting all values as a default
+						}
+						return callSign;
+					}
+				});
+
+		TableColumn<ChatMessage, String> callSignRCVRCol = new TableColumn<ChatMessage, String>("Call RX");
+		callSignRCVRCol
+				.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+					@Override
+					public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+						SimpleStringProperty callTX = new SimpleStringProperty();
+
+						if (cellDataFeatures.getValue().getReceiver().getCallSign() != null) {
+
+							callTX.setValue(cellDataFeatures.getValue().getReceiver().getCallSign());
+						} else {
+
+							callTX.setValue("");// TODO: Prevents a bug of not setting all values as a default
+						}
+						return callTX;
+					}
+				});
+
+//		TableColumn<ChatMessage, String> nameCol = new TableColumn<ChatMessage, String>("Name");
+//		nameCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+//
+//			@Override
+//			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+//				SimpleStringProperty name = new SimpleStringProperty();
+//
+//				if (cellDataFeatures.getValue().getSender() != null) {
+//
+//					name.setValue(cellDataFeatures.getValue().getSender().getName());
+//				} else {
+//
+//					name.setValue("");// TODO: Prevents a bug of not setting all values as a default
+//				}
+//				return name;
+//			}
+//		});
+
+		TableColumn<ChatMessage, String> qrgTXerCol = new TableColumn<ChatMessage, String>("Last QRG TX");
+		qrgTXerCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				StringProperty qrg = new SimpleStringProperty();
+
+				if (cellDataFeatures.getValue().getSender() != null) {
+
+//					qrg.setValue(cellDataFeatures.getValue().getSender().getFrequency());
+					qrg = cellDataFeatures.getValue().getSender().getFrequency();
+				} else {
+
+					qrg.setValue("");// TODO: Prevents a bug of not setting all values as a default
+				}
+				return qrg;
+			}
+		});
+
+		TableColumn<ChatMessage, String> qrgRXerCol = new TableColumn<ChatMessage, String>("Last QRG RX");
+		qrgRXerCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				StringProperty qrg = new SimpleStringProperty();
+
+				if (cellDataFeatures.getValue().getReceiver() != null) {
+
+//					qrg.setValue(cellDataFeatures.getValue().getReceiver().getFrequency());
+					qrg = cellDataFeatures.getValue().getReceiver().getFrequency();
+
+				} else {
+
+					qrg.setValue("");// TODO: Prevents a bug of not setting all values as a default
+				}
+				return qrg;
+			}
+		});
+
+		TableColumn<ChatMessage, String> msgCol = new TableColumn<ChatMessage, String>("Message");
+		msgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				SimpleStringProperty msg = new SimpleStringProperty();
+
+				if (cellDataFeatures.getValue().getMessageText() != null) {
+
+					msg.setValue(cellDataFeatures.getValue().getMessageText());
+				} else {
+
+					msg.setValue("");// TODO: Prevents a bug of not setting all values as a default
+				}
+				return msg;
+			}
+		});
+		msgCol.prefWidthProperty().bind(tbl_furtherInfoAbtCallsignMSGTable.widthProperty().divide(2));
+
+		TableColumn<ChatMessage, String> workedRXCol = new TableColumn<ChatMessage, String>("wkd RX?");
+		workedRXCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				SimpleStringProperty wkd = new SimpleStringProperty();
+
+				if (cellDataFeatures.getValue().getReceiver().isWorked()) {
+					wkd.setValue("X");
+				} else {
+					wkd.setValue("");
+				}
+
+				return wkd;
+			}
+		});
+
+		TableColumn<ChatMessage, String> workedTXCol = new TableColumn<ChatMessage, String>("wkd TX?");
+		workedRXCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				SimpleStringProperty wkd = new SimpleStringProperty();
+
+				if (cellDataFeatures.getValue().getSender().isWorked()) {
+					wkd.setValue("X");
+				} else {
+					wkd.setValue("");
+				}
+
+				return wkd;
+			}
+		});
+
+		tbl_furtherInfoAbtCallsignMSGTable.getColumns().addAll(timeCol, callSignTRCVCol, callSignRCVRCol,
+				  msgCol);
+
+		ObservableList<ChatMessage> toOtherMSGList = chatcontroller.getLst_toOtherMessageList();
+		tbl_furtherInfoAbtCallsignMSGTable.setItems(chatcontroller.getLst_selectedCallSignInfofilteredMessageList());
+
+		return tbl_furtherInfoAbtCallsignMSGTable;
+	}
+
+
+
 
 	/**
 	 * initializes the tableview in which the cq- and beacon-texts are shown
@@ -1811,6 +2225,10 @@ public class Kst4ContestApplication extends Application {
 	FlowPane flwPane_textSnippets;
 
 	Stage clusterAndQSOMonStage;
+	Stage stage_selectedCallSignInfoStage;
+	ChatMember selectedCallSignInfoStageChatMember = new ChatMember();
+	BorderPane selectedCallSignInfoBorderPane;
+
 
 	Stage stage_updateStage;
 
@@ -2602,6 +3020,31 @@ public class Kst4ContestApplication extends Application {
 						// do nothing, that was a deselection-event!
 					} else {
 
+//						selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0); //initialize Chatmember for showing detals at another stage
+
+
+//						try {
+////							stage_selectedCallSignInfoStage.close();
+//						} catch (NullPointerException ne) {
+//							//no stage was opened
+//							System.out.println("Kst4ContestApplication, Info: no infowindow was open: " + ne.getMessage());
+//						}
+
+//						stage_selectedCallSignInfoStage = initializeFurtherInfoOnSelectedChatMemberStage(selectedChatMember.getList().get(0));
+						selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0);
+
+						selectedCallSignFurtherInfoPane.getChildren().clear();
+						selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+
+//						selectedCallSignInfoBorderPane.
+//						selectedCallSignInfoBorderPane.setVisible(false);
+//						selectedCallSignInfoBorderPane.setVisible(true);
+
+
+
+//						stage_selectedCallSignInfoStage.setTitle("Further info on " + selectedCallSignInfoStageChatMember.getCallSign());
+//						stage_selectedCallSignInfoStage.show();
+
 						txt_chatMessageUserInput.clear();
 						txt_chatMessageUserInput
 								.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
@@ -2636,7 +3079,34 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
-			mainWindowLeftSplitPane.getItems().addAll(messageSectionSplitpane, tbl_chatMember);
+			SplitPane mainWindowRightSplitPane = new SplitPane();
+			mainWindowRightSplitPane.setOrientation(Orientation.VERTICAL);
+			mainWindowRightSplitPane.getItems().add(tbl_chatMember);
+
+
+			mainWindowLeftSplitPane.getItems().addAll(messageSectionSplitpane, mainWindowRightSplitPane);
+
+/**
+ * initializing the furter infos of a callsign part of the right splitpane
+ */
+
+
+
+
+
+
+//			selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+
+
+//			selectedCallSignInfoPane.getChildren().add(selectedCallSignInfoBorderPane);
+
+
+
+	/**
+	 * end of initializing the furter infos of a callsign part of the right splitpane
+	 */
+
+			mainWindowRightSplitPane.getItems().add(selectedCallSignFurtherInfoPane);
 
 			primaryStage.setScene(scene);
 
@@ -2645,6 +3115,23 @@ public class Kst4ContestApplication extends Application {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
+		/**
+		 * Window selected callsign information
+		 * Works with a ChatMember variable, initialized by a selected-listener of the Chatmemberlist
+		 */
+
+
+		stage_selectedCallSignInfoStage = new Stage();
+//		stage_selectedCallSignInfoStage.hide();
+//
+//		stage_selectedCallSignInfoStage.setScene(new Scene(new Label("Further info on selected Callsign"), 500, 400));
+//		stage_selectedCallSignInfoStage.setAlwaysOnTop(true);
+//		stage_selectedCallSignInfoStage.show();
+
+		/**
+		 * end Window selected callsign information
+		 */
 
 		/**
 		 * Window Cluster & qso of the other
@@ -2664,6 +3151,7 @@ public class Kst4ContestApplication extends Application {
 		 * end Window Cluster & qso of the other
 		 */
 
+
 		/**
 		 * Window updates
 		 */
@@ -2674,6 +3162,9 @@ public class Kst4ContestApplication extends Application {
 //		apnl_directedMSGWin.setOrientation(Orientation.VERTICAL);
 
 //		pnl_directedMSGWin.getItems().addAll(initDXClusterTable(), initChatToOtherMSGTable());
+
+		try {
+
 
 		stage_updateStage.setAlwaysOnTop(true);
 
@@ -2727,19 +3218,42 @@ public class Kst4ContestApplication extends Application {
 		vbxUpdateWindow.getChildren().add(treeView);
 
 		TreeItem rootItem = new TreeItem(ApplicationConstants.APPLICATION_NAME);
-		TreeItem latestVersionNumber = new TreeItem<>(chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer());
-		TreeItem adminMessage = new TreeItem<>(chatcontroller.getUpdateInformation().getAdminMessage());
-		TreeItem majorChanges = new TreeItem<>(chatcontroller.getUpdateInformation().getMajorChanges());
-		TreeItem latestVersionPathOnWebserver = new TreeItem<>(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
+		TreeItem changeLog = new TreeItem<>("ChangeLog");
+
+		ArrayList<String[]> changeLogArrayWith7Fiels = chatcontroller.getUpdateInformation().getChangeLog();
+
+		for (String[] aSubversionArray : changeLogArrayWith7Fiels) {
+			TreeItem aSubversionEntry = new TreeItem(aSubversionArray[0]);
+
+			for (int i = 1; i < aSubversionArray.length; i++) {
+				aSubversionEntry.getChildren().add(new TreeItem<>(aSubversionArray[i]));
+			}
+
+			changeLog.getChildren().add(aSubversionEntry);
+		}
+
+		rootItem.getChildren().add(changeLog);
+
+		TreeItem knownBugs = new TreeItem<>("Known bugs");
+
+		ArrayList<String[]> BugArrayWith2Fiels = chatcontroller.getUpdateInformation().getBugList();
+
+		for (String[] aBugArray : BugArrayWith2Fiels) {
+			TreeItem aBugEntry = new TreeItem(aBugArray[0]);
+
+			for (int i = 1; i < aBugArray.length; i++) {
+				aBugEntry.getChildren().add(new TreeItem<>(aBugArray[i]));
+			}
+
+			knownBugs.getChildren().add(aBugEntry);
+		}
+
+		rootItem.getChildren().add(knownBugs);
 
 
-
-		rootItem.getChildren().add(latestVersionNumber);
-		rootItem.getChildren().add(adminMessage);
-		rootItem.getChildren().add(majorChanges);
-		rootItem.getChildren().add(latestVersionPathOnWebserver);
 
 		treeView.setRoot(rootItem);
+		treeView.setShowRoot(false);
 
 		stage_updateStage.setScene(new Scene(vbxUpdateWindow, 640, 480));
 
@@ -2748,7 +3262,10 @@ public class Kst4ContestApplication extends Application {
 		} else {
 			//nothing to do
 		}
-
+		} catch (Exception excOnUpdateFileProcessing) {
+			System.out.println("[KST4ContestApp, ERROR]: Problem on Updateservice! " + excOnUpdateFileProcessing.getMessage());
+			excOnUpdateFileProcessing.printStackTrace();
+		}
 		/**
 		 * end Window Update
 		 */
