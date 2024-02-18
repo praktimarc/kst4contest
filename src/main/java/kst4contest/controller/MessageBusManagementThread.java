@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.ObservableList;
 import kst4contest.ApplicationConstants;
+import kst4contest.locatorUtils.Location;
 import kst4contest.model.AirPlaneReflectionInfo;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
@@ -362,6 +363,9 @@ public class MessageBusManagementThread extends Thread {
 				newMember.setName(splittedMessageLine[3]);
 				newMember.setQra(splittedMessageLine[4]);
 				newMember.setState(Integer.parseInt(splittedMessageLine[5]));
+//			newMember.setQTFdirection(LocatorUtils);
+				newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), newMember.getQra()));
+				newMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(newMember.getQra())));
 				newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
 
 //				this.client.getChatMemberTable().put(splittedMessageLine[2], newMember); //TODO: map -> List
@@ -402,6 +406,8 @@ public class MessageBusManagementThread extends Thread {
 					newMember.setQra(splittedMessageLine[4]);
 					newMember.setState(Integer.parseInt(splittedMessageLine[5]));
 					newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
+					newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), newMember.getQra()));
+					newMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(newMember.getQra())));
 
 					newMember = this.client.getDbHandler().fetchChatMemberWkdDataForOnlyOneCallsignFromDB(newMember);
 
@@ -512,7 +518,8 @@ public class MessageBusManagementThread extends Thread {
 					dummy.setCallSign("ALL");
 					newMessage.setReceiver(dummy);
 
-					this.client.getLst_toAllMessageList().add(0, newMessage); // sdtout to all message-List
+//					this.client.getLst_toAllMessageList().add(0, newMessage); // sdtout to all message-List //TODO: change, moved to globalmessagelist - original
+					this.client.getLst_globalChatMessageList().add(0, newMessage); // sdtout to all message-List //TODO: change, moved to globalmessagelist
 
 				} else {
 
@@ -553,7 +560,8 @@ public class MessageBusManagementThread extends Thread {
 						if (newMessage.getReceiver().getCallSign()
 								.equals(this.client.getChatPreferences().getLoginCallSign())) {
 
-							this.client.getLst_toMeMessageList().add(0, newMessage);
+//							this.client.getLst_toMeMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
+							this.client.getLst_globalChatMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
 
 							if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
 								this.client.getPlayAudioUtils().playNoiseLauncher('P');
@@ -582,13 +590,15 @@ public class MessageBusManagementThread extends Thread {
 							String originalMessage = newMessage.getMessageText();
 							newMessage
 									.setMessageText("(>" + newMessage.getReceiver().getCallSign() + ")" + originalMessage);
-							this.client.getLst_toMeMessageList().add(0, newMessage);
+//							this.client.getLst_toMeMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
+							this.client.getLst_globalChatMessageList().add(0,newMessage);//TODO: change, moved to globalmessagelist
+
 							// if you sent the message to another station, it will be sorted in to
 							// the "to me message list" with modified messagetext, added rxers callsign
 
 						} else {
-							this.client.getLst_toOtherMessageList().add(0, newMessage);
-
+//							this.client.getLst_toOtherMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
+							this.client.getLst_globalChatMessageList().add(0, newMessage);
 //						System.out.println("MSGBS bgfx: tx call = " + newMessage.getSender().getCallSign() + " / rx call = " + newMessage.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
@@ -681,6 +691,9 @@ public class MessageBusManagementThread extends Thread {
 							+ splittedMessageLine[3]));
 
 					this.client.getLst_chatMemberList().get(index).setQra(splittedMessageLine[3]);
+					this.client.getLst_chatMemberList().get(index).setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), splittedMessageLine[3]));
+					this.client.getLst_chatMemberList().get(index).setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(splittedMessageLine[3])));
+
 
 				} else {
 					System.out.println("[MSGBUSMGT:] ERROR! Locator Change of ["
@@ -837,6 +850,8 @@ public class MessageBusManagementThread extends Thread {
 				stateChangeMember.setQra(splittedMessageLine[4]);
 				stateChangeMember.setState(Integer.parseInt(splittedMessageLine[5]));
 				stateChangeMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
+				stateChangeMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), stateChangeMember.getQra()));
+				stateChangeMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(stateChangeMember.getQra())));
 
 				this.client.getDbHandler().storeChatMember(stateChangeMember); // TODO: not clean, it should be an
 																				// upodate

@@ -11,15 +11,15 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.value.ObservableStringValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import kst4contest.ApplicationConstants;
 import kst4contest.model.*;
 import kst4contest.utils.PlayAudioUtils;
 
 import java.io.*;
+import java.util.function.Predicate;
 
 /**
  * 
@@ -334,17 +334,23 @@ public class ChatController {
 
 	// ******All abstract types below here are used by the messageprocessor!
 	// ***************
-//	private Hashtable<String, ChatMember> chatMemberTable = new Hashtable<String, ChatMember>();
-//	private HashMap<String, ChatMember> chatMemberTable = new HashMap<String, ChatMember>();
-//	private Hashtable<String, ChatMember> dXClusterMemberTable = new Hashtable<String, ChatMember>();
 
-	private ObservableList<ChatMessage> lst_toAllMessageList = FXCollections.observableArrayList(); // directed to all
+	private ObservableList<ChatMessage> lst_globalChatMessageList = FXCollections.observableArrayList(); //All chatmessages will be put in there, later create filtered message lists
+//	private ObservableList<ChatMessage> lst_toAllMessageList = FXCollections.observableArrayList(); // directed to all
 																									// (beacon)
-	private ObservableList<ChatMessage> lst_toMeMessageList = FXCollections.observableArrayList(); // directed to my
+	private FilteredList<ChatMessage> lst_toAllMessageList = new FilteredList<>(lst_globalChatMessageList); // directed to all
+
+//	private ObservableList<ChatMessage> lst_toMeMessageList = FXCollections.observableArrayList(); // directed to my
 																									// call
-	private ObservableList<ChatMessage> lst_toOtherMessageList = FXCollections.observableArrayList(); // directed to a
+	private FilteredList<ChatMessage> lst_toMeMessageList = new FilteredList<>(lst_globalChatMessageList);
+
+	private FilteredList<ChatMessage> lst_selectedCallSignInfofilteredMessageList = new FilteredList<>(lst_globalChatMessageList); // directed to all
+
+//	private ObservableList<ChatMessage> lst_toOtherMessageList = FXCollections.observableArrayList(); // directed to a
 																										// call but not
 																										// mine
+	private FilteredList<ChatMessage> lst_toOtherMessageList = new FilteredList<>(lst_globalChatMessageList);
+
 	private ObservableList<ChatMember> chatMemberList = FXCollections.observableArrayList(); // List of active stations
 																								// in chat
 	private ObservableList<ChatMember> lst_chatMemberList = FXCollections.synchronizedObservableList(chatMemberList); // List
@@ -403,6 +409,22 @@ public class ChatController {
 
 		return -1;
 
+	}
+
+	public FilteredList<ChatMessage> getLst_selectedCallSignInfofilteredMessageList() {
+		return lst_selectedCallSignInfofilteredMessageList;
+	}
+
+	public void setLst_selectedCallSignInfofilteredMessageList(FilteredList<ChatMessage> lst_selectedCallSignInfofilteredMessageList) {
+		this.lst_selectedCallSignInfofilteredMessageList = lst_selectedCallSignInfofilteredMessageList;
+	}
+
+	public ObservableList<ChatMessage> getLst_globalChatMessageList() {
+		return lst_globalChatMessageList;
+	}
+
+	public void setLst_globalChatMessageList(ObservableList<ChatMessage> lst_globalChatMessageList) {
+		this.lst_globalChatMessageList = lst_globalChatMessageList;
 	}
 
 	public String getHostname() {
@@ -485,15 +507,21 @@ public class ChatController {
 		return lst_toAllMessageList;
 	}
 
-	public void setLst_toAllMessageList(ObservableList<ChatMessage> lst_toAllMessageList) {
-		this.lst_toAllMessageList = lst_toAllMessageList;
+//	public void setLst_toAllMessageList(ObservableList<ChatMessage> lst_toAllMessageList) {
+//		this.lst_toAllMessageList = lst_toAllMessageList;
+//	}
+	public void setLst_toAllMessageList(FilteredList<ChatMessage> lst_toAllMessageList) {
+	this.lst_toAllMessageList = lst_toAllMessageList;
 	}
 
 	public ObservableList<ChatMessage> getLst_toMeMessageList() {
 		return lst_toMeMessageList;
 	}
 
-	public void setLst_toMeMessageList(ObservableList<ChatMessage> lst_toMeMessageList) {
+//	public void setLst_toMeMessageList(ObservableList<ChatMessage> lst_toMeMessageList) {
+//		this.lst_toMeMessageList = lst_toMeMessageList;
+//	}
+	public void setLst_toMeMessageList(FilteredList<ChatMessage> lst_toMeMessageList) {
 		this.lst_toMeMessageList = lst_toMeMessageList;
 	}
 
@@ -501,7 +529,11 @@ public class ChatController {
 		return lst_toOtherMessageList;
 	}
 
-	public void setLst_toOtherMessageList(ObservableList<ChatMessage> lst_toOtherMessageList) {
+//	public void setLst_toOtherMessageList(ObservableList<ChatMessage> lst_toOtherMessageList) {
+//		this.lst_toOtherMessageList = lst_toOtherMessageList;
+//	}
+
+	public void setLst_toOtherMessageList(FilteredList<ChatMessage> lst_toOtherMessageList) {
 		this.lst_toOtherMessageList = lst_toOtherMessageList;
 	}
 
@@ -538,6 +570,73 @@ category = new ChatCategory(2);
 		if (checkForUpdates.downloadLatestVersionInfoXML()) {
 			updateInformation = checkForUpdates.parseUpdateXMLFile();
 		};
+
+		lst_toMeMessageList.setPredicate(new Predicate<ChatMessage>() {
+			@Override
+			public boolean test(ChatMessage chatMessage) {
+
+				try {
+
+					if (chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getLoginCallSign())) {
+						return true; //messages addressed to you
+					}
+					if (chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign())) {
+						return true; //your own echo
+					}
+
+					String ignoreCaseString = chatMessage.getMessageText();
+
+					if (chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toLowerCase()) || (chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toUpperCase()))) {
+						return true; //if someone writes about you, you will get the mail, too!
+					}
+
+					else {
+						return false;
+					}
+				}
+				catch (Exception nullPointerExc) {
+					nullPointerExc.printStackTrace();
+					System.out.println("ChatController, ERROR: maybe the receiver was null!");
+					return false;
+				}
+			}
+		});
+
+		lst_toAllMessageList.setPredicate(new Predicate<ChatMessage>() {
+			@Override
+			public boolean test(ChatMessage chatMessage) {
+
+				try {
+				if (chatMessage.getReceiver().getCallSign().equals("ALL")) { //TODO: ALL have to be an application-constant
+					return true;
+				} else return false;
+
+				}
+				catch (Exception nullPointerExc) {
+					nullPointerExc.printStackTrace();
+					System.out.println("ChatController, ERROR: maybe the receiver was null, mostly like a cq message!");
+					return true;
+				}
+
+			}
+		});
+
+		lst_toOtherMessageList.setPredicate(new Predicate<ChatMessage>() {
+			@Override
+			public boolean test(ChatMessage chatMessage) {
+				try {
+					if ((!chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign())) &&
+							(!chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getLoginCallSign()))) {
+						return true;
+					} else return false;
+
+				} catch (Exception nullPointerExc) {
+					nullPointerExc.printStackTrace();
+					System.out.println("ChatController, ERROR: maybe the receiver was null!");
+					return false;
+				}
+			}
+		});
 
 		dbHandler = new DBController();
 

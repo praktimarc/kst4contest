@@ -17,7 +17,10 @@ public class TestLocatorUtils {
 //        System.out.println(Location.getBearing(location, location2));
 
 
-        System.out.println(new Location().getDistanceKmByTwoLocatorStrings("JN49FL", "Jo51ij") + "");
+        System.out.println((new Location().getDistanceKmByTwoLocatorStrings("JN49FL", "kn02fx") + ""));
+//        System.out.println((new Location().getBearing());
+//        int test =  888.08;
+//        System.out.println(test);
 
 //        String test = new Location().getDistanceKmByTwoLocatorStrings("JN49FL", "Jo51ij") + "";
 //
