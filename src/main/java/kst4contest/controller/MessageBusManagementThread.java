@@ -490,7 +490,16 @@ public class MessageBusManagementThread extends Thread {
 
 					if (index != -1) {
 						//user found in the chatmember list
-						newMessage.setSender(this.client.getLst_chatMemberList().get(index)); // set sender to member of
+						try {
+							newMessage.setSender(this.client.getLst_chatMemberList().get(index)); // set sender to member of
+						} catch (Exception exc) {
+							ChatMember aSenderDummy = new ChatMember();
+							aSenderDummy.setCallSign(splittedMessageLine[3] + "[n/a]");
+							aSenderDummy.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+							newMessage.setSender(aSenderDummy);
+							System.out.println("MsgBusmgtT: Catched Error! " + exc.getMessage() + " // " + splittedMessageLine[3] + " is not in the list! Faking sender!");
+							exc.printStackTrace();
+						}
 																								// b4 init list
 					} else {
 						//user not found in chatmember list
@@ -602,7 +611,7 @@ public class MessageBusManagementThread extends Thread {
 //						System.out.println("MSGBS bgfx: tx call = " + newMessage.getSender().getCallSign() + " / rx call = " + newMessage.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-						System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing: ");
+						System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing or message got before user entered chat message: ");
 						referenceDeletedByUserLeftChatDuringMessageprocessing.printStackTrace();
 					}
 
