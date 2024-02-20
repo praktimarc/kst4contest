@@ -14,6 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import kst4contest.ApplicationConstants;
 import kst4contest.model.*;
 import kst4contest.utils.PlayAudioUtils;
@@ -354,11 +355,10 @@ public class ChatController {
 	private ObservableList<ChatMember> chatMemberList = FXCollections.observableArrayList(); // List of active stations
 																								// in chat
 	private ObservableList<ChatMember> lst_chatMemberList = FXCollections.synchronizedObservableList(chatMemberList); // List
-																														// of
-																														// active
-																														// stations
-																														// in
-																														// chat
+																														// of active stn in chat
+	private FilteredList<ChatMember> lst_chatMemberListFiltered = new FilteredList<ChatMember>(chatMemberList);
+	private SortedList<ChatMember> lst_chatMemberSortedFilteredList = new SortedList<ChatMember>(lst_chatMemberListFiltered);
+	private ObservableList<Predicate<ChatMember>> lst_chatMemberListFilterPredicates = FXCollections.observableArrayList();
 	private ObservableList<ClusterMessage> lst_clusterMemberList = FXCollections.observableArrayList();
 
 	private ObservableList<ChatMember> lst_DBBasedWkdCallSignList = FXCollections.observableArrayList();
@@ -495,6 +495,22 @@ public class ChatController {
 		this.lst_chatMemberList = lst_chatMemberList;
 	}
 
+	public FilteredList<ChatMember> getLst_chatMemberListFiltered() {
+		return lst_chatMemberListFiltered;
+	}
+
+	public SortedList<ChatMember> getLst_chatMemberSortedFilteredList() {
+		return lst_chatMemberSortedFilteredList;
+	}
+
+	public ObservableList<Predicate<ChatMember>> getLst_chatMemberListFilterPredicates() {
+		return lst_chatMemberListFilterPredicates;
+	}
+
+	public void setLst_chatMemberListFilterPredicates(ObservableList<Predicate<ChatMember>> lst_chatMemberListFilterPredicates) {
+		this.lst_chatMemberListFilterPredicates = lst_chatMemberListFilterPredicates;
+	}
+
 	public ObservableList<ClusterMessage> getLst_clusterMemberList() {
 		return lst_clusterMemberList;
 	}
@@ -596,7 +612,7 @@ category = new ChatCategory(2);
 				}
 				catch (Exception nullPointerExc) {
 					nullPointerExc.printStackTrace();
-					System.out.println("ChatController, ERROR: maybe the receiver was null!");
+					System.out.println("ChatController, <<<catched ERROR>>>: maybe the receiver was null, message received b4 user entered chatmessage...!" + nullPointerExc.getMessage());
 					return false;
 				}
 			}
@@ -632,7 +648,7 @@ category = new ChatCategory(2);
 
 				} catch (Exception nullPointerExc) {
 					nullPointerExc.printStackTrace();
-					System.out.println("ChatController, ERROR: maybe the receiver was null!");
+					System.out.println("ChatController, <<<catched ERROR>>>: maybe the receiver was null!");
 					return false;
 				}
 			}

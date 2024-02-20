@@ -6,7 +6,9 @@ import java.net.URISyntaxException;
 import java.util.*;
 import java.util.function.Predicate;
 
+import javafx.beans.binding.Bindings;
 import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import kst4contest.ApplicationConstants;
@@ -37,12 +39,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -76,6 +72,7 @@ public class Kst4ContestApplication extends Application {
 
 		SplitPane selectedCallSignSplitPane = new SplitPane();
 		selectedCallSignSplitPane.setOrientation(Orientation.VERTICAL);
+		selectedCallSignSplitPane.setDividerPositions(0.9);
 
 		TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable = initFurtherInfoAbtCallsignMSGTable();
 
@@ -204,7 +201,6 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-
 		selectedCallSignInfoBottomControlsBox.getChildren().add(new Label("Messages of " + selectedCallSignInfoStageChatMember.getCallSign() + " -> Filter:  "));
 		selectedCallSignInfoBottomControlsBox.getChildren().add(selectedCallSignNoFilterRB);
 		selectedCallSignInfoBottomControlsBox.getChildren().add(selectedCallSignFilterToMeMsgRB);
@@ -225,11 +221,16 @@ public class Kst4ContestApplication extends Application {
 			@Override
 			public boolean test(ChatMessage chatMessage) {
 
-				if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) ||
-						chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) {
-					return true;
+				try {
+					if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) ||
+							chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) {
+						return true;
+					} else return false;
+
+				} catch (Exception exception) {
+					System.out.println("KST4ContestApplication <<<catched ERROR>>>>: cant get sender infos due to sender is not known yet");
+				 return false;
 				}
-				else return false;
 			}
 		});
 
@@ -254,6 +255,8 @@ public class Kst4ContestApplication extends Application {
 				return callsgn;
 			}
 		});
+		callSignCol.setSortType(TableColumn.SortType.ASCENDING);
+		tbl_chatMemberTable.getSortOrder().add(callSignCol);
 
 		TableColumn<ChatMember, String> nameCol = new TableColumn<ChatMember, String>("Name");
 		nameCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
@@ -545,8 +548,10 @@ public class Kst4ContestApplication extends Application {
 
 		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qrgCol, airScoutCol, workedCol);
 
-		tbl_chatMemberTable.setItems(chatcontroller.getLst_chatMemberList());
+//		tbl_chatMemberTable.setItems(chatcontroller.getLst_chatMemberListFiltered());
 
+		tbl_chatMemberTable.setItems(chatcontroller.getLst_chatMemberSortedFilteredList());
+		chatcontroller.getLst_chatMemberSortedFilteredList().comparatorProperty().bind(tbl_chatMemberTable.comparatorProperty());
 //		chatcontroller.getLst_chatMemberList().addListener(new ListChangeListener<ChatMember>() {
 ////		ObservableStringValue chatState = new SimpleStringProperty();
 //		
@@ -588,6 +593,15 @@ public class Kst4ContestApplication extends Application {
 
 			public void run() {
 				Thread.currentThread().setName("chatMemberTableSortTimer");
+
+				System.out.println("Predicates size: " + chatcontroller.getLst_chatMemberListFilterPredicates().size());
+//
+//				for (int i = 0; i < chatcontroller.getLst_chatMemberListFilterPredicates().size(); i++) {
+//
+//					System.out.println(chatcontroller.getLst_chatMemberListFilterPredicates().get(0).);
+//
+//				}
+
 
 				Platform.runLater(() -> {
 
@@ -2839,10 +2853,9 @@ public class Kst4ContestApplication extends Application {
 									+ " as " + chatcontroller.getChatPreferences().getLoginCallSign() + " ("
 									+ chatcontroller.getChatPreferences().getLoginName() + ")" + " in "
 									+ chatcontroller.getChatPreferences().getLoginLocator() + " ("
-									+ chatcontroller.getLst_chatMemberList().size() + " users online.),"
-									+ (chatcontroller.getLst_toAllMessageList().size()
-											+ chatcontroller.getLst_toOtherMessageList().size()
-											+ chatcontroller.getLst_toMeMessageList().size())
+									+ chatcontroller.getLst_chatMemberList().size() + " users online, "
+									+ chatcontroller.getLst_chatMemberSortedFilteredList().size() + " shown), "
+									+ (chatcontroller.getLst_globalChatMessageList().size())
 									+ " messages total.";
 							chatcontroller.getChatPreferences().setChatState(chatState);
 						}
@@ -3016,42 +3029,30 @@ public class Kst4ContestApplication extends Application {
 			selectedChatMemberList.addListener(new ListChangeListener<ChatMember>() {
 				@Override
 				public void onChanged(Change<? extends ChatMember> selectedChatMember) {
-					if (selectionModelChatMember.getSelectedItems().isEmpty()) {
-						// do nothing, that was a deselection-event!
-					} else {
+					try{
 
-//						selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0); //initialize Chatmember for showing detals at another stage
+						if (selectionModelChatMember.getSelectedItems().isEmpty()) {
+							// do nothing, that was a deselection-event!
+						} else {
 
 
-//						try {
-////							stage_selectedCallSignInfoStage.close();
-//						} catch (NullPointerException ne) {
-//							//no stage was opened
-//							System.out.println("Kst4ContestApplication, Info: no infowindow was open: " + ne.getMessage());
-//						}
+							selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0);
 
-//						stage_selectedCallSignInfoStage = initializeFurtherInfoOnSelectedChatMemberStage(selectedChatMember.getList().get(0));
-						selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0);
+							selectedCallSignFurtherInfoPane.getChildren().clear();
+							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
 
+							txt_chatMessageUserInput.clear();
+							txt_chatMessageUserInput
+									.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
+							System.out.println(
+									"##################selected ChatMember: " + selectedChatMember.getList().get(0));
+							// selectedChatMemberList.clear();
+	//						selectionModelChatMember.clearSelection(0);
+						}
+					} catch (Exception exception) {
 						selectedCallSignFurtherInfoPane.getChildren().clear();
-						selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
-
-//						selectedCallSignInfoBorderPane.
-//						selectedCallSignInfoBorderPane.setVisible(false);
-//						selectedCallSignInfoBorderPane.setVisible(true);
-
-
-
-//						stage_selectedCallSignInfoStage.setTitle("Further info on " + selectedCallSignInfoStageChatMember.getCallSign());
-//						stage_selectedCallSignInfoStage.show();
-
 						txt_chatMessageUserInput.clear();
-						txt_chatMessageUserInput
-								.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
-						System.out.println(
-								"##################selected ChatMember: " + selectedChatMember.getList().get(0));
-						// selectedChatMemberList.clear();
-//						selectionModelChatMember.clearSelection(0);
+						System.out.println("KST4ContestApp <<<catched ERROR>>>, selected user left chat!");
 					}
 				}
 			});
@@ -3081,7 +3082,326 @@ public class Kst4ContestApplication extends Application {
 
 			SplitPane mainWindowRightSplitPane = new SplitPane();
 			mainWindowRightSplitPane.setOrientation(Orientation.VERTICAL);
-			mainWindowRightSplitPane.getItems().add(tbl_chatMember);
+			mainWindowRightSplitPane.setDividerPositions(0.8);
+
+			BorderPane chatMemberTableBorderPane = new BorderPane();
+			chatMemberTableBorderPane.setCenter(tbl_chatMember);
+
+			HBox chatMemberTableFilterQTFAndQRBHbox = new HBox();
+			chatMemberTableFilterQTFAndQRBHbox.setSpacing(10);
+
+//			chatMemberTableFilterQTFAndQRBHbox.set
+
+			VBox chatMemberTableFilterVBoxForAllFilters= new VBox();
+			chatMemberTableFilterVBoxForAllFilters.setSpacing(1);
+			chatMemberTableFilterVBoxForAllFilters.setStyle("-fx-padding: 1;" +
+					"-fx-border-style: solid inside;" +
+					"-fx-border-width: 1;" +
+					"-fx-border-insets: 1;" +
+					"-fx-border-radius: 1;" +
+					"-fx-border-color: lightgreen;");
+
+			HBox chatMemberTableFilterQRBHBox  = new HBox();
+			chatMemberTableFilterQRBHBox.setAlignment(Pos.CENTER_LEFT);
+
+			TextField chatMemberTableFilterMaxQrbTF = new TextField("1000");
+			ToggleButton tglBtnQRBEnable = new ToggleButton("Show only QRB [km] <= ");
+			tglBtnQRBEnable.selectedProperty().addListener(new ChangeListener<Boolean>() {
+				Predicate<ChatMember> maxQrbPredicate = new Predicate<ChatMember>() {
+					@Override
+					public boolean test(ChatMember chatMember) {
+						if (chatMember.getQrb() < Double.parseDouble(chatMemberTableFilterMaxQrbTF.getText())) {
+							return true;
+						} else return false;
+					}
+				};
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+					if (tglBtnQRBEnable.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(maxQrbPredicate);
+					} else chatcontroller.getLst_chatMemberListFilterPredicates().remove(maxQrbPredicate);
+				}
+			});
+
+			chatMemberTableFilterQRBHBox.getChildren().add(tglBtnQRBEnable);
+			chatMemberTableFilterMaxQrbTF.textProperty().addListener(new ChangeListener<String>() {
+				@Override
+				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
+					if (!newValue.matches("\\d*")) {
+						chatMemberTableFilterMaxQrbTF.setText(newValue.replaceAll("[^\\d]", ""));
+					}
+				}
+			});
+			chatMemberTableFilterMaxQrbTF.setPrefSize(50,0);
+
+			chatMemberTableFilterQRBHBox.getChildren().add(chatMemberTableFilterMaxQrbTF);
+			chatMemberTableFilterQRBHBox.setStyle("-fx-padding: 1;" +
+					"-fx-border-style: solid inside;" +
+					"-fx-border-width: 1;" +
+					"-fx-border-insets: 1;" +
+					"-fx-border-radius: 1;" +
+					"-fx-border-color: lightgrey;");
+
+			chatMemberTableFilterQTFAndQRBHbox.setFillHeight(true);
+			chatMemberTableFilterQTFAndQRBHbox.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQRBHBox);
+
+
+			HBox chatMemberTableFilterQTFHBox  = new HBox();
+			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
+
+			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF +/-25 degrees");
+			TextField chatMemberTableFilterQtfTF = new TextField("0");
+			chatMemberTableFilterQtfTF.textProperty().addListener(new ChangeListener<String>() {
+				@Override
+				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
+					if (!newValue.matches("\\d*")) {
+						chatMemberTableFilterQtfTF.setText(newValue.replaceAll("[^\\d]", ""));
+					}
+				}
+			});
+			chatMemberTableFilterQtfEnableChkbx.selectedProperty().addListener(new ChangeListener<Boolean>() {
+
+				Predicate<ChatMember> qtfCheckPredicate = new Predicate<ChatMember>() {
+					@Override
+					public boolean test(ChatMember chatMember) {
+
+						System.out.println(chatMemberTableFilterQtfTF.getText() + " stn have " + chatMember.getQTFdirection());
+
+						double myQTF = Double.parseDouble(chatMemberTableFilterQtfTF.getText());
+
+						Double diff360 = 0.;
+
+						if (myQTF-25 < 0) {
+							diff360 = myQTF-25+360;
+							System.out.println("diff- " + diff360);
+						} else if (myQTF+25 >360) {
+							diff360 = myQTF+25-360;
+							System.out.println("diff+ " + diff360);
+						}
+
+						if ((chatMember.getQTFdirection() >= myQTF-diff360 ) && (chatMember.getQTFdirection() <= myQTF+diff360)){
+							return true;
+						} else return false;
+					}
+				};
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+					if (chatMemberTableFilterQtfEnableChkbx.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(qtfCheckPredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(qtfCheckPredicate);
+					}
+				}
+			});
+			chatMemberTableFilterQTFHBox.getChildren().add(chatMemberTableFilterQtfEnableChkbx);
+
+
+
+
+			chatMemberTableFilterQtfTF.setPrefSize(50,0);
+//			chatMemberTableFilterQTFHBox.getChildren().add(chatMemberTableFilterQtfTF);
+			chatMemberTableFilterQTFHBox.setStyle("-fx-padding: 1;" +
+					"-fx-border-style: solid inside;" +
+					"-fx-border-width: 1;" +
+					"-fx-border-insets: 1;" +
+					"-fx-border-radius: 1;" +
+					"-fx-border-color: lightgrey;");
+
+
+
+			Button qtfNorth = new Button("N");
+			qtfNorth.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("0");
+				}
+			});
+			Button qtfNorthEast = new Button("NE");
+			qtfNorthEast.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("45");
+				}
+			});
+			Button qtfEast = new Button("E");
+			qtfEast.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("90");
+				}
+			});
+			Button qtfSouthEast = new Button("SE");
+			qtfSouthEast.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("135");
+				}
+			});
+			Button qtfSouth = new Button("S");
+			qtfSouth.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("180");
+				}
+			});
+			Button qtfSouthWest = new Button("SW");
+			qtfSouthWest.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("225");
+				}
+			});
+			Button qtfWest = new Button("W");
+			qtfWest.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("270");
+				}
+			});
+			Button qtfNorthWest = new Button("NW");
+			qtfNorthWest.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					chatMemberTableFilterQtfTF.textProperty().set("315");
+				}
+			});
+
+			chatMemberTableFilterQTFHBox.setSpacing(5);
+			chatMemberTableFilterQTFHBox.getChildren().addAll(qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, chatMemberTableFilterQtfTF, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
+			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQTFHBox);
+
+			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterQTFAndQRBHbox);
+
+			HBox chatMemberTableFilterTextFieldBox = new HBox();
+			chatMemberTableFilterTextFieldBox.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterTextFieldBox.setStyle("-fx-padding: 1;" +
+					"-fx-border-style: solid inside;" +
+					"-fx-border-width: 1;" +
+					"-fx-border-insets: 1;" +
+					"-fx-border-radius: 1;" +
+					"-fx-border-color: lightgrey;");
+
+
+			chatcontroller.getLst_chatMemberListFiltered().predicateProperty().bind(Bindings.createObjectBinding(() -> chatcontroller.getLst_chatMemberListFilterPredicates().stream().reduce(x -> true, Predicate::and), chatcontroller.getLst_chatMemberListFilterPredicates()));
+
+
+
+
+			TextField chatMemberTableFilterTextField = new TextField("Find...");
+			chatMemberTableFilterTextField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+					if (chatMemberTableFilterTextField.focusedProperty().getValue()) {
+
+						chatMemberTableFilterTextField.clear();
+					} else {
+						if (!chatMemberTableFilterTextField.focusedProperty().getValue() && chatMemberTableFilterTextField.textProperty().equals("")) {
+
+						chatMemberTableFilterTextField.setText("Find...");
+						}
+					}
+//					System.out.println(chatMemberTableFilterTextField.focusedProperty().getValue());
+				}
+			});
+			chatMemberTableFilterTextField.textProperty().addListener(new ChangeListener<String>() {
+
+				Predicate<ChatMember> searchTextPredicate = new Predicate<ChatMember>() {
+					@Override
+					public boolean test(ChatMember chatMember) {
+						if (chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toUpperCase()) ||
+								chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toLowerCase())) {
+							return true;
+						} else
+
+							return false;
+					}
+
+				};
+
+				@Override
+				public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
+
+					if (chatMemberTableFilterTextField.textProperty().getValue().equals("") && !chatMemberTableFilterTextField.focusedProperty().getValue()) {
+						chatMemberTableFilterTextField.setText("Find...");
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(searchTextPredicate);
+					}
+					else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
+					}
+
+					System.out.println(chatMemberTableFilterTextField.textProperty().getValue().equals("") + " / " + !chatMemberTableFilterTextField.focusedProperty().getValue());
+				}
+			});
+
+			HBox chatMemberTableFilterWorkedBandFiltersHbx = new HBox();
+
+			ToggleButton btnTglwkd = new ToggleButton("wkd");
+
+			Predicate<ChatMember> wkdPredicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkdPredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkdPredicate);
+					}
+				}
+			});
+			ToggleButton btnTglwkd144 = new ToggleButton("144");
+			ToggleButton btnTglwkd432 = new ToggleButton("432");
+			ToggleButton btnTglwkd23 = new ToggleButton("23");
+			ToggleButton btnTglwkd13 = new ToggleButton("13");
+			ToggleButton btnTglwkd9 = new ToggleButton("9");
+			ToggleButton btnTglwkd6 = new ToggleButton("6");
+			ToggleButton btnTglwkd3 = new ToggleButton("3");
+			ToggleButton btnTglInactive = new ToggleButton("Inactive stations");
+
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Hide: "));
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd144);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd432);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd23);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd13);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd9);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd6);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd3);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglInactive);
+			chatMemberTableFilterWorkedBandFiltersHbx.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterWorkedBandFiltersHbx.setSpacing(5);
+			chatMemberTableFilterWorkedBandFiltersHbx.setStyle("-fx-padding: 1;" +
+					"-fx-border-style: solid inside;" +
+					"-fx-border-width: 1;" +
+					"-fx-border-insets: 1;" +
+					"-fx-border-radius: 1;" +
+					"-fx-border-color: lightgrey;");
+
+//			chatMemberTableFilterWorkedBandFilters
+
+
+			chatMemberTableFilterTextFieldBox.getChildren().addAll(chatMemberTableFilterTextField);
+
+			HBox chatMemberTableFilterTextFieldAndWorkedBandsHbx = new HBox();
+			chatMemberTableFilterTextFieldAndWorkedBandsHbx.getChildren().addAll(chatMemberTableFilterTextFieldBox, chatMemberTableFilterWorkedBandFiltersHbx);
+			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setSpacing(5);
+
+			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterTextFieldAndWorkedBandsHbx);
+
+			chatMemberTableBorderPane.setTop(chatMemberTableFilterVBoxForAllFilters);
+
+
+			mainWindowRightSplitPane.getItems().add(chatMemberTableBorderPane);
 
 
 			mainWindowLeftSplitPane.getItems().addAll(messageSectionSplitpane, mainWindowRightSplitPane);
