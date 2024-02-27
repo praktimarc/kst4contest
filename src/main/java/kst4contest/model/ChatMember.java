@@ -19,7 +19,7 @@ public class ChatMember {
 	ChatCategory chatCategory; // only used by own instance of the chatmember instance to login to the chat
 //	ChatCategory chatCategory;//only used by own instance of the chatmember instance to login to the chat
 
-	long activityCounter; // time of last activity in epochtimesec
+	long activityTimeLastInEpoch; // time of last activity in epochtimesec
 	Date lastActivity; // time of last activity in epochtimesec
 	Date lastActualizationTimeOfThisMember; // time of last state change if that member
 	Double qrb;
@@ -125,8 +125,8 @@ public class ChatMember {
 		this.workedCategories = workedCategories;
 	}
 
-	public void setActivityCounter(long activityCounter) {
-		this.activityCounter = activityCounter;
+	public void setActivityTimeLastInEpoch(long activityTimeLastInEpoch) {
+		this.activityTimeLastInEpoch = activityTimeLastInEpoch;
 	}
 
 	public int getState() {
@@ -210,12 +210,12 @@ public class ChatMember {
 		this.frequency = frequency;
 	}
 
-	public long getActivityCounter() {
-		return activityCounter;
+	public long getActivityTimeLastInEpoch() {
+		return activityTimeLastInEpoch;
 	}
 
 	public void setActivityCounter(int activityCounter) {
-		this.activityCounter = activityCounter;
+		this.activityTimeLastInEpoch = activityCounter;
 	}
 
 	public boolean isWorked() {

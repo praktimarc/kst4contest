@@ -99,6 +99,54 @@ public class ChatController {
 		this.disconnected = disconnected;
 	}
 
+	public void airScout_SendAsShowPathPacket(ChatMember remoteChatMember) {
+
+		DatagramSocket dsocket;
+
+		String prefix_asSetpath ="ASSHOWPATH: \"KST\" \"AS\" ";
+		String bandString = "1440000";
+		String myCallAndMyLocString = chatPreferences.getLoginCallSign() + "," + chatPreferences.getLoginLocator();
+		String remoteCallAndLocString = remoteChatMember.getCallSign() +"," + remoteChatMember.getQra();
+
+		String host = "255.255.255.255";
+//		int port = 9872;
+		int port = chatPreferences.getAirScout_asCommunicationPort();
+//		System.out.println("<<<<<<<<<<<<<<<<<<<<ASPERI: " + port);
+
+//		byte[] message = "ASSETPATH: \"KST\" \"AS\" 1440000,DO5AMF,JN49GL,OK1MZM,JN89IW ".getBytes(); Original, ging
+		InetAddress address;
+
+			String queryStringToAirScout = "";
+
+			queryStringToAirScout += prefix_asSetpath + bandString + "," + myCallAndMyLocString + "," + remoteCallAndLocString;
+
+			byte[] queryStringToAirScoutMSG = queryStringToAirScout.getBytes();
+
+			try {
+				address = InetAddress.getByName("255.255.255.255");
+				DatagramPacket packet = new DatagramPacket(queryStringToAirScoutMSG, queryStringToAirScoutMSG.length, address, port);
+				dsocket = new DatagramSocket();
+				dsocket.setBroadcast(true);
+				dsocket.send(packet);
+				dsocket.close();
+			} catch (UnknownHostException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (NoRouteToHostException e) {
+				e.printStackTrace();
+			}
+			catch (SocketException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+
+	}
+
+
 	/**
 	 * Handles the disconnect of either the chat (Case DISCONNECTONLY) or the
 	 * complete application life including all threads (case CLOSEALL)<br/><br/>
@@ -290,7 +338,7 @@ public class ChatController {
 	private String chatState;
 
 	private String hostname = "109.90.0.130";
-	private String praktiKSTVersion = "praktiKST 0.9b";
+	private String praktiKSTVersion = "praktiKST 1.0";
 	private String praktiKSTVersionInfo = "2022-10 - 2022-12\ndeveloped by DO5AMF, Marc\nContact: praktimarc@gmail.com\nDonations via paypal are welcome";
 
 	private int port = 23001; // kst4contest.test 4 23001

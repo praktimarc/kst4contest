@@ -6,6 +6,9 @@
         <LoginDisplayedName>Paule</LoginDisplayedName>
         <LoginLocator>JO51DI</LoginLocator>
         <ChatCategory>2</ChatCategory>
+        <stn_antennaBeamWidthDeg>50</stn_antennaBeamWidthDeg>
+        <stn_maxQRBDefault>900</stn_maxQRBDefault>
+        <stn_qtfDefault>135</stn_qtfDefault>
     </station>
     <logsynch>
         <logsynch_fileBasedWkdCallInterpreterFileNameReadOnly>SimpleLogFile.txt</logsynch_fileBasedWkdCallInterpreterFileNameReadOnly>
