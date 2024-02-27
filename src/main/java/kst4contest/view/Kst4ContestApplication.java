@@ -8,6 +8,7 @@ import java.util.function.Predicate;
 
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.*;
+import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
@@ -35,15 +36,12 @@ import javafx.scene.control.TableColumn.CellDataFeatures;
 import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.cell.TextFieldTableCell;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
+import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatMessage;
@@ -99,12 +97,24 @@ public class Kst4ContestApplication extends Application {
 		selectedCallSignDownerSiteGridPane.setVgap(2);
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQTFInfo, 0,0,1,1);
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQRBInfo, 0,1,1,1);
-		selectedCallSignDownerSiteGridPane.add(new Label("last activity dateTime"), 0,2,1,1);
-		selectedCallSignDownerSiteGridPane.add(new Label("last activity duration"), 0,3,1,1);
-		selectedCallSignDownerSiteGridPane.add(new Button("show path in AS"), 1,0,1,3);
-		selectedCallSignDownerSiteGridPane.add(new Label("publicmsgCount"), 3,0,1,1);
-		selectedCallSignDownerSiteGridPane.add(new Label("toMeMsgCount"), 3,1,1,1);
-		selectedCallSignDownerSiteGridPane.add(new Label("fromMeMSGCount"), 3,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Label("Last activity: " + new Utils4KST().time_convertEpochToReadable(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"")), 0,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(new Label(("(" + Utils4KST.time_getSecondsBetweenEpochAndNow(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"") /60%60) +" min ago)"), 0,3,1,1);
+
+		Button selectedCallSignShowAsPathBtn = new Button("Show path in AS");
+		selectedCallSignShowAsPathBtn.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent actionEvent) {
+				chatcontroller.airScout_SendAsShowPathPacket(selectedCallSignInfoStageChatMember);
+			}
+		});
+
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,3);
+
+
+
+//		selectedCallSignDownerSiteGridPane.add(new Label("publicmsgCount"), 3,0,1,1);
+//		selectedCallSignDownerSiteGridPane.add(new Label("toMeMsgCount"), 3,1,1,1);
+//		selectedCallSignDownerSiteGridPane.add(new Label("fromMeMSGCount"), 3,2,1,1);
 //		HBox selectedCallSignDownerSiteHBox = new HBox();
 //		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQRBInfo);
 //		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQTFInfo);
@@ -121,6 +131,7 @@ public class Kst4ContestApplication extends Application {
 
 		ToggleGroup selectedCallSignInfoFilterMessagesRadioGrp = new ToggleGroup();
 		RadioButton selectedCallSignFilterToMeMsgRB = new RadioButton("pm to me ");
+		selectedCallSignFilterToMeMsgRB.setSelected(true); //TODO: that behavior as default selection could be made preferencable
 		selectedCallSignFilterToMeMsgRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
 		RadioButton selectedCallSignFilterMsgToOtherRB = new RadioButton("pm to other");
 		selectedCallSignFilterMsgToOtherRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
@@ -128,24 +139,32 @@ public class Kst4ContestApplication extends Application {
 		selectedCallSignFilterMsgpublic.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
 		RadioButton selectedCallSignNoFilterRB = new RadioButton("nothing");
 		selectedCallSignNoFilterRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
-		selectedCallSignNoFilterRB.setSelected(true); //TODO: that behavior as default selection could be made preferencable
+
 
 		selectedCallSignInfoFilterMessagesRadioGrp.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
 			@Override
 			public void changed(ObservableValue<? extends Toggle> observableValue, Toggle toggle, Toggle t1) {
 
 				RadioButton radioButton = (RadioButton) selectedCallSignInfoFilterMessagesRadioGrp.getSelectedToggle();
+
 				if (radioButton.equals(selectedCallSignFilterToMeMsgRB)) {
 					chatcontroller.getLst_selectedCallSignInfofilteredMessageList().setPredicate(new Predicate<ChatMessage>() {
 						@Override
 						public boolean test(ChatMessage chatMessage) {
 
-							if (((chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign())) || (chatMessage.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))
-									) && ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) || (chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())))) {
-								return true;
+							try {
+
+								if (((chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign())) || (chatMessage.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))
+								) && ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) || (chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())))) {
+									return true;
+								}
+
+								else return false;
+							} catch (Exception exception) {
+								System.out.println("KST4ContestApp <<<catched error>>> " + exception.getMessage());
 							}
 
-							else return false;
+							return true;
 						}
 					});
 
@@ -228,7 +247,7 @@ public class Kst4ContestApplication extends Application {
 					} else return false;
 
 				} catch (Exception exception) {
-					System.out.println("KST4ContestApplication <<<catched ERROR>>>>: cant get sender infos due to sender is not known yet");
+					System.out.println("KST4ContestApplication <<<catched ERROR>>>>: cant get sender infos due to sender is not known yet" + exception.getMessage());
 				 return false;
 				}
 			}
@@ -240,8 +259,22 @@ public class Kst4ContestApplication extends Application {
 	private TableView<ChatMember> initChatMemberTable() {
 
 		TableView<ChatMember> tbl_chatMemberTable = new TableView<ChatMember>();
+		tbl_chatMemberTable.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+
+				//we need to overdrive the Enter pressed as it should (in the whole scene) send the text!
+				if (event.getCode() == KeyCode.ENTER) {
+
+					event.consume();
+					sendButton.fire();
+				}
+
+			}
+		});
+
 		tbl_chatMemberTable.setTooltip(new Tooltip(
-				"Stations available \n\n Use right click to a station to select predefined texts \n\n Texts can be changed in the config-file"));
+				"Stations available \n\nUse right click to a station to select predefined texts\nor hit <strg> + <1> ... <9> to write textsnippet to selected station\n\nHit <enter> to send"));
 
 		TableColumn<ChatMember, String> callSignCol = new TableColumn<ChatMember, String>("Callsign");
 		callSignCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
@@ -279,6 +312,19 @@ public class Kst4ContestApplication extends Application {
 				SimpleStringProperty qra = new SimpleStringProperty();
 
 				qra.setValue(cellDataFeatures.getValue().getQra());
+
+				return qra;
+			}
+		});
+
+		TableColumn<ChatMember, String> qtfCol = new TableColumn<ChatMember, String>("QTF");
+		qtfCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
+				SimpleStringProperty qra = new SimpleStringProperty();
+
+				qra.setValue(cellDataFeatures.getValue().getQTFdirection()+"°");
 
 				return qra;
 			}
@@ -370,6 +416,23 @@ public class Kst4ContestApplication extends Application {
 		/**
 		 * END HIGH EXPERIMENTAL::::::::
 		 */
+
+
+		TableColumn<ChatMember, String> lastActCol = new TableColumn<ChatMember, String>("Act");
+		lastActCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
+
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
+				SimpleStringProperty lastActEpoch = new SimpleStringProperty();
+
+//				lastActEpoch.setValue(cellDataFeatures.getValue().getActivityTimeLastInEpoch()+"");
+
+				lastActEpoch.setValue((Utils4KST.time_getSecondsBetweenEpochAndNow(cellDataFeatures.getValue().getActivityTimeLastInEpoch()+"") /60%60) +"");
+
+				return lastActEpoch;
+			}
+		});
+
 
 		TableColumn<ChatMember, String> workedCol = new TableColumn<ChatMember, String>("worked");
 		workedCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
@@ -546,7 +609,7 @@ public class Kst4ContestApplication extends Application {
 		workedCol.getColumns().addAll(wkdAny_subcol, vhfCol_subcol, uhfCol_subcol, shf23_subcol, shf13_subcol,
 				shf9_subcol, shf6_subcol, shf3_subcol); // TODO: automatize enabling to users bandChoice
 
-		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qrgCol, airScoutCol, workedCol);
+		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qtfCol, qrgCol, lastActCol, airScoutCol, workedCol);
 
 //		tbl_chatMemberTable.setItems(chatcontroller.getLst_chatMemberListFiltered());
 
@@ -580,11 +643,13 @@ public class Kst4ContestApplication extends Application {
 
 		tbl_chatMemberTable.getSortOrder().add(callSignCol);
 
+//		initializeCommunicationOverMyHeadVizalizationStage(new ChatMember());
+
 		/**
 		 * timer_chatMemberTableSortTimer -->
 		 * This part fixes a javafx bug. The update of the Chatmember fields is (for any
-		 * reason) not visible in the ui. Its neccessarry to sort the table in intervals
-		 * to keep the table up to date.
+		 * reason) not visible in the ui. Its neccessarry to (now no more sort!) but refresh
+		 * the table in intervals to keep the table up to date.
 		 */
 
 		timer_chatMemberTableSortTimer = new Timer();
@@ -607,7 +672,7 @@ public class Kst4ContestApplication extends Application {
 
 					try {
 						
-						tbl_chatMemberTable.sort();
+//						tbl_chatMemberTable.sort();
 
 					} catch (Exception e) {
 						System.out.println("[Main.java, Warning:] Table sorting (actualizing) failed this time.");
@@ -617,7 +682,7 @@ public class Kst4ContestApplication extends Application {
 
 				});
 			}
-		}, new Date(), 10000);
+		}, new Date(), 5000);
 
 		tbl_chatMemberTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		tbl_chatMemberTable.autosize();
@@ -676,74 +741,32 @@ public class Kst4ContestApplication extends Application {
 //
 //	}
 
-	private Stage initializeFurtherInfoOnSelectedChatMemberStage(ChatMember selectedChatMember) {
-		try {
-
-
-//		stage_selectedCallSignInfoStage = new Stage();
-//		stage_selectedCallSignInfoStage.close();
-
-		stage_selectedCallSignInfoStage.setTitle("Further info on "+ selectedChatMember.getCallSign());
-		Label selectedCallSignInfoLblQTFInfo = new Label("QTF: " + selectedChatMember.getQTFdirection() + " deg");
-		Label selectedCallSignInfoLblQRBInfo = new Label("QRB: " + selectedChatMember.getQrb() + " km");
-
-
-		AnchorPane selectedCallSignInfoPane = new AnchorPane();
-		BorderPane selectedCallSignInfoBorderPane = new BorderPane();
-		selectedCallSignInfoPane.getChildren().add(selectedCallSignInfoBorderPane);
-
-		SplitPane selectedCallSignSplitPane = new SplitPane();
-		selectedCallSignSplitPane.setOrientation(Orientation.VERTICAL);
-
-		TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable = initFurtherInfoAbtCallsignMSGTable();
-
-
-		GridPane selectedCallSignDownerSiteGridPane = new GridPane();
-			selectedCallSignDownerSiteGridPane.setHgap(10);
-			selectedCallSignDownerSiteGridPane.setVgap(2);
-		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQTFInfo, 0,0,1,1);
-		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQRBInfo, 0,1,1,1);
-			selectedCallSignDownerSiteGridPane.add(new Label("last activity dateTime"), 0,2,1,1);
-			selectedCallSignDownerSiteGridPane.add(new Label("last activity duration"), 0,3,1,1);
-		selectedCallSignDownerSiteGridPane.add(new Button("show path in AS"), 1,0,1,3);
-			selectedCallSignDownerSiteGridPane.add(new Label("publicmsgCount"), 3,0,1,1);
-			selectedCallSignDownerSiteGridPane.add(new Label("toMeMsgCount"), 3,1,1,1);
-			selectedCallSignDownerSiteGridPane.add(new Label("fromMeMSGCount"), 3,2,1,1);
-//		HBox selectedCallSignDownerSiteHBox = new HBox();
-//		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQRBInfo);
-//		selectedCallSignDownerSiteHBox.getChildren().add(selectedCallSignInfoLblQTFInfo);
-
-			selectedCallSignSplitPane.getItems().add(initFurtherInfoAbtCallsignMSGTable);
-		selectedCallSignSplitPane.getItems().add(selectedCallSignDownerSiteGridPane);
-
-
-		selectedCallSignInfoBorderPane.setCenter(selectedCallSignSplitPane);
-
-		HBox selectedCallSignInfoBottomControlsBox = new HBox();
-		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Always on top"));
-		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Filter messages to me"));
-		selectedCallSignInfoBottomControlsBox.getChildren().add(new CheckBox("Filter messages to Other"));
-		selectedCallSignInfoBorderPane.setBottom(selectedCallSignInfoBottomControlsBox);
-
-
-		stage_selectedCallSignInfoStage.setScene(new Scene(selectedCallSignInfoPane, 500, 400));
-		stage_selectedCallSignInfoStage.setAlwaysOnTop(false);
-
-		if (!stage_selectedCallSignInfoStage.isShowing()) {
-
-			stage_selectedCallSignInfoStage.show();
-		}
-
-			stage_selectedCallSignInfoStage.show();
-		return stage_selectedCallSignInfoStage;
-		}
-
-		catch (Exception e) {
-			e.printStackTrace();
-			System.out.println("There occured an error due to the selected callsign had been deleted!");
-			return stage_selectedCallSignInfoStage;
-		}
-	}
+//	private Stage initializeCommunicationOverMyHeadVizalizationStage(ChatMember selectedChatMember) {
+//		Stage stage_CommunicationOverMyHeadVizalizationStage = new Stage();
+//		stage_CommunicationOverMyHeadVizalizationStage.setAlwaysOnTop(true);
+//
+//		MaidenheadLocatorMapPane locatorMapPane = new MaidenheadLocatorMapPane();
+//		locatorMapPane.addLocator("JO51IJ", Color.RED);
+//		locatorMapPane.addLocator("JN39OC", Color.BLUE);
+//		locatorMapPane.addLocator("JN49GL", Color.GREEN);
+//		locatorMapPane.connectLocators("JO51IJ", "JN49GL");
+//
+//		try {
+//
+//
+//		BorderPane bp_CommunicationOverMyHeadVizalizationStage = new BorderPane();
+//
+//			stage_CommunicationOverMyHeadVizalizationStage.setTitle("Further info on "+ selectedChatMember.getCallSign());
+//
+//			stage_CommunicationOverMyHeadVizalizationStage.setScene(new Scene(locatorMapPane));
+//			stage_CommunicationOverMyHeadVizalizationStage.show();
+//
+//			return stage_CommunicationOverMyHeadVizalizationStage;
+//		} catch (Exception exception){
+//
+//		}
+//		return stage_CommunicationOverMyHeadVizalizationStage;
+//	}
 
 	/**
 	 * Initializes the right click contextmenu for the chatmember-table, sets the
@@ -1056,6 +1079,9 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
+
+
+
 		TableColumn<ChatMessage, String> msgCol = new TableColumn<ChatMessage, String>("Message");
 		msgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
 
@@ -1317,6 +1343,7 @@ public class Kst4ContestApplication extends Application {
 		/**
 		 * END HIGH EXPERIMENTAL::::::::
 		 */
+
 
 		tbl_privateMSGTable.getColumns().addAll(timeCol, callSignCol, nameCol, qraCol, msgCol, qrgCol, airScoutCol);
 
@@ -2142,12 +2169,13 @@ public class Kst4ContestApplication extends Application {
 		Menu helpMenu = new Menu("Info");
 
 		MenuItem help1 = new MenuItem("No help here.");
-		MenuItem help2 = new MenuItem("Support the chatclient development via PayPal");
+		MenuItem help2 = new MenuItem("Donate for kst4Contest development via PayPal");
 		MenuItem help3 = new MenuItem("_______________________");
 		help3.setDisable(true);
 		MenuItem help4 = new MenuItem("Visit DARC X08-Homepage");
-		MenuItem help5 = new MenuItem("_______________________");
-		help5.setDisable(true);
+		MenuItem menuItmDonateON4KST = new MenuItem("Donate for ON4KST Chatservers with PayPal to on4kst@skynet.be");
+		MenuItem menuItmDonateOV3T = new MenuItem("Donate for OV3T´s plane feed service");
+//		help5.setDisable(true);
 		MenuItem help6 = new MenuItem("Contact the author using default mail app");
 		MenuItem help8 = new MenuItem("Join kst4Contest newsgroup");
 //		MenuItem help9 = new MenuItem("Download the changelog / roadmap");
@@ -2188,6 +2216,24 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
+//		menuItmDonateON4KST.setOnAction(new EventHandler<ActionEvent>() {
+//			public void handle(ActionEvent event) {
+//
+//				getHostServices().showDocument("https://www.paypal.com");
+//
+//
+//			}
+//		});
+
+		menuItmDonateOV3T.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+
+				getHostServices().showDocument("https://www.paypal.me/ov3t");
+
+
+			}
+		});
+
 //		help9.setOnAction(new EventHandler<ActionEvent>() {
 //			public void handle(ActionEvent event) {
 //
@@ -2211,7 +2257,7 @@ public class Kst4ContestApplication extends Application {
 		});
 
 //		helpMenu.getItems().add(help1);
-		helpMenu.getItems().addAll(help2, help4, help5, help6, help8, help10);
+		helpMenu.getItems().addAll(help2, help3, help4, menuItmDonateOV3T, menuItmDonateON4KST, help6, help8, help10);
 
 //		helpMenu.getItems().add(help2);
 //		helpMenu.getItems().add(help4);
@@ -2231,6 +2277,7 @@ public class Kst4ContestApplication extends Application {
 
 	MenuItem menuItemOptionsSetFrequencyAsName;
 	TextField txt_chatMessageUserInput = new TextField();
+	Button sendButton;
 	TextField txt_ownqrg = new TextField();
 	TextField txt_myQTF = new TextField();
 	Button btnOptionspnlConnect;
@@ -2712,9 +2759,14 @@ public class Kst4ContestApplication extends Application {
 //			            System.out.println("Textfield on focus");
 						// Do nothing until field loses focus, user will enter his frequency
 					} else {
+						try {
 						System.out.println(
 								"[Main.java, Info]: Set the MYQTF property by hand to: " + txt_myQTF.getText());
-						chatcontroller.getChatPreferences().getActualQTF().set(Integer.parseInt(txt_myQTF.getText()));
+						chatcontroller.getChatPreferences().getActualQTF().set(Integer.parseInt(txt_myQTF.getText()));}
+						catch (Exception exception) {
+							System.out.println("bullshit entered in myqtf");
+							txt_myQTF.setText("0");
+						}
 					}
 				}
 			});
@@ -2730,6 +2782,79 @@ public class Kst4ContestApplication extends Application {
 			BorderPane bPaneChatWindow = new BorderPane();
 
 			Scene scene = new Scene(bPaneChatWindow, 1024, 768);
+
+			scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
+				KeyCombination keyComboSTRGplus1 = new KeyCodeCombination(KeyCode.DIGIT1, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus2 = new KeyCodeCombination(KeyCode.DIGIT2, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus3 = new KeyCodeCombination(KeyCode.DIGIT3, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus4 = new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus5 = new KeyCodeCombination(KeyCode.DIGIT5, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus6 = new KeyCodeCombination(KeyCode.DIGIT6, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus7 = new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus8 = new KeyCodeCombination(KeyCode.DIGIT8, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus9 = new KeyCodeCombination(KeyCode.DIGIT9, KeyCombination.CONTROL_DOWN);
+				KeyCombination keyComboSTRGplus0 = new KeyCodeCombination(KeyCode.DIGIT0, KeyCombination.CONTROL_DOWN);
+
+
+				@Override
+				public void handle(KeyEvent keyEvent) {
+					try {
+
+//					System.out.println(keyEvent.getCode());
+
+						/**
+						 * if a macro is set by hitting strg+Nr, it should be possible to send the message by hit the enter key
+						 */
+					if (keyEvent.getCode() == KeyCode.ENTER) {
+
+						sendButton.fire();
+
+					} else if (keyEvent.getCode() == KeyCode.ESCAPE) {
+						txt_chatMessageUserInput.clear();
+					} else
+
+						if (selectedCallSignInfoStageChatMember.getCallSign() != null) {
+
+							if (keyComboSTRGplus1.match(keyEvent)) {
+
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(0));
+
+							} else if (keyComboSTRGplus2.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(1));
+
+							} else if (keyComboSTRGplus3.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(2));
+
+							} else if (keyComboSTRGplus4.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(3));
+
+							} else if (keyComboSTRGplus5.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(4));
+
+							} else if (keyComboSTRGplus6.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(5));
+
+							} else if (keyComboSTRGplus7.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(6));
+
+							} else if (keyComboSTRGplus8.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(7));
+
+							} else if (keyComboSTRGplus9.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(8));
+
+							} else if (keyComboSTRGplus0.match(keyEvent)) {
+								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(9));
+
+							}
+
+						}
+					} catch (Exception nullPointerExc) {
+						System.out.println("There are no predifined textsnippets for this keycombo! -> " + nullPointerExc.getMessage());
+					}
+				}
+			});
+
 
 //			primaryStage.setTitle(this.chatcontroller.getChatPreferences().getChatState());
 
@@ -2749,7 +2874,7 @@ public class Kst4ContestApplication extends Application {
 
 //			FlowPane textInputFlowPane = new FlowPane();
 
-			Button sendButton = new Button("send");
+			sendButton = new Button("send");
 			sendButton.setMinSize(60, 0);
 			sendButton.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -2944,6 +3069,15 @@ public class Kst4ContestApplication extends Application {
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput.setText("/cq "
 									+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
+
+							try {
+								selectedCallSignFurtherInfoPane.getChildren().clear();
+								selectedCallSignInfoStageChatMember = selectedChatMemberPrivateChat.getList().get(0).getSender();
+								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+							} catch (Exception exception) {
+								System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
+							}
+
 							System.out.println("privChat selected ChatMember: "
 									+ selectedChatMemberPrivateChat.getList().get(0).getSender());
 							// selectedChatMemberList.clear();
@@ -2999,6 +3133,14 @@ public class Kst4ContestApplication extends Application {
 								+ selectedChatMemberGeneralChat.getList().get(0).getSender().getCallSign() + " ");
 						System.out.println("privChat selected ChatMember: "
 								+ selectedChatMemberGeneralChat.getList().get(0).getSender());
+
+						try {
+							selectedCallSignFurtherInfoPane.getChildren().clear();
+							selectedCallSignInfoStageChatMember = selectedChatMemberGeneralChat.getList().get(0).getSender();
+							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+						} catch (Exception exception) {
+							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
+						}
 						// selectedChatMemberList.clear();
 //						selectionModelChatMember.clearSelection(0);
 					}
@@ -3009,6 +3151,7 @@ public class Kst4ContestApplication extends Application {
 
 			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
 					tbl_generalMessageTable);
+			messageSectionSplitpane.setDividerPositions(0.9);
 			//Changed to add contextmenu to cq message table
 //			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
 //					initChatGeneralMSGTable());
@@ -3044,8 +3187,8 @@ public class Kst4ContestApplication extends Application {
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput
 									.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
-							System.out.println(
-									"##################selected ChatMember: " + selectedChatMember.getList().get(0));
+//							System.out.println(
+//									"##################selected ChatMember: " + selectedChatMember.getList().get(0));
 							// selectedChatMemberList.clear();
 	//						selectionModelChatMember.clearSelection(0);
 						}
@@ -3104,7 +3247,7 @@ public class Kst4ContestApplication extends Application {
 			HBox chatMemberTableFilterQRBHBox  = new HBox();
 			chatMemberTableFilterQRBHBox.setAlignment(Pos.CENTER_LEFT);
 
-			TextField chatMemberTableFilterMaxQrbTF = new TextField("1000");
+			TextField chatMemberTableFilterMaxQrbTF = new TextField(chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
 			ToggleButton tglBtnQRBEnable = new ToggleButton("Show only QRB [km] <= ");
 			tglBtnQRBEnable.selectedProperty().addListener(new ChangeListener<Boolean>() {
 				Predicate<ChatMember> maxQrbPredicate = new Predicate<ChatMember>() {
@@ -3150,14 +3293,19 @@ public class Kst4ContestApplication extends Application {
 			HBox chatMemberTableFilterQTFHBox  = new HBox();
 			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
 
-			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF +/-25 degrees");
-			TextField chatMemberTableFilterQtfTF = new TextField("0");
+			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF:");
+			TextField chatMemberTableFilterQtfTF = new TextField(chatcontroller.getChatPreferences().getStn_qtfDefault()+"");
 			chatMemberTableFilterQtfTF.textProperty().addListener(new ChangeListener<String>() {
 				@Override
 				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
+					if (newValue.equals("")) {
+						chatMemberTableFilterQtfTF.setText("0");
+					}
 					if (!newValue.matches("\\d*")) {
 						chatMemberTableFilterQtfTF.setText(newValue.replaceAll("[^\\d]", ""));
 					}
+					chatMemberTableFilterQtfEnableChkbx.setSelected(false);
+					chatMemberTableFilterQtfEnableChkbx.setSelected(true);
 				}
 			});
 			chatMemberTableFilterQtfEnableChkbx.selectedProperty().addListener(new ChangeListener<Boolean>() {
@@ -3168,21 +3316,10 @@ public class Kst4ContestApplication extends Application {
 
 						System.out.println(chatMemberTableFilterQtfTF.getText() + " stn have " + chatMember.getQTFdirection());
 
-						double myQTF = Double.parseDouble(chatMemberTableFilterQtfTF.getText());
+//						double myQTF = );
 
-						Double diff360 = 0.;
+						return DirectionUtils.isAngleInRange(chatMember.getQTFdirection(),Double.parseDouble(chatMemberTableFilterQtfTF.getText()), chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg());
 
-						if (myQTF-25 < 0) {
-							diff360 = myQTF-25+360;
-							System.out.println("diff- " + diff360);
-						} else if (myQTF+25 >360) {
-							diff360 = myQTF+25-360;
-							System.out.println("diff+ " + diff360);
-						}
-
-						if ((chatMember.getQTFdirection() >= myQTF-diff360 ) && (chatMember.getQTFdirection() <= myQTF+diff360)){
-							return true;
-						} else return false;
 					}
 				};
 				@Override
@@ -3268,7 +3405,7 @@ public class Kst4ContestApplication extends Application {
 			});
 
 			chatMemberTableFilterQTFHBox.setSpacing(5);
-			chatMemberTableFilterQTFHBox.getChildren().addAll(qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, chatMemberTableFilterQtfTF, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
+			chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
 			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQTFHBox);
 
 			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterQTFAndQRBHbox);
@@ -3359,14 +3496,204 @@ public class Kst4ContestApplication extends Application {
 					}
 				}
 			});
+
 			ToggleButton btnTglwkd144 = new ToggleButton("144");
+
+			Predicate<ChatMember> wkd144Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked144()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd144.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd144.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd144Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd144Predicate);
+					}
+				}
+			});
+
 			ToggleButton btnTglwkd432 = new ToggleButton("432");
+
+			Predicate<ChatMember> wkd432Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked432()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd432.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd432.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd432Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd432Predicate);
+					}
+				}
+			});
+
+
 			ToggleButton btnTglwkd23 = new ToggleButton("23");
+
+			Predicate<ChatMember> wkd23Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked1240()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd23.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd23.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd23Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd23Predicate);
+					}
+				}
+			});
+
 			ToggleButton btnTglwkd13 = new ToggleButton("13");
+
+			Predicate<ChatMember> wkd13Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked2300()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd13.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd13.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd13Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd13Predicate);
+					}
+				}
+			});
+
 			ToggleButton btnTglwkd9 = new ToggleButton("9");
+
+			Predicate<ChatMember> wkd9Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked3400()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd9.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd9.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd9Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd9Predicate);
+					}
+				}
+			});
+
+
 			ToggleButton btnTglwkd6 = new ToggleButton("6");
+
+			Predicate<ChatMember> wkd6Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked5600()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd6.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd6.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd6Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd6Predicate);
+					}
+				}
+			});
+
+
 			ToggleButton btnTglwkd3 = new ToggleButton("3");
+
+			Predicate<ChatMember> wkd3Predicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+					if (chatMember.isWorked10G()) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglwkd3.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglwkd3.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(wkd3Predicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(wkd3Predicate);
+					}
+				}
+			});
+
 			ToggleButton btnTglInactive = new ToggleButton("Inactive stations");
+
+			Predicate<ChatMember> inactivePredicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+
+
+					if ((Utils4KST.time_getSecondsBetweenEpochAndNow(chatMember.getActivityTimeLastInEpoch()+"") /60%60) > 20) {
+						return false;
+					}
+					else return true;
+				}
+			};
+			btnTglInactive.setOnAction(new EventHandler<ActionEvent>() {
+
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglInactive.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(inactivePredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(inactivePredicate);
+					}
+				}
+			});
+
+			btnTglInactive.setTooltip(new Tooltip("not implemented yet!"));
 
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Hide: "));
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd);
@@ -3398,6 +3725,12 @@ public class Kst4ContestApplication extends Application {
 
 			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterTextFieldAndWorkedBandsHbx);
 
+//			Tooltip filterPanelTooltip = new Tooltip("Set the station-visible-filters here");
+//			Tooltip.install(chatMemberTableFilterVBoxForAllFilters,filterPanelTooltip);
+
+			Tooltip filterTextBoxTooltip = new Tooltip("Free text search");
+			Tooltip.install(chatMemberTableFilterTextField,filterTextBoxTooltip);
+
 			chatMemberTableBorderPane.setTop(chatMemberTableFilterVBoxForAllFilters);
 
 
@@ -3405,6 +3738,7 @@ public class Kst4ContestApplication extends Application {
 
 
 			mainWindowLeftSplitPane.getItems().addAll(messageSectionSplitpane, mainWindowRightSplitPane);
+			mainWindowLeftSplitPane.setDividerPositions(0.8);
 
 /**
  * initializing the furter infos of a callsign part of the right splitpane
@@ -3622,9 +3956,9 @@ public class Kst4ContestApplication extends Application {
 
 			@Override
 			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				System.out.println("[Main.java, Info]: Setted the Login Callsign: " + txtFldCallSign.getText());
-				chatcontroller.getChatPreferences().setLoginCallSign(txtFldCallSign.getText());
+				txtFldCallSign.setText(txtFldCallSign.getText().toUpperCase());
+				System.out.println("[Main.java, Info]: Setted the Login Callsign: " + txtFldCallSign.getText().toUpperCase());
+				chatcontroller.getChatPreferences().setLoginCallSign(txtFldCallSign.getText().toUpperCase());
 			}
 		});
 
@@ -3705,6 +4039,70 @@ public class Kst4ContestApplication extends Application {
 //        labeledSeparator.getChildren().add(rightSeparator);
 //        labeledSeparator.setAlignment(Pos.CENTER);
 
+		TextField txtFldstn_antennaBeamWidthDeg = new TextField(this.chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + "");
+
+		txtFldstn_antennaBeamWidthDeg.textProperty().addListener(new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
+
+				if (newString.equals("")) {
+					txtFldstn_antennaBeamWidthDeg.setText("0");
+				}
+
+				if (!newString.matches("\\d*")) {
+					txtFldstn_antennaBeamWidthDeg.setText(newString.replaceAll("[^\\d]", ""));
+				}
+
+				System.out.println("[Main.java, Info]: Setted the beam: " + txtFldstn_antennaBeamWidthDeg.getText());
+				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_antennaBeamWidthDeg.getText()));
+			}
+		});
+
+		TextField txtFldstn_maxQRBDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
+
+		txtFldstn_maxQRBDefault.textProperty().addListener(new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
+
+				if (newString.equals("")) {
+					txtFldstn_maxQRBDefault.setText("0");
+				}
+
+				if (!newString.matches("\\d*")) {
+					txtFldstn_maxQRBDefault.setText(newString.replaceAll("[^\\d]", ""));
+				}
+
+				System.out.println("[Main.java, Info]: Setted the QRB: " + txtFldstn_maxQRBDefault.getText());
+				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_maxQRBDefault.getText()));
+			}
+		});
+
+		TextField txtFldstn_qtfDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_qtfDefault() + "");
+
+		txtFldstn_qtfDefault.textProperty().addListener(new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
+
+				if (newString.equals("")) {
+					txtFldstn_qtfDefault.setText("0");
+				}
+
+				if (!newString.matches("\\d*")) {
+					txtFldstn_qtfDefault.setText(newString.replaceAll("[^\\d]", ""));
+				}
+
+				System.out.println("[Main.java, Info]: Setted the QRB: " + txtFldstn_qtfDefault.getText());
+				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_qtfDefault.getText()));
+//				chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
+//				chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
+			}
+
+		});
+
+
 		grdPnlStation.add(lblCallSign, 0, 0);
 		grdPnlStation.add(txtFldCallSign, 1, 0);
 		grdPnlStation.add(lblPassword, 0, 1);
@@ -3715,6 +4113,12 @@ public class Kst4ContestApplication extends Application {
 		grdPnlStation.add(txtFldLocator, 1, 3);
 		grdPnlStation.add(lblChatCategory, 0, 4);
 		grdPnlStation.add(choiceBxChatChategory, 1, 4);
+		grdPnlStation.add(new Label("Antenna beamwidth:"), 0, 5);
+		grdPnlStation.add(txtFldstn_antennaBeamWidthDeg, 1, 5);
+		grdPnlStation.add(new Label("Default maximum QRB:"), 0, 6);
+		grdPnlStation.add(txtFldstn_maxQRBDefault, 1, 6);
+		grdPnlStation.add(new Label("Default filter QTF:"), 0, 7);
+		grdPnlStation.add(txtFldstn_qtfDefault, 1, 7);
 
 		VBox vbxStation = new VBox();
 		vbxStation.setPadding(new Insets(10, 10, 10, 10));
@@ -4216,7 +4620,7 @@ public class Kst4ContestApplication extends Application {
 
 //        grdPnlShorts.add(lblEnableTRXMsgbyUCX, 0, 1);
 //        grdPnlShorts.add(chkBxEnableTRXMsgbyUCX, 1, 1);
-		grdPnlShorts.add(generateLabeledSeparator(100, "Set the Text-snippets (userlist right-click textsnippets)"), 0,
+		grdPnlShorts.add(generateLabeledSeparator(100, "Set the Text-snippets (First 10 are accessible by pressing <strg> + <nr>!)"), 0,
 				3, 2, 1);
 
 		VBox vbxShorts = new VBox();
@@ -4550,6 +4954,9 @@ public class Kst4ContestApplication extends Application {
 				txtFldName.setDisable(true);
 				txtFldLocator.setDisable(true);
 				choiceBxChatChategory.setDisable(true);
+				txtFldstn_antennaBeamWidthDeg.setDisable(true);
+				txtFldstn_qtfDefault.setDisable(true);
+				txtFldstn_maxQRBDefault.setDisable(true);
 				btnOptionspnlConnect.setDisable(true);
 				btnOptionspnlDisconnect.setDisable(false);
 				chatcontroller.setConnectedAndLoggedIn(true);
@@ -4678,5 +5085,99 @@ public class Kst4ContestApplication extends Application {
 	public static void main(String[] args) {
 		launch(args);
 	}
+
+//	public class MaidenheadLocatorMapPane extends Pane {
+//
+//		private static final double MAP_WIDTH = 800;
+//		private static final double MAP_HEIGHT = 600;
+//		private static final double CIRCLE_RADIUS = 5;
+//		private static final double TEXT_OFFSET_X = 10;
+//		private static final double TEXT_OFFSET_Y = -10;
+//
+//		public MaidenheadLocatorMapPane() {
+//			setPrefSize(MAP_WIDTH, MAP_HEIGHT);
+//		}
+//
+//		public void addLocator(String locator, Color color) {
+//			double[] coords = locatorToCoordinates(locator);
+//			Circle circle = new Circle(coords[0], coords[1], CIRCLE_RADIUS, color);
+//			Text text = new Text(coords[0] + TEXT_OFFSET_X, coords[1] + TEXT_OFFSET_Y, locator);
+//			getChildren().addAll(circle, text);
+//		}
+//
+//		public void connectLocators(String locator1, String locator2) {
+//			double[] coords1 = locatorToCoordinates(locator1);
+//			double[] coords2 = locatorToCoordinates(locator2);
+//			Line line = new Line(coords1[0], coords1[1], coords2[0], coords2[1]);
+//			getChildren().add(line);
+//
+//			// Calculate distance between locators
+//			double distance = calculateDistance(coords1, coords2);
+//
+//			// Calculate direction in degrees from locator1 to locator2
+//			double direction = calculateDirection(coords1, coords2);
+//
+//			// Format distance to display only two decimal places
+//			DecimalFormat df = new DecimalFormat("#.##");
+//
+//			// Create text for displaying distance and direction
+//			Text distanceText = new Text((coords1[0] + coords2[0]) / 2, (coords1[1] + coords2[1]) / 2, "Distance: " + df.format(distance) + " km");
+//			Text directionText = new Text((coords1[0] + coords2[0]) / 2, (coords1[1] + coords2[1]) / 2 + 20, "Direction: " + df.format(direction) + "°");
+//			getChildren().addAll(distanceText, directionText);
+//		}
+//
+//		// Helper method to convert Maidenhead locator string to coordinates
+//		private double[] locatorToCoordinates(String locator) {
+//			double lon = (locator.charAt(0) - 'A') * 20 - 180;
+//			double lat = (locator.charAt(1) - 'A') * 10 - 90;
+//			lon += (locator.charAt(2) - '0') * 2;
+//			lat += (locator.charAt(3) - '0');
+//			lon += (locator.charAt(4) - 'A') * 5.0 / 60;
+//			lat += (locator.charAt(5) - 'A') * 2.5 / 60;
+//
+//			// Convert coordinates to map coordinates
+//			double x = (lon + 180) / 360 * MAP_WIDTH;
+//			double y = MAP_HEIGHT - (lat + 90) / 180 * MAP_HEIGHT;
+//			return new double[]{x, y};
+//		}
+//
+//		// Helper method to calculate distance between two coordinates (in km)
+//		private double calculateDistance(double[] coords1, double[] coords2) {
+//			double lon1 = Math.toRadians(coords1[0]);
+//			double lat1 = Math.toRadians(coords1[1]);
+//			double lon2 = Math.toRadians(coords2[0]);
+//			double lat2 = Math.toRadians(coords2[1]);
+//
+//			double dlon = lon2 - lon1;
+//			double dlat = lat2 - lat1;
+//
+//			double a = Math.pow(Math.sin(dlat / 2), 2) + Math.cos(lat1) * Math.cos(lat2) * Math.pow(Math.sin(dlon / 2), 2);
+//			double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//
+//			// Earth radius in km
+//			double radius = 6371;
+//
+//			return radius * c;
+//		}
+//
+//		// Helper method to calculate direction in degrees from coords1 to coords2
+//		private double calculateDirection(double[] coords1, double[] coords2) {
+//			double lon1 = Math.toRadians(coords1[0]);
+//			double lat1 = Math.toRadians(coords1[1]);
+//			double lon2 = Math.toRadians(coords2[0]);
+//			double lat2 = Math.toRadians(coords2[1]);
+//
+//			double dLon = lon2 - lon1;
+//
+//			double y = Math.sin(dLon) * Math.cos(lat2);
+//			double x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+//
+//			double direction = Math.atan2(y, x);
+//			direction = Math.toDegrees(direction);
+//			direction = (direction + 360) % 360;
+//
+//			return direction;
+//		}
+//	}
 
 }

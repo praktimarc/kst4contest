@@ -49,6 +49,21 @@ public class Utils4KST {
 		return formatted;
 		
 	}
+
+	public static long time_getSecondsBetweenEpochAndNow(String epoch1) {
+
+		long epoch1Long = Long.parseLong(epoch1);
+		long epoch2Long = new Utils4KST().time_generateCurrentEpochTime();
+//		Instant instant = Instant.ofEpochSecond(epoch);
+
+		Date date = new Date(epoch1Long * 1000L);
+		Date date2 = new Date(epoch2Long * 1000L);
+
+		long seconds = Math.abs(date.getTime()-date2.getTime())/1000;
+
+		return seconds;
+
+	}
 	
 	public Date time_generateActualTimeInDateFormat() {
 		Date date = new Date(time_generateCurrentEpochTime() * 1000L);

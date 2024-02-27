@@ -138,6 +138,10 @@ public class ChatPreferences {
 	String loginName = "Marc";
 	String loginLocator = "jn49fk";
 
+	double stn_antennaBeamWidthDeg = 50;
+	double stn_maxQRBDefault = 900;
+	double stn_qtfDefault = 135;
+
 	ChatCategory loginChatCategory = new ChatCategory(2);
 	IntegerProperty actualQTF = new SimpleIntegerProperty(360); // will be updated by user at runtime!
 
@@ -211,7 +215,29 @@ public class ChatPreferences {
 //	}
 
 
+	public double getStn_antennaBeamWidthDeg() {
+		return stn_antennaBeamWidthDeg;
+	}
 
+	public void setStn_antennaBeamWidthDeg(double stn_antennaBeamWidthDeg) {
+		this.stn_antennaBeamWidthDeg = stn_antennaBeamWidthDeg;
+	}
+
+	public double getStn_maxQRBDefault() {
+		return stn_maxQRBDefault;
+	}
+
+	public void setStn_maxQRBDefault(double stn_maxQRBDefault) {
+		this.stn_maxQRBDefault = stn_maxQRBDefault;
+	}
+
+	public double getStn_qtfDefault() {
+		return stn_qtfDefault;
+	}
+
+	public void setStn_qtfDefault(double stn_qtfDefault) {
+		this.stn_qtfDefault = stn_qtfDefault;
+	}
 
 	public boolean isLoginAFKState() {
 		return loginAFKState;
@@ -560,6 +586,18 @@ public class ChatPreferences {
 		      ChatCategory.setTextContent(this.getLoginChatCategory().getCategoryNumber()+"");
 		      station.appendChild(ChatCategory);
 
+			Element stn_antennaBeamWidthDeg = doc.createElement("stn_antennaBeamWidthDeg");
+			stn_antennaBeamWidthDeg.setTextContent(this.stn_antennaBeamWidthDeg+"");
+			station.appendChild(stn_antennaBeamWidthDeg);
+
+			Element stn_maxQRBDefault = doc.createElement("stn_maxQRBDefault");
+			stn_maxQRBDefault.setTextContent(this.stn_maxQRBDefault+"");
+			station.appendChild(stn_maxQRBDefault);
+
+			Element stn_qtfDefault = doc.createElement("stn_qtfDefault");
+			stn_qtfDefault.setTextContent(this.stn_qtfDefault+"");
+			station.appendChild(stn_qtfDefault);
+
 //		      Element salary = doc.createElement("salary");
 //		      salary.setAttribute("currency", "USD");
 //		      salary.setTextContent("5000");
@@ -851,9 +889,18 @@ public class ChatPreferences {
 							loginChatCategory = new ChatCategory(2); // TODO: Set this default at another place
 						}
 
+						double antennaBeamWidthDeg = Double.parseDouble(element.getElementsByTagName("stn_antennaBeamWidthDeg").item(0).getTextContent());
+						stn_antennaBeamWidthDeg = antennaBeamWidthDeg;
+						double maxQRBDefault = Double.parseDouble(element.getElementsByTagName("stn_maxQRBDefault").item(0).getTextContent());
+						stn_maxQRBDefault = maxQRBDefault;
+						double qtfDefault = Double.parseDouble(element.getElementsByTagName("stn_qtfDefault").item(0).getTextContent());
+						stn_qtfDefault = qtfDefault;
+
+
+
 						System.out.println("[ChatPreferences, info]: Current Element: " + node.getNodeName()
 								+ " --> call: " + call + " / " + password + " / " + loginDisplayedName + " / " + qra
-								+ " / " + category);
+								+ " / " + category + " / " + antennaBeamWidthDeg + " / " + maxQRBDefault + " / " + qtfDefault);
 
 					}
 				}

@@ -366,7 +366,8 @@ public class MessageBusManagementThread extends Thread {
 //			newMember.setQTFdirection(LocatorUtils);
 				newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), newMember.getQra()));
 				newMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(newMember.getQra())));
-				newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
+				newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());//TODO evt obsolete!
+				newMember.setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
 
 //				this.client.getChatMemberTable().put(splittedMessageLine[2], newMember); //TODO: map -> List
 
@@ -406,6 +407,7 @@ public class MessageBusManagementThread extends Thread {
 					newMember.setQra(splittedMessageLine[4]);
 					newMember.setState(Integer.parseInt(splittedMessageLine[5]));
 					newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
+					newMember.setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
 					newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), newMember.getQra()));
 					newMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(newMember.getQra())));
 
@@ -488,10 +490,12 @@ public class MessageBusManagementThread extends Thread {
 
 					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), sender);
 
+					//if the user had been found in the active users list
 					if (index != -1) {
 						//user found in the chatmember list
 						try {
 							newMessage.setSender(this.client.getLst_chatMemberList().get(index)); // set sender to member of
+							this.client.getLst_chatMemberList().get(index).setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
 						} catch (Exception exc) {
 							ChatMember aSenderDummy = new ChatMember();
 							aSenderDummy.setCallSign(splittedMessageLine[3] + "[n/a]");
@@ -502,7 +506,7 @@ public class MessageBusManagementThread extends Thread {
 						}
 																								// b4 init list
 					} else {
-						//user not found in chatmember list
+						//user not found in chatmember list, mark it, sender can not be set
 						if (!sender.getCallSign().equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
 							sender.setCallSign("[n/a]" + sender.getCallSign());
 							// if someone sent a message without being in the userlist (cause
@@ -909,7 +913,7 @@ public class MessageBusManagementThread extends Thread {
 				System.out.println("Passwort falsch!");
 				
 				if (splittedMessageLine[2].contains("password")) {
-					splittedMessageLine[2] += "pse disc- and reconnect";
+					splittedMessageLine[2] += " pse disc- and reconnect";
 				}
 				
 				ChatMember server = new ChatMember();
@@ -921,10 +925,19 @@ public class MessageBusManagementThread extends Thread {
 				pwErrorMsg.setMessageGeneratedTime(client.getCurrentEpochTime()+"");
 				pwErrorMsg.setSender(server);
 				pwErrorMsg.setMessageText(splittedMessageLine[2]);
+
+				ChatMember receiverDummy = new ChatMember();
+				receiverDummy.setCallSign(client.getChatPreferences().getLoginCallSign());
+				receiverDummy.setQrb(0.);
+				receiverDummy.setQTFdirection(0.);
+				pwErrorMsg.setReceiver(receiverDummy);
+
+
 				
 				for (int i = 0; i < 10; i++) {
-					client.getLst_toMeMessageList().add(pwErrorMsg);
-					client.getLst_toAllMessageList().add(pwErrorMsg);
+					client.getLst_globalChatMessageList().add(pwErrorMsg);
+//					client.getLst_toMeMessageList().add(pwErrorMsg);
+//					client.getLst_toAllMessageList().add(pwErrorMsg);
 				}
 
 //				Kst4ContestApplication.alertWindowEvent("Password was wrong. Pse check!");
