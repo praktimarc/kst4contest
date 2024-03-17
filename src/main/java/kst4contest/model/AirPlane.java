@@ -3,6 +3,25 @@ package kst4contest.model;
 public class AirPlane {
 
 	String apCallSign, apSizeCategory;
+	String potencialDescriptionAsWord;
+
+	public String getPotencialDescriptionAsWord() {
+		if (this.getPotential() <=50) {
+			return "small AP";
+		} else if (this.getPotential() <=75 && this.getPotential() > 50) {
+			return "big AP";
+		} else if (this.getPotential() > 75) {
+			return "very big AP";
+		}
+
+
+		return potencialDescriptionAsWord;
+	}
+
+	public void setPotencialDescriptionAsWord(String potencialDescriptionAsWord) {
+		this.potencialDescriptionAsWord = potencialDescriptionAsWord;
+	}
+
 	int distanceKm, potential, arrivingDurationMinutes;
 	public String getApCallSign() {
 		return apCallSign;

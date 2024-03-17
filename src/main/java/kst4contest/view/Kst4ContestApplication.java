@@ -42,10 +42,7 @@ import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 import kst4contest.locatorUtils.DirectionUtils;
-import kst4contest.model.ChatCategory;
-import kst4contest.model.ChatMember;
-import kst4contest.model.ChatMessage;
-import kst4contest.model.ClusterMessage;
+import kst4contest.model.*;
 
 
 public class Kst4ContestApplication extends Application {
@@ -131,7 +128,7 @@ public class Kst4ContestApplication extends Application {
 
 		ToggleGroup selectedCallSignInfoFilterMessagesRadioGrp = new ToggleGroup();
 		RadioButton selectedCallSignFilterToMeMsgRB = new RadioButton("pm to me ");
-		selectedCallSignFilterToMeMsgRB.setSelected(true); //TODO: that behavior as default selection could be made preferencable
+//		selectedCallSignFilterToMeMsgRB.setSelected(true);
 		selectedCallSignFilterToMeMsgRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
 		RadioButton selectedCallSignFilterMsgToOtherRB = new RadioButton("pm to other");
 		selectedCallSignFilterMsgToOtherRB.setToggleGroup(selectedCallSignInfoFilterMessagesRadioGrp);
@@ -175,13 +172,19 @@ public class Kst4ContestApplication extends Application {
 						@Override
 						public boolean test(ChatMessage chatMessage) {
 
-							if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) && (!chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))) {
-								return true;
-							} else if ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) && (!chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))) {
-								return true;
+							try {
+
+								if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) && (!chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))) {
+									return true;
+								} else if ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) && (!chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()))) {
+									return true;
+								} else return false;
+							} catch (NullPointerException SenderNull) {
+								System.out.println("KST4ContestApp, <<<catched error>>>: Sender/receiver of the message is unknown, categorizing is impossible: " + SenderNull.getMessage());
+
+								return false;
 							}
 
-							else return false;
 						}
 					});
 
@@ -192,11 +195,19 @@ public class Kst4ContestApplication extends Application {
 						@Override
 						public boolean test(ChatMessage chatMessage) {
 
-							if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (chatMessage.getReceiver().getCallSign().equals("ALL"))) {
-								return true;
+							try {
+
+								if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) && (chatMessage.getReceiver().getCallSign().equals("ALL"))) {
+									return true;
+								}
+									else return false;
+
+							} catch (NullPointerException SenderNull) {
+								System.out.println("KST4ContestApp, <<<catched error>>>: Sender of the message is unknown, categorizing is impossible");
+
+								return false;
 							}
 
-							else return false;
 						}
 					});
 
@@ -208,12 +219,19 @@ public class Kst4ContestApplication extends Application {
 						@Override
 						public boolean test(ChatMessage chatMessage) {
 
-							if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) ||
-									chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) {
-								return true;
-							}
+							try {
 
-							else return false;
+								if ((chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) ||
+										chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) {
+									return true;
+								}
+
+								else return false;
+							} catch (NullPointerException SenderNull) {
+								System.out.println("KST4ContestApp, <<<catched error>>>: Sender/receiver of the message is unknown, categorizing is impossible");
+
+								return false;
+							}
 						}
 					});
 				}
@@ -253,7 +271,9 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
+		selectedCallSignNoFilterRB.setSelected(true); //TODO: that behavior as default selection could be made preferencable
 		return selectedCallSignInfoBorderPane;
+
 	}
 
 	private TableView<ChatMember> initChatMemberTable() {
@@ -283,11 +303,90 @@ public class Kst4ContestApplication extends Application {
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
 				SimpleStringProperty callsgn = new SimpleStringProperty();
 
-				callsgn.setValue(cellDataFeatures.getValue().getCallSign());
+				if (cellDataFeatures.getValue().getState() == 1) {
+					callsgn.setValue("(" + cellDataFeatures.getValue().getCallSign() + ")"); //away user
+				} else {
+
+					callsgn.setValue(cellDataFeatures.getValue().getCallSign());
+				}
+
+//				System.out.println(cellDataFeatures.getValue().getCallSign() + " / " + cellDataFeatures.getValue().getState()+ " <<<<<<<<<<<<<<<<<< state ");
 
 				return callsgn;
 			}
 		});
+
+//		asd hier weiter machen, für bold state
+		callSignCol.setCellFactory(new Callback<TableColumn<ChatMember, String>, TableCell<ChatMember, String>>() {
+			public TableCell call(TableColumn param) {
+
+//				param.getProperties().
+				return new TableCell<ChatMember, String>() {
+
+
+					@Override
+					public void updateItem(String item, boolean empty) {
+
+						super.updateItem(item, empty);
+
+						int currentIndex = indexProperty().getValue() < 0 ? 0 : indexProperty().getValue();
+//						System.out.println(">>>>>>>>>>>>>>>> INDEXPROPERTY  =  " + indexProperty().getValue()  + " " + getIndex() + " / " + item);
+
+
+						if (item != null) {
+
+							ChatMember chatMember = (ChatMember) param.getTableView().getItems().get(currentIndex);
+//							System.out.println(chatMember.getCallSign() + " / " + chatMember.getState() + " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<state ");
+
+							if (chatMember.getState() == 3 ) { //login in last 5 min
+								this.setStyle("-fx-font-weight: bold");
+//								System.out.println("FAAAAAAAAAAAAAAAAAAAAAAAT: " + chatMember.getCallSign());
+							} else if (chatMember.getState() == 0 ) { //here
+								this.setStyle("-fx-font-weight: normal");
+							} else if (chatMember.getState() == 2 ) { //here and relogin
+								this.setStyle("-fx-font-weight: normal");
+							} else if (chatMember.getState() == 1 ) { //away
+//								this.setStyle("-fx-font-weight: thin");
+							}
+
+							//TODO: Experimental, isinangleandrange function
+
+							if (chatMember.isInAngleAndRange()) {
+								this.setTextFill(Color.GREEN);
+								this.setStyle("-fx-font-weight: bold");
+							}
+//							else if (chatMember.getState() != 3){ //TODO: this double handling should be improved as may there can be new markers. Neccessarry to reset the colour to black
+//								this.setTextFill(Color.BLACK);
+//								this.setStyle("-fx-font-weight: normal");
+//							} else {
+//								this.setTextFill(Color.BLACK);
+//							}
+
+//							if ((Utils4KST.time_getSecondsBetweenEpochAndNow(chatMember.getActivityTimeLastInEpoch()+"") /60%60) < 2) {
+//								this.setTextFill(Color.ORANGE);
+//							}
+						}
+
+
+//						if (!isEmpty()) {
+//							this.setTextFill(Color.BLACK);
+//							// Get fancy and change color based on data
+//
+//							if (item.contains("5")) {
+//								this.setTextFill(Color.BLUEVIOLET);
+//							} else if (item.contains("7") ) {
+//								this.setTextFill(Color.RED);
+//							} else if (item.contains("0") ) {
+//								this.setTextFill(Color.ORANGE);
+//							}
+////
+							setText(item);
+//						}
+					}
+				};
+			}
+		});
+
 		callSignCol.setSortType(TableColumn.SortType.ASCENDING);
 		tbl_chatMemberTable.getSortOrder().add(callSignCol);
 
@@ -659,12 +758,12 @@ public class Kst4ContestApplication extends Application {
 			public void run() {
 				Thread.currentThread().setName("chatMemberTableSortTimer");
 
-				System.out.println("Predicates size: " + chatcontroller.getLst_chatMemberListFilterPredicates().size());
+				System.out.println("[KST4CApp, Info:] Chatmemberlist-Filterlist predicates size: " + chatcontroller.getLst_chatMemberListFilterPredicates().size());
 //
 //				for (int i = 0; i < chatcontroller.getLst_chatMemberListFilterPredicates().size(); i++) {
 //
-//					System.out.println(chatcontroller.getLst_chatMemberListFilterPredicates().get(0).);
-//
+//					Predicate test = chatcontroller.getLst_chatMemberListFilterPredicates().get(i);
+//					test.so
 //				}
 
 
@@ -1127,6 +1226,20 @@ public class Kst4ContestApplication extends Application {
 		ObservableList<ChatMessage> generalMSGList = chatcontroller.getLst_toAllMessageList();
 		tbl_generalMSGTable.setItems(generalMSGList);
 
+		tbl_generalMSGTable.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+
+				//we need to overdrive the Enter pressed as it should (in the whole scene) send the text!
+				if (event.getCode() == KeyCode.ENTER) {
+
+					event.consume();
+					sendButton.fire();
+				}
+
+			}
+		});
+
 		return tbl_generalMSGTable;
 	}
 
@@ -1265,8 +1378,6 @@ public class Kst4ContestApplication extends Application {
 
 		TableColumn<ChatMessage, String> airScoutCol = new TableColumn<ChatMessage, String>("AP [minutes / pot%]");
 		airScoutCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
-
-			boolean isnull =false;
 			
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
@@ -1344,11 +1455,56 @@ public class Kst4ContestApplication extends Application {
 		 * END HIGH EXPERIMENTAL::::::::
 		 */
 
+		TableColumn<ChatMessage, String> qrbCol = new TableColumn<ChatMessage, String>("QRB");
+		qrbCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
 
-		tbl_privateMSGTable.getColumns().addAll(timeCol, callSignCol, nameCol, qraCol, msgCol, qrgCol, airScoutCol);
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+				SimpleStringProperty qrb = new SimpleStringProperty();
+
+				if (cellDataFeatures.getValue().getSender() != null && !cellDataFeatures.getValue().getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign())) {
+					//do not calc for your own callsign as this will be NaN
+
+					if (!cellDataFeatures.getValue().getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign())) {
+
+						try {
+	//						System.out.println(cellDataFeatures.getValue().getSender().getQrb()+"      QRB");
+							qrb.setValue(cellDataFeatures.getValue().getSender().getQrb().intValue() +" km (" + cellDataFeatures.getValue().getSender().getQTFdirection().intValue() + ")°"); //make int for less space
+						} catch (Exception nullOrFormatExc) {
+							System.out.println("KST4ContestApp: <<<catched error>>>: qrb was faulty" + nullOrFormatExc.getMessage() + " / " + nullOrFormatExc.getStackTrace());
+						}
+					}
+
+//					qrb.setValue("");
+
+				} else {
+
+					qrb.setValue("");//Prevents a bug of not setting all values as a default
+				}
+				return qrb;
+			}
+		});
+
+
+		tbl_privateMSGTable.getColumns().addAll(timeCol, callSignCol, nameCol, qraCol, qrbCol, msgCol, qrgCol, airScoutCol);
 
 		ObservableList<ChatMessage> privateMSGList = chatcontroller.getLst_toMeMessageList();
 		tbl_privateMSGTable.setItems(privateMSGList);
+
+		tbl_privateMSGTable.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent event) {
+
+				//we need to overdrive the Enter pressed as it should (in the whole scene) send the text!
+				if (event.getCode() == KeyCode.ENTER) {
+
+					event.consume();
+					sendButton.fire();
+				}
+
+			}
+		});
+
 
 		return tbl_privateMSGTable;
 	}
@@ -2722,7 +2878,7 @@ public class Kst4ContestApplication extends Application {
 
 		chatcontroller = new ChatController(ownChatMemberObject); // instantiate the Chatcontroller with the user object
 
-		this.chatcontroller.getPlayAudioUtils().playNoiseLauncher('!');
+//		this.chatcontroller.getPlayAudioUtils().playNoiseLauncher('!');
 
 //		chatcontroller.execute(); //TODO:THAT IS THE MAIN POINT WHERE THE CHAT WILL BE STARTED --- MOVED TO CONNECT BUTTON EVENTHANDLER
 
@@ -2945,7 +3101,74 @@ public class Kst4ContestApplication extends Application {
 						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYLOCATOR",
 								chatcontroller.getChatPreferences().getLoginLocator()));
 					}
-					;
+
+					boolean noAirplaneHere = false;
+
+					if (txt_chatMessageUserInput.getText().contains("FIRSTAP")) {
+
+						if (selectedCallSignInfoStageChatMember != null) {
+
+							if (selectedCallSignInfoStageChatMember.getCallSign() != chatcontroller.getChatPreferences().getLoginCallSign()) {
+
+								if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo() != null) {
+
+									if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes() != null) {
+
+										if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().size() != 0) {
+											noAirplaneHere = false;
+											AirPlane airPlane = selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(0);
+											txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("FIRSTAP", "a " + airPlane.getPotencialDescriptionAsWord() +
+													" in " + airPlane.getArrivingDurationMinutes() + " min"));
+										}  else noAirplaneHere = true;
+									} else noAirplaneHere = true;
+								}
+								else noAirplaneHere = true;
+							}
+						}
+
+						if (noAirplaneHere) {
+							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("FIRSTAP",
+									"no ap available"));
+						}
+					}
+
+					if (txt_chatMessageUserInput.getText().contains("SECONDAP")) {
+
+						if (selectedCallSignInfoStageChatMember != null) {
+
+							if (selectedCallSignInfoStageChatMember.getCallSign() != chatcontroller.getChatPreferences().getLoginCallSign()) {
+
+								if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo() != null) {
+
+									if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes() != null) {
+
+										if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().size() >= 2) {
+											System.out.println("RISINGAP : " + selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().size());
+											AirPlane airPlane = selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(1);
+
+											if (!airPlane.getPotencialDescriptionAsWord().isEmpty()) {
+											noAirplaneHere = false;
+											txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDAP", "Next " + airPlane.getPotencialDescriptionAsWord() +
+													" in " + airPlane.getArrivingDurationMinutes() + " min"));
+
+											} else noAirplaneHere = true;
+
+										}  else noAirplaneHere = true;
+									} else noAirplaneHere = true;
+								}
+								else noAirplaneHere = true;
+							}
+						}
+
+						if (noAirplaneHere) {
+							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDAP",
+									""));
+						}
+					}
+
+					if (txt_chatMessageUserInput.getText().startsWith("/cq " + chatcontroller.getChatPreferences().getLoginCallSign())) {
+						txt_chatMessageUserInput.setText(" "); //prevent user sends a message to himself, that will cause errors
+					}
 				}
 			});
 
@@ -3058,7 +3281,8 @@ public class Kst4ContestApplication extends Application {
 						 */
 
 						if (selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()) ) {
-							System.out.println("privChat selected ChatMember: was own object..." + "rx was: " + selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))));
+							System.out.println("////////////////////////////// rx in orginal message: " + selectedChatMemberPrivateChat.getList().get(0).getReceiver().getCallSign());
+							System.out.println("privChat selected ChatMember: was own object...!" + "rx was: " + selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))));
 
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput.setText("/cq "
@@ -3314,7 +3538,7 @@ public class Kst4ContestApplication extends Application {
 					@Override
 					public boolean test(ChatMember chatMember) {
 
-						System.out.println(chatMemberTableFilterQtfTF.getText() + " stn have " + chatMember.getQTFdirection());
+//						System.out.println(chatMemberTableFilterQtfTF.getText() + " stn have " + chatMember.getQTFdirection());
 
 //						double myQTF = );
 
@@ -4248,7 +4472,7 @@ public class Kst4ContestApplication extends Application {
 		grdPnlLog.add(lblWkdInterpreterPathToFileTitle, 0, 2);
 		grdPnlLog.add(lblWkdInterpreterPathToFile, 1, 2);
 		grdPnlLog.add(btn_changeFilePathAndName, 2, 2);
-		grdPnlLog.add(generateLabeledSeparator(100, "N1MM/UCXLog/DXLog.net Network-Listener"), 0, 3, 2, 1);
+		grdPnlLog.add(generateLabeledSeparator(100, "N1MM/QARTEST/UCXLog/DXLog.net Network-Listener"), 0, 3, 2, 1);
 		grdPnlLog.add(lblEnableUDPbyUCX, 0, 4);
 		grdPnlLog.add(chkBxEnableUCXLogUDPReceiver, 1, 4);
 		grdPnlLog.add(lblUDPByUCX, 0, 5);

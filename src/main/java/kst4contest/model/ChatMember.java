@@ -11,6 +11,9 @@ public class ChatMember {
 	String callSign;
 	String qra;
 	String name;
+
+	boolean isInAngleAndRange; //if he tries a sked in my dir, he is in range, will process that in the messages
+
 //	String frequency; // last known qrg of the station
 
 	StringProperty frequency = new SimpleStringProperty();
@@ -36,6 +39,14 @@ public class ChatMember {
 	boolean worked3400;
 	boolean worked5600;
 	boolean worked10G;
+
+	public boolean isInAngleAndRange() {
+		return isInAngleAndRange;
+	}
+
+	public void setInAngleAndRange(boolean inAngleAndRange) {
+		isInAngleAndRange = inAngleAndRange;
+	}
 
 	public AirPlaneReflectionInfo getAirPlaneReflectInfo() {
 		return airPlaneReflectInfo;

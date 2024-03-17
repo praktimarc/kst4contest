@@ -3,6 +3,49 @@ package kst4contest.locatorUtils;
 public class DirectionUtils {
 
     /**
+     * Checks wheter a sked-sender writes to a sked-receiver and is in my direction due he beams to this receiver
+     *
+     * @param myLocator
+     * @param locatorOfSkedSender
+     * @param locatorOfSekdReceiver
+     * @param maxRangeKm
+     * @param hisAntennaBeamWidth
+     * @return
+     */
+    public static boolean isInAngleAndRange(String myLocator, String locatorOfSkedSender, String locatorOfSekdReceiver, double maxRangeKm, double hisAntennaBeamWidth) {
+
+        Location myLocation = new Location(myLocator);
+        Location skedSenderLocation = new Location(locatorOfSkedSender);
+        Location skedReceiverLocation = new Location(locatorOfSekdReceiver);
+
+        double distanceFromMeToLocSender = new Location(myLocator).getDistanceKm(new Location(locatorOfSkedSender));
+
+        // Check if distance exceeds my setted maximum range
+        if (distanceFromMeToLocSender > maxRangeKm) {
+            System.out.println("too far, " + distanceFromMeToLocSender + " km");
+            return false;
+        }
+
+        //check bearing of sender to receiver
+
+        double bearingOfSekdSenderToSkedReceiver = skedSenderLocation.getBearing(skedReceiverLocation);
+        System.out.println("skedTX -> skedTX deg: " + bearingOfSekdSenderToSkedReceiver);
+
+        double bearingOfSekdSenderToMe = skedSenderLocation.getBearing(myLocation);
+        System.out.println("skedTX -> me deg: " + bearingOfSekdSenderToMe);
+
+        if (DirectionUtils.isAngleInRange(bearingOfSekdSenderToMe,bearingOfSekdSenderToSkedReceiver, hisAntennaBeamWidth)) {
+            //I may should get "/2" because of 50% of the 3dB opening angle if txer is directed to sender exactly
+            System.out.println("isinangleandrange!");
+            return true;
+        } else {
+            System.out.println("not in angle and reach");
+            return false;
+        }
+    }
+
+
+    /**
      * Tests, if the angle (from me to) other station is in the range of the
      * angle (qtf) in degrees where my antenna points to.
      *
