@@ -29,17 +29,34 @@ public class DirectionUtils {
         //check bearing of sender to receiver
 
         double bearingOfSekdSenderToSkedReceiver = skedSenderLocation.getBearing(skedReceiverLocation);
-        System.out.println("skedTX -> skedTX deg: " + bearingOfSekdSenderToSkedReceiver);
+//        System.out.println("skedTX -> skedTX deg: " + bearingOfSekdSenderToSkedReceiver);
 
         double bearingOfSekdSenderToMe = skedSenderLocation.getBearing(myLocation);
-        System.out.println("skedTX -> me deg: " + bearingOfSekdSenderToMe);
+//        System.out.println("skedTX -> me deg: " + bearingOfSekdSenderToMe);
 
-        if (DirectionUtils.isAngleInRange(bearingOfSekdSenderToMe,bearingOfSekdSenderToSkedReceiver, hisAntennaBeamWidth)) {
+        /**
+         * simple mech works
+         */
+//        if (bearingOfSekdSenderToMe >= bearingOfSekdSenderToSkedReceiver) {
+//            if (bearingOfSekdSenderToMe-bearingOfSekdSenderToSkedReceiver <= hisAntennaBeamWidth/2){
+//                System.out.println(bearingOfSekdSenderToMe-bearingOfSekdSenderToSkedReceiver + " <= " + hisAntennaBeamWidth);
+//                return true;
+//            }
+//        } else if ((bearingOfSekdSenderToMe <= bearingOfSekdSenderToSkedReceiver)) {
+//            if (bearingOfSekdSenderToSkedReceiver-bearingOfSekdSenderToMe <= hisAntennaBeamWidth/2){
+//                return true;
+//            }
+//        } else return false;
+        /**
+         * simple mech end
+         */
+
+        if (DirectionUtils.isAngleInRange(bearingOfSekdSenderToSkedReceiver, bearingOfSekdSenderToMe, hisAntennaBeamWidth)) {
             //I may should get "/2" because of 50% of the 3dB opening angle if txer is directed to sender exactly
-            System.out.println("isinangleandrange!");
+//            System.out.println("------------> isinangleandrange!");
             return true;
         } else {
-            System.out.println("not in angle and reach");
+//            System.out.println("not in angle and reach");
             return false;
         }
     }

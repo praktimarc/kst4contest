@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.beans.binding.Bindings;
@@ -97,6 +99,36 @@ public class Kst4ContestApplication extends Application {
 		selectedCallSignDownerSiteGridPane.add(new Label("Last activity: " + new Utils4KST().time_convertEpochToReadable(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"")), 0,2,1,1);
 		selectedCallSignDownerSiteGridPane.add(new Label(("(" + Utils4KST.time_getSecondsBetweenEpochAndNow(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"") /60%60) +" min ago)"), 0,3,1,1);
 
+		/**
+		 * users qrv info setting will follow here
+		 */
+		CheckBox chkbx_tagMemberNotQRVFurtherInfoPane = new CheckBox("tag NOT QRV ALL");
+		chkbx_tagMemberNotQRVFurtherInfoPane.setSelected(selectedCallSignInfoStageChatMember.isQrvAny());
+		chkbx_tagMemberNotQRVFurtherInfoPane.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				//if selected: NOT QRV; if NOT selected: is qrv!
+				if (!newValue) {
+					chkbx_tagMemberNotQRVFurtherInfoPane.selectedProperty().setValue(true);
+				} else {
+					chkbx_tagMemberNotQRVFurtherInfoPane.selectedProperty().setValue(false);
+				}
+			}
+		});
+
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 144"), 2,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 432"), 2,1,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 23cm"), 2,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 13cm"), 2,3,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 9cm"), 3,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 6cm"), 3,1,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 3cm"), 3,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv all"), 3,3,1,1);
+
+		/**
+		 * users qrv info setting ending
+		 */
+
 		Button selectedCallSignShowAsPathBtn = new Button("Show path in AS");
 		selectedCallSignShowAsPathBtn.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
@@ -105,7 +137,7 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,3);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,2);
 
 
 
@@ -698,6 +730,10 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		shf3_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(32));
+
+//		TableColumn<ChatMember, Void> unworkableCol = new TableColumn<ChatMember, Void>("qrv");
+//		unworkableCol.setCellFactory(CheckBoxTableCell.<ChatMember, Void>forTableColumn("lalala", c ->
+//				System.out.println(c.getCallSign())));
 
 //		TableColumn uhfCol_subcol = new TableColumn("432"); //TODO: Worked band analysis
 //        TableColumn shf23_subcol = new TableColumn("23");
@@ -4299,7 +4335,7 @@ public class Kst4ContestApplication extends Application {
 				}
 
 				System.out.println("[Main.java, Info]: Setted the QRB: " + txtFldstn_maxQRBDefault.getText());
-				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_maxQRBDefault.getText()));
+				chatcontroller.getChatPreferences().setStn_maxQRBDefault(Double.parseDouble(txtFldstn_maxQRBDefault.getText()));
 			}
 		});
 
@@ -4709,7 +4745,7 @@ public class Kst4ContestApplication extends Application {
 //				"Switch bands, prefix worked by others alert, direction notifications, notification pattern matchers");
 //        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
-		Label lblNotifyEnableSimpleSounds = new Label("Enable audio notifications at: startup, new personal messages, other");
+		Label lblNotifyEnableSimpleSounds = new Label("Enable simple audio notifications at: new personal message, new sked in ur dir, other");
 		Label lblNotifyEnableCWSounds = new Label("Enable CW callsign spelling for new personal messages");
 		Label lblNotifyEnableVoiceSounds = new Label("Enable phonetic callsign spelling for new personal messages");
 
@@ -5119,6 +5155,9 @@ public class Kst4ContestApplication extends Application {
 				btnOptionspnlConnect.setDisable(false);
 				btnOptionspnlDisconnect.setDisable(false);
 				btnOptionspnlDisconnectOnly.setDisable(true);
+				txtFldstn_antennaBeamWidthDeg.setDisable(false);
+				txtFldstn_qtfDefault.setDisable(false);
+				txtFldstn_maxQRBDefault.setDisable(false);
 				menuItemOptionsSetFrequencyAsName.setDisable(true);
 				menuItemOptionsAwayBack.setDisable(true);
 			}
@@ -5404,4 +5443,72 @@ public class Kst4ContestApplication extends Application {
 //		}
 //	}
 
+}
+
+/**
+ * This cell type is used to declare buttons which can be placed in the tableview
+ *
+ * // source: https://stackoverflow.com/questions/76248808/how-do-i-add-a-button-into-a-jfx-tableview
+ */
+class ActionButtonTableCell<S, T> extends TableCell<S, T> {
+	private final ToggleButton actionButton;
+
+	public ActionButtonTableCell(String label, Consumer<S> function) {
+		this.getStyleClass().add("action-button-table-cell");
+		this.actionButton = new ToggleButton(label);
+		this.actionButton.setOnAction(e -> function.accept(getCurrentItem()));
+		this.actionButton.setMaxWidth(Double.MAX_VALUE);
+	}
+	public S getCurrentItem() {
+		// No need for a cast here:
+		System.out.println("<<<<<<<<<<<<<<<<<<<<TV Actionbutton pressed");
+		return getTableView().getItems().get(getIndex());
+	}
+
+	public static <S, T> Callback<TableColumn<S, T>, TableCell<S, T>> forTableColumn(String label, Consumer<S> function) {
+		return param -> new ActionButtonTableCell<>(label, function);
+	}
+	@Override
+	public void updateItem(T item, boolean empty) {
+		super.updateItem(item, empty);
+		if (empty) {
+			setGraphic(null);
+		} else {
+			setGraphic(actionButton);
+		}
+	}
+}
+
+/**
+ * This cell type is used to declare buttons which can be placed in the tableview
+ *
+ * // source: https://stackoverflow.com/questions/76248808/how-do-i-add-a-button-into-a-jfx-tableview
+ */
+class CheckBoxTableCell<S, T> extends TableCell<S, T> {
+	private final CheckBox actionCheckBox;
+
+	public CheckBoxTableCell(String label, Consumer<S> function) {
+		this.getStyleClass().add("action-button-table-cell");
+		this.actionCheckBox = new CheckBox(label);
+		this.actionCheckBox.setOnAction(e -> function.accept(getCurrentItem()));
+//		this.actionCheckBox.setMaxWidth(Double.MAX_VALUE);
+	}
+	public S getCurrentItem() {
+		// No need for a cast here:
+		System.out.println("<<<<<<<<<<<<<<<<<<<<TV Actionbutton pressed");
+		return getTableView().getItems().get(getIndex());
+	}
+
+	public static <S, T> Callback<TableColumn<S, T>, TableCell<S, T>> forTableColumn(String label, Consumer<S> function) {
+		return param -> new CheckBoxTableCell<>(label, function);
+	}
+	@Override
+	public void updateItem(T item, boolean empty) {
+		super.updateItem(item, empty);
+		if (empty) {
+			setGraphic(null);
+		} else {
+			setGraphic(actionCheckBox);
+		}
+	}
 }

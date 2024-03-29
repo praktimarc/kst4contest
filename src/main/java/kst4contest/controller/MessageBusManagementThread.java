@@ -625,8 +625,22 @@ public class MessageBusManagementThread extends Thread {
 									newMessage.getReceiver().getQra(),
 									client.getChatPreferences().getStn_maxQRBDefault(),
 									client.getChatPreferences().getStn_antennaBeamWidthDeg())) {
+
+								if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
+									//play only tick sound if the sender was not set directedtome before
+									if (!newMessage.getSender().isInAngleAndRange()) {
+										this.client.getPlayAudioUtils().playNoiseLauncher('-');
+									}
+								}
 								newMessage.getSender().setInAngleAndRange(true);
+								System.out.println(">>>>>>>>>> Anglewarning <<<<<<<<<< " +  newMessage.getSender().getCallSign() + ", " + newMessage.getSender().getQra() + " -> " + newMessage.getReceiver().getCallSign() + ", " + newMessage.getReceiver().getQra() + " = " +
+										new Location(newMessage.getSender().getQra()).getBearing(new Location(newMessage.getReceiver().getQra())) +
+										" / sender bearing to me: " + new Location(newMessage.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getLoginLocator())));
+
 							} else {
+								System.out.println("-notinangle- " +  newMessage.getSender().getCallSign() + ", " + newMessage.getSender().getQra() + " -> " + newMessage.getReceiver().getCallSign() + ", " + newMessage.getReceiver().getQra() + " = " +
+										new Location(newMessage.getSender().getQra()).getBearing(new Location(newMessage.getReceiver().getQra())) +
+										" ; sender bearing to me: " + new Location(newMessage.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getLoginLocator())));
 								newMessage.getSender().setInAngleAndRange(false);
 							}
 

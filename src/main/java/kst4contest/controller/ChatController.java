@@ -1170,6 +1170,13 @@ category = new ChatCategory(2);
 			chatMember -> chatMember.resetWorkedInformationAtAllBands());
 		
 	}
+
+	public void resetQRVInfoInGuiLists() {
+
+		this.chatController.getLst_chatMemberList().forEach(
+				chatMember -> chatMember.resetQRVInformationAtAllBands());
+
+	}
 	
 	/**
 	 * Setting the initial parameters at the chat

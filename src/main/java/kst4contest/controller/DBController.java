@@ -220,7 +220,7 @@ public class DBController {
 		} catch (SQLException e) {
 			System.err.println("[DBH, ERROR:] Chatmember could not been stored.");
 			e.printStackTrace();
-			connection.close();
+//			connection.close(); //Todo commented out due to errors
 		}
 	}
 
