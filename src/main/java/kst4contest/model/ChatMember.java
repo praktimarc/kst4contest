@@ -40,14 +40,17 @@ public class ChatMember {
 	boolean worked5600;
 	boolean worked10G;
 
-	boolean qrv144;
-	boolean qrv432;
-	boolean qrv1240;
-	boolean qrv2300;
-	boolean qrv3400;
-	boolean qrv5600;
-	boolean qrv10G;
-	boolean qrvAny;
+	/**
+	 * Chatmember is qrv at all band except we initialize anything other, depending to user entry
+	 */
+	boolean qrv144 = true;
+	boolean qrv432 = true;
+	boolean qrv1240 = true;
+	boolean qrv2300 = true;
+	boolean qrv3400 = true;
+	boolean qrv5600 = true;
+	boolean qrv10G = true;
+	boolean qrvAny = true;
 
 
 

@@ -1121,6 +1121,24 @@ category = new ChatCategory(2);
 					chatMember.setWorked5600(getWorkedDataFromDb.get(chatMember.getCallSign()).isWorked5600());
 					;
 					chatMember.setWorked10G(getWorkedDataFromDb.get(chatMember.getCallSign()).isWorked10G());
+					/**
+					 * v1.2 since here
+					 * TODO: Change that, this ins not generative
+					 */
+
+					chatMember.setQrv144(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv144());
+					;
+					chatMember.setQrv432(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv432());
+					;
+					chatMember.setQrv1240(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv1240());
+					;
+					chatMember.setQrv2300(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv2300());
+					;
+					chatMember.setQrv3400(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv3400());
+					;
+					chatMember.setQrv5600(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv5600());
+					;
+					chatMember.setQrv10G(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv10G());
 					;
 				}
 

@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
@@ -46,6 +47,10 @@ import javafx.util.Callback;
 import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.model.*;
 
+import javafx.scene.shape.Line;
+import javafx.scene.shape.Polygon;
+import javafx.scene.Group;
+
 
 public class Kst4ContestApplication extends Application {
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
@@ -63,6 +68,41 @@ public class Kst4ContestApplication extends Application {
 	Timer timer_updatePrivatemessageTable; // same here
 	VBox selectedCallSignFurtherInfoPane = new VBox();
 
+	public static Node createArrow(double deg) {
+		// Convert degrees to radians
+		double rad = Math.toRadians(90-180 - deg);
+
+		// Length of the arrow line
+		double arrowLength = 6;
+
+		// Coordinates of the arrow tip
+		double tipX = arrowLength * Math.cos(rad);
+		double tipY = arrowLength * Math.sin(rad);
+
+		// Draw the arrow line
+		Line arrowLine = new Line(0, 0, tipX, -tipY);
+		arrowLine.setStroke(Color.LIGHTGREEN);
+
+		// Calculate coordinates for the arrowhead
+		double arrowheadAngle = Math.toRadians(20); // Angle of arrowhead
+		double arrowheadLength = 15; // Length of arrowhead
+		double arrowheadX1 = tipX + arrowheadLength * Math.cos(rad - arrowheadAngle);
+		double arrowheadY1 = tipY + arrowheadLength * Math.sin(rad - arrowheadAngle);
+		double arrowheadX2 = tipX + arrowheadLength * Math.cos(rad + arrowheadAngle);
+		double arrowheadY2 = tipY + arrowheadLength * Math.sin(rad + arrowheadAngle);
+
+		// Draw the arrowhead
+		Polygon arrowhead = new Polygon(
+				0, 0,  // tip
+				arrowheadX1, -arrowheadY1, // left corner
+				arrowheadX2, -arrowheadY2 // right corner
+		);
+		arrowhead.setFill(Color.GREEN);
+
+		// Return the arrow element (line + polygon)
+		return new javafx.scene.Group(arrowLine, arrowhead);
+	}
+
 	private BorderPane generateFurtherInfoAbtSelectedCallsignBP(ChatMember selectedCallSignInfoStageChatMember) {
 
 		selectedCallSignInfoBorderPane = new BorderPane();
@@ -73,19 +113,7 @@ public class Kst4ContestApplication extends Application {
 
 		TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable = initFurtherInfoAbtCallsignMSGTable();
 
-//		ChatMember dummy = new ChatMember();
-//		dummy.setCallSign("DM5M");
-//		dummy.setQra("JO51IJ");
-//		dummy.setQrb(0.0);
-//		dummy.setQTFdirection(0.0);
-//		dummy.setName("me");
-//		dummy.setState(0);
-//
-//		selectedCallSignInfoStageChatMember = dummy;
-
-
 		Label selectedCallSignInfoLblQTFInfo = new Label("QTF:" + selectedCallSignInfoStageChatMember.getQTFdirection() + " deg");
-//		System.out.println("qtfinfolabel should show: " + selectedCallSignInfoStageChatMember.getQrb());
 
 		Label selectedCallSignInfoLblQRBInfo = new Label("QRB: " + selectedCallSignInfoStageChatMember.getQrb() + " km");
 
@@ -99,31 +127,219 @@ public class Kst4ContestApplication extends Application {
 		selectedCallSignDownerSiteGridPane.add(new Label("Last activity: " + new Utils4KST().time_convertEpochToReadable(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"")), 0,2,1,1);
 		selectedCallSignDownerSiteGridPane.add(new Label(("(" + Utils4KST.time_getSecondsBetweenEpochAndNow(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"") /60%60) +" min ago)"), 0,3,1,1);
 
+//		selectedCallSignDownerSiteGridPane.add(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()),1,2,2,2); //moved to as button
+
 		/**
 		 * users qrv info setting will follow here
 		 */
-		CheckBox chkbx_tagMemberNotQRVFurtherInfoPane = new CheckBox("tag NOT QRV ALL");
-		chkbx_tagMemberNotQRVFurtherInfoPane.setSelected(selectedCallSignInfoStageChatMember.isQrvAny());
-		chkbx_tagMemberNotQRVFurtherInfoPane.selectedProperty().addListener(new ChangeListener<Boolean>() {
+//		CheckBox chkbx_tagMemberNotQRVFurtherInfoPane = new CheckBox("tag NOT QRV ALL");
+//		chkbx_tagMemberNotQRVFurtherInfoPane.setSelected(selectedCallSignInfoStageChatMember.isQrvAny());
+//		chkbx_tagMemberNotQRVFurtherInfoPanefurtherInfoPnl_chkbx_notQRV144
+
+		CheckBox furtherInfoPnl_chkbx_notQRV144 = new CheckBox("tag not qrv 144");
+		furtherInfoPnl_chkbx_notQRV144.setSelected(!selectedCallSignInfoStageChatMember.isQrv144());
+		furtherInfoPnl_chkbx_notQRV144.selectedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				//if selected: NOT QRV; if NOT selected: is qrv!
 				if (!newValue) {
-					chkbx_tagMemberNotQRVFurtherInfoPane.selectedProperty().setValue(true);
+					selectedCallSignInfoStageChatMember.setQrv144(true);
 				} else {
-					chkbx_tagMemberNotQRVFurtherInfoPane.selectedProperty().setValue(false);
+					selectedCallSignInfoStageChatMember.setQrv144(false);
+				}
+				try {
+
+				chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
 				}
 			}
 		});
 
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 144"), 2,0,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 432"), 2,1,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 23cm"), 2,2,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 13cm"), 2,3,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 9cm"), 3,0,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 6cm"), 3,1,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv 3cm"), 3,2,1,1);
-		selectedCallSignDownerSiteGridPane.add(new CheckBox("tag not qrv all"), 3,3,1,1);
+		CheckBox furtherInfoPnl_chkbx_notQRV432 = new CheckBox("tag not qrv 432");
+		furtherInfoPnl_chkbx_notQRV432.setSelected(!selectedCallSignInfoStageChatMember.isQrv432());
+		furtherInfoPnl_chkbx_notQRV432.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv432(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv432(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		CheckBox furtherInfoPnl_chkbx_notQRV23 = new CheckBox("tag not qrv 23cm");
+		furtherInfoPnl_chkbx_notQRV23.setSelected(!selectedCallSignInfoStageChatMember.isQrv1240());
+		furtherInfoPnl_chkbx_notQRV23.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv1240(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv1240(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		CheckBox furtherInfoPnl_chkbx_notQRV13 = new CheckBox("tag not qrv 13cm");
+		furtherInfoPnl_chkbx_notQRV13.setSelected(!selectedCallSignInfoStageChatMember.isQrv2300());
+		furtherInfoPnl_chkbx_notQRV13.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv2300(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv2300(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		CheckBox furtherInfoPnl_chkbx_notQRV9 = new CheckBox("tag not qrv 9cm");
+		furtherInfoPnl_chkbx_notQRV9.setSelected(!selectedCallSignInfoStageChatMember.isQrv3400());
+		furtherInfoPnl_chkbx_notQRV9.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv3400(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv3400(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		CheckBox furtherInfoPnl_chkbx_notQRV6 = new CheckBox("tag not qrv 6cm");
+		furtherInfoPnl_chkbx_notQRV6.setSelected(!selectedCallSignInfoStageChatMember.isQrv5600());
+		furtherInfoPnl_chkbx_notQRV6.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv5600(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv5600(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		CheckBox furtherInfoPnl_chkbx_notQRV3 = new CheckBox("tag not qrv 3cm");
+		furtherInfoPnl_chkbx_notQRV3.setSelected(!selectedCallSignInfoStageChatMember.isQrv10G());
+		furtherInfoPnl_chkbx_notQRV3.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv10G(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv10G(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		CheckBox furtherInfoPnl_chkbx_notQRVall = new CheckBox("tag not qrv all");
+		furtherInfoPnl_chkbx_notQRVall.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					selectedCallSignInfoStageChatMember.setQrv144(true);
+					selectedCallSignInfoStageChatMember.setQrv432(true);
+					selectedCallSignInfoStageChatMember.setQrv1240(true);
+					selectedCallSignInfoStageChatMember.setQrv2300(true);
+					selectedCallSignInfoStageChatMember.setQrv3400(true);
+					selectedCallSignInfoStageChatMember.setQrv5600(true);
+					selectedCallSignInfoStageChatMember.setQrv10G(true);
+				} else {
+					selectedCallSignInfoStageChatMember.setQrv144(false);
+					selectedCallSignInfoStageChatMember.setQrv432(false);
+					selectedCallSignInfoStageChatMember.setQrv1240(false);
+					selectedCallSignInfoStageChatMember.setQrv2300(false);
+					selectedCallSignInfoStageChatMember.setQrv3400(false);
+					selectedCallSignInfoStageChatMember.setQrv5600(false);
+					selectedCallSignInfoStageChatMember.setQrv10G(false);
+				}
+
+				try {
+
+					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+				} catch (Exception e) {
+					//do nothing, upodate was not possible
+				}
+			}
+		});
+
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV144, 2,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV432, 2,1,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV23, 2,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV13, 2,3,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV9, 3,0,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV6, 3,1,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRV3, 3,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(furtherInfoPnl_chkbx_notQRVall, 3,3,1,1);
+
+		if (!chatcontroller.getChatPreferences().isStn_bandActive144()) {
+			furtherInfoPnl_chkbx_notQRV144.setVisible(false);
+		}
+		if (!chatcontroller.getChatPreferences().isStn_bandActive432()) {
+			furtherInfoPnl_chkbx_notQRV432.setVisible(false);
+		}
+
+		if (!chatcontroller.getChatPreferences().isStn_bandActive1240()) {
+			furtherInfoPnl_chkbx_notQRV23.setVisible(false);
+		}
+		if (!chatcontroller.getChatPreferences().isStn_bandActive2300()) {
+			furtherInfoPnl_chkbx_notQRV13.setVisible(false);
+		}
+		if (!chatcontroller.getChatPreferences().isStn_bandActive3400()) {
+			furtherInfoPnl_chkbx_notQRV9.setVisible(false);
+		}
+		if (!chatcontroller.getChatPreferences().isStn_bandActive5600()) {
+			furtherInfoPnl_chkbx_notQRV6.setVisible(false);
+		}
+		if (!chatcontroller.getChatPreferences().isStn_bandActive10G()) {
+			furtherInfoPnl_chkbx_notQRV3.setVisible(false);
+		}
+
+
+
 
 		/**
 		 * users qrv info setting ending
@@ -136,6 +352,8 @@ public class Kst4ContestApplication extends Application {
 				chatcontroller.airScout_SendAsShowPathPacket(selectedCallSignInfoStageChatMember);
 			}
 		});
+
+		selectedCallSignShowAsPathBtn.setGraphic(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()));
 
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,2);
 
@@ -460,6 +678,7 @@ public class Kst4ContestApplication extends Application {
 				return qra;
 			}
 		});
+		qtfCol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(15));
 
 		TableColumn<ChatMember, String> qrgCol = new TableColumn<ChatMember, String>("QRG");
 		qrgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
@@ -563,7 +782,11 @@ public class Kst4ContestApplication extends Application {
 				return lastActEpoch;
 			}
 		});
+		lastActCol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(32));
 
+/**
+ * section of worked flag in chatmember table
+ */
 
 		TableColumn<ChatMember, String> workedCol = new TableColumn<ChatMember, String>("worked");
 		workedCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
@@ -582,7 +805,7 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-		TableColumn<ChatMember, String> wkdAny_subcol = new TableColumn<ChatMember, String>("wkd");
+		TableColumn<ChatMember, String> wkdAny_subcol = new TableColumn<ChatMember, String>("wkdany");
 		wkdAny_subcol
 				.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
@@ -731,20 +954,105 @@ public class Kst4ContestApplication extends Application {
 
 		shf3_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(32));
 
-//		TableColumn<ChatMember, Void> unworkableCol = new TableColumn<ChatMember, Void>("qrv");
-//		unworkableCol.setCellFactory(CheckBoxTableCell.<ChatMember, Void>forTableColumn("lalala", c ->
-//				System.out.println(c.getCallSign())));
+		/**
+		 * section of NOT-QRV flag in chatmember table
+		 */
 
-//		TableColumn uhfCol_subcol = new TableColumn("432"); //TODO: Worked band analysis
-//        TableColumn shf23_subcol = new TableColumn("23");
-//        TableColumn shf13_subcol = new TableColumn("13");
-//        TableColumn shf9_subcol = new TableColumn("9");
-//        TableColumn shf6_subcol = new TableColumn("6");
-//        TableColumn shf3_subcol = new TableColumn("3");
-		workedCol.getColumns().addAll(wkdAny_subcol, vhfCol_subcol, uhfCol_subcol, shf23_subcol, shf13_subcol,
-				shf9_subcol, shf6_subcol, shf3_subcol); // TODO: automatize enabling to users bandChoice
+		TableColumn<ChatMember, String> notQRVCol = new TableColumn<ChatMember, String>("NOT QRV @");
+		notQRVCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
-		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qtfCol, qrgCol, lastActCol, airScoutCol, workedCol);
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
+				SimpleStringProperty wkd = new SimpleStringProperty();
+
+				wkd.setValue("");
+
+				if (!cellDataFeatures.getValue().isQrv144()) {
+					wkd.setValue(wkd.getValue() + "144 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("144 ",""));
+				}
+
+				if (!cellDataFeatures.getValue().isQrv432()) {
+					wkd.setValue(wkd.getValue() + "70 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("70 ",""));
+				}
+
+				if (!cellDataFeatures.getValue().isQrv1240()) {
+					wkd.setValue(wkd.getValue() + "SHF23 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("SHFcm ",""));
+				}
+
+				if (!cellDataFeatures.getValue().isQrv2300()) {
+					wkd.setValue(wkd.getValue() + "SHF13 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("SHF13 ",""));
+				}
+
+				if (!cellDataFeatures.getValue().isQrv3400()) {
+					wkd.setValue(wkd.getValue() + "SHF9 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("SHF9 ",""));
+				}
+
+				if (!cellDataFeatures.getValue().isQrv5600()) {
+					wkd.setValue(wkd.getValue() + "SHF6 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("SHF6 ",""));
+				}
+
+				if (!cellDataFeatures.getValue().isQrv10G()) {
+					wkd.setValue(wkd.getValue() + "SHF3 ");
+				} else {
+					wkd.setValue(wkd.getValue().replace("SHF3 ",""));
+				}
+
+
+				return wkd;
+			}
+		});
+
+
+
+
+		/**
+		 * add now only cols which affects the used band of my station
+		 */
+
+		if (chatcontroller.getChatPreferences().isStn_bandActive144()) {
+			workedCol.getColumns().add(vhfCol_subcol);
+		}
+		if (chatcontroller.getChatPreferences().isStn_bandActive432()) {
+			workedCol.getColumns().add(uhfCol_subcol);
+		}
+
+		if (chatcontroller.getChatPreferences().isStn_bandActive1240()) {
+			workedCol.getColumns().add(shf23_subcol);
+		}
+		if (chatcontroller.getChatPreferences().isStn_bandActive2300()) {
+			workedCol.getColumns().add(shf13_subcol);
+		}
+		if (chatcontroller.getChatPreferences().isStn_bandActive3400()) {
+			workedCol.getColumns().add(shf9_subcol);
+		}
+		if (chatcontroller.getChatPreferences().isStn_bandActive5600()) {
+			workedCol.getColumns().add(shf6_subcol);
+		}
+		if (chatcontroller.getChatPreferences().isStn_bandActive10G()) {
+			workedCol.getColumns().add(shf3_subcol);
+		}
+
+		/**
+		 * The worked any col makes sense in all cases
+		 */
+			workedCol.getColumns().add(wkdAny_subcol);
+
+
+
+
+		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qtfCol, qrgCol, lastActCol, airScoutCol, workedCol, notQRVCol);
 
 //		tbl_chatMemberTable.setItems(chatcontroller.getLst_chatMemberListFiltered());
 
@@ -2475,11 +2783,13 @@ public class Kst4ContestApplication extends Application {
 	Button btnOptionspnlConnect;
 	ContextMenu chatMessageContextMenu; // public due need to update it on modify
 	ContextMenu chatMemberContextMenu;// public due need to update it on modify
+	HBox chatMemberTableFilterQTFAndQRBHbox;
+
 	FlowPane flwPane_textSnippets;
 
 	Stage clusterAndQSOMonStage;
 	Stage stage_selectedCallSignInfoStage;
-	ChatMember selectedCallSignInfoStageChatMember = new ChatMember();
+	ChatMember selectedCallSignInfoStageChatMember;
 	BorderPane selectedCallSignInfoBorderPane;
 
 
@@ -3439,7 +3749,10 @@ public class Kst4ContestApplication extends Application {
 						} else {
 
 
-							selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0);
+//							selectedCallSignInfoStageChatMember = selectedChatMember.getList().get(0); //TODO: may need reference to original chatmember object
+							selectedCallSignInfoStageChatMember = chatcontroller.getLst_chatMemberList()
+									.get(chatcontroller.checkListForChatMemberIndexByCallSign(
+											selectedChatMember.getList().get(0)));
 
 							selectedCallSignFurtherInfoPane.getChildren().clear();
 							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
@@ -3490,7 +3803,7 @@ public class Kst4ContestApplication extends Application {
 			BorderPane chatMemberTableBorderPane = new BorderPane();
 			chatMemberTableBorderPane.setCenter(tbl_chatMember);
 
-			HBox chatMemberTableFilterQTFAndQRBHbox = new HBox();
+			chatMemberTableFilterQTFAndQRBHbox = new HBox();
 			chatMemberTableFilterQTFAndQRBHbox.setSpacing(10);
 
 //			chatMemberTableFilterQTFAndQRBHbox.set
@@ -3763,7 +4076,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked144()) {
+					if (chatMember.isWorked144() || !chatMember.isQrv144()) {
 						return false;
 					}
 					else return true;
@@ -3780,6 +4093,7 @@ public class Kst4ContestApplication extends Application {
 					}
 				}
 			});
+//			btnTglwkd144.setVisible(chatcontroller.getChatPreferences().isStn_bandActive144());
 
 			ToggleButton btnTglwkd432 = new ToggleButton("432");
 
@@ -3787,7 +4101,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked432()) {
+					if (chatMember.isWorked432() || !chatMember.isQrv432()) {
 						return false;
 					}
 					else return true;
@@ -3804,6 +4118,7 @@ public class Kst4ContestApplication extends Application {
 					}
 				}
 			});
+//			btnTglwkd432.setVisible(chatcontroller.getChatPreferences().isStn_bandActive432());
 
 
 			ToggleButton btnTglwkd23 = new ToggleButton("23");
@@ -3812,7 +4127,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked1240()) {
+					if (chatMember.isWorked1240() || !chatMember.isQrv1240()) {
 						return false;
 					}
 					else return true;
@@ -3836,7 +4151,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked2300()) {
+					if (chatMember.isWorked2300() || !chatMember.isQrv2300()) {
 						return false;
 					}
 					else return true;
@@ -3860,7 +4175,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked3400()) {
+					if (chatMember.isWorked3400() || !chatMember.isQrv3400()) {
 						return false;
 					}
 					else return true;
@@ -3885,7 +4200,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked5600()) {
+					if (chatMember.isWorked5600() || !chatMember.isQrv5600()) {
 						return false;
 					}
 					else return true;
@@ -3910,7 +4225,7 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public boolean test(ChatMember chatMember) {
 
-					if (chatMember.isWorked10G()) {
+					if (chatMember.isWorked10G() || !chatMember.isQrv10G()) {
 						return false;
 					}
 					else return true;
@@ -3953,17 +4268,39 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
-			btnTglInactive.setTooltip(new Tooltip("not implemented yet!"));
+			btnTglInactive.setTooltip(new Tooltip("Hide inactive stations"));
 
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Hide: "));
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Hide worked:\nHide un-QRV: "));
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd144);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd432);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd23);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd13);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd9);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd6);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd3);
+
+			/**
+			 * add only filter buttons at the callsigntable which affects used bands
+			 */
+			if (chatcontroller.getChatPreferences().isStn_bandActive144()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd144);
+			}
+			if (chatcontroller.getChatPreferences().isStn_bandActive432()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd432);
+			}
+
+			if (chatcontroller.getChatPreferences().isStn_bandActive1240()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd23);
+			}
+			if (chatcontroller.getChatPreferences().isStn_bandActive2300()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd13);
+			}
+			if (chatcontroller.getChatPreferences().isStn_bandActive3400()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd9);
+			}
+			if (chatcontroller.getChatPreferences().isStn_bandActive5600()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd6);
+
+			}
+			if (chatcontroller.getChatPreferences().isStn_bandActive10G()) {
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglwkd3);
+
+			}
+
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglInactive);
 			chatMemberTableFilterWorkedBandFiltersHbx.setAlignment(Pos.CENTER_LEFT);
 			chatMemberTableFilterWorkedBandFiltersHbx.setSpacing(5);
@@ -4385,7 +4722,126 @@ public class Kst4ContestApplication extends Application {
 		vbxStation.getChildren().addAll(
 				generateLabeledSeparator(100, "Set your Login Credentials and Station Parameters here"), grdPnlStation);
 		vbxStation.getChildren().addAll(generateLabeledSeparator(50,
-				"Don´t forget to reset the worked stations information before starting a new contest!"));
+				"! ! ! ! Don´t forget to reset the worked stations information before starting a new contest ! ! ! !"));
+
+
+		CheckBox settings_chkbx_QRV144 = new CheckBox("My station uses 2m band");
+		settings_chkbx_QRV144.setSelected(chatcontroller.getChatPreferences().isStn_bandActive144());
+		settings_chkbx_QRV144.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive144(
+						settings_chkbx_QRV144.isSelected());
+				System.out.println("[Main.java, Info]: setted my 144 qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive144());
+				chatMemberTableFilterQTFAndQRBHbox.setVisible(false);
+				chatMemberTableFilterQTFAndQRBHbox.setVisible(true);
+			}
+		});
+
+		CheckBox settings_chkbx_QRV432 = new CheckBox("My station uses 70cm band");
+		settings_chkbx_QRV432.setSelected(chatcontroller.getChatPreferences().isStn_bandActive432());
+		settings_chkbx_QRV432.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive432(
+						settings_chkbx_QRV432.isSelected());
+				System.out.println("[Main.java, Info]: setted my 432 qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive432());
+			}
+		});
+
+		CheckBox settings_chkbx_QRV1240 = new CheckBox("My station uses 23cm band");
+		settings_chkbx_QRV1240.setSelected(chatcontroller.getChatPreferences().isStn_bandActive1240());
+		settings_chkbx_QRV1240.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive1240(
+						settings_chkbx_QRV1240.isSelected());
+				System.out.println("[Main.java, Info]: setted my 1240 qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive1240());
+			}
+		});
+
+		CheckBox settings_chkbx_QRV2300 = new CheckBox("My station uses 13cm band");
+		settings_chkbx_QRV2300.setSelected(chatcontroller.getChatPreferences().isStn_bandActive2300());
+		settings_chkbx_QRV2300.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive2300(
+						settings_chkbx_QRV2300.isSelected());
+				System.out.println("[Main.java, Info]: setted my 2300 qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive2300());
+			}
+		});
+
+		CheckBox settings_chkbx_QRV3400 = new CheckBox("My station uses 9cm band");
+		settings_chkbx_QRV3400.setSelected(chatcontroller.getChatPreferences().isStn_bandActive3400());
+		settings_chkbx_QRV3400.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive3400(
+						settings_chkbx_QRV3400.isSelected());
+				System.out.println("[Main.java, Info]: setted my 3400 qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive3400());
+			}
+		});
+
+		CheckBox settings_chkbx_QRV5600 = new CheckBox("My station uses 6cm band");
+		settings_chkbx_QRV5600.setSelected(chatcontroller.getChatPreferences().isStn_bandActive5600());
+		settings_chkbx_QRV5600.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive5600(
+						settings_chkbx_QRV5600.isSelected());
+				System.out.println("[Main.java, Info]: setted my 5600 qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive5600());
+			}
+		});
+
+		CheckBox settings_chkbx_QRV10G = new CheckBox("My station uses 3cm band");
+		settings_chkbx_QRV10G.setSelected(chatcontroller.getChatPreferences().isStn_bandActive10G());
+		settings_chkbx_QRV10G.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				chatcontroller.getChatPreferences().setStn_bandActive10G(
+						settings_chkbx_QRV10G.isSelected());
+				System.out.println("[Main.java, Info]: setted my 10G qrv setting to: "
+						+ chatcontroller.getChatPreferences().isStn_bandActive10G());
+			}
+		});
+
+
+		GridPane grdPnlStation_bands = new GridPane();
+		grdPnlStation_bands.setPadding(new Insets(10, 10, 10, 10));
+		grdPnlStation_bands.setVgap(5);
+		grdPnlStation_bands.setHgap(5);
+
+		grdPnlStation_bands.add(new Label("Define on which bands you will be qrv today (changes UI a bit ... click save, then restart!)"), 0, 0, 3,1);
+		grdPnlStation_bands.add(settings_chkbx_QRV144, 0, 1);
+		grdPnlStation_bands.add(settings_chkbx_QRV432, 1, 1);
+		grdPnlStation_bands.add(settings_chkbx_QRV1240, 2, 1);
+		grdPnlStation_bands.add(settings_chkbx_QRV2300, 0, 2);
+		grdPnlStation_bands.add(settings_chkbx_QRV3400, 1, 2);
+		grdPnlStation_bands.add(settings_chkbx_QRV5600, 2, 2);
+		grdPnlStation_bands.add(settings_chkbx_QRV10G, 0, 3);
+		grdPnlStation_bands.setMaxWidth(555.0);
+
+		grdPnlStation_bands.setStyle("   -fx-border-color: lightgray;\n" +
+				"    -fx-vgap: 5;\n" +
+				"    -fx-hgap: 5;\n" +
+				"    -fx-padding: 5;");
+
+		vbxStation.getChildren().add(new Label("    ")); //need some space there
+		vbxStation.getChildren().add(grdPnlStation_bands);
+
+//		vbxStation.getChildren().add(settings_chkbx_QRV144);
+//		vbxStation.getChildren().add(settings_chkbx_QRV432);
+//		vbxStation.getChildren().add(settings_chkbx_qRV1240);
+//		vbxStation.getChildren().add(settings_chkbx_QRV2300);
+//		vbxStation.getChildren().add(settings_chkbx_QRV3400);
+//		vbxStation.getChildren().add(settings_chkbx_QRV5600);
+//		vbxStation.getChildren().add(settings_chkbx_QRV10G);
 
 		/*************************************************************************************
 		 * Log synch settings Tab
@@ -5025,7 +5481,7 @@ public class Kst4ContestApplication extends Application {
 		tblVw_worked = initWkdStnTable();
 //		tblVw_worked.setItems(); TODO
 
-		Button btn_wkdDB_reset = new Button("Reset worked-data");
+		Button btn_wkdDB_reset = new Button("Reset worked-tags and NOT-QRV-tags");
 		btn_wkdDB_reset.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {

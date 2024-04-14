@@ -145,6 +145,15 @@ public class ChatPreferences {
 	ChatCategory loginChatCategory = new ChatCategory(2);
 	IntegerProperty actualQTF = new SimpleIntegerProperty(360); // will be updated by user at runtime!
 
+	boolean stn_bandActive144;
+	boolean stn_bandActive432;
+	boolean stn_bandActive1240;
+	boolean stn_bandActive2300;
+	boolean stn_bandActive3400;
+	boolean stn_bandActive5600;
+	boolean stn_bandActive10G;
+
+
 
 	/**
 	 * Log Synch preferences
@@ -598,6 +607,34 @@ public class ChatPreferences {
 			stn_qtfDefault.setTextContent(this.stn_qtfDefault+"");
 			station.appendChild(stn_qtfDefault);
 
+			Element stn_bandActive144 = doc.createElement("stn_bandActive144");
+			stn_bandActive144.setTextContent(this.stn_bandActive144+"");
+			station.appendChild(stn_bandActive144);
+
+			Element stn_bandActive432 = doc.createElement("stn_bandActive432");
+			stn_bandActive432.setTextContent(this.stn_bandActive432+"");
+			station.appendChild(stn_bandActive432);
+
+			Element stn_bandActive1240 = doc.createElement("stn_bandActive1240");
+			stn_bandActive1240.setTextContent(this.stn_bandActive1240+"");
+			station.appendChild(stn_bandActive1240);
+
+			Element stn_bandActive2300 = doc.createElement("stn_bandActive2300");
+			stn_bandActive2300.setTextContent(this.stn_bandActive2300+"");
+			station.appendChild(stn_bandActive2300);
+
+			Element stn_bandActive3400 = doc.createElement("stn_bandActive3400");
+			stn_bandActive3400.setTextContent(this.stn_bandActive3400+"");
+			station.appendChild(stn_bandActive3400);
+
+			Element stn_bandActive5600 = doc.createElement("stn_bandActive5600");
+			stn_bandActive5600.setTextContent(this.stn_bandActive5600+"");
+			station.appendChild(stn_bandActive5600);
+
+			Element stn_bandActive10G = doc.createElement("stn_bandActive10G");
+			stn_bandActive10G.setTextContent(this.stn_bandActive10G+"");
+			station.appendChild(stn_bandActive10G);
+
 //		      Element salary = doc.createElement("salary");
 //		      salary.setAttribute("currency", "USD");
 //		      salary.setTextContent("5000");
@@ -896,11 +933,104 @@ public class ChatPreferences {
 						double qtfDefault = Double.parseDouble(element.getElementsByTagName("stn_qtfDefault").item(0).getTextContent());
 						stn_qtfDefault = qtfDefault;
 
+						try {
+
+							String stnUses144 = element
+									.getElementsByTagName("stn_bandActive144").item(0)
+									.getTextContent();
+
+							if (stnUses144.equals("true")) {
+
+								stn_bandActive144 = true;
+							} else {
+								stn_bandActive144 = false;
+							}
+
+							String stnUses432 = element
+									.getElementsByTagName("stn_bandActive432").item(0)
+									.getTextContent();
+
+							if (stnUses432.equals("true")) {
+
+								stn_bandActive432 = true;
+							} else {
+								stn_bandActive432 = false;
+							}
+
+							String stnUses1240 = element
+									.getElementsByTagName("stn_bandActive1240").item(0)
+									.getTextContent();
+
+							if (stnUses1240.equals("true")) {
+
+								stn_bandActive1240 = true;
+							} else {
+								stn_bandActive1240 = false;
+							}
+
+							String stnUses2300 = element
+									.getElementsByTagName("stn_bandActive2300").item(0)
+									.getTextContent();
+
+							if (stnUses2300.equals("true")) {
+
+								stn_bandActive2300 = true;
+							} else {
+								stn_bandActive2300 = false;
+							}
+
+							String stnUses3400 = element
+									.getElementsByTagName("stn_bandActive3400").item(0)
+									.getTextContent();
+
+							if (stnUses3400.equals("true")) {
+
+								stn_bandActive3400 = true;
+							} else {
+								stn_bandActive3400 = false;
+							}
+
+							String stnUses5600 = element
+									.getElementsByTagName("stn_bandActive5600").item(0)
+									.getTextContent();
+
+							if (stnUses5600.equals("true")) {
+
+								stn_bandActive5600 = true;
+							} else {
+								stn_bandActive5600 = false;
+							}
+
+							String stnUses10G = element
+									.getElementsByTagName("stn_bandActive10G").item(0)
+									.getTextContent();
+
+							if (stnUses10G.equals("true")) {
+
+								stn_bandActive10G = true;
+							} else {
+								stn_bandActive10G = false;
+							}
+
+						} catch (NullPointerException tooOldConfigFileOrFormatError) {
+							/**
+							 * In program version 1 there had not been these settings in the xml and not founding em
+							 * would cause an exception and dumb values for the preferences. So we have to initialize
+							 * these variables and later write a proper configfile which can be used correctly then.
+							 */
+							stn_bandActive144 = true;
+							stn_bandActive432 = true;
+							stn_bandActive1240 = true;
+							stn_bandActive2300 = true;
+							stn_bandActive3400 = true;
+							stn_bandActive5600 = true;
+							stn_bandActive10G = true;
+						}
 
 
 						System.out.println("[ChatPreferences, info]: Current Element: " + node.getNodeName()
 								+ " --> call: " + call + " / " + password + " / " + loginDisplayedName + " / " + qra
-								+ " / " + category + " / " + antennaBeamWidthDeg + " / " + maxQRBDefault + " / " + qtfDefault);
+								+ " / " + category + " / " + antennaBeamWidthDeg + " / " + maxQRBDefault + " / " + qtfDefault + " qrv144: " + stn_bandActive144);
 
 					}
 				}
@@ -1297,6 +1427,61 @@ public class ChatPreferences {
 
 	}
 
+	public boolean isStn_bandActive144() {
+		return stn_bandActive144;
+	}
+
+	public void setStn_bandActive144(boolean stn_bandActive144) {
+		this.stn_bandActive144 = stn_bandActive144;
+	}
+
+	public boolean isStn_bandActive432() {
+		return stn_bandActive432;
+	}
+
+	public void setStn_bandActive432(boolean stn_bandActive432) {
+		this.stn_bandActive432 = stn_bandActive432;
+	}
+
+	public boolean isStn_bandActive1240() {
+		return stn_bandActive1240;
+	}
+
+	public void setStn_bandActive1240(boolean stn_bandActive1240) {
+		this.stn_bandActive1240 = stn_bandActive1240;
+	}
+
+	public boolean isStn_bandActive2300() {
+		return stn_bandActive2300;
+	}
+
+	public void setStn_bandActive2300(boolean stn_bandActive2300) {
+		this.stn_bandActive2300 = stn_bandActive2300;
+	}
+
+	public boolean isStn_bandActive3400() {
+		return stn_bandActive3400;
+	}
+
+	public void setStn_bandActive3400(boolean stn_bandActive3400) {
+		this.stn_bandActive3400 = stn_bandActive3400;
+	}
+
+	public boolean isStn_bandActive5600() {
+		return stn_bandActive5600;
+	}
+
+	public void setStn_bandActive5600(boolean stn_bandActive5600) {
+		this.stn_bandActive5600 = stn_bandActive5600;
+	}
+
+	public boolean isStn_bandActive10G() {
+		return stn_bandActive10G;
+	}
+
+	public void setStn_bandActive10G(boolean stn_bandActive10G) {
+		this.stn_bandActive10G = stn_bandActive10G;
+	}
 
 	/**
 	 * 

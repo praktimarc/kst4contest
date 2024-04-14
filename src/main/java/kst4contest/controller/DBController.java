@@ -104,8 +104,75 @@ public class DBController {
 			}
 		});
 
+		versionUpdateOfDBCheckAndChangeV11ToV12(); //TODO: newer version DB update should be called here
 
 	}
+
+	/**
+	 * While the first version of this software has other needs to the db tables than the 1.2 and following versions
+	 * this method will check if the database file of the user is compatible and make it compatible if it´s not.
+	 * <br/>
+	 * v1.1 -> v1.2: Chatmember entities will get additional fields for not-QRV-band-info
+	 * <br/>
+	 * I check only the first field "notqrv144", if it does not exist, I creating all fields neccessarry for v1.2
+	 */
+		public void versionUpdateOfDBCheckAndChangeV11ToV12() {
+
+			try {
+				Statement stmt = connection.createStatement();
+				ResultSet rs = stmt.executeQuery(
+						"SELECT * FROM ChatMember where notQRV144 != 0;");
+				stmt.close();
+			} catch (SQLException ex) {
+
+				System.out.println("DBH, Info: updating DB fields for version change v1.1 -> v1.2");
+
+				try {
+
+					PreparedStatement ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV144 BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					 ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV432 BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					 ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV1240 BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					 ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV2300 BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					 ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV3400 BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					 ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV5600 BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					 ps = connection.prepareStatement(
+							"ALTER TABLE ChatMember ADD notQRV10G BOOLEAN DEFAULT 0" + ";");
+					ps.addBatch();
+					ps.executeBatch();
+
+					connection.setAutoCommit(false);
+					connection.setAutoCommit(true);
+				} catch (SQLException e) {
+
+				}
+            }
+
+
+		}
 
 //	private void handleDB() {
 //		try {
@@ -172,6 +239,7 @@ public class DBController {
 	 * "worked3400" BOOLEAN,<br/>
 	 * "worked5600" BOOLEAN,<br/>
 	 * "worked10G" BOOLEAN,<br/>
+	 * <br/><b>!!! since v1.2 there is a not-qrv info for each band, too !!!</b>
 	 * 
 	 * @throws SQLException
 	 */
@@ -184,7 +252,7 @@ public class DBController {
 //			if (!rs.next()) {
 
 			PreparedStatement ps = connection.prepareStatement(
-					"INSERT OR IGNORE INTO ChatMember VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(callsign) DO UPDATE SET qra = '"
+					"INSERT OR IGNORE INTO ChatMember VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(callsign) DO UPDATE SET qra = '"
 							+ chatMemberToStore.getQra() + "', name = '" + chatMemberToStore.getName()
 							+ "', lastActivityDateTime = '" + chatMemberToStore.getLastActivity()
 							+ "' where callsign = '" + chatMemberToStore.getCallSign() + "';");
@@ -201,6 +269,16 @@ public class DBController {
 			ps.setInt(10, helper_booleanIntConverter(chatMemberToStore.isWorked3400()));
 			ps.setInt(11, helper_booleanIntConverter(chatMemberToStore.isWorked5600()));
 			ps.setInt(12, helper_booleanIntConverter(chatMemberToStore.isWorked10G()));
+			/**
+			 * Here starts v1.2
+			 */
+			ps.setInt(13, helper_booleanIntConverter(!chatMemberToStore.isQrv144()));
+			ps.setInt(14, helper_booleanIntConverter(!chatMemberToStore.isQrv432()));
+			ps.setInt(15, helper_booleanIntConverter(!chatMemberToStore.isQrv1240()));
+			ps.setInt(16, helper_booleanIntConverter(!chatMemberToStore.isQrv2300()));
+			ps.setInt(17, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
+			ps.setInt(18, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
+			ps.setInt(19, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
 
 			ps.addBatch();
 
@@ -273,6 +351,18 @@ public class DBController {
 				updateWkdData.setWorked5600(helper_IntToBooleanConverter(rs.getInt("worked5600")));
 				updateWkdData.setWorked10G(helper_IntToBooleanConverter(rs.getInt("worked10G")));
 
+				/**
+				 * v1.2 since here
+				 */
+
+				updateWkdData.setQrv144(!helper_IntToBooleanConverter(rs.getInt("notQRV144")));
+				updateWkdData.setQrv432(!helper_IntToBooleanConverter(rs.getInt("notQRV432")));
+				updateWkdData.setQrv1240(!helper_IntToBooleanConverter(rs.getInt("notQRV1240")));
+				updateWkdData.setQrv2300(!helper_IntToBooleanConverter(rs.getInt("notQRV2300")));
+				updateWkdData.setQrv3400(!helper_IntToBooleanConverter(rs.getInt("notQRV3400")));
+				updateWkdData.setQrv5600(!helper_IntToBooleanConverter(rs.getInt("notQRV5600")));
+				updateWkdData.setQrv10G(!helper_IntToBooleanConverter(rs.getInt("notQRV10G")));
+
 				fetchedWorkeddata.put(updateWkdData.getCallSign(), updateWkdData);
 
 //				System.out.println(
@@ -333,6 +423,18 @@ public class DBController {
 				checkForThis.setWorked5600(helper_IntToBooleanConverter(rs.getInt("worked5600")));
 				checkForThis.setWorked10G(helper_IntToBooleanConverter(rs.getInt("worked10G")));
 
+				/**
+				 * v1.2 since here
+				 */
+
+				checkForThis.setWorked144(helper_IntToBooleanConverter(rs.getInt("notQRV144")));
+				checkForThis.setWorked432(helper_IntToBooleanConverter(rs.getInt("notQRV432")));
+				checkForThis.setWorked1240(helper_IntToBooleanConverter(rs.getInt("notQRV1240")));
+				checkForThis.setWorked2300(helper_IntToBooleanConverter(rs.getInt("notQRV2300")));
+				checkForThis.setWorked3400(helper_IntToBooleanConverter(rs.getInt("notQRV3400")));
+				checkForThis.setWorked5600(helper_IntToBooleanConverter(rs.getInt("notQRV5600")));
+				checkForThis.setWorked10G(helper_IntToBooleanConverter(rs.getInt("notQRV10G")));
+
 				System.out.println(
 						"[DBH, Info:] providing callsign wkd info, wkd, 144, 432, ... for UA5 new chatmember : "
 								+ checkForThis.toString());
@@ -367,7 +469,9 @@ public class DBController {
 	 * <b>Usage: User triggered after User clicked the reset-wkd button, may in each
 	 * new contest period</b> <br/>
 	 * <br/>
-	 * 
+	 *
+	 * modified for work with v1.2
+	 *
 	 * @return true if reset was successful
 	 * 
 	 * @throws SQLException
@@ -377,7 +481,8 @@ public class DBController {
 		try {
 			Statement stmt = connection.createStatement();
 
-			int affected = stmt.executeUpdate("update ChatMember set worked = 0, worked144 = 0, worked432 = 0, worked1240 = 0, worked2300 = 0, worked3400 = 0, worked5600 = 0, worked10G = 0;");
+			int affected = stmt.executeUpdate("update ChatMember set worked = 0, worked144 = 0, worked432 = 0, worked1240 = 0, worked2300 = 0, worked3400 = 0, worked5600 = 0, worked10G = 0" +
+					", notQrv144 = 0, notQrv432 = 0, notQrv1240 = 0, notQrv2300 = 0, notQrv3400 = 0, notQrv5600 = 0, notQrv10G = 0;");
 			 
 			stmt.close();
 			
@@ -517,6 +622,77 @@ public class DBController {
 		}
 	}
 
+	public boolean updateNotQRVInfoOnChatMember(ChatMember chatMemberToStore) throws SQLException {
+		try {
+			Statement stmt = connection.createStatement();
+
+			/**
+			 * at first, mark the station as worked, always
+			 */
+			PreparedStatement ps = connection.prepareStatement("UPDATE ChatMember set notQrv144 = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv144()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			ps = connection.prepareStatement("UPDATE ChatMember set notQrv432 = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv432()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			ps = connection.prepareStatement("UPDATE ChatMember set notQrv1240 = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv1240()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			ps = connection.prepareStatement("UPDATE ChatMember set notQrv2300 = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv2300()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			ps = connection.prepareStatement("UPDATE ChatMember set notQrv3400 = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			ps = connection.prepareStatement("UPDATE ChatMember set notQrv5600 = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			ps = connection.prepareStatement("UPDATE ChatMember set notQrv10G = ? WHERE CallSign = ?");
+
+			ps.setInt(1, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
+			ps.setString(2, chatMemberToStore.getCallSign());
+			ps.addBatch();
+			ps.executeBatch();
+
+			connection.setAutoCommit(false);
+			connection.setAutoCommit(true);
+
+
+			stmt.close();
+
+		} catch (SQLException e) {
+			System.err.println("[DBH, ERROR:] Couldn't handle DB-Query");
+			e.printStackTrace();
+			connection.close();
+			return false;
+		}
+		return  true;
+	}
+
 	private int helper_booleanIntConverter(boolean convertToInt) {
 
 		if (convertToInt) {
@@ -545,11 +721,15 @@ public class DBController {
 		dummy.setName("Team Test");
 		dummy.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
 		dummy.setWorked5600(true);
+
+//		dbc.versionUpdateOfDBCheckAndChangeV11ToV12();
+//		dbc.fetchChatMemberNOTQRVBandInfoForOnlyOneCallsignFromDB();
+//		dbc.updateNOTQRVBandInfoOnChatMember();
 //		dummy.setWorked432(true);
 
 //		dbc.storeChatMember(dummy);
 
-		dbc.updateWkdInfoOnChatMember(dummy);
+//		dbc.updateWkdInfoOnChatMember(dummy);
 
 //        dbc.handleDB();
 	}
