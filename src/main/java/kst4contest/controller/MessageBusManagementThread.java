@@ -12,7 +12,6 @@ import java.util.regex.Pattern;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.ObservableList;
 import kst4contest.ApplicationConstants;
-
 import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.locatorUtils.Location;
 import kst4contest.model.AirPlaneReflectionInfo;
@@ -619,8 +618,6 @@ public class MessageBusManagementThread extends Thread {
 							// the "to me message list" with modified messagetext, added rxers callsign
 
 						} else {
-
-=======
 							//message sent to other user
 //							this.client.getLst_toOtherMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
 							if (DirectionUtils.isInAngleAndRange(client.getChatPreferences().getLoginLocator(),
@@ -651,7 +648,6 @@ public class MessageBusManagementThread extends Thread {
 //						System.out.println("MSGBS bgfx: tx call = " + newMessage.getSender().getCallSign() + " / rx call = " + newMessage.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-
 						System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing or message got before user entered chat message: " + referenceDeletedByUserLeftChatDuringMessageprocessing.getStackTrace());
 //						referenceDeletedByUserLeftChatDuringMessageprocessing.printStackTrace();
 					}
