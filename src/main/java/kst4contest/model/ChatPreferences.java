@@ -225,7 +225,6 @@ public class ChatPreferences {
 	private double[] GUIstage_updateStage_SceneSizeHW = new double[] {640, 480};
 	private double[] GUIsettingsStageSceneSizeHW = new double[] {720, 768};
 
-
 	private double[] GUIselectedCallSignSplitPane_dividerposition = {0.55};
 	private double[] GUImainWindowLeftSplitPane_dividerposition = {0.51};
 	private double[] GUImessageSectionSplitpane_dividerposition = {0.62, 0.7, 0.75}; //3 deviders now //TODO: more should be possible?
@@ -688,7 +687,6 @@ public class ChatPreferences {
 			stn_qtfDefault.setTextContent(this.stn_qtfDefault+"");
 			station.appendChild(stn_qtfDefault);
 
-
 			Element stn_bandActive144 = doc.createElement("stn_bandActive144");
 			stn_bandActive144.setTextContent(this.stn_bandActive144+"");
 			station.appendChild(stn_bandActive144);
@@ -1067,7 +1065,6 @@ public class ChatPreferences {
 						double qtfDefault = Double.parseDouble(element.getElementsByTagName("stn_qtfDefault").item(0).getTextContent());
 						stn_qtfDefault = qtfDefault;
 
-
 						try {
 
 							String stnUses144 = element
@@ -1165,9 +1162,7 @@ public class ChatPreferences {
 
 						System.out.println("[ChatPreferences, info]: Current Element: " + node.getNodeName()
 								+ " --> call: " + call + " / " + password + " / " + loginDisplayedName + " / " + qra
-
 								+ " / " + category + " / " + antennaBeamWidthDeg + " / " + maxQRBDefault + " / " + qtfDefault + " qrv144: " + stn_bandActive144);
-
 
 					}
 				}
