@@ -5,12 +5,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.*;
-import javafx.scene.image.ImageView;
 import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
@@ -49,7 +47,6 @@ import kst4contest.model.*;
 
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
-import javafx.scene.Group;
 
 
 public class Kst4ContestApplication extends Application {
@@ -103,13 +100,27 @@ public class Kst4ContestApplication extends Application {
 		return new javafx.scene.Group(arrowLine, arrowhead);
 	}
 
+
+	/**
+	 * This method generates a BoderPane which shows some additional information about a callsign which had been
+	 * selected either: <br/>
+	 * - at the userlist <br/>
+	 * - at the CQ message list (senders callsign)<br/>
+	 * - at the PM message list (senders callsign)<br/><br/>
+	 * Method gets its information source out of the original chatmember object of the userlist, not a copy
+	 *
+	 * @param selectedCallSignInfoStageChatMember
+	 * @return
+	 */
 	private BorderPane generateFurtherInfoAbtSelectedCallsignBP(ChatMember selectedCallSignInfoStageChatMember) {
+
 
 		selectedCallSignInfoBorderPane = new BorderPane();
 
 		SplitPane selectedCallSignSplitPane = new SplitPane();
 		selectedCallSignSplitPane.setOrientation(Orientation.VERTICAL);
-		selectedCallSignSplitPane.setDividerPositions(0.9);
+		selectedCallSignSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUIselectedCallSignSplitPane_dividerposition());
+
 
 		TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable = initFurtherInfoAbtCallsignMSGTable();
 
@@ -127,14 +138,9 @@ public class Kst4ContestApplication extends Application {
 		selectedCallSignDownerSiteGridPane.add(new Label("Last activity: " + new Utils4KST().time_convertEpochToReadable(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"")), 0,2,1,1);
 		selectedCallSignDownerSiteGridPane.add(new Label(("(" + Utils4KST.time_getSecondsBetweenEpochAndNow(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"") /60%60) +" min ago)"), 0,3,1,1);
 
-//		selectedCallSignDownerSiteGridPane.add(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()),1,2,2,2); //moved to as button
-
 		/**
 		 * users qrv info setting will follow here
 		 */
-//		CheckBox chkbx_tagMemberNotQRVFurtherInfoPane = new CheckBox("tag NOT QRV ALL");
-//		chkbx_tagMemberNotQRVFurtherInfoPane.setSelected(selectedCallSignInfoStageChatMember.isQrvAny());
-//		chkbx_tagMemberNotQRVFurtherInfoPanefurtherInfoPnl_chkbx_notQRV144
 
 		CheckBox furtherInfoPnl_chkbx_notQRV144 = new CheckBox("tag not qrv 144");
 		furtherInfoPnl_chkbx_notQRV144.setSelected(!selectedCallSignInfoStageChatMember.isQrv144());
@@ -149,6 +155,12 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 				chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+
+//				double[] deviderPos = selectedCallSignSplitPane.getDividerPositions();
+//				for (int i = 0; i<deviderPos.length;i++) {
+//					System.out.println("<<<<<<<<<<<<<<<DEVIDER " + deviderPos[i]);
+//				}
+
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -368,6 +380,22 @@ public class Kst4ContestApplication extends Application {
 
 		selectedCallSignSplitPane.getItems().add(initFurtherInfoAbtCallsignMSGTable);
 		selectedCallSignSplitPane.getItems().add(selectedCallSignDownerSiteGridPane);
+
+		//first initialize how much divider positions we need...
+//		chatcontroller.getChatPreferences().setGUIselectedCallSignSplitPane_dividerposition(new double[selectedCallSignSplitPane.getDividers().size()]);
+		/**
+		 * Then add change listeners to the dividers to save their state
+		 */
+		for (SplitPane.Divider divider : selectedCallSignSplitPane.getDividers()) {
+			divider.positionProperty().addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
+//					System.out.println("<<<<<<<<<<<<<<<<<<< devider " + selectedCallSignSplitPane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  selectedCallSignSplitPane.getDividers().size());
+					chatcontroller.getChatPreferences().getGUIselectedCallSignSplitPane_dividerposition()[selectedCallSignSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+				}
+			});
+
+		}
 
 
 		selectedCallSignInfoBorderPane.setCenter(selectedCallSignSplitPane);
@@ -822,7 +850,7 @@ public class Kst4ContestApplication extends Application {
 						return wkd;
 					}
 				});
-		wkdAny_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(28));
+		wkdAny_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(14));
 
 		TableColumn<ChatMember, String> vhfCol_subcol = new TableColumn<ChatMember, String>("144");
 		vhfCol_subcol
@@ -1103,7 +1131,7 @@ public class Kst4ContestApplication extends Application {
 				Thread.currentThread().setName("chatMemberTableSortTimer");
 
 				System.out.println("[KST4CApp, Info:] Chatmemberlist-Filterlist predicates size: " + chatcontroller.getLst_chatMemberListFilterPredicates().size());
-//
+//				System.out.println("[KST4CApp, Info:] Deviderpos: " + spl);
 //				for (int i = 0; i < chatcontroller.getLst_chatMemberListFilterPredicates().size(); i++) {
 //
 //					Predicate test = chatcontroller.getLst_chatMemberListFilterPredicates().get(i);
@@ -1216,8 +1244,7 @@ public class Kst4ContestApplication extends Application {
 	 * clickhandler for the contextmenu out of a string array (each menuitam will be
 	 * created out of exact one array-entry). These are initialized by the
 	 * chatpreferences object out of the config-xml
-	 * 
-	 * @param menuTexts
+	 *
 	 * @return
 	 */
 	private ContextMenu initChatMemberTableContextMenu(ObservableList<String> contextMenuEntries) { // new mechanic
@@ -2788,7 +2815,7 @@ public class Kst4ContestApplication extends Application {
 	FlowPane flwPane_textSnippets;
 
 	Stage clusterAndQSOMonStage;
-	Stage stage_selectedCallSignInfoStage;
+//	Stage stage_selectedCallSignInfoStage;
 	ChatMember selectedCallSignInfoStageChatMember;
 	BorderPane selectedCallSignInfoBorderPane;
 
@@ -2809,7 +2836,7 @@ public class Kst4ContestApplication extends Application {
 	 * For identification of the button in the dom and make it functional, the
 	 * init-value have to be "MYQRG"! </b>
 	 * 
-	 * @param buttonText
+	 *
 	 * @return
 	 */
 	private Node[] buttonFactory(ObservableList<String> shortcuts) {
@@ -3283,9 +3310,24 @@ public class Kst4ContestApplication extends Application {
 
 			BorderPane bPaneChatWindow = new BorderPane();
 
-			Scene scene = new Scene(bPaneChatWindow, 1024, 768);
+			Scene scn_ChatwindowMainScene = new Scene(bPaneChatWindow, chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[1], chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[0]);
 
-			scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
+			//add listeners for size changes to restore after startup
+			scn_ChatwindowMainScene.widthProperty().addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newWidthValue) {
+					chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[1] = newWidthValue.doubleValue();
+				}
+			});
+
+			scn_ChatwindowMainScene.heightProperty().addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newHeightValue) {
+					chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[0] = newHeightValue.doubleValue();
+				}
+			});
+
+			scn_ChatwindowMainScene.setOnKeyPressed(new EventHandler<KeyEvent>() {
 				KeyCombination keyComboSTRGplus1 = new KeyCodeCombination(KeyCode.DIGIT1, KeyCombination.CONTROL_DOWN);
 				KeyCombination keyComboSTRGplus2 = new KeyCodeCombination(KeyCode.DIGIT2, KeyCombination.CONTROL_DOWN);
 				KeyCombination keyComboSTRGplus3 = new KeyCodeCombination(KeyCode.DIGIT3, KeyCombination.CONTROL_DOWN);
@@ -3721,7 +3763,24 @@ public class Kst4ContestApplication extends Application {
 
 			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
 					tbl_generalMessageTable);
-			messageSectionSplitpane.setDividerPositions(0.9);
+			messageSectionSplitpane.setDividerPositions(chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition());
+
+			//first initialize how much divider positions we need...
+//			chatcontroller.getChatPreferences().setGUImessageSectionSplitpane_dividerposition(chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition());
+			/**
+			 * Then add change listeners to the dividers to save their state
+			 */
+			for (SplitPane.Divider divider : messageSectionSplitpane.getDividers()) {
+				divider.positionProperty().addListener(new ChangeListener<Number>() {
+					@Override
+					public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
+						System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<< devider>>>>>> " + messageSectionSplitpane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  messageSectionSplitpane.getDividers().size());
+						chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition()[messageSectionSplitpane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+					}
+				});
+
+			}
+
 			//Changed to add contextmenu to cq message table
 //			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
 //					initChatGeneralMSGTable());
@@ -3798,7 +3857,7 @@ public class Kst4ContestApplication extends Application {
 
 			SplitPane mainWindowRightSplitPane = new SplitPane();
 			mainWindowRightSplitPane.setOrientation(Orientation.VERTICAL);
-			mainWindowRightSplitPane.setDividerPositions(0.8);
+			mainWindowRightSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition());
 
 			BorderPane chatMemberTableBorderPane = new BorderPane();
 			chatMemberTableBorderPane.setCenter(tbl_chatMember);
@@ -3817,8 +3876,11 @@ public class Kst4ContestApplication extends Application {
 					"-fx-border-radius: 1;" +
 					"-fx-border-color: lightgreen;");
 
-			HBox chatMemberTableFilterQRBHBox  = new HBox();
+//			HBox chatMemberTableFilterQRBHBox  = new HBox();
+			FlowPane chatMemberTableFilterQRBHBox  = new FlowPane();
 			chatMemberTableFilterQRBHBox.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterQRBHBox.setHgap(2);
+			chatMemberTableFilterQRBHBox.setPrefWidth(210);
 
 			TextField chatMemberTableFilterMaxQrbTF = new TextField(chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
 			ToggleButton tglBtnQRBEnable = new ToggleButton("Show only QRB [km] <= ");
@@ -3863,8 +3925,11 @@ public class Kst4ContestApplication extends Application {
 			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQRBHBox);
 
 
-			HBox chatMemberTableFilterQTFHBox  = new HBox();
+//			HBox chatMemberTableFilterQTFHBox  = new HBox();
+			FlowPane chatMemberTableFilterQTFHBox  = new FlowPane();
 			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterQTFHBox.setPrefWidth(490);
+			chatMemberTableFilterQTFHBox.setHgap(2);
 
 			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF:");
 			TextField chatMemberTableFilterQtfTF = new TextField(chatcontroller.getChatPreferences().getStn_qtfDefault()+"");
@@ -3977,8 +4042,8 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
-			chatMemberTableFilterQTFHBox.setSpacing(5);
-			chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
+//			chatMemberTableFilterQTFHBox.setSpacing(5);
+			chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg +/- " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + ""), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
 			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQTFHBox);
 
 			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterQTFAndQRBHbox);
@@ -4316,9 +4381,11 @@ public class Kst4ContestApplication extends Application {
 
 			chatMemberTableFilterTextFieldBox.getChildren().addAll(chatMemberTableFilterTextField);
 
-			HBox chatMemberTableFilterTextFieldAndWorkedBandsHbx = new HBox();
+//			HBox chatMemberTableFilterTextFieldAndWorkedBandsHbx = new HBox();
+			FlowPane chatMemberTableFilterTextFieldAndWorkedBandsHbx = new FlowPane();
 			chatMemberTableFilterTextFieldAndWorkedBandsHbx.getChildren().addAll(chatMemberTableFilterTextFieldBox, chatMemberTableFilterWorkedBandFiltersHbx);
-			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setSpacing(5);
+//			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setSpacing(5);
+			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setHgap(2);
 
 			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterTextFieldAndWorkedBandsHbx);
 
@@ -4335,7 +4402,24 @@ public class Kst4ContestApplication extends Application {
 
 
 			mainWindowLeftSplitPane.getItems().addAll(messageSectionSplitpane, mainWindowRightSplitPane);
-			mainWindowLeftSplitPane.setDividerPositions(0.8);
+			mainWindowLeftSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUImainWindowLeftSplitPane_dividerposition());
+
+			//first initialize how much divider positions we need...
+//			chatcontroller.getChatPreferences().setGUImainWindowLeftSplitPane_dividerposition(new double[mainWindowLeftSplitPane.getDividers().size()]);
+//			chatcontroller.getChatPreferences().getGUImainWindowLeftSplitPane_dividerposition()[0] = 0.2;
+			/**
+			 * here will follow the Splitpane divider listener to save the user made UI changes, should been made at the very end of all splitpane operations
+			 */
+			for (SplitPane.Divider divider : mainWindowLeftSplitPane.getDividers()) {
+				divider.positionProperty().addListener(new ChangeListener<Number>() {
+					@Override
+					public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
+						System.out.println("<<<<<<<<<<<<<<<<<<< mainWindowLeftSplitPanedevider " + mainWindowLeftSplitPane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  mainWindowLeftSplitPane.getDividers().size());
+						chatcontroller.getChatPreferences().getGUImainWindowLeftSplitPane_dividerposition()[mainWindowLeftSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+					}
+				});
+
+			}
 
 /**
  * initializing the furter infos of a callsign part of the right splitpane
@@ -4359,7 +4443,25 @@ public class Kst4ContestApplication extends Application {
 
 			mainWindowRightSplitPane.getItems().add(selectedCallSignFurtherInfoPane);
 
-			primaryStage.setScene(scene);
+			//first initialize how much divider positions we need...
+//			chatcontroller.getChatPreferences().setGUImainWindowRightSplitPane_dividerposition(new double[mainWindowRightSplitPane.getDividers().size()]);
+
+			/**
+			 * here will follow the Splitpane divider listener to save the user made UI changes, should been made at the very end of all splitpane operations
+			 */
+
+			for (SplitPane.Divider divider : mainWindowRightSplitPane.getDividers()) {
+				divider.positionProperty().addListener(new ChangeListener<Number>() {
+					@Override
+					public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
+						System.out.println("<<<<<<<<<<<<<<<<<<<>>>>>> devider mainwindowRIGHTsplitpane " + mainWindowRightSplitPane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  mainWindowRightSplitPane.getDividers().size());
+						chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition()[mainWindowRightSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+					}
+				});
+
+			}
+
+			primaryStage.setScene(scn_ChatwindowMainScene);
 
 			primaryStage.show();
 
@@ -4373,12 +4475,6 @@ public class Kst4ContestApplication extends Application {
 		 */
 
 
-		stage_selectedCallSignInfoStage = new Stage();
-//		stage_selectedCallSignInfoStage.hide();
-//
-//		stage_selectedCallSignInfoStage.setScene(new Scene(new Label("Further info on selected Callsign"), 500, 400));
-//		stage_selectedCallSignInfoStage.setAlwaysOnTop(true);
-//		stage_selectedCallSignInfoStage.show();
 
 		/**
 		 * end Window selected callsign information
@@ -4392,10 +4488,49 @@ public class Kst4ContestApplication extends Application {
 		clusterAndQSOMonStage.setTitle("Cluster & QSO of the other");
 		SplitPane pnl_directedMSGWin = new SplitPane();
 		pnl_directedMSGWin.setOrientation(Orientation.VERTICAL);
-
+		pnl_directedMSGWin.setDividerPositions(chatcontroller.getChatPreferences().getGUIpnl_directedMSGWin_dividerpositionDefault());
 		pnl_directedMSGWin.getItems().addAll(initDXClusterTable(), initChatToOtherMSGTable());
 
-		clusterAndQSOMonStage.setScene(new Scene(pnl_directedMSGWin, 700, 500));
+
+
+		//first initialize how much divider positions we need...
+//		chatcontroller.getChatPreferences().setGUIpnl_directedMSGWin_dividerpositionDefault(new double[pnl_directedMSGWin.getDividers().size()]);
+
+		/**
+		 * here will follow the Splitpane divider listener to save the user made UI changes, should been made at the very end of all splitpane operations
+		 */
+
+		for (SplitPane.Divider divider : pnl_directedMSGWin.getDividers()) {
+			divider.positionProperty().addListener(new ChangeListener<Number>() {
+				@Override
+				public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
+					System.out.println("<<<<<<<<<<<<<<<<<<<|||||||||||||||||||| devider " + pnl_directedMSGWin.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  pnl_directedMSGWin.getDividers().size());
+					chatcontroller.getChatPreferences().getGUIpnl_directedMSGWin_dividerpositionDefault()[pnl_directedMSGWin.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+				}
+			});
+
+		}
+
+
+		Scene clusterAndQSOMonScene = new Scene(pnl_directedMSGWin, chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1]);
+
+		clusterAndQSOMonScene.heightProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newHeightValue) {
+				chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1] = newHeightValue.doubleValue();
+			}
+		});
+
+		clusterAndQSOMonScene.widthProperty().addListener(new ChangeListener<Number>() {
+			@Override
+			public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newWidthValue) {
+				chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0] = newWidthValue.doubleValue();
+			}
+		});
+
+		clusterAndQSOMonStage.setScene(clusterAndQSOMonScene);
+
+
 		clusterAndQSOMonStage.show();
 
 		/**
@@ -4506,7 +4641,9 @@ public class Kst4ContestApplication extends Application {
 		treeView.setRoot(rootItem);
 		treeView.setShowRoot(false);
 
-		stage_updateStage.setScene(new Scene(vbxUpdateWindow, 640, 480));
+		System.out.println("SRVR Version: " + chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() + " // installed versioasdn " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
+
+		stage_updateStage.setScene(new Scene(vbxUpdateWindow, chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1]));
 
 		if (chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() > ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER) {
 			stage_updateStage.show();
@@ -4637,7 +4774,7 @@ public class Kst4ContestApplication extends Application {
 //        labeledSeparator.setAlignment(Pos.CENTER);
 
 		TextField txtFldstn_antennaBeamWidthDeg = new TextField(this.chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + "");
-
+		txtFldstn_antennaBeamWidthDeg.setTooltip(new Tooltip("Your antenna beamwidth in DEG\n\nEnter correct values here due it´s used for path suggestions!!!"));
 		txtFldstn_antennaBeamWidthDeg.textProperty().addListener(new ChangeListener<String>() {
 
 			@Override
@@ -5512,8 +5649,6 @@ public class Kst4ContestApplication extends Application {
 //		        a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
 					a.show();
 				}
-				
-				
 
 //				System.out.println("DB reset via DBHandler needs to be implemented");
 			}
@@ -5722,7 +5857,7 @@ public class Kst4ContestApplication extends Application {
 //        optionsPanel.setAlignment(vbxButtons, Pos.CENTER);;
 
 //        VBox vBox = new VBox(tabPaneOptions);
-		settingsStage.setScene(new Scene(optionsPanel, 720, 768));
+		settingsStage.setScene(new Scene(optionsPanel, chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1]));
 
 //		settingsStage.getScene().getWindow().addEventFilter(WindowEvent.WINDOW_CLOSE_REQUEST, this::closeWindowEvent);
 

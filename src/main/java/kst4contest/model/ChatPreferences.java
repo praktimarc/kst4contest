@@ -214,15 +214,95 @@ public class ChatPreferences {
 	String unwkd_unworkedStnRequesterBeaconsText;
 	String unwkd_beaconUnworkedstationsPrefix;
 
-//	public String getMYQRG() {
-//		return MYQRG;
-//	}
-//
-//	public void setMYQRG(String mYQRG) {
-//		
-//		MYQRG = mYQRG;
-//	}
+	/*********************************************************************************
+	 *
+	 * GUI SETTING VARIABLES WILL BE BUFFERED HERE, DEFAULTS TOO
+	 *
+	 *********************************************************************************/
 
+	private double[] GUIscn_ChatwindowMainSceneSizeHW = new double[] {768, 1234};
+	private double[] GUIclusterAndQSOMonStage_SceneSizeHW = new double[] {700, 500};
+	private double[] GUIstage_updateStage_SceneSizeHW = new double[] {640, 480};
+	private double[] GUIsettingsStageSceneSizeHW = new double[] {720, 768};
+
+	private double[] GUIselectedCallSignSplitPane_dividerposition = {0.55};
+	private double[] GUImainWindowLeftSplitPane_dividerposition = {0.51};
+	private double[] GUImessageSectionSplitpane_dividerposition = {0.62, 0.7, 0.75}; //3 deviders now //TODO: more should be possible?
+	private double[] GUImainWindowRightSplitPane_dividerposition = {0.72};
+	private double[] GUIpnl_directedMSGWin_dividerpositionDefault = {0.8};
+
+
+	public double[] getGUIscn_ChatwindowMainSceneSizeHW() {
+		return GUIscn_ChatwindowMainSceneSizeHW;
+	}
+
+	public void setGUIscn_ChatwindowMainSceneSizeHW(double[] GUIscn_ChatwindowMainSceneSizeHW) {
+		this.GUIscn_ChatwindowMainSceneSizeHW = GUIscn_ChatwindowMainSceneSizeHW;
+	}
+
+	public double[] getGUIclusterAndQSOMonStage_SceneSizeHW() {
+		return GUIclusterAndQSOMonStage_SceneSizeHW;
+	}
+
+	public void setGUIclusterAndQSOMonStage_SceneSizeHW(double[] GUIclusterAndQSOMonStage_SceneSizeHW) {
+		this.GUIclusterAndQSOMonStage_SceneSizeHW = GUIclusterAndQSOMonStage_SceneSizeHW;
+	}
+
+	public double[] getGUIstage_updateStage_SceneSizeHW() {
+		return GUIstage_updateStage_SceneSizeHW;
+	}
+
+	public void setGUIstage_updateStage_SceneSizeHW(double[] GUIstage_updateStage_SceneSizeHW) {
+		this.GUIstage_updateStage_SceneSizeHW = GUIstage_updateStage_SceneSizeHW;
+	}
+
+	public double[] getGUIsettingsStageSceneSizeHW() {
+		return GUIsettingsStageSceneSizeHW;
+	}
+
+	public void setGUIsettingsStageSceneSizeHW(double[] GUIsettingsStageSceneSizeHW) {
+		this.GUIsettingsStageSceneSizeHW = GUIsettingsStageSceneSizeHW;
+	}
+
+	public double[] getGUIselectedCallSignSplitPane_dividerposition() {
+		return GUIselectedCallSignSplitPane_dividerposition;
+	}
+
+	public void setGUIselectedCallSignSplitPane_dividerposition(double[] GUIselectedCallSignSplitPane_dividerposition) {
+		this.GUIselectedCallSignSplitPane_dividerposition = GUIselectedCallSignSplitPane_dividerposition;
+	}
+
+	public double[] getGUImainWindowLeftSplitPane_dividerposition() {
+		return GUImainWindowLeftSplitPane_dividerposition;
+	}
+
+	public void setGUImainWindowLeftSplitPane_dividerposition(double[] GUImainWindowLeftSplitPane_dividerposition) {
+		this.GUImainWindowLeftSplitPane_dividerposition = GUImainWindowLeftSplitPane_dividerposition;
+	}
+
+	public double[] getGUImessageSectionSplitpane_dividerposition() {
+		return GUImessageSectionSplitpane_dividerposition;
+	}
+
+	public void setGUImessageSectionSplitpane_dividerposition(double[] GUImessageSectionSplitpane_dividerposition) {
+		this.GUImessageSectionSplitpane_dividerposition = GUImessageSectionSplitpane_dividerposition;
+	}
+
+	public double[] getGUImainWindowRightSplitPane_dividerposition() {
+		return GUImainWindowRightSplitPane_dividerposition;
+	}
+
+	public void setGUImainWindowRightSplitPane_dividerposition(double[] GUImainWindowRightSplitPane_dividerposition) {
+		this.GUImainWindowRightSplitPane_dividerposition = GUImainWindowRightSplitPane_dividerposition;
+	}
+
+	public double[] getGUIpnl_directedMSGWin_dividerpositionDefault() {
+		return GUIpnl_directedMSGWin_dividerpositionDefault;
+	}
+
+	public void setGUIpnl_directedMSGWin_dividerpositionDefault(double[] GUIpnl_directedMSGWin_dividerpositionDefault) {
+		this.GUIpnl_directedMSGWin_dividerpositionDefault = GUIpnl_directedMSGWin_dividerpositionDefault;
+	}
 
 	public double getStn_antennaBeamWidthDeg() {
 		return stn_antennaBeamWidthDeg;
@@ -802,8 +882,7 @@ public class ChatPreferences {
 
 		      Element beaconUnworkedstations = doc.createElement("beaconUnworkedstations");
 		      rootElement.appendChild(beaconUnworkedstations);
-		      
-		      
+
 		      Element beaconUnworkedstationsText = doc.createElement("beaconUnworkedstationsText");
 		      beaconUnworkedstationsText.setTextContent(this.getUnwkd_unworkedStnRequesterBeaconsText());
 		      beaconUnworkedstations.appendChild(beaconUnworkedstationsText);
@@ -819,10 +898,62 @@ public class ChatPreferences {
 		      Element beaconUnworkedstationsPrefix = doc.createElement("beaconUnworkedstationsPrefix");
 		      beaconUnworkedstationsPrefix.setTextContent(this.getUnwkd_beaconUnworkedstationsPrefix());
 		      beaconUnworkedstations.appendChild(beaconUnworkedstationsPrefix);
-		      
-		      
 
-		      writeXml(doc, System.out);
+			/****************************
+			 * GUI BEHAVIOUR
+			 ***************************/
+
+			/**
+			 * window sizes
+			 */
+			Element guiOptions = doc.createElement("guiOptions");
+			rootElement.appendChild(guiOptions);
+
+			Element GUIscn_ChatwindowMainSceneSizeHW = doc.createElement("GUIscn_ChatwindowMainSceneSizeHW");
+			GUIscn_ChatwindowMainSceneSizeHW.setTextContent(this.getGUIscn_ChatwindowMainSceneSizeHW()[0]+";"+this.getGUIscn_ChatwindowMainSceneSizeHW()[1]);
+			guiOptions.appendChild(GUIscn_ChatwindowMainSceneSizeHW);
+
+			Element GUIclusterAndQSOMonStage_SceneSizeHW = doc.createElement("GUIclusterAndQSOMonStage_SceneSizeHW");
+			GUIclusterAndQSOMonStage_SceneSizeHW.setTextContent(this.getGUIclusterAndQSOMonStage_SceneSizeHW()[0]+";"+this.getGUIclusterAndQSOMonStage_SceneSizeHW()[1]);
+			guiOptions.appendChild(GUIclusterAndQSOMonStage_SceneSizeHW);
+
+			Element GUIstage_updateStage_SceneSizeHW = doc.createElement("GUIstage_updateStage_SceneSizeHW");
+			GUIstage_updateStage_SceneSizeHW.setTextContent(this.getGUIstage_updateStage_SceneSizeHW()[0]+";"+this.getGUIstage_updateStage_SceneSizeHW()[1]);
+			guiOptions.appendChild(GUIstage_updateStage_SceneSizeHW);
+
+			Element GUIsettingsStageSceneSizeHW = doc.createElement("GUIsettingsStageSceneSizeHW");
+			GUIsettingsStageSceneSizeHW.setTextContent(this.getGUIsettingsStageSceneSizeHW()[0]+";"+this.getGUIsettingsStageSceneSizeHW()[1]);
+			guiOptions.appendChild(GUIsettingsStageSceneSizeHW);
+
+			/************************************
+			 * save splitpanel divider positions
+			 ************************************/
+
+			Element GUIselectedCallSignSplitPane_dividerposition = doc.createElement("GUIselectedCallSignSplitPane_dividerposition");
+			GUIselectedCallSignSplitPane_dividerposition.setTextContent(doubleArrayToCSVString(getGUIselectedCallSignSplitPane_dividerposition()));
+			guiOptions.appendChild(GUIselectedCallSignSplitPane_dividerposition);
+
+			Element GUImainWindowLeftSplitPane_dividerposition = doc.createElement("GUImainWindowLeftSplitPane_dividerposition");
+			GUImainWindowLeftSplitPane_dividerposition.setTextContent(doubleArrayToCSVString(getGUImainWindowLeftSplitPane_dividerposition()));
+			guiOptions.appendChild(GUImainWindowLeftSplitPane_dividerposition);
+
+			Element GUImessageSectionSplitpane_dividerposition = doc.createElement("GUImessageSectionSplitpane_dividerposition");
+			GUImessageSectionSplitpane_dividerposition.setTextContent(doubleArrayToCSVString(getGUImessageSectionSplitpane_dividerposition()));
+			guiOptions.appendChild(GUImessageSectionSplitpane_dividerposition);
+
+			Element GUImainWindowRightSplitPane_dividerposition = doc.createElement("GUImainWindowRightSplitPane_dividerposition");
+			GUImainWindowRightSplitPane_dividerposition.setTextContent(doubleArrayToCSVString(getGUImainWindowRightSplitPane_dividerposition()));
+			guiOptions.appendChild(GUImainWindowRightSplitPane_dividerposition);
+
+			Element GUIpnl_directedMSGWin_dividerpositionDefault = doc.createElement("GUIpnl_directedMSGWin_dividerpositionDefault");
+			GUIpnl_directedMSGWin_dividerpositionDefault.setTextContent(doubleArrayToCSVString(getGUIpnl_directedMSGWin_dividerpositionDefault()));
+			guiOptions.appendChild(GUIpnl_directedMSGWin_dividerpositionDefault);
+
+			/****************************************************************************************
+			 ****************************** now write this XML! *************************************
+			 ****************************************************************************************/
+
+			writeXml(doc, System.out);
 			
 			// write dom document to a file
 	        try (FileOutputStream output =
@@ -886,6 +1017,7 @@ public class ChatPreferences {
 
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			Document doc = db.parse(xmlConfigFile);
+
 
 			/**
 			 * case station settings
@@ -1417,6 +1549,105 @@ public class ChatPreferences {
 						+ unwkd_unworkedStnRequesterBeaconsText);
 			}
 
+
+			/***********************************************
+			 *
+			 * case read GUI options
+			 *
+			 ***********************************************/
+			list = doc.getElementsByTagName("guiOptions");
+			if (list.getLength() != 0) {
+
+				for (int temp = 0; temp < list.getLength(); temp++) {
+
+					Node node = list.item(temp);
+
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+
+						Element element = (Element) node;
+
+						try{
+
+							String GUIscn_ChatwindowMainSceneSizeHW = element.getElementsByTagName("GUIscn_ChatwindowMainSceneSizeHW").item(0)
+									.getTextContent();
+
+							for (int i = 0; i < (GUIscn_ChatwindowMainSceneSizeHW.split(";").length); i++) {
+								this.getGUIscn_ChatwindowMainSceneSizeHW()[i] =
+										Double.parseDouble(GUIscn_ChatwindowMainSceneSizeHW.split(";")[i]);
+							}
+
+							System.out.println(
+									"[ChatPreferences, info]: Set the GUIscn_ChatwindowMainSceneSizeHW size to " + GUIclusterAndQSOMonStage_SceneSizeHW);
+
+
+							String GUIclusterAndQSOMonStage_SceneSizeHW = element.getElementsByTagName("GUIclusterAndQSOMonStage_SceneSizeHW").item(0)
+									.getTextContent();
+
+							for (int i = 0; i < (GUIclusterAndQSOMonStage_SceneSizeHW.split(";").length); i++) {
+								this.getGUIclusterAndQSOMonStage_SceneSizeHW()[i] =
+										Double.parseDouble(GUIclusterAndQSOMonStage_SceneSizeHW.split(";")[i]);
+							}
+
+							String GUIselectedCallSignSplitPane_dividerposition = element.getElementsByTagName("GUIselectedCallSignSplitPane_dividerposition").item(0)
+									.getTextContent();
+							this.setGUIselectedCallSignSplitPane_dividerposition(csvStringToDoubleArray(GUIselectedCallSignSplitPane_dividerposition));
+
+							String GUImainWindowLeftSplitPane_dividerposition = element.getElementsByTagName("GUImainWindowLeftSplitPane_dividerposition").item(0)
+									.getTextContent();
+							this.setGUImainWindowLeftSplitPane_dividerposition(csvStringToDoubleArray(GUImainWindowLeftSplitPane_dividerposition));
+
+							String GUImessageSectionSplitpane_dividerposition = element.getElementsByTagName("GUImessageSectionSplitpane_dividerposition").item(0)
+									.getTextContent();
+							this.setGUImessageSectionSplitpane_dividerposition(csvStringToDoubleArray(GUImessageSectionSplitpane_dividerposition));
+
+							String GUImainWindowRightSplitPane_dividerposition = element.getElementsByTagName("GUImainWindowRightSplitPane_dividerposition").item(0)
+									.getTextContent();
+							this.setGUImainWindowRightSplitPane_dividerposition(csvStringToDoubleArray(GUImainWindowRightSplitPane_dividerposition));
+
+							String GUIpnl_directedMSGWin_dividerpositionDefault = element.getElementsByTagName("GUIpnl_directedMSGWin_dividerpositionDefault").item(0)
+									.getTextContent();
+							this.setGUIpnl_directedMSGWin_dividerpositionDefault(csvStringToDoubleArray(GUIpnl_directedMSGWin_dividerpositionDefault));
+
+
+
+
+//							System.out.println(
+//									"[ChatPreferences, info]: Set the GUIclusterAndQSOMonStage_SceneSizeHW size to " + GUIclusterAndQSOMonStage_SceneSizeHW);
+
+						}
+
+
+
+
+
+						catch (NullPointerException tooOldConfigFileOrFormatError) {
+							/**
+							 * In program version 1.2 there had not been these settings in the xml and not founding em
+							 * would cause an exception and dumb values for the preferences. So we have to initialize
+							 * these variables and later write a proper configfile which can be used correctly then.
+							 *
+							 * So THESE ARE DEFULTS
+							 */
+
+							tooOldConfigFileOrFormatError.printStackTrace();
+							GUIscn_ChatwindowMainSceneSizeHW = new double[] {768, 1234};
+							GUIclusterAndQSOMonStage_SceneSizeHW = new double[] {700, 500};
+							GUIstage_updateStage_SceneSizeHW = new double[] {640, 480};
+							GUIsettingsStageSceneSizeHW = new double[] {720, 768};
+
+							GUIselectedCallSignSplitPane_dividerposition = new double[]{0.9};
+							setGUImainWindowLeftSplitPane_dividerposition(new double[]{0.7});
+							GUImessageSectionSplitpane_dividerposition = new double[]{0.5};
+							GUImainWindowRightSplitPane_dividerposition = new double[]{0.8};
+							GUIpnl_directedMSGWin_dividerpositionDefault = new double[]{0.8};
+//							GUImainWindowLeftSplitPane_dividerposition
+						}
+					}
+				}
+			}
+
+
+
 		} catch (ParserConfigurationException | SAXException | IOException e) {
 			e.printStackTrace();
 			System.out.println(e.getCause());
@@ -1425,6 +1656,41 @@ public class ChatPreferences {
 
 		return true;
 
+	}
+
+	/**
+	 *
+	 * @return double array with separated values for each doublevalue, seperated by ";", empty array if none
+	 */
+	private double [] csvStringToDoubleArray(String csvStringWithDoubles){
+
+		String separator = ";";
+		double[] result = new double[csvStringWithDoubles.split(separator).length];
+
+		for (int i = 0; i < (csvStringWithDoubles.split(separator).length); i++) {
+			result[i] =
+					Double.parseDouble(csvStringWithDoubles.split(separator)[i]);
+//			System.out.println("EXTRACTED " + result[i]);
+		}
+
+		return result;
+	}
+
+	private String doubleArrayToCSVString(double[] doubleArrayToCSVConvert){
+
+		String separator = ";";
+		String result = "";
+
+		for (int i = 0; i < (doubleArrayToCSVConvert.length); i++) {
+			result += doubleArrayToCSVConvert[i];
+
+			if (i+1<doubleArrayToCSVConvert.length) {
+				result += separator;
+			}
+
+		}
+
+		return result;
 	}
 
 	public boolean isStn_bandActive144() {
