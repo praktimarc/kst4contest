@@ -644,14 +644,17 @@ category = new ChatCategory(2);
 					if (chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getLoginCallSign())) {
 						return true; //messages addressed to you
 					}
-					if (chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign())) {
-						return true; //your own echo
+
+					if ((chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL"))){
+						return true; //your own echo except texts to all (CQ)
 					}
 
 					String ignoreCaseString = chatMessage.getMessageText();
 
-					if (chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toLowerCase()) || (chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toUpperCase()))) {
-						return true; //if someone writes about you, you will get the mail, too!
+
+					if ((chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toLowerCase()) || (chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toUpperCase())))
+					&& (!chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign()))) {
+						return true; //if someone writes about you, you will get the mail, too, except you are the sender...!
 					}
 
 					else {
@@ -1120,6 +1123,24 @@ category = new ChatCategory(2);
 					chatMember.setWorked5600(getWorkedDataFromDb.get(chatMember.getCallSign()).isWorked5600());
 					;
 					chatMember.setWorked10G(getWorkedDataFromDb.get(chatMember.getCallSign()).isWorked10G());
+					/**
+					 * v1.2 since here
+					 * TODO: Change that, this ins not generative
+					 */
+
+					chatMember.setQrv144(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv144());
+					;
+					chatMember.setQrv432(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv432());
+					;
+					chatMember.setQrv1240(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv1240());
+					;
+					chatMember.setQrv2300(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv2300());
+					;
+					chatMember.setQrv3400(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv3400());
+					;
+					chatMember.setQrv5600(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv5600());
+					;
+					chatMember.setQrv10G(getWorkedDataFromDb.get(chatMember.getCallSign()).isQrv10G());
 					;
 				}
 
@@ -1168,6 +1189,13 @@ category = new ChatCategory(2);
 		this.chatController.getLst_chatMemberList().forEach(
 			chatMember -> chatMember.resetWorkedInformationAtAllBands());
 		
+	}
+
+	public void resetQRVInfoInGuiLists() {
+
+		this.chatController.getLst_chatMemberList().forEach(
+				chatMember -> chatMember.resetQRVInformationAtAllBands());
+
 	}
 	
 	/**

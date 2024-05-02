@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <praktiKST>
     <station>
-        <LoginCallSign>DO5SA</LoginCallSign>
+        <LoginCallSign>DO5AMF</LoginCallSign>
         <LoginPassword>kst4contest.test</LoginPassword>
-        <LoginDisplayedName>Paule</LoginDisplayedName>
-        <LoginLocator>JO51DI</LoginLocator>
+        <LoginDisplayedName>Marc</LoginDisplayedName>
+        <LoginLocator>JN49GL</LoginLocator>
         <ChatCategory>2</ChatCategory>
         <stn_antennaBeamWidthDeg>50</stn_antennaBeamWidthDeg>
         <stn_maxQRBDefault>900</stn_maxQRBDefault>

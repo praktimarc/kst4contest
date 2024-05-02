@@ -11,6 +11,9 @@ public class ChatMember {
 	String callSign;
 	String qra;
 	String name;
+
+	boolean isInAngleAndRange; //if he tries a sked in my dir, he is in range, will process that in the messages
+
 //	String frequency; // last known qrg of the station
 
 	StringProperty frequency = new SimpleStringProperty();
@@ -36,6 +39,28 @@ public class ChatMember {
 	boolean worked3400;
 	boolean worked5600;
 	boolean worked10G;
+
+	/**
+	 * Chatmember is qrv at all band except we initialize anything other, depending to user entry
+	 */
+	boolean qrv144 = true;
+	boolean qrv432 = true;
+	boolean qrv1240 = true;
+	boolean qrv2300 = true;
+	boolean qrv3400 = true;
+	boolean qrv5600 = true;
+	boolean qrv10G = true;
+	boolean qrvAny = true;
+
+
+
+	public boolean isInAngleAndRange() {
+		return isInAngleAndRange;
+	}
+
+	public void setInAngleAndRange(boolean inAngleAndRange) {
+		isInAngleAndRange = inAngleAndRange;
+	}
 
 	public AirPlaneReflectionInfo getAirPlaneReflectInfo() {
 		return airPlaneReflectInfo;
@@ -117,6 +142,70 @@ public class ChatMember {
 		worked10G = worked10g;
 	}
 
+	public boolean isQrv144() {
+		return qrv144;
+	}
+
+	public void setQrv144(boolean qrv144) {
+		this.qrv144 = qrv144;
+	}
+
+	public boolean isQrv432() {
+		return qrv432;
+	}
+
+	public void setQrv432(boolean qrv432) {
+		this.qrv432 = qrv432;
+	}
+
+	public boolean isQrv1240() {
+		return qrv1240;
+	}
+
+	public void setQrv1240(boolean qrv1240) {
+		this.qrv1240 = qrv1240;
+	}
+
+	public boolean isQrv2300() {
+		return qrv2300;
+	}
+
+	public void setQrv2300(boolean qrv2300) {
+		this.qrv2300 = qrv2300;
+	}
+
+	public boolean isQrv3400() {
+		return qrv3400;
+	}
+
+	public void setQrv3400(boolean qrv3400) {
+		this.qrv3400 = qrv3400;
+	}
+
+	public boolean isQrv5600() {
+		return qrv5600;
+	}
+
+	public void setQrv5600(boolean qrv5600) {
+		this.qrv5600 = qrv5600;
+	}
+
+	public boolean isQrv10G() {
+		return qrv10G;
+	}
+
+	public void setQrv10G(boolean qrv10G) {
+		this.qrv10G = qrv10G;
+	}
+
+	public boolean isQrvAny() {
+		return qrvAny;
+	}
+
+	public void setQrvAny(boolean qrvAny) {
+		this.qrvAny = qrvAny;
+	}
+
 	public int[] getWorkedCategories() {
 		return workedCategories;
 	}
@@ -169,12 +258,6 @@ public class ChatMember {
 		QTFdirection = qTFdirection;
 	}
 
-//	public int getWorkedCategory() {
-//		return workedCategory;
-//	}
-//	public void setWorkedCategory(int workedCategory) {
-//		this.workedCategory = workedCategory;
-//	}
 	public String getCallSign() {
 		return callSign;
 	}
@@ -240,6 +323,22 @@ public class ChatMember {
 		this.setWorked3400(false);
 		this.setWorked5600(false);
 		this.setWorked10G(false);
+	}
+
+	/**
+	 * Sets all worked information of this object to false. Scope: GUI, Reset Button
+	 * for worked info, called by appcontroller
+	 */
+	public void resetQRVInformationAtAllBands() {
+
+		this.setQrvAny(true);
+		this.setQrv144(true);
+		this.setQrv432(true);
+		this.setQrv1240(true);
+		this.setQrv2300(true);
+		this.setQrv3400(true);
+		this.setQrv5600(true);
+		this.setQrv10G(true);
 	}
 
 	@Override

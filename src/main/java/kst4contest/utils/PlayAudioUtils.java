@@ -20,11 +20,13 @@ public class PlayAudioUtils {
      */
     public PlayAudioUtils() {
 
+
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/NOISESTARTUP.mp3", "NOISESTARTUP.mp3");
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/NOISECQWINDOW.mp3", "NOISECQWINDOW.mp3");
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/NOISEPMWINDOW.mp3", "NOISEPMWINDOW.mp3");
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/NOISEERROR.mp3", "NOISEERROR.mp3");
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/NOISENOTIFY.mp3", "NOISENOTIFY.mp3");
+        ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/tick.mp3", "tick.mp3");
 
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/LTTRA.mp3", "LTTRA.mp3");
         ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, "/LTTRB.mp3", "LTTRB.mp3");
@@ -119,6 +121,7 @@ public class PlayAudioUtils {
      *<br/>
      *
      *  case '!': Startup<br/>
+     *  case '-': tick<br/>
      *  case 'C': CQ Window new entry<br/>
      *  case 'P': PM Window new entry<br/>
      *  case 'E': Error occured<br/>
@@ -134,6 +137,9 @@ public class PlayAudioUtils {
 
 
             switch (actionChar){
+                case '-':
+                    musicList.add(new Media(new File (ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, "/tick.mp3")).toURI().toString()));
+                    break;
                 case '!':
                     musicList.add(new Media(new File (ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, "/NOISESTARTUP.mp3")).toURI().toString()));
                     break;

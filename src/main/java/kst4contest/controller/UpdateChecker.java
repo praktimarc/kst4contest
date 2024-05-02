@@ -37,13 +37,13 @@ public class UpdateChecker {
 
 
         System.out.println("[Updatechecker: checking for updates...]");
-        double currentVersionNumber = ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
+//        double currentVersionNumber = ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
 
     }
 
     String versionInfoDownloadedFromServerFileName = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, ApplicationConstants.VERSIONINFDOWNLOADEDLOCALFILE);
     String versionInfoXMLURLAtServer = ApplicationConstants.VERSIONINFOURLFORUPDATES_KST4CONTEST;
-    double currentVersion = ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
+//    double currentVersion = ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
     //DOWNLOAD from URL, then parse, then do anything with it...
 
     /**
@@ -230,7 +230,7 @@ public class UpdateChecker {
     public String toString() {
         String toString = "";
 
-        toString += this.currentVersion;
+//        toString += this.currentVersion;
 
         return toString;
     }
