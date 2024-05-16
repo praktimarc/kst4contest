@@ -618,3 +618,502 @@ DL4ASK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;
 DL5SE;Dan 70cm;JO50XL;StringProperty [value: null];true;false;true;false;false;false;false;false
 DJ6VX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
 OM3W;Club 2m;JN99CH;StringProperty [value: 302 ];true;true;false;false;false;false;false;false
+DL2NDL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1OLA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2TX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+I4GHG;Rino 144.390;JN63DT;StringProperty [value: 144.390 ];true;true;false;false;false;false;false;false
+DL4LAM/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK0KTL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF1AK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF4UM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6OO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK7AC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ0MW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM2BHG;Heinz;JO51MW;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5KT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0HBS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0GM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5FDP;Stefan;JN49LP;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE5DIN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ9MH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0DLE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0AP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM2CF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4MW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2FQ;Tzetzo-23cm 60W;JN49EW;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK1X;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5OA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF6WE;Ewald   6  4  2m;JO31GO;StringProperty [value: null];true;true;false;false;false;false;false;false
+G4PIQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF7JU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1AG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0UM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2WU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB8TS/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2MR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG3RAP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8QS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+ON4LDP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF8V;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DA2K;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F1CBR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F4WDS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH2PA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF5TV;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG4MH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5HI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK6QO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5WN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO4HBK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ3AK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4APJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR2L;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1DEU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6KDS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB7AD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2CB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM5F;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2I;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6UJH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM5MA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4VDA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6ABB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1AVF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5AJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH1GSD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL7UDA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1KIM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OL7C;Radio Club;JO60JJ;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1KAD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OL3Z;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F4BIT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8ABK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ2FR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4SHE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DA0M;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK1BZT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DD6YR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ6OL;Ralf 2m-13cm/6cm;JO52AP;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6ON;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK6AO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2LB;Torsten;JO53LQ;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5ANS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO1CS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OM3KOM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB3LO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM2D;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF1ASG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2BXC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6ZEJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0D;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6MHW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2OAU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5AWE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4MN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4ST;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG8AB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO6JH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1AWD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DP9X;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL3LAR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2HXE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR1T;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC6HG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0LB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH1AKY;Jens 2m;JO50LQ;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK8MM;Mark only VHF;JO53CL;StringProperty [value: null];true;true;false;false;false;false;false;false
+DP6K/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2PZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4NWM/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4M;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+SP9KDA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+SP7VVB;Maciek 2m;JO91VQ;StringProperty [value: 374.5 ];true;true;false;false;false;false;false;false
+DH2UAK;Klaus;JO71FU;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH8GHH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2XF/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH2UHE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1RLB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ2BC;Bert 2 m;JO63PO;StringProperty [value: null];true;true;false;false;false;false;false;false
+F0EUY/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK7C;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2AF;Milan 2m;JN89AR;StringProperty [value: 374,5 ];true;true;false;false;false;false;false;false
+DK5IR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+SP6AB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5OU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1BUG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0AC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG9OBI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG2SER;Carsten;JN58OH;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1JHR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0MA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH9ET;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8SAM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A1AAY;RKNG;JN85PJ;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A1W;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A2AE;Zvonko 144272;JN86HF;StringProperty [value: 144272 ];true;true;false;false;false;false;false;false
+OE3XOE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A3SM;Mato;JN85FW;StringProperty [value: 149 ];true;true;false;false;false;false;false;false
+S59P;Club JN86AO;JN86AO;StringProperty [value: 144.333 ];true;true;false;false;false;false;false;false
+OK5IM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5NE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF2AJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2AKD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5HQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2GBG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG4OP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE2M;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A5AY;Damir;JN85OK;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE3TFA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF3RU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB5SM;Klaus-2m;JN59LE;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0SX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2HTI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DN5PW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A2YF;Tiko 2m;JN85OO;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2AKV;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DA2T;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6CNG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO1FDK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF1HF;Andi JO43VF;JO43VF;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6NEJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG0PF;Gilbert 2m;JO50LQ;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL9DBF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5AS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F6HJO/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2GZ;Harry;JN49GB;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ6QS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2YDS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8LR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL9AAA/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL9FBF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR2E;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ8MW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ6VX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO5VL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5DF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6GCK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1SMA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK0CO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL9IM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ7YP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8FBP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH0HAN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM2SL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6ZXG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK3ZQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F1TRE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2ZO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB1BAC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1FAR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO2PSW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ1FZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR2X;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK0PU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ1OB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2IT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5ZBS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK6TW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ1AA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1ATZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ1PWV;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0FW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5TM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+I3FGX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1NPF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2HXE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1FMP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+9A0BB;144.239 BB Team;JN85EI;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ1AN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG0LFG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE6V;Werner 72 el kW;JN76VT;StringProperty [value: 144.186 ];true;true;false;false;false;false;false;false
+DD5VL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1MZM;Milos144358;JN89IW;StringProperty [value: 144.358 ];true;true;false;false;false;false;false;false
+DF0WF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL3LA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE8Q/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1CJT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DA0FF;144.245;JO40XL;StringProperty [value: 144245 ];true;true;false;false;false;false;false;false
+PA2TMS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4YDR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+IQ5NN;MonteNerone144;JN63GN;StringProperty [value: 144182 ];true;true;false;false;false;false;false;false
+OK7O;144;JN69OU;StringProperty [value: 144.380 ];true;true;false;false;false;false;false;false
+OM3KII;2m;JN88UU;StringProperty [value: 267 ];true;true;false;false;false;false;false;false
+DR0R;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ9FC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1DAF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0YY;Berlin.240;JO62GD;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5HQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC5IMM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+SP2CNW;Jan 2m ,;JO93AI;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2LB;Torsten;JO53LQ;StringProperty [value: null];true;true;false;false;false;false;false;false
+OM6DN;2x12ele 950asl;JN99FI;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL3HXS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK8QC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0MU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OL1C;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DD2ML;Ulli 4x10 QRO;JN68GI;StringProperty [value: 370,2 ];true;true;false;false;false;false;false;false
+OK2KAA;Club 2m;JN79QJ;StringProperty [value: 144.217 ];true;true;false;false;false;false;false;false
+IQ4KD;Monghidoro C.T;JN54PF;StringProperty [value: 234 ];true;true;false;false;false;false;false;false
+9A9D;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+IK4GNG;Gibo;JN64FB;StringProperty [value: 373 ];true;true;false;false;false;false;false;false
+IQ8BI;2m Test;JN63NJ;StringProperty [value: 367 ];true;true;false;false;false;false;false;false
+DL8CHR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+IQ4CT;Team 2m;JN54WE;StringProperty [value: 220 ];true;true;false;false;false;false;false;false
+OZ1BEF;Dan;JO46OE;StringProperty [value: 144277 ];true;true;false;false;false;false;false;false
+DB9OH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK8XY;Torsten,2m SSB;JO53AP;StringProperty [value: 307 ];true;true;false;false;false;false;false;false
+OZ7UV;Svend;JO65DH;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0LU;Team 144.280 CQ;JO43UA;StringProperty [value: 280 ];true;true;false;false;false;false;false;false
+DM2HEY;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OM2Y;Jan;JN88RS;StringProperty [value: 144.169 ];true;true;false;false;false;false;false;false
+OM3FW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK6R;144 only;JN79OW;StringProperty [value: 184 ];true;true;false;false;false;false;false;false
+OK3W;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OM8A;OM8A_2m;JN87WV;StringProperty [value: 144280 ];true;true;false;false;false;false;false;false
+DR1H;144320 8*12el;JN59OP;StringProperty [value: 144320 ];true;true;false;false;false;false;false;false
+DK0NA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR7C;24GHz up;JO50WB;StringProperty [value: 388 ];true;true;false;false;false;false;false;false
+OE5LHM/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DP3P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG5BRE;Ronny 70/23/13/9;JO62VM;StringProperty [value: 280 ];true;true;false;false;false;false;false;false
+DL2FFW;Frank 2m;JO50LQ;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2KEA;Radioclub;JN89EJ;StringProperty [value: 144.375 ];true;true;false;false;false;false;false;false
+DL5WW;Guenter 2m only;JO63PL;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5ALW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL7AX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1KCR;BIG GUN;JN79VS;StringProperty [value: 144.162 ];true;true;false;false;false;false;false;false
+OK1LN;Lada;JN79AI;StringProperty [value: 144.317 ];true;true;false;false;false;false;false;false
+OK1KKI;RK J.Hradec _2m;JN79NF;StringProperty [value: 144276 ];true;true;false;false;false;false;false;false
+OK1KPA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO5OT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2KCN;Club, 2m only;JN89OI;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK5W;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2BMJ;Milan only 2m;JN89VC;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2KOJ;2m;JN79UG;StringProperty [value: 166 ];true;true;false;false;false;false;false;false
+DL0NF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE5NNN/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OL7M;2m 1100m asl;JO80FG;StringProperty [value: 144.307 ];true;true;false;false;false;false;false;false
+OM5AW;Joe 144/QRO;JN98AH;StringProperty [value: 144324 ];true;true;false;false;false;false;false;false
+SN6Z;Mike;JO81MG;StringProperty [value: 144220 ];true;true;false;false;false;false;false;false
+SN7L;Team 144.182;JO91QF;StringProperty [value: 182 ];true;true;false;false;false;false;false;false
+DL5AA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+ON4EI/P;Oli 4x4+1x7 1KW;JO20JO;StringProperty [value: 182 ];true;true;false;false;false;false;false;false
+OK4C;Klondajk;JN79BU;StringProperty [value: 144.155 ];true;true;false;false;false;false;false;false
+OL4N;2m;JO60VR;StringProperty [value: 144260 ];true;true;false;false;false;false;false;false
+DR5T;Marek;JN47KW;StringProperty [value: 144.351 ];true;true;false;false;false;false;false;false
+DD7PA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+ON8TT/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0RN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5EZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F4IYU;Christophe;JN19GD;StringProperty [value: 295 ];true;true;false;false;false;false;false;false
+DD0PX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OM5R;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1KKP;Club;JO70DG;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4VAI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+G4PIQ;Andy 1kW 17el;JO02OD;StringProperty [value: 144.133 ];true;true;false;false;false;false;false;false
+DM5B;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1IME;Ota 2m;JO70FB;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK5T;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1VAV;Petr_2-70 SSB;JN79FW;StringProperty [value: 250 ];true;true;false;false;false;false;false;false
+S51S;Igor;JN75ES;StringProperty [value: 432250 ];true;true;false;false;false;false;false;false
+DL2NBU;Peter;JN59KQ;StringProperty [value: 144095 ];true;true;false;false;false;false;false;false
+S53O;ljubo 2m;JN86AT;StringProperty [value: 144382 ];true;true;false;false;false;false;false;false
+HA1CA;Zoli;JN86HN;StringProperty [value: 144 ];true;true;false;false;false;false;false;false
+OK1KCB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK5Y;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+HG6N;Tibor;JN98VD;StringProperty [value: 144.050 ];true;true;false;false;false;false;false;false
+DK1KC/P;Mike;JN58QH;StringProperty [value: 068 ];true;true;false;false;false;false;false;false
+PA1T;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK0ZB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG7SCB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+TM5R;144.340.00;JN19BQ;StringProperty [value: 144.340.00 ];true;true;false;false;false;false;false;false
+DM5D;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0HAL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+SP9KDA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DD5DX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK6FE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF3VM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR6T;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4DAW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6NDW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK6WT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2BO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5CW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB9LG;Lutz;JO40DM;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL7UP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH1PAL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC6CX/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ0YS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F4JXV;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK9PT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK3WG;Jurg;JO72GI;StringProperty [value: 144.030 ];true;true;false;false;false;false;false;false
+DO1AYJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC2ZL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DA2R;Hans-Jürgen;JN69EM;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5RE/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F6GTH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F8CND/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH9NAD/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM3AWK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ0CC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO6KDS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL3EAZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+PD4R;Dennis;JO32CD;StringProperty [value: 260 ];true;true;false;false;false;false;false;false
+DL4ZAA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0ET;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5BAW/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ6JJ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB6XG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2AKT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1BFR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F5UIN/N;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK6AC;Michael;JO52IJ;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK1E;2m/70cm;JO53WH;StringProperty [value: 350 ];true;true;false;false;false;false;false;false
+DJ8PY;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG9KB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL7QX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR6R;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ3SN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG6ME;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+S57GM;Borut-2m;JN76CC;StringProperty [value: 350 ];true;true;false;false;false;false;false;false
+OK2L;Team 2m;JN99BN;StringProperty [value: 293 299 ];true;true;false;false;false;false;false;false
+OK1UGI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH1DX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF2AP;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1RDO;2m;JN69JK;StringProperty [value: 372 ];true;true;false;false;false;false;false;false
+SP3LX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1OPT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO1XRK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG0FE;Lothar;JO62UN;StringProperty [value: null];true;true;false;false;false;false;false;false
+SM7EYW;Torleif;JO65NK;StringProperty [value: 184 ];true;true;false;false;false;false;false;false
+DL2BQC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM7D;Ronald;JO62LI;StringProperty [value: 092 ];true;true;false;false;false;false;false;false
+SM7FMX;Mog;JO65KN;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR5W;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DP4K;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH5BS;erni  2m qro +70;JO63UW;StringProperty [value: 144327 ];true;true;false;false;false;false;false;false
+DF1HC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2NG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+SP4SAS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF6RI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF9ME/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4NAZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+IQ3LX;Laguna Team;JN54TF;StringProperty [value: 144.295 ];true;true;false;false;false;false;false;false
+DK2AT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE3GRA/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL3DQL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR0R;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5KW/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF5RF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+PC0A;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6MRA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F5MGD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH8SL;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG9FBA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL6OA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH6DAO;Ray;JO41CN;StringProperty [value: null];true;true;false;false;false;false;false;false
+DD0D;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK4EI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO6NI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ5FK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4JU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0RD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH1DAC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM8MM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM3DG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK0AU;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF8OI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5UHR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO3VE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR7R;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DB1PA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF8XC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5RX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+HB9YBQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DD1IW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+HB9LEH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK3JH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+ON4KHG;Gaetan 2m/3cm;JO10XO;StringProperty [value: 185 ];true;true;false;false;false;false;false;false
+OK1RMR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF8ZH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5RA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM7TW;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO7AD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM1DE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2AAZ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+S570CST;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC6NY;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1LSH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8AMB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DR7B;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OM2DT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG8OBN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OL2J;RK Jihlava;JN79TI;StringProperty [value: 144.104 ];true;true;false;false;false;false;false;false
+DL5DWF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4PT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2BPN;Jaroslav;JN89UF;StringProperty [value: 299 ];true;true;false;false;false;false;false;false
+DL7AYK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL9UO;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2HVM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK2O;Milos144229;JN89IW;StringProperty [value: 144.229 ];true;true;false;false;false;false;false;false
+DH9YX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8GL/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+IU3OAR;Gian 144.264;JN54FO;StringProperty [value: 144.264 ];true;true;false;false;false;false;false;false
+HB9TTY;2/70-2x12Y-400W;JN37XG;StringProperty [value: 299 ];true;true;false;false;false;false;false;false
+DF4NR;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG7FBB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F4KJP/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+IK5AMB;144.318;JN53SR;StringProperty [value: d144 318 ];true;true;false;false;false;false;false;false
+IK4ZHH;Phil;JN63AX;StringProperty [value: 144.285 285 ];true;true;false;false;false;false;false;false
+OK1KMP;Clubstation 2/70;JO70UK;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1GK;2m 17ele 200W;JO70FA;StringProperty [value: 299 ];true;true;false;false;false;false;false;false
+DK0TUI;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OE1W;Team;JN77TX;StringProperty [value: 144.358,50 ];true;true;false;false;false;false;false;false
+OK1VRY;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL2MDU;Chris;JN58RF;StringProperty [value: 144277 ];true;true;false;false;false;false;false;false
+DO5SA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL0WB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL8QS;Heiko;JO43KH;StringProperty [value: 267 ];true;true;false;false;false;false;false;false
+DL8GL/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+ON8JA/P;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DJ6QK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DQ55DIG;Team;JO73CE;StringProperty [value: 144.238 ];true;true;false;false;false;false;false;false
+DK9ZQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1MPK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DG4FCX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO5SA;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1FOX;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+OK1XTN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK7VN;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4HRM;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK9ZC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK2R;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL5ME;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF0G;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH5NAH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL4ASK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DH1GSD;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK1WB;Hans;JO52FG;StringProperty [value: null];true;true;false;false;false;false;false;false
+DM2DXG;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DL1SE;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC9DC;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+F6HMQ;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DO1KUB;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK4VW;Ulli 70cm;JO40IT;StringProperty [value: 321 ];true;true;false;false;false;false;false;false
+DL5SKH;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DC5GF;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF1DT;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5DQ;Nico-2m;JO31QH;StringProperty [value: 318 ];true;true;false;false;false;false;false;false
+DL0BBK;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DK5PD;Lothar 2m;JN39VV;StringProperty [value: 144,144 ];true;true;false;false;false;false;false;false
+DH1PS;unknown;unknown;StringProperty [value: null];true;true;false;false;false;false;false;false
+DF7KF;Dithmar;JO30FK;StringProperty [value: null];true;true;false;false;false;false;false;false
+EI4GNB;tim 2/4/5/6/8;IO63WE;StringProperty [value: null];true;true;false;false;false;false;false;false
+G8XVJ;Erik;IO83QK;StringProperty [value: null];true;true;false;false;false;false;false;false
+GW0GEI;steve 144393;IO72VE;StringProperty [value: null];true;true;false;false;false;false;false;false
+NO3I;Bob;EN90UW;StringProperty [value: null];true;true;false;false;false;false;false;false
+G4LOH;Tim;IO70JC;StringProperty [value: null];true;true;false;false;false;false;false;false
+F1GTU;Daniel - 2M/70CM;JN05IE;StringProperty [value: null];true;true;false;false;false;false;false;false
+IZ5EME;Marco 10elm QRO;JN52NS;StringProperty [value: null];true;true;false;false;false;false;false;false
+OV3T;Thomas;JO46CM;StringProperty [value: null];true;true;false;false;false;false;false;false
+F5ICN;Alex QRV 2/70/23;JN03BF;StringProperty [value: null];true;true;false;false;false;false;false;false

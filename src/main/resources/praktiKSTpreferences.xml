@@ -2,13 +2,20 @@
 <praktiKST>
     <station>
         <LoginCallSign>DO5AMF</LoginCallSign>
-        <LoginPassword>kst4contest.test</LoginPassword>
-        <LoginDisplayedName>Marc</LoginDisplayedName>
-        <LoginLocator>JN49GL</LoginLocator>
+        <LoginPassword>changeMe</LoginPassword>
+        <LoginDisplayedName>KST4Contest</LoginDisplayedName>
+        <LoginLocator>JO51IJ</LoginLocator>
         <ChatCategory>2</ChatCategory>
-        <stn_antennaBeamWidthDeg>50</stn_antennaBeamWidthDeg>
-        <stn_maxQRBDefault>900</stn_maxQRBDefault>
-        <stn_qtfDefault>135</stn_qtfDefault>
+        <stn_antennaBeamWidthDeg>50.0</stn_antennaBeamWidthDeg>
+        <stn_maxQRBDefault>900.0</stn_maxQRBDefault>
+        <stn_qtfDefault>135.0</stn_qtfDefault>
+        <stn_bandActive144>true</stn_bandActive144>
+        <stn_bandActive432>true</stn_bandActive432>
+        <stn_bandActive1240>false</stn_bandActive1240>
+        <stn_bandActive2300>false</stn_bandActive2300>
+        <stn_bandActive3400>false</stn_bandActive3400>
+        <stn_bandActive5600>false</stn_bandActive5600>
+        <stn_bandActive10G>false</stn_bandActive10G>
     </station>
     <logsynch>
         <logsynch_fileBasedWkdCallInterpreterFileNameReadOnly>SimpleLogFile.txt</logsynch_fileBasedWkdCallInterpreterFileNameReadOnly>
@@ -19,7 +26,7 @@
     </logsynch>
     <trxSynchUCX>
         <trxSynch_ucxLogUDPListenerEnabled>true</trxSynch_ucxLogUDPListenerEnabled>
-        <trxSynch_defaultMYQRGValue>144.010.00</trxSynch_defaultMYQRGValue>
+        <trxSynch_defaultMYQRGValue>144.374.50</trxSynch_defaultMYQRGValue>
     </trxSynchUCX>
     <AirScoutQuerier>
         <asQry_airScoutCommunicationEnabled>true</asQry_airScoutCommunicationEnabled>
@@ -28,6 +35,11 @@
         <asQry_airScoutUDPPort>9872</asQry_airScoutUDPPort>
         <asQry_airScoutBandValue>1440000</asQry_airScoutBandValue>
     </AirScoutQuerier>
+    <notifications>
+        <notify_SimpleAudioNotificationsEnabled>true</notify_SimpleAudioNotificationsEnabled>
+        <notify_CWCallsignAudioNotificationsEnabled>true</notify_CWCallsignAudioNotificationsEnabled>
+        <notify_VoiceCallsignAudioNotificationsEnabled>true</notify_VoiceCallsignAudioNotificationsEnabled>
+    </notifications>
     <shortCuts>
         <t>Hi OM,</t>
         <t>pse</t>
@@ -68,9 +80,9 @@
         <t>MYQRG</t>
     </shortCuts>
     <textSnippets>
-        <t>Hi OM, try sked 2m? Ur QRG?</t>
-        <t>Hi OM, try sked 70cms? Ur QRG?</t>
-        <t>Hi OM, try sked 23cms? Ur QRG?</t>
+        <t>Hi QRZNAME, try sked 2m? Ur QRG?</t>
+        <t>try? FIRSTAP, pse lsn MYQRGSHORT</t>
+        <t>maybe we need AP. FIRSTAP SECONDAP</t>
         <t>I am calling cq to ur dir, pse lsn to MYLOCATOR at MYQRG</t>
         <t>pse ur qrg?</t>
         <t>rrr, I move to your qrg nw, pse ant dir MYLOCATOR</t>
@@ -79,7 +91,7 @@
         <t>Sry, strong qrm by local station, may try MYQRG</t>
         <t>Sry, in qso nw, pse qrx, I will meep you</t>
         <t>Ur ant my dir MYLOCATOR nw?</t>
-        <t>nil?</t>
+        <t>QRZNAME pse ant dir MYLOCATORSHORT</t>
         <t>No cw op here, pse can we use ssb?</t>
         <t>No chance in ssb, can we use cw?</t>
         <t>Nil till now, are you calling?</t>
@@ -99,4 +111,15 @@
         <beaconUnworkedstationsEnabled>false</beaconUnworkedstationsEnabled>
         <beaconUnworkedstationsPrefix>OE</beaconUnworkedstationsPrefix>
     </beaconUnworkedstations>
+    <guiOptions>
+        <GUIscn_ChatwindowMainSceneSizeHW>748.0;1544.800048828125</GUIscn_ChatwindowMainSceneSizeHW>
+        <GUIclusterAndQSOMonStage_SceneSizeHW>765.5999755859375;467.20001220703125</GUIclusterAndQSOMonStage_SceneSizeHW>
+        <GUIstage_updateStage_SceneSizeHW>640.0;480.0</GUIstage_updateStage_SceneSizeHW>
+        <GUIsettingsStageSceneSizeHW>720.0;768.0</GUIsettingsStageSceneSizeHW>
+        <GUIselectedCallSignSplitPane_dividerposition>0.5120192307692308</GUIselectedCallSignSplitPane_dividerposition>
+        <GUImainWindowLeftSplitPane_dividerposition>0.5046632124352332</GUImainWindowLeftSplitPane_dividerposition>
+        <GUImessageSectionSplitpane_dividerposition>0.5102549889135255;0.5934035476718403;0.6377494456762749</GUImessageSectionSplitpane_dividerposition>
+        <GUImainWindowRightSplitPane_dividerposition>0.74029933481153</GUImainWindowRightSplitPane_dividerposition>
+        <GUIpnl_directedMSGWin_dividerpositionDefault>0.09707903525548366</GUIpnl_directedMSGWin_dividerpositionDefault>
+    </guiOptions>
 </praktiKST>

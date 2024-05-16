@@ -11,6 +11,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -108,6 +109,7 @@ public class ChatController {
 		String myCallAndMyLocString = chatPreferences.getLoginCallSign() + "," + chatPreferences.getLoginLocator();
 		String remoteCallAndLocString = remoteChatMember.getCallSign() +"," + remoteChatMember.getQra();
 
+
 		String host = "255.255.255.255";
 //		int port = 9872;
 		int port = chatPreferences.getAirScout_asCommunicationPort();
@@ -118,7 +120,7 @@ public class ChatController {
 
 			String queryStringToAirScout = "";
 
-			queryStringToAirScout += prefix_asSetpath + bandString + "," + myCallAndMyLocString + "," + remoteCallAndLocString;
+			queryStringToAirScout += prefix_asSetpath + bandString + "," + myCallAndMyLocString + "," + remoteCallAndLocString+ "Å";
 
 			byte[] queryStringToAirScoutMSG = queryStringToAirScout.getBytes();
 
@@ -338,7 +340,7 @@ public class ChatController {
 	private String chatState;
 
 	private String hostname = "109.90.0.130";
-	private String praktiKSTVersion = "praktiKST 1.0";
+//	private String praktiKSTVersion = "praktiKST 1.0";
 	private String praktiKSTVersionInfo = "2022-10 - 2022-12\ndeveloped by DO5AMF, Marc\nContact: praktimarc@gmail.com\nDonations via paypal are welcome";
 
 	private int port = 23001; // kst4contest.test 4 23001
@@ -400,8 +402,15 @@ public class ChatController {
 																										// mine
 	private FilteredList<ChatMessage> lst_toOtherMessageList = new FilteredList<>(lst_globalChatMessageList);
 
-	private ObservableList<ChatMember> chatMemberList = FXCollections.observableArrayList(); // List of active stations
+	/**
+	 * we do some trick here with the chatmemberlist to not make it neccessary to change all boolean properties if the
+	 * chatmember object to observables. We trigger the list for changes on an object which we change whenever a list
+	 * update will be neccessary to process (important for correct lifetime filtering!)
+	 */
+//	private ObservableList<ChatMember> chatMemberList = FXCollections.observableArrayList(workedInfoChange -> new Observable[] {workedInfoChange.workedInfoChangeFireListEventTriggerProperty()}); // List of active stations
 																								// in chat
+	private ObservableList<ChatMember> chatMemberList = FXCollections.observableArrayList(); // List of active stations
+
 	private ObservableList<ChatMember> lst_chatMemberList = FXCollections.synchronizedObservableList(chatMemberList); // List
 																														// of active stn in chat
 	private FilteredList<ChatMember> lst_chatMemberListFiltered = new FilteredList<ChatMember>(chatMemberList);
@@ -503,13 +512,13 @@ public class ChatController {
 		this.messageTXBus = messageTXBus;
 	}
 
-	public String getPraktiKSTVersion() {
-		return praktiKSTVersion;
-	}
+//	public String getPraktiKSTVersion() {
+//		return praktiKSTVersion;
+//	}
 
-	public void setPraktiKSTVersion(String praktiKSTVersion) {
-		this.praktiKSTVersion = praktiKSTVersion;
-	}
+//	public void setPraktiKSTVersion(String praktiKSTVersion) {
+//		this.praktiKSTVersion = praktiKSTVersion;
+//	}
 
 	public String getPraktiKSTVersionInfo() {
 		return praktiKSTVersionInfo;
@@ -1035,7 +1044,7 @@ category = new ChatCategory(2);
 
 				String loginString = "";
 				loginString = "LOGINC|" + chatPreferences.getLoginCallSign() + "|" + chatPreferences.getLoginPassword()
-						+ "|" + chatPreferences.getLoginChatCategory().getCategoryNumber() + "|" + praktiKSTVersion
+						+ "|" + chatPreferences.getLoginChatCategory().getCategoryNumber() + "|praktiKST v" + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER
 						+ "|25|0|1|" + getCurrentEpochTime() + "|0|";
 
 				// System.out.println(loginString);

@@ -2,11 +2,14 @@ package kst4contest.model;
 
 import java.util.Date;
 
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 
 public class ChatMember {
 
+//	private final BooleanProperty workedInfoChangeFireListEventTrigger = new SimpleBooleanProperty();
 	AirPlaneReflectionInfo airPlaneReflectInfo;
 	String callSign;
 	String qra;
@@ -51,6 +54,8 @@ public class ChatMember {
 	boolean qrv5600 = true;
 	boolean qrv10G = true;
 	boolean qrvAny = true;
+
+
 
 
 
@@ -307,6 +312,8 @@ public class ChatMember {
 
 	public void setWorked(boolean worked) {
 		this.worked = worked;
+//		this.workedInfoChangeFireListEventTriggerProperty().setValue(true);
+//		this.workedInfoChangeFireListEventTriggerProperty().setValue(false);
 	}
 
 	/**

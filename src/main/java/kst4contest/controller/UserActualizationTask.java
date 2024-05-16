@@ -9,6 +9,7 @@ import java.util.TimerTask;
 import javafx.collections.ObservableList;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ClusterMessage;
+import kst4contest.view.GuiUtils;
 
 public class UserActualizationTask extends TimerTask {
 
@@ -89,6 +90,7 @@ public class UserActualizationTask extends TimerTask {
 //				chatMember.setWorked(true);
 //				System.out.println("[USERACT, info:] marking Chatuser " + chatMember.getCallSign() + " as worked, based on UDPLsnBackup-Logfile.");
 //			}
+//			GuiUtils.triggerGUIFilteredChatMemberListChange(this.client); //todo: quick and dirty gui fix
 		}
 
 		ObservableList<ClusterMessage> praktiKSTClusterList = this.client.getLst_clusterMemberList();

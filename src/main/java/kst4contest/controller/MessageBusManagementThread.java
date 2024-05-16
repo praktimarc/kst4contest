@@ -1128,8 +1128,9 @@ public class MessageBusManagementThread extends Thread {
 					
 				} catch (InterruptedException e1) {
 					this.interrupt();
-					// TODO Auto-generated catch block
+
 					e1.printStackTrace();
+					break;// TODO Change at may24, avoid uncloability. Check if this could lead to further errors on instable link!
 	//				client.getMessageRXBus().clear();
 				}
 			{

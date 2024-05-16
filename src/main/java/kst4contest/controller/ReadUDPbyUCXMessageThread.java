@@ -10,6 +10,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import kst4contest.ApplicationConstants;
+import kst4contest.view.GuiUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -309,7 +310,18 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
 											.setWorked10G(true);
 								}
+								/**
+								 * //TODO: following line is a quick fix to making disappear worked chatmembers of the list
+								 * Thats uncomfortable due to this also causes selection changes,
+								 * Better way is to change all worked and qrv values to observables and then trigger the underlying
+								 * list to fire an invalidationevent. Really Todo!
+								 */
+								try{
 
+									GuiUtils.triggerGUIFilteredChatMemberListChange(client); //not clean at all
+								} catch (Exception IllegalStateException) {
+									//do nothing, as it works...
+								}
 							}
 						}
 

@@ -37,7 +37,7 @@ public class UCXLogFileToHashsetParser {
 	 */
 	private ChatMember checkIfLineInhibitsCallSign(String line) {
 
-		Pattern pattern = Pattern.compile(PTRN_CallSign); // TODO: PTRN should depend to category-selection of own stn
+		Pattern pattern = Pattern.compile(PTRN_CallSign);
 		Matcher matcher = pattern.matcher(line);
 
 		String matchedString = "";

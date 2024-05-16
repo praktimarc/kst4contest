@@ -7,6 +7,8 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
@@ -156,10 +158,7 @@ public class Kst4ContestApplication extends Application {
 
 				chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 
-//				double[] deviderPos = selectedCallSignSplitPane.getDividerPositions();
-//				for (int i = 0; i<deviderPos.length;i++) {
-//					System.out.println("<<<<<<<<<<<<<<<DEVIDER " + deviderPos[i]);
-//				}
+				GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
@@ -181,6 +180,7 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -201,6 +201,7 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -221,6 +222,7 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -241,6 +243,7 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -256,11 +259,13 @@ public class Kst4ContestApplication extends Application {
 					selectedCallSignInfoStageChatMember.setQrv5600(true);
 				} else {
 					selectedCallSignInfoStageChatMember.setQrv5600(false);
+
 				}
 
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -281,6 +286,7 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -312,6 +318,7 @@ public class Kst4ContestApplication extends Application {
 				try {
 
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
+					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
 					//do nothing, upodate was not possible
 				}
@@ -594,11 +601,9 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-//		asd hier weiter machen, für bold state
 		callSignCol.setCellFactory(new Callback<TableColumn<ChatMember, String>, TableCell<ChatMember, String>>() {
 			public TableCell call(TableColumn param) {
 
-//				param.getProperties().
 				return new TableCell<ChatMember, String>() {
 
 
@@ -706,6 +711,26 @@ public class Kst4ContestApplication extends Application {
 				return qra;
 			}
 		});
+
+		qtfCol.setComparator(new Comparator<String>() {
+			@Override
+			public int compare(String o1, String o2) {
+
+				double doubleDegreesObj1 = Double.parseDouble(o1.split("°")[0]); //filter the "°"
+				double doubleDegreesObj2 = Double.parseDouble(o2.split("°")[0]); //filter the "°"
+
+				if (doubleDegreesObj1 < doubleDegreesObj2) {
+					return -1;
+				} else if (doubleDegreesObj1 == doubleDegreesObj2) {
+					return 0;
+				} else if (doubleDegreesObj1 > doubleDegreesObj2) {
+					return 1;
+				}
+
+				return 0;//should never happen!
+			}
+		});
+
 		qtfCol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(15));
 
 		TableColumn<ChatMember, String> qrgCol = new TableColumn<ChatMember, String>("QRG");
@@ -1131,6 +1156,28 @@ public class Kst4ContestApplication extends Application {
 				Thread.currentThread().setName("chatMemberTableSortTimer");
 
 				System.out.println("[KST4CApp, Info:] Chatmemberlist-Filterlist predicates size: " + chatcontroller.getLst_chatMemberListFilterPredicates().size());
+
+//				{
+//					//trick to trigger gui changes on property changes of obects
+//
+//					Predicate<ChatMember> dummyPredicate = new Predicate<ChatMember>() {
+//						@Override
+//						public boolean test(ChatMember chatMember) {
+//							return true;
+//						}
+//					};
+//
+//					/**
+//					 * //TODO: following 2 lines are a quick fix to making disappear worked chatmembers of the list
+//					 * Thats uncomfortable due to this also causes selection changes,
+//					 * Better way is to change all worked and qrv values to observables and then trigger the underlying
+//					 * list to fire an invalidationevent. Really Todo!
+//					 */
+//					chatcontroller.getLst_chatMemberListFilterPredicates().add(dummyPredicate);
+////					chatcontroller.getLst_chatMemberListFilterPredicates().remove(dummyPredicate);
+//
+//				}
+
 //				System.out.println("[KST4CApp, Info:] Deviderpos: " + spl);
 //				for (int i = 0; i < chatcontroller.getLst_chatMemberListFilterPredicates().size(); i++) {
 //
@@ -1149,7 +1196,10 @@ public class Kst4ContestApplication extends Application {
 						System.out.println("[Main.java, Warning:] Table sorting (actualizing) failed this time.");
 					}
 
+
 					tbl_chatMemberTable.refresh();
+
+//					tbl_chatMemberTable.
 
 				});
 			}
@@ -1257,6 +1307,8 @@ public class Kst4ContestApplication extends Application {
 			menuItem.setOnAction(new EventHandler<ActionEvent>() {
 				public void handle(ActionEvent event) {
 					txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText() + menuItem.getText());
+					txt_chatMessageUserInput.requestFocus();
+					txt_chatMessageUserInput.selectEnd();
 				}
 			});
 
@@ -3304,6 +3356,7 @@ public class Kst4ContestApplication extends Application {
 //			txt_ownqrg.setMinSize(40, 0);
 			txt_myQTF.setAlignment(Pos.BASELINE_RIGHT);
 			txt_myQTF.setTooltip(new Tooltip("Enter/update your actual qtf here for using path suggestions"));
+			txt_myQTF.setFocusTraversable(false);
 
 			SplitPane mainWindowLeftSplitPane = new SplitPane();
 			mainWindowLeftSplitPane.setOrientation(Orientation.HORIZONTAL);
@@ -3391,7 +3444,8 @@ public class Kst4ContestApplication extends Application {
 								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(9));
 
 							}
-
+							txt_chatMessageUserInput.requestFocus(); //in every case, focus the textfield for further edits
+							txt_chatMessageUserInput.selectEnd();
 						}
 					} catch (Exception nullPointerExc) {
 						System.out.println("There are no predifined textsnippets for this keycombo! -> " + nullPointerExc.getMessage());
@@ -3448,6 +3502,7 @@ public class Kst4ContestApplication extends Application {
 
 //			TextField txt_chatMessageUserInput
 //			txt_chatMessageUserInput.setPrefWidth("80%");
+			txt_chatMessageUserInput.setFocusTraversable(false);
 			txt_chatMessageUserInput.setPrefSize(500, 0);
 			txt_chatMessageUserInput.setText("");
 			txt_chatMessageUserInput.setTooltip(new Tooltip("Textmessage to Chat"));
@@ -3472,7 +3527,17 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
 
-					if (txt_chatMessageUserInput.getText().contains("MYQRG")) {
+
+					if (txt_chatMessageUserInput.getText().contains("MYQRGSHORT")) {
+						System.out.println("MYQRGSHORT erkannt");
+
+//						txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG());
+//						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG()));
+						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYQRGSHORT",
+								chatcontroller.getChatPreferences().getMYQRG().getValue().substring(0,7)));
+					}
+
+					if (txt_chatMessageUserInput.getText().contains("MYQRG") && !txt_chatMessageUserInput.getText().contains("MYQRGSHORT")) {
 						System.out.println("MYQRG erkannt");
 
 //						txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG());
@@ -3480,15 +3545,26 @@ public class Kst4ContestApplication extends Application {
 						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYQRG",
 								chatcontroller.getChatPreferences().getMYQRG().getValue()));
 					}
-					;
 
-					if (txt_chatMessageUserInput.getText().contains("MYLOCATOR")) {
+
+
+
+					if (txt_chatMessageUserInput.getText().contains("MYLOCATORSHORT")) {
+						System.out.println("MYLOCATORSHORT erkannt");
+
+//						txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG());
+						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYLOCATORSHORT",
+								chatcontroller.getChatPreferences().getLoginLocator().substring(0,4))); //JO51 instead of JO51JL
+					}
+
+					if (txt_chatMessageUserInput.getText().contains("MYLOCATOR") && !txt_chatMessageUserInput.getText().contains("MYLOCATORSHORT")) {
 						System.out.println("MYLOCATOR erkannt");
 
 //						txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG());
 						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYLOCATOR",
 								chatcontroller.getChatPreferences().getLoginLocator()));
 					}
+
 
 					boolean noAirplaneHere = false;
 
@@ -3554,6 +3630,35 @@ public class Kst4ContestApplication extends Application {
 						}
 					}
 
+					if (txt_chatMessageUserInput.getText().contains("QRZNAME")) {
+
+						if (selectedCallSignInfoStageChatMember != null) {
+
+							/**
+							 * for any reason there is a (not critical) exception if i use String[] here, so I
+							 * decided to use the whole name
+							 */
+//							try {
+//
+//							String[] firstName = selectedCallSignInfoStageChatMember.getName().split(" ");
+//							String splitFirst ="";
+//
+//							if (firstName.length > 1) {
+//								splitFirst = firstName[0];
+//							} else splitFirst = selectedCallSignInfoStageChatMember.getName();
+//
+//							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("QRZNAME",
+//									splitFirst)); //only first word of name field will be inserted
+//							} catch (Exception jfxBugExc) {
+//
+//							}
+
+							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("QRZNAME",
+									selectedCallSignInfoStageChatMember.getName()));
+						}
+
+					}
+
 					if (txt_chatMessageUserInput.getText().startsWith("/cq " + chatcontroller.getChatPreferences().getLoginCallSign())) {
 						txt_chatMessageUserInput.setText(" "); //prevent user sends a message to himself, that will cause errors
 					}
@@ -3570,6 +3675,7 @@ public class Kst4ContestApplication extends Application {
 			txt_ownqrg.setPrefSize(80, 0);
 //			txt_ownqrg.setMinSize(40, 0);
 			txt_ownqrg.setAlignment(Pos.BASELINE_RIGHT);
+			txt_ownqrg.setFocusTraversable(false);
 //			System.out.println(txt_ownqrg.textProperty();
 
 			primaryStage.setTitle(chatcontroller.getChatPreferences().getChatState());
@@ -3669,23 +3775,31 @@ public class Kst4ContestApplication extends Application {
 						 */
 
 						if (selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign().equals(chatcontroller.getChatPreferences().getLoginCallSign()) ) {
+							//selected message of own callsign ... now filter the foreign callsign and fill it in after /cq
 							System.out.println("////////////////////////////// rx in orginal message: " + selectedChatMemberPrivateChat.getList().get(0).getReceiver().getCallSign());
 							System.out.println("privChat selected ChatMember: was own object...!" + "rx was: " + selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))));
 
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput.setText("/cq "
 									+ selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))) + " "); //here1
+							txt_chatMessageUserInput.requestFocus();
+							txt_chatMessageUserInput.selectEnd();
+
 
 						} else {
 
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput.setText("/cq "
 									+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
+							txt_chatMessageUserInput.requestFocus();
+							txt_chatMessageUserInput.selectEnd();
 
 							try {
 								selectedCallSignFurtherInfoPane.getChildren().clear();
 								selectedCallSignInfoStageChatMember = selectedChatMemberPrivateChat.getList().get(0).getSender();
 								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+								txt_chatMessageUserInput.requestFocus();
+								txt_chatMessageUserInput.selectEnd();
 							} catch (Exception exception) {
 								System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
 							}
@@ -3743,6 +3857,8 @@ public class Kst4ContestApplication extends Application {
 						txt_chatMessageUserInput.clear();
 						txt_chatMessageUserInput.setText("/cq "
 								+ selectedChatMemberGeneralChat.getList().get(0).getSender().getCallSign() + " ");
+						txt_chatMessageUserInput.requestFocus();
+						txt_chatMessageUserInput.selectEnd();
 						System.out.println("privChat selected ChatMember: "
 								+ selectedChatMemberGeneralChat.getList().get(0).getSender());
 
@@ -3750,6 +3866,8 @@ public class Kst4ContestApplication extends Application {
 							selectedCallSignFurtherInfoPane.getChildren().clear();
 							selectedCallSignInfoStageChatMember = selectedChatMemberGeneralChat.getList().get(0).getSender();
 							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+							txt_chatMessageUserInput.requestFocus();
+							txt_chatMessageUserInput.selectEnd();
 						} catch (Exception exception) {
 							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
 						}
@@ -3819,6 +3937,8 @@ public class Kst4ContestApplication extends Application {
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput
 									.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
+							txt_chatMessageUserInput.requestFocus();
+							txt_chatMessageUserInput.selectEnd();
 //							System.out.println(
 //									"##################selected ChatMember: " + selectedChatMember.getList().get(0));
 							// selectedChatMemberList.clear();
@@ -3883,6 +4003,7 @@ public class Kst4ContestApplication extends Application {
 			chatMemberTableFilterQRBHBox.setPrefWidth(210);
 
 			TextField chatMemberTableFilterMaxQrbTF = new TextField(chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
+			chatMemberTableFilterMaxQrbTF.setFocusTraversable(false);
 			ToggleButton tglBtnQRBEnable = new ToggleButton("Show only QRB [km] <= ");
 			tglBtnQRBEnable.selectedProperty().addListener(new ChangeListener<Boolean>() {
 				Predicate<ChatMember> maxQrbPredicate = new Predicate<ChatMember>() {
@@ -3933,6 +4054,7 @@ public class Kst4ContestApplication extends Application {
 
 			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF:");
 			TextField chatMemberTableFilterQtfTF = new TextField(chatcontroller.getChatPreferences().getStn_qtfDefault()+"");
+			chatMemberTableFilterQtfTF.setFocusTraversable(false);
 			chatMemberTableFilterQtfTF.textProperty().addListener(new ChangeListener<String>() {
 				@Override
 				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
@@ -4064,6 +4186,7 @@ public class Kst4ContestApplication extends Application {
 
 
 			TextField chatMemberTableFilterTextField = new TextField("Find...");
+			chatMemberTableFilterTextField.setFocusTraversable(false);
 			chatMemberTableFilterTextField.focusedProperty().addListener(new ChangeListener<Boolean>() {
 				@Override
 				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
@@ -4685,6 +4808,7 @@ public class Kst4ContestApplication extends Application {
 		Label lblCallSign = new Label("Login-Callsign:");
 //        TextField txtFldCallSign = new TextField("dm5m");
 		TextField txtFldCallSign = new TextField(this.chatcontroller.getChatPreferences().getLoginCallSign());
+		txtFldCallSign.setFocusTraversable(false);
 
 		txtFldCallSign.textProperty().addListener(new ChangeListener<String>() {
 
@@ -4711,6 +4835,7 @@ public class Kst4ContestApplication extends Application {
 
 		Label lblName = new Label("Name in Chat:");
 		TextField txtFldName = new TextField(this.chatcontroller.getChatPreferences().getLoginName());
+		txtFldName.setFocusTraversable(false);
 
 		txtFldName.textProperty().addListener(new ChangeListener<String>() {
 
@@ -4724,6 +4849,8 @@ public class Kst4ContestApplication extends Application {
 
 		Label lblLocator = new Label("Locator in Chat:");
 		TextField txtFldLocator = new TextField(this.chatcontroller.getChatPreferences().getLoginLocator());
+		txtFldLocator.setFocusTraversable(false);
+
 
 		txtFldLocator.textProperty().addListener(new ChangeListener<String>() {
 
@@ -4774,6 +4901,7 @@ public class Kst4ContestApplication extends Application {
 //        labeledSeparator.setAlignment(Pos.CENTER);
 
 		TextField txtFldstn_antennaBeamWidthDeg = new TextField(this.chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + "");
+		txtFldstn_antennaBeamWidthDeg.setFocusTraversable(false);
 		txtFldstn_antennaBeamWidthDeg.setTooltip(new Tooltip("Your antenna beamwidth in DEG\n\nEnter correct values here due it´s used for path suggestions!!!"));
 		txtFldstn_antennaBeamWidthDeg.textProperty().addListener(new ChangeListener<String>() {
 
@@ -4794,6 +4922,7 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		TextField txtFldstn_maxQRBDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
+		txtFldstn_maxQRBDefault.setFocusTraversable(false);
 
 		txtFldstn_maxQRBDefault.textProperty().addListener(new ChangeListener<String>() {
 
@@ -4814,6 +4943,7 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		TextField txtFldstn_qtfDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_qtfDefault() + "");
+		txtFldstn_qtfDefault.setFocusTraversable(false);
 
 		txtFldstn_qtfDefault.textProperty().addListener(new ChangeListener<String>() {
 
@@ -5030,6 +5160,7 @@ public class Kst4ContestApplication extends Application {
 
 		Label lblUDPByUCX = new Label("UDP-Port for message-listener (default is 12060)");
 		TextField txtFldUDPPortforUCX = new TextField("");
+		txtFldUDPPortforUCX.setFocusTraversable(false);
 		txtFldUDPPortforUCX
 				.setText(this.chatcontroller.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort() + "");
 		txtFldUDPPortforUCX.focusedProperty().addListener(new ChangeListener<Boolean>() {
@@ -5211,6 +5342,7 @@ public class Kst4ContestApplication extends Application {
 
 		TextField txtFld_asServerNameString = new TextField(
 				chatcontroller.getChatPreferences().getAirScout_asServerNameString());
+		txtFld_asServerNameString.setFocusTraversable(false);
 		txtFld_asServerNameString.focusedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
@@ -5236,6 +5368,7 @@ public class Kst4ContestApplication extends Application {
 
 		TextField txtFld_asClientNameString = new TextField(
 				chatcontroller.getChatPreferences().getAirScout_asClientNameString());
+		txtFld_asClientNameString.setFocusTraversable(false);
 		txtFld_asClientNameString.focusedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
@@ -5261,6 +5394,7 @@ public class Kst4ContestApplication extends Application {
 
 		TextField txtFld_asUDPPortInt = new TextField(
 				chatcontroller.getChatPreferences().getAirScout_asCommunicationPort() + "");
+		txtFld_asUDPPortInt.setFocusTraversable(false);
 		txtFld_asUDPPortInt.focusedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
@@ -5284,6 +5418,7 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		TextField txtFld_asQRGInt = new TextField(chatcontroller.getChatPreferences().getAirScout_asBandString() + "");
+		txtFld_asQRGInt.setFocusTraversable(false);
 		txtFld_asQRGInt.focusedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
@@ -5512,6 +5647,7 @@ public class Kst4ContestApplication extends Application {
 		grdPnlBeacon.add(new Label("Beacon message [<100 Chars]:"), 0, 2);
 
 		TextField txtFldBeaconText = new TextField(this.chatcontroller.getChatPreferences().getBcn_beaconText());
+		txtFldBeaconText.setFocusTraversable(false);
 		grdPnlBeacon.add(txtFldBeaconText, 1, 2);
 		txtFldBeaconText.focusedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
