@@ -53,27 +53,16 @@ public class ChatCategory {
 	
 	public ChatCategory(int setThiscategoryNumber) {
 		this.categoryNumber = setThiscategoryNumber;
+		setCategoryNumber(setThiscategoryNumber);
 	}
-	
-	
-	
-	
 
 	public int getCategoryNumber() {
 		return categoryNumber;
 	}
 
-
-
-
-
 	public void setCategoryNumber(int categoryNumber) {
 		this.categoryNumber = categoryNumber;
 	}
-
-
-
-
 
 	/**
 	 * Returns an Array of int with possible frequency prefixes, due to in the chat

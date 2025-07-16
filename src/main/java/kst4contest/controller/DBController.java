@@ -405,15 +405,10 @@ public class DBController {
 			ResultSet rs = stmt
 					.executeQuery("SELECT * FROM ChatMember where callsign = '" + checkForThis.getCallSign() + "' ;");
 
-//			ChatMember updateWkdData;
-
-//			if (!rs.isBeforeFirst()) { //if there are no data to update....
+//			System.out.println("DBH stmt: " + rs.getStatement().toString());
 
 			while (rs.next()) {
 
-//				updateWkdData = new ChatMember();
-
-//				updateWkdData.setCallSign(rs.getString("callsign"));
 				checkForThis.setWorked(helper_IntToBooleanConverter(rs.getInt("worked")));
 				checkForThis.setWorked144(helper_IntToBooleanConverter(rs.getInt("worked144")));
 				checkForThis.setWorked432(helper_IntToBooleanConverter(rs.getInt("worked432")));
@@ -427,20 +422,22 @@ public class DBController {
 				 * v1.2 since here
 				 */
 
-				checkForThis.setWorked144(helper_IntToBooleanConverter(rs.getInt("notQRV144")));
-				checkForThis.setWorked432(helper_IntToBooleanConverter(rs.getInt("notQRV432")));
-				checkForThis.setWorked1240(helper_IntToBooleanConverter(rs.getInt("notQRV1240")));
-				checkForThis.setWorked2300(helper_IntToBooleanConverter(rs.getInt("notQRV2300")));
-				checkForThis.setWorked3400(helper_IntToBooleanConverter(rs.getInt("notQRV3400")));
-				checkForThis.setWorked5600(helper_IntToBooleanConverter(rs.getInt("notQRV5600")));
-				checkForThis.setWorked10G(helper_IntToBooleanConverter(rs.getInt("notQRV10G")));
+				checkForThis.setQrv144(!helper_IntToBooleanConverter(rs.getInt("notQRV144")));
+				checkForThis.setQrv432(!helper_IntToBooleanConverter(rs.getInt("notQRV432")));
+				checkForThis.setQrv1240(!helper_IntToBooleanConverter(rs.getInt("notQRV1240")));
+				checkForThis.setQrv2300(!helper_IntToBooleanConverter(rs.getInt("notQRV2300")));
+				checkForThis.setQrv3400(!helper_IntToBooleanConverter(rs.getInt("notQRV3400")));
+				checkForThis.setQrv5600(!helper_IntToBooleanConverter(rs.getInt("notQRV5600")));
+				checkForThis.setQrv10G(!helper_IntToBooleanConverter(rs.getInt("notQRV10G")));
 
-				System.out.println(
-						"[DBH, Info:] providing callsign wkd info, wkd, 144, 432, ... for UA5 new chatmember : "
-								+ checkForThis.toString());
+//				System.out.println(
+//						"[DBH, Info:] providing callsign wkd info, wkd, 144, 432, ....... for UA5 new chatmember : "
+//								+ checkForThis.toString());
 
 			}
-//			}
+
+//			rs.gets
+
 			rs.close();
 			stmt.close();
 			
@@ -454,7 +451,7 @@ public class DBController {
 			try {
 				connection.close();
 			} catch (SQLException e1) {
-				// TODO Auto-generated catch block
+
 				e1.printStackTrace();
 			}
 		}
@@ -704,9 +701,13 @@ public class DBController {
 
 	private boolean helper_IntToBooleanConverter(int valueFromDBField) {
 
+//		System.out.println(">>>>>>>>>>>>>>> DBC: " + valueFromDBField + " -> ");
+
 		if (valueFromDBField != 0) {
+			System.out.println("true");
 			return true;
 		} else
+			System.out.println("false");
 			return false;
 
 	}

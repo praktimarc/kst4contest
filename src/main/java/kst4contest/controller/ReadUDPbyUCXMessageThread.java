@@ -3,6 +3,7 @@ package kst4contest.controller;
 import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -195,8 +196,12 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //						call = call.toLowerCase();
 						String band = element.getElementsByTagName("band").item(0).getTextContent();
 
+						String points = element.getElementsByTagName("points").item(0).getTextContent();
+
 						System.out.println("[Readudp, info ]: received Current Element :" + node.getNodeName()
-								+ "call: " + call + " / " + band);
+								+ "call: " + call + " / " + band + " ----> " + points + " POINTS");
+
+//						client.getChatPreferences().setBcn_contestScoreSum(Long.parseLong(points));
 
 						ChatMember workedCall = new ChatMember();
 						workedCall.setCallSign(call);
@@ -238,6 +243,44 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 						}
 
+						/**
+						 * cases hotfix for MINOS logger, which tells band like "2m", not "144"
+						 */
+						case "2m": {
+							workedCall.setWorked144(true);
+							break;
+						}
+
+						case "70cm": {
+							workedCall.setWorked432(true);
+							break;
+						}
+
+						case "23cm": {
+							workedCall.setWorked1240(true);
+							break;
+						}
+
+						case "13cm": {
+							workedCall.setWorked2300(true);
+							break;
+						}
+
+						case "9cm": {
+							workedCall.setWorked3400(true);
+							break;
+						}
+
+						case "6cm": {
+							workedCall.setWorked5600(true);
+							break;
+						}
+
+						case "3cm": {
+							workedCall.setWorked10G(true);
+
+						}
+
 						default:
 							System.out.println("[ReadUDPFromUCX, Error:] unexpected band value: \"" + band + "\"");
 							break;
@@ -256,79 +299,150 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 //							modifyThat = (ChatMember) client.getMap_ucxLogInfoWorkedCalls().get(call);
 
-							int indexOfChatMemberInTable = -1;
-							indexOfChatMemberInTable = client.checkListForChatMemberIndexByCallSign(workedCall);
+//							asd //TODO: Check if callsign and callsignraw is similar, then mark first and further via new checklistforchatmembermultiplemethod with array of indize
 
-							if (indexOfChatMemberInTable == -1) {
-								// do nothing
+							ArrayList<Integer> markTheseChattersAsWorked = client.checkListForChatMemberIndexesByCallSign(workedCall);
+
+							if (markTheseChattersAsWorked.isEmpty()) {
+								//Worked call is not part of the chatmember list
 							} else {
-								modifyThat = client.getLst_chatMemberList().get(indexOfChatMemberInTable);
-//							modifyThat.setWorked(true);
-								
-								client.getLst_chatMemberList()
-										.get(client.checkListForChatMemberIndexByCallSign(modifyThat)).setWorked(true);
+								for (int index : markTheseChattersAsWorked) {
+									modifyThat = client.getLst_chatMemberList().get(index);
 
-								if (workedCall.isWorked144()) {
-									modifyThat.setWorked144(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked144(true);
+									modifyThat.setWorked(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat)).setWorked(true);
 
-								} else if (workedCall.isWorked432()) {
-									modifyThat.setWorked432(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked432(true);
+									if (workedCall.isWorked144()) {
+										modifyThat.setWorked144(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked144(true);
 
-								} else if (workedCall.isWorked1240()) {
-									modifyThat.setWorked1240(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked1240(true);
+									} else if (workedCall.isWorked432()) {
+										modifyThat.setWorked432(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked432(true);
 
-								} else if (workedCall.isWorked2300()) {
-									modifyThat.setWorked2300(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked2300(true);
+									} else if (workedCall.isWorked1240()) {
+										modifyThat.setWorked1240(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked1240(true);
 
-								} else if (workedCall.isWorked3400()) {
-									modifyThat.setWorked3400(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked3400(true);
+									} else if (workedCall.isWorked2300()) {
+										modifyThat.setWorked2300(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked2300(true);
 
-								} else if (workedCall.isWorked5600()) {
-									modifyThat.setWorked5600(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked5600(true);
+									} else if (workedCall.isWorked3400()) {
+										modifyThat.setWorked3400(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked3400(true);
 
-								} else if (workedCall.isWorked10G()) {
-									modifyThat.setWorked10G(true);
-									client.getLst_chatMemberList()
-											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-											.setWorked10G(true);
+									} else if (workedCall.isWorked5600()) {
+										modifyThat.setWorked5600(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked5600(true);
+
+									} else if (workedCall.isWorked10G()) {
+										modifyThat.setWorked10G(true);
+//										client.getLst_chatMemberList()
+//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//												.setWorked10G(true);
+									}
 								}
-								/**
-								 * //TODO: following line is a quick fix to making disappear worked chatmembers of the list
-								 * Thats uncomfortable due to this also causes selection changes,
-								 * Better way is to change all worked and qrv values to observables and then trigger the underlying
-								 * list to fire an invalidationevent. Really Todo!
-								 */
-								try{
+
+								try {
 
 									GuiUtils.triggerGUIFilteredChatMemberListChange(client); //not clean at all
 								} catch (Exception IllegalStateException) {
 									//do nothing, as it works...
 								}
 							}
+
+							/**
+							 * old mechanic to markup worked stations in the chatmember table
+							 */
+//							int indexOfChatMemberInTable = -1; //chatmember not in table
+//							indexOfChatMemberInTable = client.checkListForChatMemberIndexByCallSign(workedCall);
+//
+//							if (indexOfChatMemberInTable == -1) {
+//								// do nothing
+//							} else {
+//								modifyThat = client.getLst_chatMemberList().get(indexOfChatMemberInTable);
+//
+//								client.getLst_chatMemberList()
+//										.get(client.checkListForChatMemberIndexByCallSign(modifyThat)).setWorked(true);
+//
+//								if (workedCall.isWorked144()) {
+//									modifyThat.setWorked144(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked144(true);
+//
+//								} else if (workedCall.isWorked432()) {
+//									modifyThat.setWorked432(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked432(true);
+//
+//								} else if (workedCall.isWorked1240()) {
+//									modifyThat.setWorked1240(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked1240(true);
+//
+//								} else if (workedCall.isWorked2300()) {
+//									modifyThat.setWorked2300(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked2300(true);
+//
+//								} else if (workedCall.isWorked3400()) {
+//									modifyThat.setWorked3400(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked3400(true);
+//
+//								} else if (workedCall.isWorked5600()) {
+//									modifyThat.setWorked5600(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked5600(true);
+//
+//								} else if (workedCall.isWorked10G()) {
+//									modifyThat.setWorked10G(true);
+//									client.getLst_chatMemberList()
+//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
+//											.setWorked10G(true);
+//								}
+							/**
+							 * //TODO: following line is a quick fix to making disappear worked chatmembers of the list
+							 * Thats uncomfortable due to this also causes selection changes,
+							 * Better way is to change all worked and qrv values to observables and then trigger the underlying
+							 * list to fire an invalidationevent. Really Todo!
+							 */
+//								try{
+//
+//									GuiUtils.triggerGUIFilteredChatMemberListChange(client); //not clean at all
+//								} catch (Exception IllegalStateException) {
+//									//do nothing, as it works...
+//								}
+//						}
+							/**
+							 * end -> old mechanic to markup worked stations in the chatmember table
+							 */
 						}
 
 						boolean isInChat = this.client.getDbHandler().updateWkdInfoOnChatMember(workedCall);
 						// This will update the worked info on a worked chatmember. DBHandler will
 						// check, if an entry at the db had been modified. If not, then the worked
-						// station had not been stored. DBHandler will store the informations then.
+						// station had not been stored. DBHandler will store the information then.
 						if (!isInChat) {
 							
 							workedCall.setName("unknown");
@@ -348,7 +462,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 							fileWriterPersistUDPToFile = new FileWriter(logUDPMessageToThisFile, true);
 
 						} catch (IOException e1) {
-							// TODO Auto-generated catch block
 							e1.printStackTrace();
 						}
 
@@ -424,7 +537,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //						System.out.println("Radio Mode: " + mode);
 //						System.out.println("[ReadUDPFromUCX, Info:] Setted QRG pref to: \"" + qrg + "\"" );
 
-						this.client.getChatPreferences().getMYQRG().set(formattedQRG);
+						this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
 						
 						System.out.println("[ReadUDPbyUCXTh: ] Radioinfo processed: " + formattedQRG);
 					}

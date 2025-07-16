@@ -20,7 +20,6 @@ import javax.xml.transform.stream.StreamResult;
 
 import kst4contest.ApplicationConstants;
 import kst4contest.utils.ApplicationFileUtils;
-import org.w3c.dom.Comment;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -132,17 +131,21 @@ public class ChatPreferences {
 	 * Station preferences
 	 */
 
-	boolean loginAFKState = false; //always start as here
-	String loginCallSign = "do5amf";
-	String loginPassword = "";
-	String loginName = "Marc";
-	String loginLocator = "jn49fk";
+	boolean stn_loginAFKState = false; //always start as here
+	String stn_loginCallSign = "do5amf";
+	String stn_loginPassword = "";
+	String stn_loginNameMainCat = "KST4Contest";
+	String stn_loginNameSecondCat = "KST4ContestSHF";
+	String stn_loginLocatorMainCat = "jn49fk";
+	String stn_loginLocatorSecondCat = "jn49fk";
 
 	double stn_antennaBeamWidthDeg = 50;
 	double stn_maxQRBDefault = 900;
 	double stn_qtfDefault = 135;
 
-	ChatCategory loginChatCategory = new ChatCategory(2);
+	ChatCategory loginChatCategoryMain = new ChatCategory(2);
+	ChatCategory loginChatCategorySecond = new ChatCategory(3);
+	boolean loginToSecondChatEnabled;
 	IntegerProperty actualQTF = new SimpleIntegerProperty(360); // will be updated by user at runtime!
 
 	boolean stn_bandActive144;
@@ -152,8 +155,6 @@ public class ChatPreferences {
 	boolean stn_bandActive3400;
 	boolean stn_bandActive5600;
 	boolean stn_bandActive10G;
-
-
 
 	/**
 	 * Log Synch preferences
@@ -167,8 +168,10 @@ public class ChatPreferences {
 	/**
 	 * TRX Synch prefs
 	 */
-	StringProperty MYQRG = new SimpleStringProperty(); // own qrg will be set by user entry or ucxlog if trx Synch is
+	StringProperty MYQRGFirstCat = new SimpleStringProperty(); // own qrg will be set by user entry or ucxlog if trx Synch is
 														// activated
+	StringProperty MYQRGSecondCat = new SimpleStringProperty(); // own qrg will be set by user entry or ucxlog if trx Synch is activated
+
 	boolean trxSynch_ucxLogUDPListenerEnabled = false;
 
 	/**
@@ -187,6 +190,15 @@ public class ChatPreferences {
 	boolean notify_playCWCallsignsOnRxedPMs = true;
 	boolean notify_playVoiceCallsignsOnRxedPMs = true;
 
+	//DXCluster section
+	boolean notify_dxClusterServerEnabled = true;
+	int notify_dxclusterServerPort = 8000; //default 8000 like db0sue.de
+	SimpleStringProperty notify_optionalFrequencyPrefix = new SimpleStringProperty("144");
+
+	SimpleStringProperty notify_DXCSrv_SpottersCallSign = new SimpleStringProperty("DO5AMF");
+
+	boolean notify_DXClusterServerTriggerBearing;
+	boolean notify_DXClusterServerTriggerOnQRGDetect;
 
 
 	/**
@@ -201,18 +213,44 @@ public class ChatPreferences {
 	 * Beacon prefs
 	 */
 
-	boolean bcn_beaconsEnabled = true;
-	int bcn_beaconIntervalInMinutes = 20;
-	String bcn_beaconText = "Hi, pse call us";
+	boolean bcn_beaconsEnabledMainCat = true;
+	boolean bcn_beaconsEnabledSecondCat = false;
+	int bcn_beaconIntervalInMinutesMainCat = 20;
+	int bcn_beaconIntervalInMinutesSecondCat = 20;
+	String bcn_beaconTextMainCat = "Hi, pse call us";
+	String bcn_beaconTextSecondCat = "Hi, pse call us";
+	long bcn_contestScoreSum;
+	int bcn_contestQsoSum;
+	String bcn_contestODXCallsignKms;
 
 	/**
 	 * Unworked station requester prefs
 	 */
 
-	boolean unwkd_unworkedStnRequesterBeaconsEnabled;
-	int unwkd_unworkedStnRequesterBeaconsInterval;
-	String unwkd_unworkedStnRequesterBeaconsText;
-	String unwkd_beaconUnworkedstationsPrefix;
+	boolean messageHandling_unworkedStnRequesterBeaconsEnabled;
+	int messageHandling_unworkedStnRequesterBeaconsInterval;
+	String messageHandling_unworkedStnRequesterBeaconsText;
+	String messageHandling_beaconUnworkedstationsPrefix;
+
+	String messageHandling_autoAnswerTextMainCat = "Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
+	String messageHandling_autoAnswerTextSecondCat = "Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
+
+	boolean messageHandling_autoAnswerEnabled = false;
+	boolean messageHandling_autoAnswerEnabledSecondCat = false;
+
+	boolean messageHandling_autoAnswerToQRGRequestEnabled;
+
+	/*********************************************************************************
+	 *
+	 * GUI OPTIONS WHICH CAN BE CHANGED WILL BE SAVED HERE
+	 *
+	 *********************************************************************************/
+
+	boolean guiOptions_defaultFilterNothing;
+	boolean guiOptions_defaultFilterPmToMe;
+	boolean guiOptions_defaultFilterPmToOther;
+	boolean guiOptions_defaultFilterPublicMsgs;
+
 
 	/*********************************************************************************
 	 *
@@ -231,6 +269,210 @@ public class ChatPreferences {
 	private double[] GUImainWindowRightSplitPane_dividerposition = {0.72};
 	private double[] GUIpnl_directedMSGWin_dividerpositionDefault = {0.8};
 
+
+	public boolean isMessageHandling_autoAnswerEnabledSecondCat() {
+		return messageHandling_autoAnswerEnabledSecondCat;
+	}
+
+	public void setMessageHandling_autoAnswerEnabledSecondCat(boolean messageHandling_autoAnswerEnabledSecondCat) {
+		this.messageHandling_autoAnswerEnabledSecondCat = messageHandling_autoAnswerEnabledSecondCat;
+	}
+
+	public StringProperty getMYQRGSecondCat() {
+		return MYQRGSecondCat;
+	}
+
+	public void setMYQRGSecondCat(String MYQRGSecondCat) {
+		this.MYQRGSecondCat.set(MYQRGSecondCat);
+	}
+
+	public boolean isMessageHandling_autoAnswerEnabled() {
+		return messageHandling_autoAnswerEnabled;
+	}
+
+	public String getMessageHandling_autoAnswerTextSecondCat() {
+		return messageHandling_autoAnswerTextSecondCat;
+	}
+
+	public void setMessageHandling_autoAnswerTextSecondCat(String messageHandling_autoAnswerTextSecondCat) {
+		this.messageHandling_autoAnswerTextSecondCat = messageHandling_autoAnswerTextSecondCat;
+	}
+
+	public String getMessageHandling_beaconUnworkedstationsPrefix() {
+		return messageHandling_beaconUnworkedstationsPrefix;
+	}
+
+	public StringProperty MYQRGFirstCatProperty() {
+		return MYQRGFirstCat;
+	}
+
+	public void setMYQRGFirstCat(String MYQRGFirstCat) {
+		this.MYQRGFirstCat.set(MYQRGFirstCat);
+	}
+
+	public String getStn_loginNameSecondCat() {
+		return stn_loginNameSecondCat;
+	}
+
+	public void setStn_loginNameSecondCat(String stn_loginNameSecondCat) {
+		this.stn_loginNameSecondCat = stn_loginNameSecondCat;
+	}
+
+	public String getStn_loginLocatorSecondCat() {
+		return stn_loginLocatorSecondCat;
+	}
+
+	public void setStn_loginLocatorSecondCat(String stn_loginLocatorSecondCat) {
+		this.stn_loginLocatorSecondCat = stn_loginLocatorSecondCat;
+	}
+
+	public boolean isBcn_beaconsEnabledSecondCat() {
+		return bcn_beaconsEnabledSecondCat;
+	}
+
+	public void setBcn_beaconsEnabledSecondCat(boolean bcn_beaconsEnabledSecondCat) {
+		this.bcn_beaconsEnabledSecondCat = bcn_beaconsEnabledSecondCat;
+	}
+
+	public int getBcn_beaconIntervalInMinutesSecondCat() {
+		return bcn_beaconIntervalInMinutesSecondCat;
+	}
+
+	public void setBcn_beaconIntervalInMinutesSecondCat(int bcn_beaconIntervalInMinutesSecondCat) {
+		this.bcn_beaconIntervalInMinutesSecondCat = bcn_beaconIntervalInMinutesSecondCat;
+	}
+
+	public String getBcn_beaconTextSecondCat() {
+		return bcn_beaconTextSecondCat;
+	}
+
+	public void setBcn_beaconTextSecondCat(String bcn_beaconTextSecondCat) {
+		this.bcn_beaconTextSecondCat = bcn_beaconTextSecondCat;
+	}
+
+	public ChatCategory getLoginChatCategorySecond() {
+		return loginChatCategorySecond;
+	}
+
+	public void setLoginChatCategorySecond(ChatCategory loginChatCategorySecond) {
+		this.loginChatCategorySecond = loginChatCategorySecond;
+	}
+
+	public boolean isLoginToSecondChatEnabled() {
+		return loginToSecondChatEnabled;
+	}
+
+	public void setLoginToSecondChatEnabled(boolean loginToSecondChatEnabled) {
+		this.loginToSecondChatEnabled = loginToSecondChatEnabled;
+	}
+
+	public boolean isGuiOptions_defaultFilterNothing() {
+		return guiOptions_defaultFilterNothing;
+	}
+
+	public void setGuiOptions_defaultFilterNothing(boolean guiOptions_defaultFilterNothing) {
+		this.guiOptions_defaultFilterNothing = guiOptions_defaultFilterNothing;
+	}
+
+	public boolean isGuiOptions_defaultFilterPmToMe() {
+		return guiOptions_defaultFilterPmToMe;
+	}
+
+	public void setGuiOptions_defaultFilterPmToMe(boolean guiOptions_defaultFilterPmToMe) {
+		this.guiOptions_defaultFilterPmToMe = guiOptions_defaultFilterPmToMe;
+	}
+
+	public boolean isGuiOptions_defaultFilterPmToOther() {
+		return guiOptions_defaultFilterPmToOther;
+	}
+
+	public void setGuiOptions_defaultFilterPmToOther(boolean guiOptions_defaultFilterPmToOther) {
+		this.guiOptions_defaultFilterPmToOther = guiOptions_defaultFilterPmToOther;
+	}
+
+	public boolean isGuiOptions_defaultFilterPublicMsgs() {
+		return guiOptions_defaultFilterPublicMsgs;
+	}
+
+	public void setGuiOptions_defaultFilterPublicMsgs(boolean guiOptions_defaultFilterPublicMsgs) {
+		this.guiOptions_defaultFilterPublicMsgs = guiOptions_defaultFilterPublicMsgs;
+	}
+
+	public boolean isMessageHandling_autoAnswerToQRGRequestEnabled() {
+		return messageHandling_autoAnswerToQRGRequestEnabled;
+	}
+
+	public void setMessageHandling_autoAnswerToQRGRequestEnabled(boolean messageHandling_autoAnswerToQRGRequestEnabled) {
+		this.messageHandling_autoAnswerToQRGRequestEnabled = messageHandling_autoAnswerToQRGRequestEnabled;
+	}
+
+	public String getMessageHandling_autoAnswerTextMainCat() {
+		return messageHandling_autoAnswerTextMainCat;
+	}
+
+	public void setMessageHandling_autoAnswerTextMainCat(String messageHandling_autoAnswerTextMainCat) {
+		this.messageHandling_autoAnswerTextMainCat = messageHandling_autoAnswerTextMainCat;
+	}
+
+	public boolean isMsgHandling_autoAnswerEnabled() {
+		return messageHandling_autoAnswerEnabled;
+	}
+
+	public void setMessageHandling_autoAnswerEnabled(boolean messageHandling_autoAnswerEnabled) {
+		this.messageHandling_autoAnswerEnabled = messageHandling_autoAnswerEnabled;
+	}
+
+	public long getBcn_contestScoreSum() {
+		return bcn_contestScoreSum;
+	}
+
+	public void setBcn_contestScoreSum(long bcn_contestScoreSum) {
+		this.bcn_contestScoreSum = bcn_contestScoreSum;
+	}
+
+	public void setNotify_DXCSrv_SpottersCallSign(String notify_DXCSrv_SpottersCallSign) {
+		this.notify_DXCSrv_SpottersCallSign.set(notify_DXCSrv_SpottersCallSign);
+	}
+
+	public boolean isNotify_DXClusterServerTriggerBearing() {
+		return notify_DXClusterServerTriggerBearing;
+	}
+
+	public void setNotify_DXClusterServerTriggerBearing(boolean notify_DXClusterServerTriggerBearing) {
+		this.notify_DXClusterServerTriggerBearing = notify_DXClusterServerTriggerBearing;
+	}
+
+	public boolean isNotify_DXClusterServerTriggerOnQRGDetect() {
+		return notify_DXClusterServerTriggerOnQRGDetect;
+	}
+
+	public void setNotify_DXClusterServerTriggerOnQRGDetect(boolean notify_DXClusterServerTriggerOnQRGDetect) {
+		this.notify_DXClusterServerTriggerOnQRGDetect = notify_DXClusterServerTriggerOnQRGDetect;
+	}
+
+	public boolean isNotify_dxClusterServerEnabled() {
+		return notify_dxClusterServerEnabled;
+	}
+
+	public void setNotify_dxClusterServerEnabled(boolean notify_dxClusterServerEnabled) {
+		this.notify_dxClusterServerEnabled = notify_dxClusterServerEnabled;
+	}
+
+	public SimpleStringProperty getNotify_optionalFrequencyPrefix() {
+		return notify_optionalFrequencyPrefix;
+	}
+
+	public void setNotify_optionalFrequencyPrefix(SimpleStringProperty notify_optionalFrequencyPrefix) {
+		this.notify_optionalFrequencyPrefix = notify_optionalFrequencyPrefix;
+	}
+
+	public int getNotify_dxclusterServerPort() {
+		return notify_dxclusterServerPort;
+	}
+
+	public void setNotify_dxclusterServerPort(int notify_dxclusterServerPort) {
+		this.notify_dxclusterServerPort = notify_dxclusterServerPort;
+	}
 
 	public double[] getGUIscn_ChatwindowMainSceneSizeHW() {
 		return GUIscn_ChatwindowMainSceneSizeHW;
@@ -328,16 +570,16 @@ public class ChatPreferences {
 		this.stn_qtfDefault = stn_qtfDefault;
 	}
 
-	public boolean isLoginAFKState() {
-		return loginAFKState;
+	public boolean isStn_loginAFKState() {
+		return stn_loginAFKState;
 	}
 
-	public void setLoginAFKState(boolean loginAFKState) {
-		this.loginAFKState = loginAFKState;
+	public void setStn_loginAFKState(boolean stn_loginAFKState) {
+		this.stn_loginAFKState = stn_loginAFKState;
 	}
 
-	public String getLoginCallSign() {
-		return loginCallSign;
+	public String getStn_loginCallSign() {
+		return stn_loginCallSign;
 	}
 
 	public String getAirScout_asBandString() {
@@ -434,8 +676,8 @@ public class ChatPreferences {
 	 *
 	 */
 
-	public StringProperty getMYQRG() {
-		return MYQRG;
+	public StringProperty getMYQRGFirstCat() {
+		return MYQRGFirstCat;
 	}
 
 	public IntegerProperty getActualQTF() {
@@ -446,44 +688,44 @@ public class ChatPreferences {
 		this.actualQTF = actualQTF;
 	}
 
-	public void setMYQRG(StringProperty mYQRG) {
-		MYQRG = mYQRG;
+	public void setMYQRGFirstCat(StringProperty mYQRG) {
+		MYQRGFirstCat = mYQRG;
 	}
 
-	public void setLoginCallSign(String loginCallSign) {
-		this.loginCallSign = loginCallSign;
+	public void setStn_loginCallSign(String stn_loginCallSign) {
+		this.stn_loginCallSign = stn_loginCallSign;
 	}
 
-	public String getLoginPassword() {
-		return loginPassword;
+	public String getStn_loginPassword() {
+		return stn_loginPassword;
 	}
 
-	public void setLoginPassword(String loginPassword) {
-		this.loginPassword = loginPassword;
+	public void setStn_loginPassword(String stn_loginPassword) {
+		this.stn_loginPassword = stn_loginPassword;
 	}
 
-	public String getLoginName() {
-		return loginName;
+	public String getStn_loginNameMainCat() {
+		return stn_loginNameMainCat;
 	}
 
-	public void setLoginName(String loginName) {
-		this.loginName = loginName;
+	public void setStn_loginNameMainCat(String stn_loginNameMainCat) {
+		this.stn_loginNameMainCat = stn_loginNameMainCat;
 	}
 
-	public String getLoginLocator() {
-		return loginLocator;
+	public String getStn_loginLocatorMainCat() {
+		return stn_loginLocatorMainCat;
 	}
 
-	public void setLoginLocator(String loginLocator) {
-		this.loginLocator = loginLocator;
+	public void setStn_loginLocatorMainCat(String stn_loginLocatorMainCat) {
+		this.stn_loginLocatorMainCat = stn_loginLocatorMainCat;
 	}
 
-	public ChatCategory getLoginChatCategory() {
-		return loginChatCategory;
+	public ChatCategory getLoginChatCategoryMain() {
+		return loginChatCategoryMain;
 	}
 
-	public void setLoginChatCategory(ChatCategory loginChatCategory) {
-		this.loginChatCategory = loginChatCategory;
+	public void setLoginChatCategoryMain(ChatCategory loginChatCategoryMain) {
+		this.loginChatCategoryMain = loginChatCategoryMain;
 	}
 
 	public String getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly() {
@@ -527,7 +769,27 @@ public class ChatPreferences {
 		this.trxSynch_ucxLogUDPListenerEnabled = trxSynch_ucxLogUDPListenerEnabled;
 	}
 
-//	public String[] getShortcuts() {
+	public SimpleStringProperty notify_optionalFrequencyPrefixProperty() {
+		return notify_optionalFrequencyPrefix;
+	}
+
+	public void setNotify_optionalFrequencyPrefix(String notify_optionalFrequencyPrefix) {
+		this.notify_optionalFrequencyPrefix.set(notify_optionalFrequencyPrefix);
+	}
+
+	public SimpleStringProperty getNotify_DXCSrv_SpottersCallSign() {
+		return notify_DXCSrv_SpottersCallSign;
+	}
+
+	public SimpleStringProperty notify_DXCSrv_SpottersCallSignProperty() {
+		return notify_DXCSrv_SpottersCallSign;
+	}
+
+	public void setNotify_DXCSrv_SpottersCallSign(SimpleStringProperty notify_DXCSrv_SpottersCallSign) {
+		this.notify_DXCSrv_SpottersCallSign.setValue(notify_DXCSrv_SpottersCallSign.getValue());
+	}
+
+	//	public String[] getShortcuts() {
 //		return shortcuts;
 //	}
 //
@@ -543,8 +805,8 @@ public class ChatPreferences {
 //		this.textSnippets = textSnippets;
 //	}
 
-	public boolean isBcn_beaconsEnabled() {
-		return bcn_beaconsEnabled;
+	public boolean isBcn_beaconsEnabledMainCat() {
+		return bcn_beaconsEnabledMainCat;
 	}
 
 	public ObservableList<String> getLst_txtShortCutBtnList() {
@@ -563,59 +825,59 @@ public class ChatPreferences {
 		this.lst_txtSnipList = lst_txtSnipList;
 	}
 
-	public void setBcn_beaconsEnabled(boolean bcn_beaconsEnabled) {
-		this.bcn_beaconsEnabled = bcn_beaconsEnabled;
+	public void setBcn_beaconsEnabledMainCat(boolean bcn_beaconsEnabledMainCat) {
+		this.bcn_beaconsEnabledMainCat = bcn_beaconsEnabledMainCat;
 	}
 
-	public int getBcn_beaconIntervalInMinutes() {
-		return bcn_beaconIntervalInMinutes;
+	public int getBcn_beaconIntervalInMinutesMainCat() {
+		return bcn_beaconIntervalInMinutesMainCat;
 	}
 
-	public void setBcn_beaconIntervalInMinutes(int bcn_beaconIntervalInMinutes) {
-		this.bcn_beaconIntervalInMinutes = bcn_beaconIntervalInMinutes;
+	public void setBcn_beaconIntervalInMinutesMainCat(int bcn_beaconIntervalInMinutesMainCat) {
+		this.bcn_beaconIntervalInMinutesMainCat = bcn_beaconIntervalInMinutesMainCat;
 	}
 
-	public String getBcn_beaconText() {
-		return bcn_beaconText;
+	public String getBcn_beaconTextMainCat() {
+		return bcn_beaconTextMainCat;
 	}
 
-	public void setBcn_beaconText(String bcn_beaconText) {
+	public void setBcn_beaconTextMainCat(String bcn_beaconTextMainCat) {
 
-		this.bcn_beaconText = bcn_beaconText;
+		this.bcn_beaconTextMainCat = bcn_beaconTextMainCat;
 	}
 
 	 
 	
-	public String getUnwkd_beaconUnworkedstationsPrefix() {
-		return unwkd_beaconUnworkedstationsPrefix;
+	public String messageHandling_beaconUnworkedstationsPrefix() {
+		return messageHandling_beaconUnworkedstationsPrefix;
 	}
 
-	public void setUnwkd_beaconUnworkedstationsPrefix(String unwkd_beaconUnworkedstationsPrefix) {
-		this.unwkd_beaconUnworkedstationsPrefix = unwkd_beaconUnworkedstationsPrefix;
+	public void setMessageHandling_beaconUnworkedstationsPrefix(String messageHandling_beaconUnworkedstationsPrefix) {
+		this.messageHandling_beaconUnworkedstationsPrefix = messageHandling_beaconUnworkedstationsPrefix;
 	}
 
-	public boolean isUnwkd_unworkedStnRequesterBeaconsEnabled() {
-		return unwkd_unworkedStnRequesterBeaconsEnabled;
+	public boolean isMessageHandling_unworkedStnRequesterBeaconsEnabled() {
+		return messageHandling_unworkedStnRequesterBeaconsEnabled;
 	}
 
-	public void setUnwkd_unworkedStnRequesterBeaconsEnabled(boolean unwkd_unworkedStnRequesterBeaconsEnabled) {
-		this.unwkd_unworkedStnRequesterBeaconsEnabled = unwkd_unworkedStnRequesterBeaconsEnabled;
+	public void setMessageHandling_unworkedStnRequesterBeaconsEnabled(boolean messageHandling_unworkedStnRequesterBeaconsEnabled) {
+		this.messageHandling_unworkedStnRequesterBeaconsEnabled = messageHandling_unworkedStnRequesterBeaconsEnabled;
 	}
 
-	public int getUnwkd_unworkedStnRequesterBeaconsInterval() {
-		return unwkd_unworkedStnRequesterBeaconsInterval;
+	public int getMessageHandling_unworkedStnRequesterBeaconsInterval() {
+		return messageHandling_unworkedStnRequesterBeaconsInterval;
 	}
 
-	public void setUnwkd_unworkedStnRequesterBeaconsInterval(int unwkd_unworkedStnRequesterBeaconsInterval) {
-		this.unwkd_unworkedStnRequesterBeaconsInterval = unwkd_unworkedStnRequesterBeaconsInterval;
+	public void setMessageHandling_unworkedStnRequesterBeaconsInterval(int messageHandling_unworkedStnRequesterBeaconsInterval) {
+		this.messageHandling_unworkedStnRequesterBeaconsInterval = messageHandling_unworkedStnRequesterBeaconsInterval;
 	}
 
-	public String getUnwkd_unworkedStnRequesterBeaconsText() {
-		return unwkd_unworkedStnRequesterBeaconsText;
+	public String getMessageHandling_unworkedStnRequesterBeaconsText() {
+		return messageHandling_unworkedStnRequesterBeaconsText;
 	}
 
-	public void setUnwkd_unworkedStnRequesterBeaconsText(String unwkd_unworkedStnRequesterBeaconsText) {
-		this.unwkd_unworkedStnRequesterBeaconsText = unwkd_unworkedStnRequesterBeaconsText;
+	public void setMessageHandling_unworkedStnRequesterBeaconsText(String messageHandling_unworkedStnRequesterBeaconsText) {
+		this.messageHandling_unworkedStnRequesterBeaconsText = messageHandling_unworkedStnRequesterBeaconsText;
 	}
 
 	public String getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup() {
@@ -634,6 +896,8 @@ public class ChatPreferences {
 	public void setStoreAndRestorePreferencesFileName(String storeAndRestorePreferencesFileName) {
 		this.storeAndRestorePreferencesFileName = storeAndRestorePreferencesFileName;
 	}
+
+
 
 	/**
 	 * 
@@ -655,25 +919,37 @@ public class ChatPreferences {
 		      rootElement.appendChild(station);
 		      
 		      Element LoginCallSign = doc.createElement("LoginCallSign");
-		      LoginCallSign.setTextContent(this.getLoginCallSign());
+		      LoginCallSign.setTextContent(this.getStn_loginCallSign());
 		      station.appendChild(LoginCallSign);
 		      
 
 		      Element LoginPassword = doc.createElement("LoginPassword");
-		      LoginPassword.setTextContent(this.getLoginPassword());
+		      LoginPassword.setTextContent(this.getStn_loginPassword());
 		      station.appendChild(LoginPassword);
 
 		      Element LoginDisplayedName = doc.createElement("LoginDisplayedName");
-		      LoginDisplayedName.setTextContent(this.getLoginName());
+		      LoginDisplayedName.setTextContent(this.getStn_loginNameMainCat());
 		      station.appendChild(LoginDisplayedName);
 
+			Element stn_loginNameSecondCat = doc.createElement("stn_loginNameSecondCat");
+			stn_loginNameSecondCat.setTextContent(this.getStn_loginNameSecondCat());
+			station.appendChild(stn_loginNameSecondCat);
+
 		      Element LoginLocator = doc.createElement("LoginLocator");
-		      LoginLocator.setTextContent(this.getLoginLocator());
+		      LoginLocator.setTextContent(this.getStn_loginLocatorMainCat());
 		      station.appendChild(LoginLocator);
 
 		      Element ChatCategory = doc.createElement("ChatCategory");
-		      ChatCategory.setTextContent(this.getLoginChatCategory().getCategoryNumber()+"");
+		      ChatCategory.setTextContent(this.getLoginChatCategoryMain().getCategoryNumber()+"");
 		      station.appendChild(ChatCategory);
+
+			Element ChatCategorySecond = doc.createElement("ChatCategorySecond");
+			ChatCategorySecond.setTextContent(this.getLoginChatCategorySecond().getCategoryNumber()+"");
+			station.appendChild(ChatCategorySecond);
+
+			Element stn_secondCatEnabled = doc.createElement("stn_secondCatEnabled");
+			stn_secondCatEnabled.setTextContent(this.loginToSecondChatEnabled+"");
+			station.appendChild(stn_secondCatEnabled);
 
 			Element stn_antennaBeamWidthDeg = doc.createElement("stn_antennaBeamWidthDeg");
 			stn_antennaBeamWidthDeg.setTextContent(this.stn_antennaBeamWidthDeg+"");
@@ -715,21 +991,6 @@ public class ChatPreferences {
 			stn_bandActive10G.setTextContent(this.stn_bandActive10G+"");
 			station.appendChild(stn_bandActive10G);
 
-//		      Element salary = doc.createElement("salary");
-//		      salary.setAttribute("currency", "USD");
-//		      salary.setTextContent("5000");
-//		      staff.appendChild(salary);
-
-		      // add xml comment
-		      Comment comment = doc.createComment(
-		              "for special characters like < &, need CDATA");
-//		      staff.appendChild(comment);
-
-//		      Element bio = doc.createElement("bio");
-		      // add xml CDATA
-		      
-//		      staff.appendChild(bio);
-		      
 		      /**
 		       * LOGSYNCH
 		       */
@@ -770,7 +1031,7 @@ public class ChatPreferences {
 		      trxSynchUCX.appendChild(trxSynch_ucxLogUDPListenerEnabled);
 		      
 		      Element trxSynch_defaultMYQRGValue = doc.createElement("trxSynch_defaultMYQRGValue");
-		      trxSynch_defaultMYQRGValue.setTextContent(this.getMYQRG().getValue());
+		      trxSynch_defaultMYQRGValue.setTextContent(this.getMYQRGFirstCat().getValue());
 		      trxSynchUCX.appendChild(trxSynch_defaultMYQRGValue);
 
 		      
@@ -824,6 +1085,29 @@ public class ChatPreferences {
 			notify_VoiceCallSignAudioNotificationsEnabled.setTextContent(this.isNotify_playVoiceCallsignsOnRxedPMs()+"");
 			notifications.appendChild(notify_VoiceCallSignAudioNotificationsEnabled);
 
+			Element notify_dxClusterServerEnabledToFile = doc.createElement("notify_dxClusterServerEnabled");
+			notify_dxClusterServerEnabledToFile.setTextContent(this.isNotify_dxClusterServerEnabled() + "");
+			notifications.appendChild(notify_dxClusterServerEnabledToFile);
+
+			Element notify_DXClusterServerTriggerBearingToFile = doc.createElement("notify_DXClusterServerTriggerBearing");
+			notify_DXClusterServerTriggerBearingToFile.setTextContent(this.isNotify_DXClusterServerTriggerBearing() + "");
+			notifications.appendChild(notify_DXClusterServerTriggerBearingToFile);
+
+			Element notify_DXClusterServerTriggerOnQRGDetectToFile = doc.createElement("notify_DXClusterServerTriggerOnQRGDetect");
+			notify_DXClusterServerTriggerOnQRGDetectToFile.setTextContent(this.isNotify_DXClusterServerTriggerOnQRGDetect() + "");
+			notifications.appendChild(notify_DXClusterServerTriggerOnQRGDetectToFile);
+
+			Element notify_dxclusterServerPortToFile = doc.createElement("notify_dxclusterServerPort");
+			notify_dxclusterServerPortToFile.setTextContent(this.getNotify_dxclusterServerPort()+ "");
+			notifications.appendChild(notify_dxclusterServerPortToFile);
+
+			Element notify_optionalFrequencyPrefixToFile = doc.createElement("notify_optionalFrequencyPrefix");
+			notify_optionalFrequencyPrefixToFile.setTextContent(this.getNotify_optionalFrequencyPrefix().get());
+			notifications.appendChild(notify_optionalFrequencyPrefixToFile);
+
+			Element notify_DXCSrv_SpottersCallSignToFile = doc.createElement("notify_DXCSrv_SpottersCallSign");
+			notify_DXCSrv_SpottersCallSignToFile.setTextContent(this.getNotify_DXCSrv_SpottersCallSign().get());
+			notifications.appendChild(notify_DXCSrv_SpottersCallSignToFile);
 
 		      /**
 		       * Shortcuts
@@ -860,48 +1144,104 @@ public class ChatPreferences {
 
 		      Element beaconCQ = doc.createElement("beaconCQ");
 		      rootElement.appendChild(beaconCQ);
-		      
-		      
+
 		      Element beaconCQText = doc.createElement("beaconCQText");
-		      beaconCQText.setTextContent(this.getBcn_beaconText());
+		      beaconCQText.setTextContent(this.getBcn_beaconTextMainCat());
 		      beaconCQ.appendChild(beaconCQText);
 		      
 		      Element beaconCQIntervalMinutes = doc.createElement("beaconCQIntervalMinutes");
-		      beaconCQIntervalMinutes.setTextContent(this.getBcn_beaconIntervalInMinutes()+"");
+		      beaconCQIntervalMinutes.setTextContent(this.getBcn_beaconIntervalInMinutesMainCat()+"");
 		      beaconCQ.appendChild(beaconCQIntervalMinutes);
 		      
 		      Element beaconCQEnabled = doc.createElement("beaconCQEnabled");
-		      beaconCQEnabled.setTextContent(this.isBcn_beaconsEnabled()+"");
+		      beaconCQEnabled.setTextContent(this.isBcn_beaconsEnabledMainCat()+"");
 		      beaconCQ.appendChild(beaconCQEnabled);
-		      
-		      
-		      
+
+
+			Element beaconCQTextSecondText = doc.createElement("beaconCQTextSecondText");
+			beaconCQTextSecondText.setTextContent(this.getBcn_beaconTextSecondCat());
+			beaconCQ.appendChild(beaconCQTextSecondText);
+
+			Element beaconCQIntervalMinutesSecondCat = doc.createElement("beaconCQIntervalMinutesSecondCat");
+			beaconCQIntervalMinutesSecondCat.setTextContent(this.getBcn_beaconIntervalInMinutesSecondCat()+"");
+			beaconCQ.appendChild(beaconCQIntervalMinutesSecondCat);
+
+			Element beaconCQEnabledSecondCat = doc.createElement("beaconCQEnabledSecondCat");
+			beaconCQEnabledSecondCat.setTextContent(this.isBcn_beaconsEnabledSecondCat()+"");
+			beaconCQ.appendChild(beaconCQEnabledSecondCat);
+
 		      /**
-		       * Beacon Unworked Stations
+		       * Messagehandling section / ex Beacon Unworked Stations
 		       */
 
 		      Element beaconUnworkedstations = doc.createElement("beaconUnworkedstations");
 		      rootElement.appendChild(beaconUnworkedstations);
 
 		      Element beaconUnworkedstationsText = doc.createElement("beaconUnworkedstationsText");
-		      beaconUnworkedstationsText.setTextContent(this.getUnwkd_unworkedStnRequesterBeaconsText());
+		      beaconUnworkedstationsText.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsText());
 		      beaconUnworkedstations.appendChild(beaconUnworkedstationsText);
 		      
 		      Element beaconUnworkedstationsIntervalMinutes = doc.createElement("beaconUnworkedstationsIntervalMinutes");
-		      beaconUnworkedstationsIntervalMinutes.setTextContent(this.getUnwkd_unworkedStnRequesterBeaconsInterval()+"");
+		      beaconUnworkedstationsIntervalMinutes.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsInterval()+"");
 		      beaconUnworkedstations.appendChild(beaconUnworkedstationsIntervalMinutes);
 
 		      Element beaconUnworkedstationsEnabled = doc.createElement("beaconUnworkedstationsEnabled");
-		      beaconUnworkedstationsEnabled.setTextContent(this.isUnwkd_unworkedStnRequesterBeaconsEnabled()+"");
+		      beaconUnworkedstationsEnabled.setTextContent(this.isMessageHandling_unworkedStnRequesterBeaconsEnabled()+"");
 		      beaconUnworkedstations.appendChild(beaconUnworkedstationsEnabled);
 		      
 		      Element beaconUnworkedstationsPrefix = doc.createElement("beaconUnworkedstationsPrefix");
-		      beaconUnworkedstationsPrefix.setTextContent(this.getUnwkd_beaconUnworkedstationsPrefix());
+		      beaconUnworkedstationsPrefix.setTextContent(this.messageHandling_beaconUnworkedstationsPrefix());
 		      beaconUnworkedstations.appendChild(beaconUnworkedstationsPrefix);
+
+			/*****************************************************************
+			 * MESSAGEHANDLING NEW  .... BEACONUNWORKED HAVE TO BE REPLACED
+			 ****************************************************************/
+
+			Element messageHandling = doc.createElement("messageHandling");
+			rootElement.appendChild(messageHandling);
+
+			Element autoAnswerText = doc.createElement("autoAnswerText");
+			autoAnswerText.setTextContent(this.getMessageHandling_autoAnswerTextMainCat());
+			messageHandling.appendChild(autoAnswerText);
+
+			Element autoAnswerEnabled = doc.createElement("autoAnswerEnabled");
+			autoAnswerEnabled.setTextContent(this.isMsgHandling_autoAnswerEnabled()+"");
+			messageHandling.appendChild(autoAnswerEnabled);
+
+			Element autoAnswerTextSecondCat = doc.createElement("autoAnswerTextSecondCat");
+			autoAnswerTextSecondCat.setTextContent(this.getMessageHandling_autoAnswerTextSecondCat());
+			messageHandling.appendChild(autoAnswerTextSecondCat);
+
+			Element autoAnswerEnabledSecondCat = doc.createElement("autoAnswerEnabledSecondCat");
+			autoAnswerEnabledSecondCat.setTextContent(this.isMessageHandling_autoAnswerEnabledSecondCat()+"");
+			messageHandling.appendChild(autoAnswerEnabledSecondCat);
+
+			Element autoAnswerToQrgRequestEnabled = doc.createElement("autoAnswerToQrgRequestEnabled");
+			autoAnswerToQrgRequestEnabled.setTextContent(isMessageHandling_autoAnswerToQRGRequestEnabled()+"");
+			messageHandling.appendChild(autoAnswerToQrgRequestEnabled);
 
 			/****************************
 			 * GUI BEHAVIOUR
 			 ***************************/
+
+			Element guiSaveableOptions = doc.createElement("guiSaveableOptions");
+			rootElement.appendChild(guiSaveableOptions);
+
+			Element guiOptions_defaultFilterNothing = doc.createElement("guiOptions_defaultFilterNothing");
+			guiOptions_defaultFilterNothing.setTextContent(this.isGuiOptions_defaultFilterNothing()+"");
+			guiSaveableOptions.appendChild(guiOptions_defaultFilterNothing);
+
+			Element guiOptions_defaultFilterPmToMe = doc.createElement("guiOptions_defaultFilterPmToMe");
+			guiOptions_defaultFilterPmToMe.setTextContent(this.isGuiOptions_defaultFilterPmToMe()+"");
+			guiSaveableOptions.appendChild(guiOptions_defaultFilterPmToMe);
+
+			Element guiOptions_defaultFilterPmToOther = doc.createElement("guiOptions_defaultFilterPmToOther");
+			guiOptions_defaultFilterPmToOther.setTextContent(this.isGuiOptions_defaultFilterPmToOther()+"");
+			guiSaveableOptions.appendChild(guiOptions_defaultFilterPmToOther);
+
+			Element guiOptions_defaultFilterPublicMsgs = doc.createElement("guiOptions_defaultFilterPublicMsgs");
+			guiOptions_defaultFilterPublicMsgs.setTextContent(this.isGuiOptions_defaultFilterPublicMsgs()+"");
+			guiSaveableOptions.appendChild(guiOptions_defaultFilterPublicMsgs);
 
 			/**
 			 * window sizes
@@ -1035,28 +1375,62 @@ public class ChatPreferences {
 						Element element = (Element) node;
 
 						String call = element.getElementsByTagName("LoginCallSign").item(0).getTextContent();
-						loginCallSign = call;
+						stn_loginCallSign = call;
 
 //						call = call.toLowerCase();
 						String password = element.getElementsByTagName("LoginPassword").item(0).getTextContent();
-						loginPassword = password;
+						stn_loginPassword = password;
 
 						String loginDisplayedName = element.getElementsByTagName("LoginDisplayedName").item(0)
 								.getTextContent();
-						loginName = loginDisplayedName;
+						stn_loginNameMainCat = loginDisplayedName;
+
+						try {
+							String loginDisplayedNameSecondCat = element.getElementsByTagName("stn_loginNameSecondCat").item(0)
+									.getTextContent();
+							stn_loginNameSecondCat = loginDisplayedNameSecondCat;
+						} catch (Exception previousVersionExc) {
+							stn_loginNameSecondCat = "KST4Contest2nd";
+						}
 
 						String qra = element.getElementsByTagName("LoginLocator").item(0).getTextContent();
-						loginLocator = qra;
+						stn_loginLocatorMainCat = qra;
 
 						String category = element.getElementsByTagName("ChatCategory").item(0).getTextContent();
 
 						if (isNumeric(category)) {
 							ChatCategory chatCategory = new ChatCategory(Integer.parseInt(category));
-							loginChatCategory = chatCategory;
+							loginChatCategoryMain = chatCategory;
 						} else {
 
-							loginChatCategory = new ChatCategory(2); // TODO: Set this default at another place
+							loginChatCategoryMain = new ChatCategory(2); // TODO: Set this default at another place
 						}
+
+						try {
+
+							String ChatCategorySecond = element.getElementsByTagName("ChatCategorySecond").item(0).getTextContent();
+							if (isNumeric(ChatCategorySecond)) {
+								ChatCategory chatCategory2 = new ChatCategory(Integer.parseInt(ChatCategorySecond));
+								loginChatCategorySecond = chatCategory2;
+							} else {
+								loginChatCategorySecond = new ChatCategory(3); // TODO: Set this default at another place
+							}
+
+							String secondCatEnabledOrNot = element
+									.getElementsByTagName("stn_secondCatEnabled").item(0)
+									.getTextContent();
+
+							if (secondCatEnabledOrNot.equals("true")) {
+
+								loginToSecondChatEnabled = true;
+							} else {
+								loginToSecondChatEnabled = false;
+							}
+						} catch (Exception prevVersionExc){
+							loginToSecondChatEnabled = false; //default if setting not found
+						}
+
+
 
 						double antennaBeamWidthDeg = Double.parseDouble(element.getElementsByTagName("stn_antennaBeamWidthDeg").item(0).getTextContent());
 						stn_antennaBeamWidthDeg = antennaBeamWidthDeg;
@@ -1264,18 +1638,22 @@ public class ChatPreferences {
 						String trxSynch_defaultMYQRGValue = element.getElementsByTagName("trxSynch_defaultMYQRGValue")
 								.item(0).getTextContent();
 
-						this.getMYQRG().setValue(trxSynch_defaultMYQRGValue);
+						this.getMYQRGFirstCat().setValue(trxSynch_defaultMYQRGValue);
 
-//						this.getMYQRG().addListener((observable, oldValue, newValue) -> {
-//						    System.out.println("[Chatprefs.java, Info]: MYQRG changed from " + oldValue + " to " + newValue);
-////						    this.getMYQRG().
-////						    txt_ownqrg.setText(newValue);
-//						});
+						String trxSynch_defaultMYQRG2Value;
+						try{
+							trxSynch_defaultMYQRG2Value = element.getElementsByTagName("trxSynch_defaultMYQRG2Value")
+									.item(0).getTextContent();
 
-//						
+						} catch (Exception notFoundExc) {
+							trxSynch_defaultMYQRG2Value = "1296.123.00"; //v1.26, new setting
+						}
+
+						this.getMYQRGSecondCat().setValue(trxSynch_defaultMYQRG2Value);
+
 						System.out.println(
 								"[ChatPreferences, info]: Set the trx qrg synch to " + trxSynch_ucxLogUDPListenerEnabled
-										+ " and default value to " + this.getMYQRG().getValue());
+										+ " and default value to " + this.getMYQRGFirstCat().getValue() + " // " + this.getMYQRGSecondCat().getValue());
 
 					}
 				}
@@ -1321,6 +1699,56 @@ public class ChatPreferences {
 							notify_playVoiceCallsignsOnRxedPMs = true;
 						} else {
 							notify_playVoiceCallsignsOnRxedPMs = false;
+						}
+
+						try { //try catch block since Version 1.23 due to new prefs to save and read
+
+							String notify_dxClusterServerEnabledFromFile = element.getElementsByTagName("notify_dxClusterServerEnabled").item(0)
+									.getTextContent();
+
+							if (notify_dxClusterServerEnabledFromFile.equals("true")) {
+								notify_dxClusterServerEnabled = true;
+							} else {
+								notify_dxClusterServerEnabled = false;
+							}
+
+							String notify_DXClusterServerTriggerBearingFromFile = element.getElementsByTagName("notify_DXClusterServerTriggerBearing").item(0)
+									.getTextContent();
+
+							if (notify_DXClusterServerTriggerBearingFromFile.equals("true")) {
+								notify_DXClusterServerTriggerBearing = true;
+							} else {
+								notify_DXClusterServerTriggerBearing = false;
+							}
+
+							String notify_DXClusterServerTriggerOnQRGDetectFromFile = element.getElementsByTagName("notify_DXClusterServerTriggerOnQRGDetect").item(0)
+									.getTextContent();
+
+							if (notify_DXClusterServerTriggerOnQRGDetectFromFile.equals("true")) {
+								notify_DXClusterServerTriggerOnQRGDetect = true;
+							} else {
+								notify_DXClusterServerTriggerOnQRGDetect = false;
+							}
+
+							String notify_dxclusterServerPortFromFile = element
+									.getElementsByTagName("notify_dxclusterServerPort").item(0).getTextContent();
+
+							if (isNumeric(notify_dxclusterServerPortFromFile)) {
+								notify_dxclusterServerPort = Integer.parseInt(notify_dxclusterServerPortFromFile);
+							} else {
+//								notify_dxclusterServerPort = 8000; Default setted on very top of file
+							}
+
+							String notify_DXCSrv_SpottersCallSignFromFile = element.getElementsByTagName("notify_DXCSrv_SpottersCallSign").item(0).getTextContent();
+							notify_DXCSrv_SpottersCallSign.set(notify_DXCSrv_SpottersCallSignFromFile);
+
+							String notify_optionalFrequencyPrefixFromFile = element.getElementsByTagName("notify_optionalFrequencyPrefix").item(0).getTextContent();
+							notify_optionalFrequencyPrefix.set(notify_optionalFrequencyPrefixFromFile);
+
+
+						} catch (NullPointerException e) {
+							e.printStackTrace();
+							System.out.println("[ChatPreferences, Warning:] some monitoring preferences could not be found in "+ storeAndRestorePreferencesFileName +". Using defaults.");
 						}
 
 						System.out.println(
@@ -1475,25 +1903,55 @@ public class ChatPreferences {
 
 						if (beaconCQEnabled.equals("true")) {
 
-							bcn_beaconsEnabled = true;
+							bcn_beaconsEnabledMainCat = true;
 						} else {
-							bcn_beaconsEnabled = false;
+							bcn_beaconsEnabledMainCat = false;
 						}
 
 						String beaconCQIntervalMinutes = element.getElementsByTagName("beaconCQIntervalMinutes").item(0)
 								.getTextContent();
 
 						if (isNumeric(beaconCQIntervalMinutes)) {
-							bcn_beaconIntervalInMinutes = Integer.parseInt(beaconCQIntervalMinutes);
+							bcn_beaconIntervalInMinutesMainCat = Integer.parseInt(beaconCQIntervalMinutes);
 						} else {
-							bcn_beaconIntervalInMinutes = 20; // Default value, TODO: Set this in default list
+							bcn_beaconIntervalInMinutesMainCat = 20; // Default value, TODO: Set this in default list
 						}
 
 						String beaconCQText = element.getElementsByTagName("beaconCQText").item(0).getTextContent();
-						this.setBcn_beaconText(beaconCQText);
+						this.setBcn_beaconTextMainCat(beaconCQText);
 
-//						
-						System.out.println("[ChatPreferences, info]: set the beacon text to: " + beaconCQText);
+						String beaconCQEnabledSecondCat;
+						try {
+							beaconCQEnabledSecondCat = element.getElementsByTagName("beaconCQEnabledSecondCat").item(0)
+									.getTextContent();
+
+							if (beaconCQEnabledSecondCat.equals("true")) {
+
+								bcn_beaconsEnabledSecondCat = true;
+							} else {
+								bcn_beaconsEnabledSecondCat = false;
+							}
+
+							String beaconCQIntervalMinutesSecondCat = element.getElementsByTagName("beaconCQIntervalMinutesSecondCat").item(0)
+									.getTextContent();
+
+							if (isNumeric(beaconCQIntervalMinutesSecondCat)) {
+								bcn_beaconIntervalInMinutesSecondCat = Integer.parseInt(beaconCQIntervalMinutesSecondCat);
+							} else {
+								bcn_beaconIntervalInMinutesSecondCat = 3; // Default value, TODO: Set this in default list
+							}
+
+							String beaconCQTextSecondText = element.getElementsByTagName("beaconCQTextSecondText").item(0).getTextContent();
+							this.setBcn_beaconTextSecondCat(beaconCQTextSecondText);
+
+						} catch (Exception previousVersionException) {
+							bcn_beaconsEnabledSecondCat = false;
+							bcn_beaconIntervalInMinutesSecondCat = 3;
+							this.setBcn_beaconTextSecondCat(this.getStn_loginCallSign() + " is QRV, pse sked for contact");
+
+						}
+//
+						System.out.println("[ChatPreferences, info]: set the beacon text to: " + beaconCQText  + " and " + this.getBcn_beaconTextSecondCat());
 
 					}
 				}
@@ -1517,37 +1975,132 @@ public class ChatPreferences {
 //
 						String beaconUnworkedstationsText = element.getElementsByTagName("beaconUnworkedstationsText")
 								.item(0).getTextContent();
-						unwkd_unworkedStnRequesterBeaconsText = beaconUnworkedstationsText;
+						messageHandling_unworkedStnRequesterBeaconsText = beaconUnworkedstationsText;
 
 						String beaconUnworkedstationsIntervalMinutes = element
 								.getElementsByTagName("beaconUnworkedstationsIntervalMinutes").item(0).getTextContent();
 
 						if (isNumeric(beaconUnworkedstationsIntervalMinutes)) {
-							unwkd_unworkedStnRequesterBeaconsInterval = Integer
+							messageHandling_unworkedStnRequesterBeaconsInterval = Integer
 									.parseInt(beaconUnworkedstationsIntervalMinutes);
 						} else {
-							unwkd_unworkedStnRequesterBeaconsInterval = 20;
+							messageHandling_unworkedStnRequesterBeaconsInterval = 20;
 						}
 
 						String beaconUnworkedstationsEnabled = element
 								.getElementsByTagName("beaconUnworkedstationsEnabled").item(0).getTextContent();
 
 						if (beaconUnworkedstationsEnabled.equals("true")) {
-							unwkd_unworkedStnRequesterBeaconsEnabled = true;
+							messageHandling_unworkedStnRequesterBeaconsEnabled = true;
 						} else {
-							unwkd_unworkedStnRequesterBeaconsEnabled = false;
+							messageHandling_unworkedStnRequesterBeaconsEnabled = false;
 						}
 						
 						String beaconUnworkedstationsPrefix = element
 								.getElementsByTagName("beaconUnworkedstationsPrefix").item(0).getTextContent();
 
-						unwkd_beaconUnworkedstationsPrefix = beaconUnworkedstationsPrefix;
+						messageHandling_beaconUnworkedstationsPrefix = beaconUnworkedstationsPrefix;
 
 					}
 				}
 				System.out.println("[ChatPreferences, info]: set the unworked stn beacon text to: "
-						+ unwkd_unworkedStnRequesterBeaconsText);
+						+ messageHandling_unworkedStnRequesterBeaconsText);
 			}
+
+
+
+			/***********************************************
+			 *
+			 * case messageHandling
+			 *
+			 ***********************************************/
+			list = doc.getElementsByTagName("messageHandling");
+			if (list.getLength() != 0) {
+
+				for (int temp = 0; temp < list.getLength(); temp++) {
+
+					Node node = list.item(temp);
+
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+
+						Element element = (Element) node;
+
+						try{
+
+							String autoAnswerText = element.getElementsByTagName("autoAnswerText").item(0)
+									.getTextContent();
+
+							this.setMessageHandling_autoAnswerTextMainCat(autoAnswerText);
+
+							String autoAnswerEnabled = element.getElementsByTagName("autoAnswerEnabled").item(0)
+									.getTextContent();
+
+							if (autoAnswerEnabled.equals("true")) {
+								this.setMessageHandling_autoAnswerEnabled(true);
+							} else {
+								this.setMessageHandling_autoAnswerEnabled(false);
+							}
+
+							String autoAnswerToQrgRequestEnabled = element.getElementsByTagName("autoAnswerToQrgRequestEnabled").item(0)
+									.getTextContent();
+
+							if (autoAnswerToQrgRequestEnabled.equals("true")) {
+								this.setMessageHandling_autoAnswerToQRGRequestEnabled(true);
+							} else {
+								this.setMessageHandling_autoAnswerToQRGRequestEnabled(false);
+							}
+
+
+						}
+
+						catch (NullPointerException tooOldConfigFileOrFormatError) {
+							/**
+							 * In program version 1.24 there had not been these settings in the xml and not founding em
+							 * would cause an exception and dumb values for the preferences. So we have to initialize
+							 * these variables and later write a proper configfile which can be used correctly then.
+							 *
+							 * So THESE ARE DEFAULTS for the new variables
+							 */
+
+							tooOldConfigFileOrFormatError.printStackTrace();
+							this.setMessageHandling_autoAnswerTextMainCat("Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
+							this.setMessageHandling_autoAnswerEnabled(false);
+							this.setMessageHandling_autoAnswerToQRGRequestEnabled(true);
+						}
+
+						try {
+							String autoAnswerTextSecondCat = element.getElementsByTagName("autoAnswerTextSecondCat").item(0)
+									.getTextContent();
+
+							this.setMessageHandling_autoAnswerTextSecondCat(autoAnswerTextSecondCat);
+
+
+							String autoAnswerEnabledSecondCat = element.getElementsByTagName("autoAnswerEnabledSecondCat").item(0)
+									.getTextContent();
+
+							if (autoAnswerEnabledSecondCat.equals("true")) {
+								this.setMessageHandling_autoAnswerEnabledSecondCat(true);
+							} else {
+								this.setMessageHandling_autoAnswerEnabledSecondCat(false);
+							}
+						} catch (Exception prevVersionExc) {
+
+							String autoAnswerTextSecondCat = "[KST4Contest autoreply] change me ... ";
+							this.setMessageHandling_autoAnswerEnabledSecondCat(false);
+
+						}
+
+
+					}
+				}
+			}
+
+
+
+
+
+
+
 
 
 			/***********************************************
@@ -1616,17 +2169,13 @@ public class ChatPreferences {
 
 						}
 
-
-
-
-
 						catch (NullPointerException tooOldConfigFileOrFormatError) {
 							/**
 							 * In program version 1.2 there had not been these settings in the xml and not founding em
 							 * would cause an exception and dumb values for the preferences. So we have to initialize
 							 * these variables and later write a proper configfile which can be used correctly then.
 							 *
-							 * So THESE ARE DEFULTS
+							 * So THESE ARE DEFAULTS
 							 */
 
 							tooOldConfigFileOrFormatError.printStackTrace();
@@ -1641,6 +2190,83 @@ public class ChatPreferences {
 							GUImainWindowRightSplitPane_dividerposition = new double[]{0.8};
 							GUIpnl_directedMSGWin_dividerpositionDefault = new double[]{0.8};
 //							GUImainWindowLeftSplitPane_dividerposition
+						}
+					}
+				}
+			}
+
+			/***********************************************
+			 *
+			 * case read guiSaveableOptions
+			 *
+			 ***********************************************/
+			list = doc.getElementsByTagName("guiSaveableOptions");
+			if (list.getLength() != 0) {
+
+				for (int temp = 0; temp < list.getLength(); temp++) {
+
+					Node node = list.item(temp);
+
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+
+						Element element = (Element) node;
+
+						try{
+
+							String guiOptions_defaultFilterNothing = element.getElementsByTagName("guiOptions_defaultFilterNothing").item(0)
+									.getTextContent();
+
+							if (guiOptions_defaultFilterNothing.equals("true")) {
+								this.setGuiOptions_defaultFilterNothing(true);
+							} else {
+								this.setGuiOptions_defaultFilterNothing(false);
+							}
+
+							String guiOptions_defaultFilterPmToMe = element.getElementsByTagName("guiOptions_defaultFilterPmToMe").item(0)
+									.getTextContent();
+
+							if (guiOptions_defaultFilterPmToMe.equals("true")) {
+								this.setGuiOptions_defaultFilterPmToMe(true);
+							} else {
+								this.setGuiOptions_defaultFilterNothing(false);
+							}
+
+							String guiOptions_defaultFilterPmToOther = element.getElementsByTagName("guiOptions_defaultFilterPmToOther").item(0)
+									.getTextContent();
+
+							if (guiOptions_defaultFilterPmToOther.equals("true")) {
+								this.setGuiOptions_defaultFilterPmToOther(true);
+							} else {
+								this.setGuiOptions_defaultFilterPmToOther(false);
+							}
+
+							String guiOptions_defaultFilterPublicMsgs = element.getElementsByTagName("guiOptions_defaultFilterPublicMsgs").item(0)
+									.getTextContent();
+
+							if (guiOptions_defaultFilterPublicMsgs.equals("true")) {
+								this.setGuiOptions_defaultFilterPublicMsgs(true);
+							} else {
+								this.setGuiOptions_defaultFilterPublicMsgs(false);
+							}
+
+
+						}
+
+
+
+
+
+						catch (NullPointerException tooOldConfigFileOrFormatError) {
+							/**
+							 * In program version 1.24 there had not been these settings in the xml and not founding em
+							 * would cause an exception and dumb values for the preferences. So we have to initialize
+							 * these variables and later write a proper configfile which can be used correctly then.
+							 *
+							 * So THESE ARE DEFAULTS for the new variables
+							 */
+
+							tooOldConfigFileOrFormatError.printStackTrace();
+							this.setGuiOptions_defaultFilterPmToMe(true);
 						}
 					}
 				}
