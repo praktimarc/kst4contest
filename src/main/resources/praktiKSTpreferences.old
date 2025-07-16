@@ -3,18 +3,15 @@
     <station>
         <LoginCallSign>DO5AMF</LoginCallSign>
         <LoginPassword>changeMe</LoginPassword>
-        <LoginDisplayedName>KST4Contest1263</LoginDisplayedName>
-        <stn_loginNameSecondCat>KST4Contest1263</stn_loginNameSecondCat>
-        <LoginLocator>JO54ME</LoginLocator>
+        <LoginDisplayedName>KST4Contest</LoginDisplayedName>
+        <LoginLocator>JO51IJ</LoginLocator>
         <ChatCategory>2</ChatCategory>
-        <ChatCategorySecond>3</ChatCategorySecond>
-        <stn_secondCatEnabled>true</stn_secondCatEnabled>
-        <stn_antennaBeamWidthDeg>60.0</stn_antennaBeamWidthDeg>
-        <stn_maxQRBDefault>1333.0</stn_maxQRBDefault>
+        <stn_antennaBeamWidthDeg>50.0</stn_antennaBeamWidthDeg>
+        <stn_maxQRBDefault>900.0</stn_maxQRBDefault>
         <stn_qtfDefault>135.0</stn_qtfDefault>
         <stn_bandActive144>true</stn_bandActive144>
         <stn_bandActive432>true</stn_bandActive432>
-        <stn_bandActive1240>true</stn_bandActive1240>
+        <stn_bandActive1240>false</stn_bandActive1240>
         <stn_bandActive2300>false</stn_bandActive2300>
         <stn_bandActive3400>false</stn_bandActive3400>
         <stn_bandActive5600>false</stn_bandActive5600>
@@ -29,11 +26,11 @@
     </logsynch>
     <trxSynchUCX>
         <trxSynch_ucxLogUDPListenerEnabled>true</trxSynch_ucxLogUDPListenerEnabled>
-        <trxSynch_defaultMYQRGValue>144.123.00</trxSynch_defaultMYQRGValue>
+        <trxSynch_defaultMYQRGValue>144.374.50</trxSynch_defaultMYQRGValue>
     </trxSynchUCX>
     <AirScoutQuerier>
         <asQry_airScoutCommunicationEnabled>true</asQry_airScoutCommunicationEnabled>
-        <asQry_airScoutServerName>AS</asQry_airScoutServerName>
+        <asQry_airScoutServerName>KST</asQry_airScoutServerName>
         <asQry_airScoutClientName>KST</asQry_airScoutClientName>
         <asQry_airScoutUDPPort>9872</asQry_airScoutUDPPort>
         <asQry_airScoutBandValue>1440000</asQry_airScoutBandValue>
@@ -42,17 +39,13 @@
         <notify_SimpleAudioNotificationsEnabled>true</notify_SimpleAudioNotificationsEnabled>
         <notify_CWCallsignAudioNotificationsEnabled>true</notify_CWCallsignAudioNotificationsEnabled>
         <notify_VoiceCallsignAudioNotificationsEnabled>true</notify_VoiceCallsignAudioNotificationsEnabled>
-        <notify_dxClusterServerEnabled>true</notify_dxClusterServerEnabled>
-        <notify_DXClusterServerTriggerBearing>false</notify_DXClusterServerTriggerBearing>
-        <notify_DXClusterServerTriggerOnQRGDetect>false</notify_DXClusterServerTriggerOnQRGDetect>
-        <notify_dxclusterServerPort>8000</notify_dxclusterServerPort>
-        <notify_optionalFrequencyPrefix>432</notify_optionalFrequencyPrefix>
-        <notify_DXCSrv_SpottersCallSign>DO5AMF</notify_DXCSrv_SpottersCallSign>
     </notifications>
     <shortCuts>
-        <t>Hi OM, try Sked? FIRSTAP</t>
-        <t>TNX qso, 73!</t>
+        <t>Hi OM,</t>
+        <t>pse</t>
         <t>turn</t>
+        <t>ant</t>
+        <t>my</t>
         <t>dir</t>
         <t>sked</t>
         <t>ssb</t>
@@ -85,7 +78,6 @@
         <t>,</t>
         <t>/SETNAME MYQRG</t>
         <t>MYQRG</t>
-        <t>SECONDQRG</t>
     </shortCuts>
     <textSnippets>
         <t>Hi QRZNAME, try sked 2m? Ur QRG?</t>
@@ -109,12 +101,9 @@
         <t>Tnx fb qso, all ok, 73 es gl!</t>
     </textSnippets>
     <beaconCQ>
-        <beaconCQText>_.~'"´"'~.__.~'´ CQ CQ CQ NAC de MYCALL, pse try 144.317 for JO54 `'~.__.~'"`"'~._</beaconCQText>
-        <beaconCQIntervalMinutes>1</beaconCQIntervalMinutes>
+        <beaconCQText>_.~'"´"'~.__.~'´ CQ CQ CQ de MYCALL, pse call us at MYQRG `'~.__.~'"`"'~._</beaconCQText>
+        <beaconCQIntervalMinutes>5</beaconCQIntervalMinutes>
         <beaconCQEnabled>false</beaconCQEnabled>
-        <beaconCQTextSecondText>_.~'"´"'~.__.~'´ CQ CQ CQ de MYCALL, pse sked or SECONDQRG `'~.__.~'"`"'~._</beaconCQTextSecondText>
-        <beaconCQIntervalMinutesSecondCat>3</beaconCQIntervalMinutesSecondCat>
-        <beaconCQEnabledSecondCat>false</beaconCQEnabledSecondCat>
     </beaconCQ>
     <beaconUnworkedstations>
         <beaconUnworkedstationsText>Hi OM, pse Sked at MYQRG or your QRG</beaconUnworkedstationsText>
@@ -122,28 +111,15 @@
         <beaconUnworkedstationsEnabled>false</beaconUnworkedstationsEnabled>
         <beaconUnworkedstationsPrefix>OE</beaconUnworkedstationsPrefix>
     </beaconUnworkedstations>
-    <messageHandling>
-        <autoAnswerText>Hi, sry I am not qrv, just testing new features of KST4Contest 1.25</autoAnswerText>
-        <autoAnswerEnabled>false</autoAnswerEnabled>
-        <autoAnswerTextSecondCat>Hi, sry I am not qrv, just testing new features of KST4Contest 1.251</autoAnswerTextSecondCat>
-        <autoAnswerEnabledSecondCat>false</autoAnswerEnabledSecondCat>
-        <autoAnswerToQrgRequestEnabled>true</autoAnswerToQrgRequestEnabled>
-    </messageHandling>
-    <guiSaveableOptions>
-        <guiOptions_defaultFilterNothing>false</guiOptions_defaultFilterNothing>
-        <guiOptions_defaultFilterPmToMe>true</guiOptions_defaultFilterPmToMe>
-        <guiOptions_defaultFilterPmToOther>false</guiOptions_defaultFilterPmToOther>
-        <guiOptions_defaultFilterPublicMsgs>false</guiOptions_defaultFilterPublicMsgs>
-    </guiSaveableOptions>
     <guiOptions>
-        <GUIscn_ChatwindowMainSceneSizeHW>1080.800048828125;2048.0</GUIscn_ChatwindowMainSceneSizeHW>
-        <GUIclusterAndQSOMonStage_SceneSizeHW>1196.800048828125;259.20001220703125</GUIclusterAndQSOMonStage_SceneSizeHW>
+        <GUIscn_ChatwindowMainSceneSizeHW>748.0;1544.800048828125</GUIscn_ChatwindowMainSceneSizeHW>
+        <GUIclusterAndQSOMonStage_SceneSizeHW>765.5999755859375;467.20001220703125</GUIclusterAndQSOMonStage_SceneSizeHW>
         <GUIstage_updateStage_SceneSizeHW>640.0;480.0</GUIstage_updateStage_SceneSizeHW>
         <GUIsettingsStageSceneSizeHW>720.0;768.0</GUIsettingsStageSceneSizeHW>
-        <GUIselectedCallSignSplitPane_dividerposition>0.5154494382022472</GUIselectedCallSignSplitPane_dividerposition>
-        <GUImainWindowLeftSplitPane_dividerposition>0.45846364347146207</GUImainWindowLeftSplitPane_dividerposition>
-        <GUImessageSectionSplitpane_dividerposition>0.5284522003034902;0.5853566009104704;0.6157056145675266</GUImessageSectionSplitpane_dividerposition>
-        <GUImainWindowRightSplitPane_dividerposition>0.5749241274658573</GUImainWindowRightSplitPane_dividerposition>
-        <GUIpnl_directedMSGWin_dividerpositionDefault>0.1754658301944221</GUIpnl_directedMSGWin_dividerpositionDefault>
+        <GUIselectedCallSignSplitPane_dividerposition>0.5120192307692308</GUIselectedCallSignSplitPane_dividerposition>
+        <GUImainWindowLeftSplitPane_dividerposition>0.5046632124352332</GUImainWindowLeftSplitPane_dividerposition>
+        <GUImessageSectionSplitpane_dividerposition>0.5102549889135255;0.5934035476718403;0.6377494456762749</GUImessageSectionSplitpane_dividerposition>
+        <GUImainWindowRightSplitPane_dividerposition>0.74029933481153</GUImainWindowRightSplitPane_dividerposition>
+        <GUIpnl_directedMSGWin_dividerpositionDefault>0.09707903525548366</GUIpnl_directedMSGWin_dividerpositionDefault>
     </guiOptions>
 </praktiKST>

@@ -2,6 +2,8 @@ package kst4contest.controller;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import kst4contest.model.ChatMessage;
 
@@ -17,7 +19,7 @@ public class WriteThread extends Thread {
 	private ChatController client;
 	private OutputStream output;
 
-	private ChatMessage messageTextRaw;
+	private ChatMessage messageToBeSend;
 
 	public WriteThread(Socket socket, ChatController client) throws InterruptedException {
 		this.socket = socket;
@@ -25,7 +27,9 @@ public class WriteThread extends Thread {
 
 		try {
 			output = socket.getOutputStream();
-			writer = new PrintWriter(output, true);
+
+			writer = new PrintWriter(output, true, StandardCharsets.UTF_8);
+
 		} catch (IOException ex) {
 			System.out.println("Error getting output stream: " + ex.getMessage());
 			ex.printStackTrace();
@@ -34,7 +38,8 @@ public class WriteThread extends Thread {
 
 	/**
 	 * This method is used to send a message to the server, raw formatted. E.g. for
-	 * the keepalive message.
+	 * the keepalive message. This method sends only in the main message-Category. To send it in a category
+	 * "defined by Chatmessage", use txByRxmsgCatOrigin(Chatmessage "toBeSend")
 	 * 
 	 * @param messageToServer
 	 * @throws InterruptedException
@@ -45,6 +50,33 @@ public class WriteThread extends Thread {
 //	   	writer.flush(); //kst4contest.test 4 23001
 		System.out.println(messageToServer.getMessageText() + "< sended to the writer");
 		writer.println(messageToServer.getMessageText());
+
+	}
+
+
+	/**
+	 * This method is used to send a message directly to a receiver in a special chatcategory. The receivers category
+	 * will be read out of the Chatmessage.getChatCategory method. <b> The message text will be modified to fit kst
+	 * messageformat</b>
+	 *
+	 * @param messageToServer
+	 * @throws InterruptedException
+	 */
+	public void txByRxmsgCatOrigin(ChatMessage messageToServer) throws InterruptedException {
+
+//	   	writer.println(messageToServer.getMessage()); //kst4contest.test 4 23001
+//	   	writer.flush(); //kst4contest.test 4 23001
+
+		String originalMessageText = messageToServer.getMessageText() + "";
+
+		String newMessageText = "";
+
+		newMessageText = ("MSG|" + messageToServer.getChatCategory().getCategoryNumber()
+				+ "|0|" + originalMessageText + "|0|"); //original before 1.26
+
+
+		System.out.println(newMessageText + "< sended to the writer (DIRECTED REPLY)");
+		writer.println(newMessageText);
 
 	}
 
@@ -59,29 +91,28 @@ public class WriteThread extends Thread {
 	public void txKSTFormatted(ChatMessage messageToServer) throws InterruptedException {
 
 //		writer.println(messageToServer.getMessageText());
-		messageTextRaw = messageToServer;
+		messageToBeSend = messageToServer;
 
 		try {
 
-			messageTextRaw = client.getMessageTXBus().take();
+			messageToBeSend = client.getMessageTXBus().take();
 //			this.client.getmesetChatsetServerready(true);
 
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		String messageLine = messageTextRaw.getMessageText();
+		String messageLine = messageToBeSend.getMessageText();
 
-		if (messageTextRaw.isMessageDirectedToServer()) {
+		if (messageToBeSend.isMessageDirectedToServer()) {
 			/**
 			 * We have to check if we only commands the server (keepalive) or want do talk
 			 * to the community
 			 */
 
 			try {
-				tx(messageTextRaw);
-				System.out.println("BUS: tx: " + messageTextRaw.getMessageText());
+				tx(messageToBeSend);
+				System.out.println("BUS: tx: " + messageToBeSend.getMessageText());
 
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
@@ -95,8 +126,8 @@ public class WriteThread extends Thread {
 //		ownMSG.setMessageText(
 //				"MSG|" + this.client.getCategory().getCategoryNumber() + "|0|" + messageLine + "|0|");
 
-			ownMSG.setMessageText("MSG|" + this.client.getChatPreferences().getLoginChatCategory().getCategoryNumber()
-					+ "|0|" + messageLine + "|0|");
+			ownMSG.setMessageText("MSG|" + this.client.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber()
+					+ "|0|" + messageLine + "|0|"); //original before 1.26
 
 			try {
 				tx(ownMSG);
@@ -108,7 +139,7 @@ public class WriteThread extends Thread {
 			}
 		}
 
-		if (messageTextRaw.equals("/QUIT")) {
+		if (messageToBeSend.equals("/QUIT")) {
 			try {
 				this.client.getReadThread().terminateConnection();
 				this.client.getReadThread().interrupt();
@@ -117,7 +148,6 @@ public class WriteThread extends Thread {
 				this.interrupt();
 
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -137,59 +167,62 @@ public class WriteThread extends Thread {
 
 		while (true) {
 			try {
-				messageTextRaw = client.getMessageTXBus().take();
+				messageToBeSend = client.getMessageTXBus().take();
 
-				if (messageTextRaw.getMessageText().equals("POISONPILL_KILLTHREAD")
-						&& messageTextRaw.getMessageSenderName().equals("POISONPILL_KILLTHREAD")) {
+				if (messageToBeSend.getMessageText().equals("POISONPILL_KILLTHREAD")
+						&& messageToBeSend.getMessageSenderName().equals("POISONPILL_KILLTHREAD")) {
 					client.getMessageRXBus().clear();
 					this.interrupt();
 					break;
 				} else {
-					String messageLine = messageTextRaw.getMessageText();
+					String messageLine = messageToBeSend.getMessageText();
 
-					if (messageTextRaw.isMessageDirectedToServer()) {
+					if (messageToBeSend.isMessageDirectedToServer()) {
 						/**
 						 * We have to check if we only commands the server (keepalive) or want do talk
 						 * to the community
 						 */
 
 						try {
-							tx(messageTextRaw);
-							System.out.println("BUS: tx: " + messageTextRaw.getMessageText());
+							tx(messageToBeSend);
+							System.out.println("BUS: tx: " + messageToBeSend.getMessageText());
 
 						} catch (InterruptedException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
 
-					} else {
+					} else { //message is not directed to the server, it´s directed to all or to a station
 
-						ChatMessage ownMSG = new ChatMessage();
+						if (messageToBeSend.getChatCategory() == this.client.getChatCategoryMain() || messageToBeSend.getChatCategory() == this.client.getChatCategorySecondChat()) {
 
-//				ownMSG.setMessageText(
-//						"MSG|" + this.client.getCategory().getCategoryNumber() + "|0|" + messageLine + "|0|");
+							txByRxmsgCatOrigin(messageToBeSend);
 
-						ownMSG.setMessageText(
-								"MSG|" + this.client.getChatPreferences().getLoginChatCategory().getCategoryNumber() + "|0|"
-										+ messageLine + "|0|");
+						} else { //default bhv if destination cat is not detectable
 
-						try {
-							tx(ownMSG);
-							System.out.println("BUS: tx: " + ownMSG.getMessageText());
 
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+							ChatMessage ownMSG = new ChatMessage();
+
+							ownMSG.setMessageText(
+									"MSG|" + this.client.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber() + "|0|"
+											+ messageLine + "|0|");
+
+							try {
+								tx(ownMSG);
+								System.out.println("WT: tx (raw): " + ownMSG.getMessageText());
+
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
 						}
 					}
 				}
 
-				System.out.println("WritheTh: got message out of the queue: " + messageTextRaw.getMessageText());
+				System.out.println("WritheTh: got message out of the queue: " + messageToBeSend.getMessageText());
 
 //			this.client.getmesetChatsetServerready(true);
 
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 				client.getMessageTXBus().clear();
 			} 

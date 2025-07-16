@@ -5,6 +5,7 @@ import java.io.PrintWriter;
 import java.sql.SQLException;
 //import java.net.Socket;
 //import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,12 +15,7 @@ import javafx.collections.ObservableList;
 import kst4contest.ApplicationConstants;
 import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.locatorUtils.Location;
-import kst4contest.model.AirPlaneReflectionInfo;
-import kst4contest.model.ChatMember;
-import kst4contest.model.ChatMessage;
-import kst4contest.model.ClusterMessage;
-import kst4contest.utils.PlayAudioUtils;
-import kst4contest.view.Kst4ContestApplication;
+import kst4contest.model.*;
 
 /**
  * 
@@ -43,6 +39,7 @@ public class MessageBusManagementThread extends Thread {
 	private Hashtable<String, ChatMember> chatMemberTable;
 	private final String PTRN_USERLISTENTRY = "([a-zA-Z0-9]{2}/{1})?([a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z]{0,3})(/p)? [a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2} [ -~]{1,20}";
 	private final String PTRN_QRG_CAT2 = "(([0-9]{3,4}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
+	private final String PTRN_QRG_CAT3 = "(([0-9]{3,5}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
 //	BufferedWriter bufwrtrDBGMSGOut;
 
 //	    private String text;
@@ -72,8 +69,7 @@ public class MessageBusManagementThread extends Thread {
 	/**
 	 * check if a chatmessage is part of the userlist via telnet 23000 port<br/>
 	 * <b>Updates userlist!</b>
-	 * 
-	 * @param chatMessage
+	 *
 	 */
 	private void checkIfItsUserListEntry(ChatMessage messageToProcess) {
 
@@ -114,9 +110,7 @@ public class MessageBusManagementThread extends Thread {
 
 	/**
 	 * check if a chatmessage is part of the userlist via telnet 23000 port<br/>
-	 * <b>Updates userlist!</b>
-	 * 
-	 * @param chatMessage
+	 * <b>This method updates the userlist!</b>
 	 */
 	private void checkIfItsUserListEntry23001(ChatMessage messageToProcess) {
 
@@ -159,37 +153,28 @@ public class MessageBusManagementThread extends Thread {
 	 * check if a chatmessage or a name of a chatmember contains a frequency<br/>
 	 * <b>returns String = "" if no frequency found</b>
 	 * 
-	 * @param chatMessage
+
 	 */
 	private String checkIfMessageInhibitsFrequency(ChatMessage messageToProcess) {
 
-		Pattern pattern = Pattern.compile(PTRN_QRG_CAT2); // TODO: PTRN should depend to category-selection of own stn
+		Pattern pattern = Pattern.compile(PTRN_QRG_CAT2); // TODO: PTRN should depend to category-selection of own stn, it´s not the case now
 		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
 		String[] splittedQRGString;
 //		splittedQRGString[0] = "0";
 
 		String stringAggregation = "";
 
-//		if (matcher.) {
-//			stringAggregation = ""; //reset aggregated string			
-//		}
 
 		while (matcher.find()) {
-//				System.out.println("QRG detected: "+ matcher.group() + " " + matcher.start());
-
-//			ChatMember member = new ChatMember();
 			String matchedString = matcher.group();
 
-//			splittedQRGString = new String[0];
 			splittedQRGString = matchedString.split(" ");
 
-			for (int i = 0; i < splittedQRGString.length; i++) {
-				stringAggregation += splittedQRGString[i] + " ";
-			}
+            for (String s : splittedQRGString) {
+                stringAggregation += s + " ";
+            }
 
 			System.out.println("[MSGBUSMGT:] Processed qrg info: " + stringAggregation);
-
-//				if (member.getName().)
 
 //			System.out.println("Processed QRG Entry [" + this.client.getChatMemberTable().size() + "]: Call: "
 //					+ member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
@@ -214,7 +199,7 @@ public class MessageBusManagementThread extends Thread {
 		messageToProcess.setMessageText(reduce);
 
 		if (messageToProcess.getMessageText().isEmpty()) {
-			System.out.println("[MSGBUSMGTT:] ######################no processable data");
+//			System.out.println("[MSGBUSMGTT:] ###################### no processable data");
 		} else {
 
 			if (reduce.length() >= 14 && reduce.length() <= 40) {
@@ -275,26 +260,35 @@ public class MessageBusManagementThread extends Thread {
 //		System.out.println("[MsgBusMgr, ERROR:] ChecklistForChatMemberIndexByCallsign, not found: "
 //				+ lookForThis.getCallSign() + "\n ");
 		/***
-		 * Old mechanic for index search,new one implemented due concurrentmodificationexcm which works - end
+		 * /Old mechanic for index search,new one implemented due concurrentmodificationexc which works - end
 		 * 
 		 */
 
 		for (int i = 0; i < list.size(); i++) {
 			if (list.get(i).getCallSign().equals(lookForThis.getCallSign())) {
+				//TODO: New since 1.26! Check against category!
+
+				System.out.println("MSGBUSMGT, DEBUG: Checking Chatcategories of found list member " + list.get(i).getCallSign() + " / " + list.get(i).getChatCategory() +  " against " + lookForThis.getCallSign() + " / " + lookForThis.getChatCategory());
+
 //				System.out
 //						.println("MSGBUSHELBER: Found " + chatMember.getCallSign() + " at " + list.indexOf(chatMember));
 
-				return list.indexOf(list.get(i));
+				if (list.get(i).getChatCategory().equals(lookForThis.getChatCategory())) { //new 1.26
+
+					return list.indexOf(list.get(i));
+				} //new 1.26
+				else {
+					System.out.println("MSGBUSMGT, DEBUG: Category does not match");
+
+				}
+
+//				System.out.println("--------------------------- chatcategory of list.get(i) = " + list.get(i).getChatCategory().getCategoryNumber());
+				System.out.println("--------------------------- chatcategory of lookforthisChatMember = " + lookForThis.getChatCategory().getCategoryNumber() );
 			}
+//				return list.indexOf(list.get(i)); //if no category found, return entry //TODO: ERROR detected here! Should work now, needs some proof
+//				return -1; //if category dont match, return: member not found
 		}
-
-//		for (Iterator iterator = list.iterator(); iterator.hasNext();) {
-//			ChatMember chatMember = (ChatMember) iterator.next();
-//			System.out.println(list.indexOf(lookForThis) + ": " + chatMember.getCallSign());
-//		}
-
 		return -1; // if it´s not found, the method will always end here and return -1
-
 	}
 
 	/**
@@ -332,6 +326,22 @@ public class MessageBusManagementThread extends Thread {
 		final String SRVR_LOGINWRONGCALLSYNTAX = "103";
 		final String SRVR_LOGINWRONGCALLUNKNOWN = "101";
 
+		/**
+		 * here we have a helper Set for identifying questions for my qrg which can be autoanswered later // TODO: move to an extra method
+		 */
+		final HashSet<String> qrgQuestionTexts = new HashSet<String>();
+//		final ArrayList<String> qrgQuestionTexts = new ArrayList<String>();
+		qrgQuestionTexts.add("ur qrg?");
+		qrgQuestionTexts.add("your qrg?");
+		qrgQuestionTexts.add("qrg?");
+		qrgQuestionTexts.add("freq?");
+		qrgQuestionTexts.add("pse QRG");
+
+
+		/**
+		 * here we have a helper list for identifying questions for my qrg which can be autoanswered later
+		 */
+
 		if (messageToProcess.getMessageText().isEmpty()) {
 			System.out.println("[MSGBUSMGTT:] ######################no processable data");
 
@@ -352,28 +362,32 @@ public class MessageBusManagementThread extends Thread {
 
 			/**
 			 * Initializes the Userlist if entry fits UA0
+			 * UA0|3|DL6SAQ|walter not qrv|JN58CK|1| <- RXed
+			 *
 			 */
 			if (splittedMessageLine[0].contains(INITIALUSERLISTENTRY)) {
 //				System.out.println("MSGBUS: User detected");
 
 				ChatMember newMember = new ChatMember();
 
-				newMember.setAirPlaneReflectInfo(new AirPlaneReflectionInfo()); // TODO: Only bugfix, check
+				newMember.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+
+				newMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
 
 				newMember.setCallSign(splittedMessageLine[2]);
 				newMember.setName(splittedMessageLine[3]);
 				newMember.setQra(splittedMessageLine[4]);
 				newMember.setState(Integer.parseInt(splittedMessageLine[5]));
-//			newMember.setQTFdirection(LocatorUtils);
-				newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), newMember.getQra()));
-				newMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(newMember.getQra())));
+//				newMember.setQTFdirection(LocatorUtils);
+				newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getStn_loginLocatorMainCat(), newMember.getQra()));
+				newMember.setQTFdirection(new Location(client.getChatPreferences().getStn_loginLocatorMainCat()).getBearing(new Location(newMember.getQra())));
 				newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());//TODO evt obsolete!
 				newMember.setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
 
 //				this.client.getChatMemberTable().put(splittedMessageLine[2], newMember); //TODO: map -> List
 
 				//the own call will not be in the list
-				if (!client.getChatPreferences().getLoginCallSign().equals(newMember.getCallSign())) {
+				if (!client.getChatPreferences().getStn_loginCallSign().equals(newMember.getCallSign())) {
 					this.client.getLst_chatMemberList().add(newMember);
 				}
 
@@ -390,31 +404,36 @@ public class MessageBusManagementThread extends Thread {
 
 			/**
 			 * Actualize Userlist, add new entry UA5 or UA2
+			 *
+			 * UA5|2|IU4CHE|Giorgio 2-70-23|JN64GB|2|
+			 * UA2|2|W5ADD|Parker|EM40WL|2|
+			 *
 			 */
 			if (splittedMessageLine[0].contains(USERENTEREDCHAT) || splittedMessageLine[0].contains(USERENTEREDCHAT2)) {
 //				System.out.println("MSGBUS: User detected");
 
-				/**
-				 * The own callsign will not be hold in the userlist any more
-				 */
-				if (!client.getChatPreferences().getLoginCallSign().equals(splittedMessageLine[2])) {
 
+				if (!client.getChatPreferences().getStn_loginCallSign().equals(splittedMessageLine[2])) { //own call ignore
 
 					ChatMember newMember = new ChatMember();
 
 					newMember.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+
+					newMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+
 					newMember.setCallSign(splittedMessageLine[2]);
 					newMember.setName(splittedMessageLine[3]);
 					newMember.setQra(splittedMessageLine[4]);
 					newMember.setState(Integer.parseInt(splittedMessageLine[5]));
 					newMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
 					newMember.setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
-					newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), newMember.getQra()));
-					newMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(newMember.getQra())));
+					newMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getStn_loginLocatorMainCat(), newMember.getQra()));
+					newMember.setQTFdirection(new Location(client.getChatPreferences().getStn_loginLocatorMainCat()).getBearing(new Location(newMember.getQra())));
 
 					newMember = this.client.getDbHandler().fetchChatMemberWkdDataForOnlyOneCallsignFromDB(newMember);
 
 					this.client.getLst_chatMemberList().add(newMember);
+
 					this.client.getDbHandler().storeChatMember(newMember);
 				}
 
@@ -433,16 +452,18 @@ public class MessageBusManagementThread extends Thread {
 
 				ChatMember newMember = new ChatMember();
 
-				newMember.setCallSign(splittedMessageLine[2]);
+				newMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
 
-//				this.client.getChatMemberTable().remove(newMember.getCallSign());
+				newMember.setCallSign(splittedMessageLine[2]);
 
 				System.out.println("[MSGBUSMGT, Info:] User left Chat and will be removed from list ["
 						+ this.client.getLst_chatMemberList().size() + "] :" + newMember.getCallSign());
 				try {
 					this.client.getLst_chatMemberList().remove(
 							checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), newMember));
-					
+
+					//TODO: since 1.26 new method design to detect chatcategory, too!
+
 				} catch (Exception e) {
 					System.out.println("[MSGBUSMGT, EXC!, Error:] User sent left chat but had not been there ... ["
 							+ this.client.getLst_chatMemberList().size() + "] :" + newMember.getCallSign() + "\n"
@@ -472,43 +493,51 @@ public class MessageBusManagementThread extends Thread {
 			 * CH|2|1663966535|DM5M|dm5m-team|0|kst4contest.test|0|
 			 */
 			if (splittedMessageLine[0].contains(CHATCHANNELMESSAGE)) {
-//					System.out.println("MSGBUS: User detected");
 
-				ChatMessage newMessage = new ChatMessage();
-				newMessage.setChatCategory(this.client.getCategory());
-				newMessage.setMessageGeneratedTime(splittedMessageLine[2]);
+				//experimental 1.26: multi channel messages
+				ChatMessage newMessageArrived = new ChatMessage();
+				ChatCategory chategoryForMessageAndMessageSender;
+
+				newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+
+				chategoryForMessageAndMessageSender = newMessageArrived.getChatCategory();
+				newMessageArrived.setMessageGeneratedTime(splittedMessageLine[2]);
 
 				if (splittedMessageLine[3].equals("SERVER")) {
 					ChatMember dummy = new ChatMember();
 					dummy.setCallSign("SERVER");
 					dummy.setName("Sysop");
-					newMessage.setSender(dummy);
+					newMessageArrived.setSender(dummy);
+					newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+					dummy.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+//					System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> servers cat " + newMessageArrived.getChatCategory());
 
 				} else {
 
 					ChatMember sender = new ChatMember();
 					sender.setCallSign(splittedMessageLine[3]);
+					sender.setChatCategory(chategoryForMessageAndMessageSender);
 
 					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), sender);
 
-					//if the user had been found in the active users list
+
 					if (index != -1) {
-						//user found in the chatmember list
+						//user not found in the chatmember list
 						try {
-							newMessage.setSender(this.client.getLst_chatMemberList().get(index)); // set sender to member of
+							newMessageArrived.setSender(this.client.getLst_chatMemberList().get(index)); // set sender to member of
 							this.client.getLst_chatMemberList().get(index).setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
 						} catch (Exception exc) {
 							ChatMember aSenderDummy = new ChatMember();
 							aSenderDummy.setCallSign(splittedMessageLine[3] + "[n/a]");
 							aSenderDummy.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
-							newMessage.setSender(aSenderDummy);
+							newMessageArrived.setSender(aSenderDummy);
 							System.out.println("MsgBusmgtT: Catched Error! " + exc.getMessage() + " // " + splittedMessageLine[3] + " is not in the list! Faking sender!");
 							exc.printStackTrace();
 						}
 																								// b4 init list
 					} else {
 						//user not found in chatmember list, mark it, sender can not be set
-						if (!sender.getCallSign().equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
+						if (!sender.getCallSign().equals(this.client.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
 							sender.setCallSign("[n/a]" + sender.getCallSign());
 							// if someone sent a message without being in the userlist (cause
 							// on4kst missed implementing....), callsign will be marked
@@ -516,45 +545,47 @@ public class MessageBusManagementThread extends Thread {
 							//that means, message was by own station, broadcasted to all other
 							ChatMember dummy = new ChatMember();
 							dummy.setCallSign("ALL");
-							newMessage.setReceiver(dummy);
+							newMessageArrived.setReceiver(dummy);
 
 							AirPlaneReflectionInfo preventNullpointerExc = new AirPlaneReflectionInfo();
 							preventNullpointerExc.setAirPlanesReachableCntr(0);
 							sender.setAirPlaneReflectInfo(preventNullpointerExc);
-							newMessage.setSender(sender); //my own call is the sender
+							newMessageArrived.setSender(sender); //my own call is the sender
 						}
 					}
 
-//					newMessage.setSender(this.client.getChatMemberTable().get(splittedMessageLine[3]));
+//					newMessageArrived.setSender(this.client.getChatMemberTable().get(splittedMessageLine[3]));
 				}
 
-				newMessage.setMessageSenderName(splittedMessageLine[4]);
-				newMessage.setMessageText(splittedMessageLine[6]);
+				newMessageArrived.setMessageSenderName(splittedMessageLine[4]);
+				newMessageArrived.setMessageText(splittedMessageLine[6]);
 
 				if (splittedMessageLine[7].equals("0")) {
 					// message is not directed to anyone, move it to the cq messages!
 					ChatMember dummy = new ChatMember();
 					dummy.setCallSign("ALL");
-					newMessage.setReceiver(dummy);
+					newMessageArrived.setReceiver(dummy);
 
-//					this.client.getLst_toAllMessageList().add(0, newMessage); // sdtout to all message-List //TODO: change, moved to globalmessagelist - original
-					this.client.getLst_globalChatMessageList().add(0, newMessage); // sdtout to all message-List //TODO: change, moved to globalmessagelist
+					this.client.getLst_globalChatMessageList().add(0, newMessageArrived); // sdtout to all message-List
 
 				} else {
 					//message is directed to another chatmember, process as such!
 
 					ChatMember receiver = new ChatMember();
+
+					receiver.setChatCategory(chategoryForMessageAndMessageSender); //got out of message itself
+
 					receiver.setCallSign(splittedMessageLine[7]);
 
 					int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), receiver);
 
 					if (index != -1) {
-						newMessage.setReceiver(this.client.getLst_chatMemberList().get(index));// -1: Member left Chat
+						newMessageArrived.setReceiver(this.client.getLst_chatMemberList().get(index));// -1: Member left Chat
 																								// before...
 					} else { //found in active member list
 
 
-						if (receiver.getCallSign().equals(client.getChatPreferences().getLoginCallSign())) {
+						if (receiver.getCallSign().equals(client.getChatPreferences().getStn_loginCallSign())) {
 							/**
 							 * If mycallsign sent a message to the server, server will publish that message and
 							 * send it to all chatmember including me.
@@ -562,90 +593,143 @@ public class MessageBusManagementThread extends Thread {
 							 * it in the next case (marking left user, just for information). But I want an echo.
 							 */
 
-							receiver.setCallSign(client.getChatPreferences().getLoginCallSign());
-							newMessage.setReceiver(receiver);
+							receiver.setCallSign(client.getChatPreferences().getStn_loginCallSign());
+							newMessageArrived.setReceiver(receiver);
 						} else {
 							//this are user which left chat but had been adressed by this message
 							receiver.setCallSign(receiver.getCallSign() + "(left)");
-							newMessage.setReceiver(receiver);
+							newMessageArrived.setReceiver(receiver);
 						}
 					}
 
-//					System.out.println("message directed to: " + newMessage.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessage.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
+//					System.out.println("message directed to: " + newMessageArrived.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessageArrived.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
 
 					try {
 						/**
 						 * message is directed to me, will be put in the "to me" messagelist
 						 */
-						if (newMessage.getReceiver().getCallSign()
-								.equals(this.client.getChatPreferences().getLoginCallSign())) {
+						if (newMessageArrived.getReceiver().getCallSign()
+								.equals(this.client.getChatPreferences().getStn_loginCallSign())) {
 
-//							this.client.getLst_toMeMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
-							this.client.getLst_globalChatMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
+//							this.client.getLst_toMeMessageList().add(0, newMessageArrived); //TODO: change, moved to globalmessagelist, original
+							this.client.getLst_globalChatMessageList().add(0, newMessageArrived); //TODO: change, moved to globalmessagelist, original
 
 							if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
 								this.client.getPlayAudioUtils().playNoiseLauncher('P');
 							}
 							if (this.client.getChatPreferences().isNotify_playCWCallsignsOnRxedPMs()) {
-								this.client.getPlayAudioUtils().playCWLauncher(" " + " " + newMessage.getSender().getCallSign().toUpperCase());
+								this.client.getPlayAudioUtils().playCWLauncher(" " + " " + newMessageArrived.getSender().getCallSign().toUpperCase());
 							}
 							if (this.client.getChatPreferences().isNotify_playVoiceCallsignsOnRxedPMs()) {
-								this.client.getPlayAudioUtils().playVoiceLauncher( "?" + newMessage.getSender().getCallSign().toUpperCase());
+								this.client.getPlayAudioUtils().playVoiceLauncher( "?" + newMessageArrived.getSender().getCallSign().toUpperCase());
 							}
 
 							if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
-								if (newMessage.getMessageText().toUpperCase().contains("//BELL")) {
+								if (newMessageArrived.getMessageText().toUpperCase().contains("//BELL")) {
 									this.client.getPlayAudioUtils().playVoiceLauncher("!");
 								}
 							}
 
+							if (this.client.getChatPreferences().isMsgHandling_autoAnswerEnabled()) {
 
-							System.out.println("message directed to me: " + newMessage.getReceiver().getCallSign() + ".");
+								ChatMessage automaticAnswer = new ChatMessage();
+								ChatMember itsMe = new ChatMember();
+								itsMe.setCallSign(this.client.getChatPreferences().getStn_loginCallSign());
 
-						} else if (newMessage.getSender().getCallSign().toUpperCase()
-								.equals(this.client.getChatPreferences().getLoginCallSign().toUpperCase())) {
+								automaticAnswer.setSender(itsMe);
+								automaticAnswer.setReceiver(newMessageArrived.getSender());
+								automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " " + this.client.getChatPreferences().getMessageHandling_autoAnswerTextMainCat());
+
+								this.client.getMessageTXBus().add(automaticAnswer);
+
+							}
+
+							/**
+							 * auto reply/answer to QRG requests is here
+							 */
+							if (this.client.getChatPreferences().isMessageHandling_autoAnswerToQRGRequestEnabled()) {
+
+								for (String lookForQRGString : qrgQuestionTexts) {
+									if (newMessageArrived.getMessageText().contains(lookForQRGString)) {
+
+										ChatMessage automaticAnswer = new ChatMessage();
+										ChatMember itsMe = new ChatMember();
+										itsMe.setCallSign(this.client.getChatPreferences().getStn_loginCallSign());
+
+										automaticAnswer.setSender(itsMe);
+										automaticAnswer.setReceiver(newMessageArrived.getSender());
+										automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " KST4Contest Auto: QRG is: " + this.client.getChatPreferences().getMYQRGFirstCat().getValue());
+
+										if (this.client.getChatPreferences().isLoginToSecondChatEnabled()) {
+											automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " KST4Contest Auto: QRGs: " + this.client.getChatPreferences().getMYQRGFirstCat().getValue() + " / " + this.client.getChatPreferences().getMYQRGSecondCat().getValue());
+										} else {
+											automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " KST4Contest Auto: QRG is: " + this.client.getChatPreferences().getMYQRGFirstCat().getValue());
+										}
+
+										this.client.getMessageTXBus().add(automaticAnswer);
+
+									}
+								}
+							}
+
+							System.out.println("message directed to me: " + newMessageArrived.getReceiver().getCallSign() + ".");
+
+						} else if (newMessageArrived.getSender().getCallSign().toUpperCase()
+								.equals(this.client.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
 								/**
 								 * message sent by me!
 								 * message from me will appear in the PM window, too, with (>CALLSIGN) before
 								 */
-							String originalMessage = newMessage.getMessageText();
-							newMessage
-									.setMessageText("(>" + newMessage.getReceiver().getCallSign() + ")" + originalMessage);
-//							this.client.getLst_toMeMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
-							this.client.getLst_globalChatMessageList().add(0,newMessage);//TODO: change, moved to globalmessagelist
+							String originalMessage = newMessageArrived.getMessageText();
+							newMessageArrived
+									.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
+							this.client.getLst_globalChatMessageList().add(0,newMessageArrived);
 
 							// if you sent the message to another station, it will be sorted in to
 							// the "to me message list" with modified messagetext, added rxers callsign
 
 						} else {
 							//message sent to other user
-//							this.client.getLst_toOtherMessageList().add(0, newMessage); //TODO: change, moved to globalmessagelist, original
-							if (DirectionUtils.isInAngleAndRange(client.getChatPreferences().getLoginLocator(),
-									newMessage.getSender().getQra(),
-									newMessage.getReceiver().getQra(),
+//							this.client.getLst_toOtherMessageList().add(0, newMessageArrived); //TODO: change, moved to globalmessagelist, original
+							if (DirectionUtils.isInAngleAndRange(client.getChatPreferences().getStn_loginLocatorMainCat(),
+									newMessageArrived.getSender().getQra(),
+									newMessageArrived.getReceiver().getQra(),
 									client.getChatPreferences().getStn_maxQRBDefault(),
 									client.getChatPreferences().getStn_antennaBeamWidthDeg())) {
 
 								if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
 									//play only tick sound if the sender was not set directedtome before
-									if (!newMessage.getSender().isInAngleAndRange()) {
+									if (!newMessageArrived.getSender().isInAngleAndRange()) {
 										this.client.getPlayAudioUtils().playNoiseLauncher('-');
 									}
 								}
-								newMessage.getSender().setInAngleAndRange(true);
-								System.out.println(">>>>>>>>>> Anglewarning <<<<<<<<<< " +  newMessage.getSender().getCallSign() + ", " + newMessage.getSender().getQra() + " -> " + newMessage.getReceiver().getCallSign() + ", " + newMessage.getReceiver().getQra() + " = " +
-										new Location(newMessage.getSender().getQra()).getBearing(new Location(newMessage.getReceiver().getQra())) +
-										" / sender bearing to me: " + new Location(newMessage.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getLoginLocator())));
+
+								newMessageArrived.getSender().setInAngleAndRange(true);
+
+								if (client.getChatPreferences().isNotify_dxClusterServerEnabled()) {
+									try {
+										if (newMessageArrived.getSender().getFrequency() != null) {
+											this.client.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(newMessageArrived.getSender()); //tells the DXCluster server to send a DXC message for this member to the logbook software
+										}
+									} catch (Exception exception) {
+										System.out.println("[MSGBUSMGT, ERROR:] DXCluster messageserver error while processing spot for 0" + newMessageArrived.getSender().getCallSign() + " // " + exception.getMessage());
+										exception.printStackTrace();
+									}
+								}
+
+								System.out.println(">>>>>>>>>> Anglewarning <<<<<<<<<< " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
+										new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
+										" / sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())));
 
 							} else {
-								System.out.println("-notinangle- " +  newMessage.getSender().getCallSign() + ", " + newMessage.getSender().getQra() + " -> " + newMessage.getReceiver().getCallSign() + ", " + newMessage.getReceiver().getQra() + " = " +
-										new Location(newMessage.getSender().getQra()).getBearing(new Location(newMessage.getReceiver().getQra())) +
-										" ; sender bearing to me: " + new Location(newMessage.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getLoginLocator())));
-								newMessage.getSender().setInAngleAndRange(false);
+								System.out.println("-notinangle- " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
+										new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
+										" ; sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())));
+								newMessageArrived.getSender().setInAngleAndRange(false);
 							}
 
-							this.client.getLst_globalChatMessageList().add(0, newMessage);
-//						System.out.println("MSGBS bgfx: tx call = " + newMessage.getSender().getCallSign() + " / rx call = " + newMessage.getReceiver().getCallSign());
+							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
+//						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
 						System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing or message got before user entered chat message: " + referenceDeletedByUserLeftChatDuringMessageprocessing.getStackTrace());
@@ -654,7 +738,7 @@ public class MessageBusManagementThread extends Thread {
 
 					// sdtout to me message-List
 
-//					newMessage.setReceiver(this.client.getChatMemberTable().get(splittedMessageLine[7])); // set sender
+//					newMessageArrived.setReceiver(this.client.getChatMemberTable().get(splittedMessageLine[7])); // set sender
 					// to the
 					// member of
 					// before
@@ -662,11 +746,16 @@ public class MessageBusManagementThread extends Thread {
 					// list
 				}
 
-//				System.out.println("[MSGBUSMGT:] processed message: " + newMessage.getChatCategory().getCategoryNumber()
-//						+ " " + newMessage.getSender().getCallSign() + ", " + newMessage.getMessageSenderName() + " -> "
-//						+ newMessage.getReceiver().getCallSign() + ": " + newMessage.getMessageText());
+				try {
 
-				String locatedFrequencies = checkIfMessageInhibitsFrequency(newMessage);
+				System.out.println("[MSGBUSMGT:] processed message: " + newMessageArrived.getChatCategory().getCategoryNumber()
+						+ " " + newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getMessageSenderName() + " -> "
+						+ newMessageArrived.getReceiver().getCallSign() + ": " + newMessageArrived.getMessageText());
+				} catch (Exception exceptionOccured) {
+					System.out.println("[MSGMgtBus: ERROR CHATCHED ON MAYBE NULL ISSUE]: " + exceptionOccured.getMessage() + "\n" + exceptionOccured.getStackTrace());
+				}
+
+				String locatedFrequencies = checkIfMessageInhibitsFrequency(newMessageArrived);
 				
 				SimpleStringProperty qrg = new SimpleStringProperty(locatedFrequencies);
 
@@ -676,14 +765,10 @@ public class MessageBusManagementThread extends Thread {
 						// no qrg found, nothing to do
 					} else {
 
-//						String stringAggregation = "";
-//
-//						for (int i = 0; i < locatedFrequencies.length; i++) {
-//							stringAggregation += locatedFrequencies[i] + " ";
-//						}
-
 						ChatMember temp3 = new ChatMember();
 						temp3.setCallSign(splittedMessageLine[3]);
+						temp3.setChatCategory(chategoryForMessageAndMessageSender);
+
 						int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(), temp3);
 
 						if (index == -1) { // user is not in the userlist but sent message...
@@ -694,13 +779,12 @@ public class MessageBusManagementThread extends Thread {
 							System.out.println("[MSGBUSMGT <<<catched ERROR>>>]:, Frequency for " + splittedMessageLine[3]
 									+ " is not settable, Callsign is not in the Member-list!");
 
-							//create dummy user to display the message but it wont be hit the user object
+							//create dummy user to display the message but it wont be hit an existing user object
 							ChatMember newMember = new ChatMember();
+
 							newMember.setCallSign(splittedMessageLine[3]);
 							newMember.setName(splittedMessageLine[4]);
 							newMember.setFrequency(qrg);
-//							newMember.setFrequency(locatedFrequencies);
-//							this.client.getLst_chatMemberList().add(newMember);
 
 						} else {
 							/**
@@ -709,6 +793,8 @@ public class MessageBusManagementThread extends Thread {
 							this.client.getLst_chatMemberList().get(index).setFrequency(qrg);
 							System.out.println("[MSGBUSMGT:] Frequency for " + splittedMessageLine[3] + " setted: "
 									+ locatedFrequencies);
+//							this.client.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(this.client.getLst_chatMemberList().get(index)); //tells the DXCluster server to send a DXC message for this member to the logbook software
+
 						}
 					}
 
@@ -725,6 +811,8 @@ public class MessageBusManagementThread extends Thread {
 //					System.out.println("MSGBUS: User detected");
 
 				ChatMember temp4 = new ChatMember();
+				temp4.setChatCategory(this.client.getChatCategoryMain()); //not really detectable and not really neccessarry to detect
+
 				temp4.setCallSign(splittedMessageLine[2]);
 				temp4.setQra(splittedMessageLine[3]);
 				temp4.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
@@ -737,21 +825,20 @@ public class MessageBusManagementThread extends Thread {
 							+ this.client.getLst_chatMemberList().get(index).getQra() + " new is: "
 							+ splittedMessageLine[3]));
 
-					this.client.getLst_chatMemberList().get(index).setQra(splittedMessageLine[3]);
-					this.client.getLst_chatMemberList().get(index).setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), splittedMessageLine[3]));
-					this.client.getLst_chatMemberList().get(index).setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(splittedMessageLine[3])));
+					ChatMember foundThisInChatMemberList = this.client.getLst_chatMemberList().get(index); //make less list accesses
 
+//					this.client.getLst_chatMemberList().get(index).setQra(splittedMessageLine[3]);
+//					this.client.getLst_chatMemberList().get(index).setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), splittedMessageLine[3]));
+//					this.client.getLst_chatMemberList().get(index).setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(splittedMessageLine[3])));
+
+					foundThisInChatMemberList.setQra(splittedMessageLine[3]);
+					foundThisInChatMemberList.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getStn_loginLocatorMainCat(), splittedMessageLine[3]));
+					foundThisInChatMemberList.setQTFdirection(new Location(client.getChatPreferences().getStn_loginLocatorMainCat()).getBearing(new Location(splittedMessageLine[3])));
 
 				} else {
 					System.out.println("[MSGBUSMGT:] ERROR! Locator Change of ["
 							+ (splittedMessageLine[2] + "] is not possible, user is not in the Table!"));
 
-//					ChatMember newMember = new ChatMember();
-//					newMember.setCallSign(splittedMessageLine[2]);
-//					newMember.setQra(splittedMessageLine[3]);
-//					this.client.getChatMemberTable().put(newMember.getCallSign(), newMember);
-
-//					this.client.getLst_chatMemberList().add(temp4);
 				}
 
 				this.client.getDbHandler().storeChatMember(temp4); // TODO thats a bit unclean, its less an insert but a
@@ -873,6 +960,8 @@ public class MessageBusManagementThread extends Thread {
 
 //				System.out.println("[MSGBUSMGT:] DXCluster Message detected ");
 
+				stateChangeMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+
 				int index = checkListForChatMemberIndexByCallSign(this.client.getLst_chatMemberList(),
 						stateChangeMember);
 
@@ -892,13 +981,15 @@ public class MessageBusManagementThread extends Thread {
 
 				ChatMember stateChangeMember = new ChatMember();
 
+				stateChangeMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+
 				stateChangeMember.setCallSign(splittedMessageLine[2]);
 				stateChangeMember.setName(splittedMessageLine[3]);
 				stateChangeMember.setQra(splittedMessageLine[4]);
 				stateChangeMember.setState(Integer.parseInt(splittedMessageLine[5]));
 				stateChangeMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
-				stateChangeMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getLoginLocator(), stateChangeMember.getQra()));
-				stateChangeMember.setQTFdirection(new Location(client.getChatPreferences().getLoginLocator()).getBearing(new Location(stateChangeMember.getQra())));
+				stateChangeMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getStn_loginLocatorMainCat(), stateChangeMember.getQra()));
+				stateChangeMember.setQTFdirection(new Location(client.getChatPreferences().getStn_loginLocatorMainCat()).getBearing(new Location(stateChangeMember.getQra())));
 
 				this.client.getDbHandler().storeChatMember(stateChangeMember); // TODO: not clean, it should be an
 																				// upodate
@@ -914,14 +1005,6 @@ public class MessageBusManagementThread extends Thread {
 					this.client.getLst_chatMemberList().get(index).setQra(stateChangeMember.getQra());
 					this.client.getLst_chatMemberList().get(index).setState(stateChangeMember.getState());
 				}
-
-
-//				this.client.getChatMemberTable().get(stateChangeMember.getCallSign())
-//						.setName(stateChangeMember.getName());
-//				this.client.getChatMemberTable().get(stateChangeMember.getCallSign())
-//						.setQra(stateChangeMember.getQra());
-//				this.client.getChatMemberTable().get(stateChangeMember.getCallSign())
-//						.setState(stateChangeMember.getState());
 
 			} else
 
@@ -961,7 +1044,7 @@ public class MessageBusManagementThread extends Thread {
 				pwErrorMsg.setMessageText(splittedMessageLine[2]);
 
 				ChatMember receiverDummy = new ChatMember();
-				receiverDummy.setCallSign(client.getChatPreferences().getLoginCallSign());
+				receiverDummy.setCallSign(client.getChatPreferences().getStn_loginCallSign());
 				receiverDummy.setQrb(0.);
 				receiverDummy.setQTFdirection(0.);
 				pwErrorMsg.setReceiver(receiverDummy);
@@ -1006,6 +1089,28 @@ public class MessageBusManagementThread extends Thread {
 
 //			checkIfMessageInhibitsFrequency(messageToProcess);
 		}
+	}
+
+	/**
+	 * Method gets a String with a messagecategory-number and returns out of which of the existing categories
+	 * (chat channels) this message/user had written from
+	 *
+	 * @param categoryNumber
+	 * @return used Chatcategory (instance of singletons)
+	 */
+	private ChatCategory util_getChatCategoryByCategoryNrString(String categoryNumber) {
+
+//		System.out.println("MSGBSMGT Debug: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> try to find out category for a member; category is " + categoryNumber + " // 1st is " + this.client.getChatCategoryMain().getCategoryNumber() + " // 2nd is " + this.client.getChatCategorySecondChat().getCategoryNumber());
+
+		if (categoryNumber.equals(this.client.getChatCategoryMain().getCategoryNumber() + "")) {
+			return this.client.getChatCategoryMain();
+		} else if (categoryNumber.equals(this.client.getChatCategorySecondChat().getCategoryNumber() + "")) {
+			return this.client.getChatCategorySecondChat();
+		} else {
+			System.out.println("Msgbusmgt: ERROR!!! -> category for this message does not exist!");
+			return this.client.getChatCategoryMain(); //Chatcategory default decision
+		}
+
 	}
 
 	@Override
@@ -1118,10 +1223,10 @@ public class MessageBusManagementThread extends Thread {
 							try {
 								processRXMessage23001(messageTextRaw);
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
+								System.out.println("MsgBusMgt: process23001 went wrong / IO Error");
 								e.printStackTrace();
 							} catch (SQLException e) {
-								// TODO Auto-generated catch block
+								System.out.println("MsgBusMgt: process23001 went wrong / SQL Error");
 								e.printStackTrace();
 							}
 					}
@@ -1130,7 +1235,7 @@ public class MessageBusManagementThread extends Thread {
 					this.interrupt();
 
 					e1.printStackTrace();
-					break;// TODO Change at may24, avoid uncloability. Check if this could lead to further errors on instable link!
+					break;// TODO Change at may24, avoid uncloadability. Check if this could lead to further errors on instable link!
 	//				client.getMessageRXBus().clear();
 				}
 			{

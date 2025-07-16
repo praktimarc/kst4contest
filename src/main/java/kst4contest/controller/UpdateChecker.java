@@ -178,7 +178,7 @@ public class UpdateChecker {
                     for (int i = 0; i < element.getChildNodes().getLength(); i++) {
 
                         if (element.getChildNodes().item(i).getNodeType() == Node.ELEMENT_NODE) {
-                            System.out.println(element.getChildNodes().item(i).getTextContent() + " <<<<<<<<<<<<<<<<<< " + i + " / " + childNodeCounter);
+//                            System.out.println(element.getChildNodes().item(i).getTextContent() + " <<<<<<<<<<<<<<<<<< " + i + " / " + childNodeCounter);
 //                            System.out.println(element.getChildNodes().item(i).getNodeName());
                             aChangeLogEntry[childNodeCounter] = aChangeLogEntry[childNodeCounter] + element.getChildNodes().item(i).getTextContent();
                             childNodeCounter++;

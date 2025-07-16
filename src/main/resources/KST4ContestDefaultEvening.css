@@ -1,0 +1,192 @@
+.root {
+    -fx-accent: #1e74c6;
+    -fx-focus-color: -fx-accent;
+    -fx-base: #373e43;
+    -fx-control-inner-background: derive(-fx-base, 35%);
+    -fx-control-inner-background-alt: -fx-control-inner-background ;
+}
+
+.label{
+    -fx-text-fill: lightgray;
+}
+
+.label-callSignChatCatDescriptor {
+    -fx-font-family: "Arial";
+    -fx-font-size: 18px;
+    -fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, green 0%, lightgreen 100%);
+    -fx-alignment: center;
+}
+
+.text-field {
+    -fx-prompt-text-fill: gray;
+}
+
+.text-field .text {
+   -fx-fill: linear-gradient(from 0% 0% to 100% 200%, green 0%, lightgreen 100%);
+   -fx-stroke: green;
+   -fx-stroke-width: 0.2;
+   -fx-font-size: 25px;
+}
+
+.text-input-MYQRG1 {
+    -fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, #f98aff 0%, #f98aff 100%); /*purple*/
+}
+
+
+.titulo{
+    -fx-font-weight: bold;
+    -fx-font-size: 18px;
+}
+
+.button{
+    -fx-focus-traversable: false;
+}
+
+.button:hover{
+    -fx-text-fill: white;
+}
+
+.separator *.line {
+    -fx-background-color: #3C3C3C;
+    -fx-border-style: solid;
+    -fx-border-width: 1px;
+}
+
+.scroll-bar{
+    -fx-background-color: derive(-fx-base,45%)
+}
+
+.button:default {
+    -fx-base: -fx-accent ;
+    -fx-font-weight: bold;
+}
+
+.button:pressed {
+    -fx-border-color: #ff0000;
+}
+
+.button:hover {
+    -fx-background-color:linear-gradient(#f0ff35, #a9ff00),
+        radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);
+        -fx-background-radius: 6, 5;
+        -fx-background-insets: 0, 1;
+        -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+        -fx-text-fill: #395306;
+}
+
+.buttonMyQrg1 {
+    -fx-background-color: linear-gradient(from 0% 0% to 100% 200%, green 0%, lightgreen 100%);
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: #395306;
+}
+
+
+.toggle-button:selected {
+    -fx-background-color:linear-gradient(#f0ff35, #a9ff00),
+    radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: #395306;
+}
+
+
+.table-view .column-header {
+   -fx-background-color: linear-gradient(to right, #373838, #373838);
+}
+
+.table-view .column-header .text {
+   -fx-fill: linear-gradient(from 0% 0% to 100% 200%, repeat, green 0%, lightgreen 50%);
+   -fx-stroke: green;
+   -fx-stroke-width: 0.2;
+}
+
+.table-view{
+    /*-fx-background-color: derive(-fx-base, 10%);*/
+    -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+.table-view .column-header .label{
+    -fx-alignment: CENTER_LEFT;
+    -fx-font-weight: none;
+}
+
+.table-row-cell > .defaultText-column  {
+  -fx-text-fill: white;
+  -fx-background-insets: 0 0 1 0px;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+
+}
+
+.table-row-cell > .messageToMe-column {
+  -fx-text-fill: lightgreen;
+  -fx-background-insets: 0 0 1 0px;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+.messageHighlightOwn-column { /*PM own message*/
+  -fx-background-color: #4674b9;
+  -fx-background-insets: 0 0 1 0px;
+  -fx-text-fill: white;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+.messageHighlight30-column { /*PM for 30 sec: works*/
+  -fx-text-fill: white;
+  -fx-background-color: #33cc33;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+.messageHighlight60-column { /*PM for 30 sec: works*/
+  -fx-text-fill: white;
+  -fx-background-color: #40bf40;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+.messageHighlight90-column { /*PM for 30 sec: works*/
+  -fx-text-fill: white;
+  -fx-background-color: #4db34d;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+.messageHighlight120-column { /*PM for 30 sec: works*/
+  -fx-text-fill: white;
+  -fx-background-color: #59a659;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+.messageHighlight180-column { /*PM for 30 sec: works*/
+  -fx-text-fill: white;
+  -fx-background-color: #669966;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+.messageHighlight300-column { /*PM for 30 sec: works*/
+  -fx-text-fill: white;
+  -fx-background-color: #738c73;
+  -fx-selection-bar-non-focused: derive(-fx-base, 50%);
+}
+
+
+.table-cell-bold {
+  -fx-font-weight: bold;
+}
+
+.table-cell-inAngleAndRange {
+  -fx-text-fill: lightgreen;
+  -fx-font-weight: bold;
+}
+
+.table-cell-100PercentAP { /*GEHT*/
+  -fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, #f98aff 0%, #f98aff 100%); /*purple*/;
+  -fx-font-weight: bold;
+}
+
+.table-cell-75PercentAP { /*GEHT*/
+    -fx-text-fill: #fa6666;
+    -fx-font-weight: bold;
+}
+
+.table-cell-50PercentAP {
+  -fx-text-fill: #fa9f66;
+  -fx-font-weight: bold;
+}

@@ -3,7 +3,7 @@ package kst4contest.model;
 import java.util.ArrayList;
 
 public class UpdateInformation {
-    double latestVersionNumberOnServer = 100; //dummy value to prevent nullpointerexc
+    double latestVersionNumberOnServer = 1.26; //dummy value to prevent nullpointerexc
     String adminMessage ="";
         String majorChanges ="";
         String latestVersionPathOnWebserver="";

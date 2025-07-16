@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 
 import kst4contest.model.ChatMessage;
  
@@ -39,7 +40,7 @@ public class ReadThread extends Thread {
  
         try {
             input = socket.getInputStream();            
-            reader = new BufferedReader(new InputStreamReader(input));
+            reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
             
         } catch (IOException ex) {
             System.out.println("Error getting input stream: " + ex.getMessage());

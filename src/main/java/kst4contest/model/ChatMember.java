@@ -14,6 +14,9 @@ public class ChatMember {
 	String callSign;
 	String qra;
 	String name;
+	String callSignRaw; //without -2 or -70 etc.
+
+
 
 	boolean isInAngleAndRange; //if he tries a sked in my dir, he is in range, will process that in the messages
 
@@ -22,7 +25,7 @@ public class ChatMember {
 	StringProperty frequency = new SimpleStringProperty();
 
 	String password; // only used by own instance of the chatmember instance to login to the chat
-	ChatCategory chatCategory; // only used by own instance of the chatmember instance to login to the chat
+	ChatCategory chatCategory; //Source category
 //	ChatCategory chatCategory;//only used by own instance of the chatmember instance to login to the chat
 
 	long activityTimeLastInEpoch; // time of last activity in epochtimesec
@@ -312,9 +315,24 @@ public class ChatMember {
 
 	public void setWorked(boolean worked) {
 		this.worked = worked;
-//		this.workedInfoChangeFireListEventTriggerProperty().setValue(true);
-//		this.workedInfoChangeFireListEventTriggerProperty().setValue(false);
+
 	}
+
+	/**
+	 *
+	 * @return String (callsign) without -2 or -70 etc.
+	 */
+	public String getCallSignRaw() {
+
+			String raw = "";
+
+		try {
+			return this.getCallSign().split("-")[0]; //e.g. OK2M-70, returns only ok2m
+		} catch (Exception e) {
+			return getCallSign();
+		}
+	}
+
 
 	/**
 	 * Sets all worked information of this object to false. Scope: GUI, Reset Button
@@ -352,9 +370,9 @@ public class ChatMember {
 	public String toString() {
 		String chatMemberSerialization = "";
 
-		chatMemberSerialization += callSign + ";" + name + ";" + qra + ";" + frequency + ";" + worked + ";" + worked144
-				+ ";" + worked432 + ";" + worked1240 + ";" + worked2300 + ";" + worked3400 + ";" + worked5600 + ";"
-				+ worked10G;
+		chatMemberSerialization += callSign + ";" + name + ";" + qra + ";" + frequency + "; wkd " + worked + "; wkd144 " + worked144
+				+ "; wkd432" + worked432 + "; wkd1240" + worked1240 + "; wkd2300" + worked2300 + "; wkd3400" + worked3400 + "; wkd5600" + worked5600 + "; wkd10G"
+				+ worked10G + " ; " + chatCategory;
 
 		return chatMemberSerialization;
 	}

@@ -1,17 +1,15 @@
 package kst4contest.controller;
 
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.Selector;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 
-import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
@@ -46,11 +44,13 @@ public class ChatController {
 			private UpdateInformation updateInformation;
 	private ChatPreferences chatPreferences;
 
-	private ChatCategory category;
+	private ChatCategory chatCategoryMain;
+	private ChatCategory chatCategorySecondChat;
 	boolean connectedAndLoggedIn;
 	boolean connectedAndNOTLoggedIn;
 	boolean disconnected;
 	boolean disconnectionPerformedByUser = false;
+
 
 	public boolean isDisconnectionPerformedByUser() {
 		return disconnectionPerformedByUser;
@@ -58,6 +58,15 @@ public class ChatController {
 
 	public void setDisconnectionPerformedByUser(boolean disconnectionPerformedByUser) {
 		this.disconnectionPerformedByUser = disconnectionPerformedByUser;
+	}
+
+
+	public ChatCategory getChatCategorySecondChat() {
+		return chatCategorySecondChat;
+	}
+
+	public void setChatCategorySecondChat(ChatCategory chatCategorySecondChat) {
+		this.chatCategorySecondChat = chatCategorySecondChat;
 	}
 
 	public UpdateInformation getUpdateInformation() {
@@ -106,7 +115,7 @@ public class ChatController {
 
 		String prefix_asSetpath ="ASSHOWPATH: \"KST\" \"AS\" ";
 		String bandString = "1440000";
-		String myCallAndMyLocString = chatPreferences.getLoginCallSign() + "," + chatPreferences.getLoginLocator();
+		String myCallAndMyLocString = chatPreferences.getStn_loginCallSign() + "," + chatPreferences.getStn_loginLocatorMainCat();
 		String remoteCallAndLocString = remoteChatMember.getCallSign() +"," + remoteChatMember.getQra();
 
 
@@ -159,6 +168,8 @@ public class ChatController {
 	 *                clicked (new connection may follow)
 	 */
 	public void disconnect(String action) {
+
+		this.dxClusterServer.stop();
 
 		this.setDisconnectionPerformedByUser(true);
 
@@ -253,7 +264,8 @@ public class ChatController {
 			airScoutUDPReaderThread.interrupt();
 			
 			dbHandler.closeDBConnection();
-			
+
+			dxClusterServer.stop();
 
 			try {
 
@@ -352,6 +364,8 @@ public class ChatController {
 	private ChatController chatController;
 	private MessageBusManagementThread messageProcessor;
 	private ReadUDPbyAirScoutMessageThread airScoutUDPReaderThread;
+	private DXClusterThreadPooledServer dxClusterServer;
+
 
 	private PlayAudioUtils playAudioUtils = new PlayAudioUtils();
 
@@ -372,6 +386,9 @@ public class ChatController {
 	private DBController dbHandler;
 
 	private Socket socket;
+	private ServerSocket cluster_telnetServerSocket; // socket that accepts telnet client connects (cluster client)
+//	private ServerSocketChannel cluster_telnetServerSocketChannel;
+
 
 	private Timer userActualizationtimer;
 
@@ -426,6 +443,46 @@ public class ChatController {
 
 	/**
 	 * checks if the callsign-String of a given chatmember instance and a given list
+	 * instance is in the list (multiple entries are possible to find by this method! <br/>
+	 * If yes, returns an Array of int with the list indexes <b>if not, returns empty array</b>
+	 * <br/>
+	 * <br/>Also gives back indexes for callsign-70 or callsign-2 etc.<br/>
+	 *
+	 * @param lookForThis
+	 * @return int[]
+	 */
+	public ArrayList<Integer> checkListForChatMemberIndexesByCallSign(ChatMember lookForThis) {
+
+		ArrayList<Integer> resultingIndexes = new ArrayList<Integer>();
+
+		if (lookForThis == null) {
+
+//			System.out.println("[ChatCtrl] ERROR: null Value for Chatmember detected! Member cannot be in the list!");
+			return resultingIndexes;
+
+		} else if (lookForThis.getCallSign() == null) {
+			System.out.println("[ChatCtrl] ERROR: null Value in Callsign detected! Member cannot be in the list!");
+			return resultingIndexes;
+		}
+
+		for (Iterator iterator = lst_chatMemberList.iterator(); iterator.hasNext();) {
+			ChatMember chatMember = (ChatMember) iterator.next();
+			if (chatMember.getCallSignRaw().equals(lookForThis.getCallSignRaw())) { //Change for stations with -2 or -70 in logincallsign
+				System.out
+						.println("chtctrlr: Found raw " + chatMember.getCallSignRaw() + " //  " + lookForThis.getCallSign());
+
+				resultingIndexes.add(lst_chatMemberList.indexOf(chatMember));
+
+			} else {
+
+			}
+		}
+		return resultingIndexes;
+
+	}
+
+	/**
+	 * checks if the callsign-String of a given chatmember instance and a given list
 	 * instance is in the list. If yes, returns the index in the List, <b>if not,
 	 * returns -1.</b>
 	 * 
@@ -445,9 +502,10 @@ public class ChatController {
 
 		for (Iterator iterator = lst_chatMemberList.iterator(); iterator.hasNext();) {
 			ChatMember chatMember = (ChatMember) iterator.next();
-			if (chatMember.getCallSign().equals(lookForThis.getCallSign())) {
+//			if (chatMember.getCallSign().equals(lookForThis.getCallSign())) {
+			if (chatMember.getCallSignRaw().equals(lookForThis.getCallSignRaw())) { //TODO: Change for stations with -2 or -70 in logincallsign
 //				System.out
-//						.println("MSGBUSHELPER: Found " + chatMember.getCallSign() + " at " + lst_chatMemberList.indexOf(chatMember));
+//						.println("chtctrlr: Found raw " + chatMember.getCallSignRaw() + " //  " + lookForThis.getCallSign());
 
 				return lst_chatMemberList.indexOf(chatMember);
 			} else {
@@ -617,7 +675,9 @@ public class ChatController {
 	public ChatController() {
 
 		super();
-category = new ChatCategory(2);
+		chatCategoryMain = new ChatCategory(2);//Todo: selectable chatcategory, switched by user
+		chatCategorySecondChat = new ChatCategory(3); //Todo: selectable chatcategory, switched by user
+
 		ownChatMemberObject = new ChatMember();
 		ownChatMemberObject.setCallSign(userName);
 		ownChatMemberObject.setName(showedName);
@@ -650,17 +710,17 @@ category = new ChatCategory(2);
 
 				try {
 
-					if (chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getLoginCallSign())) {
+					if (chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getStn_loginCallSign())) {
 						return true; //messages addressed to you
 					}
-					if ((chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL"))){
+					if ((chatMessage.getSender().getCallSign().equals(getChatPreferences().getStn_loginCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL"))){
 						return true; //your own echo except texts to all (CQ)
 					}
 
 					String ignoreCaseString = chatMessage.getMessageText();
 
-					if ((chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toLowerCase()) || (chatMessage.getMessageText().contains(chatPreferences.getLoginCallSign().toUpperCase())))
-					&& (!chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign()))) {
+					if ((chatMessage.getMessageText().contains(chatPreferences.getStn_loginCallSign().toLowerCase()) || (chatMessage.getMessageText().contains(chatPreferences.getStn_loginCallSign().toUpperCase())))
+					&& (!chatMessage.getSender().getCallSign().equals(getChatPreferences().getStn_loginCallSign()))) {
 						return true; //if someone writes about you, you will get the mail, too, except you are the sender...!
 					}
 
@@ -699,8 +759,10 @@ category = new ChatCategory(2);
 			@Override
 			public boolean test(ChatMessage chatMessage) {
 				try {
-					if ((!chatMessage.getSender().getCallSign().equals(getChatPreferences().getLoginCallSign())) &&
-							(!chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getLoginCallSign()))) {
+					if ((!chatMessage.getSender().getCallSign().equals(getChatPreferences().getStn_loginCallSign())) &&
+							(!chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getStn_loginCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL")) )
+					//RX not own callsign and TX not own callsign and callsign is not "ALL" (that means, directed to public)
+					{
 						return true;
 					} else return false;
 
@@ -717,9 +779,10 @@ category = new ChatCategory(2);
 		chatPreferences = new ChatPreferences();
 		chatPreferences.readPreferencesFromXmlFile(); // set the praktikst Prefs by file or default if file is corrupted
 
-		category = chatPreferences.getLoginChatCategory();
-		this.userName = chatPreferences.getLoginCallSign();
-		this.password = chatPreferences.getLoginPassword();
+		chatCategoryMain = chatPreferences.getLoginChatCategoryMain();
+		chatCategorySecondChat = chatPreferences.getLoginChatCategorySecond();
+		this.userName = chatPreferences.getStn_loginCallSign();
+		this.password = chatPreferences.getStn_loginPassword();
 //		category = setCategory;
 		ownChatMemberObject = setOwnChatMemberObject;
 
@@ -758,6 +821,7 @@ category = new ChatCategory(2);
 		return writeThread;
 	}
 
+
 	public void setWriteThread(WriteThread writeThread) {
 		this.writeThread = writeThread;
 	}
@@ -770,15 +834,19 @@ category = new ChatCategory(2);
 		this.readThread = readThread;
 	}
 
-	public ChatCategory getCategory() {
-		return category;
+	public ChatCategory getChatCategoryMain() {
+		return chatCategoryMain;
 	}
 
-	public void setCategory(ChatCategory category) {
-		this.category = category;
+	public void setChatCategoryMain(ChatCategory chatCategoryMain) {
+		this.chatCategoryMain = chatCategoryMain;
 	}
 
-//	public void setChatMemberTable(Hashtable<String, ChatMember> chatMemberTable) {
+	public DXClusterThreadPooledServer getDxClusterServer() {
+		return dxClusterServer;
+	}
+
+	//	public void setChatMemberTable(Hashtable<String, ChatMember> chatMemberTable) {
 //		this.chatMemberTable = chatMemberTable;
 //	}
 //	
@@ -823,8 +891,13 @@ category = new ChatCategory(2);
 			messageTXBus = new LinkedBlockingQueue<ChatMessage>();
 //        	messageBus.add("");
 
-			socket = new Socket(hostname, port);
+			socket = new Socket(hostname, port);//socket for the on4kst chat server
 			System.out.println("Connected to the chat server: " + socket.isConnected());
+
+//			cluster_telnetServerSocket = new ServerSocket(8000); //TODO: Port customization have do be made
+
+			ByteBuffer buffer = ByteBuffer.allocate(1024);
+			Selector selector = Selector.open();
 
 //			consoleReader = new InputReaderThread(this);
 //			consoleReader.start();
@@ -845,26 +918,29 @@ category = new ChatCategory(2);
 			messageProcessor.setName("messagebusManagementThread");
 			messageProcessor.start();
 
-			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(chatPreferences.getAirScout_asCommunicationPort(), this, "AS", "KST");
+//			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(chatPreferences.getAirScout_asCommunicationPort(), this, "AS", "KST"); //working original
+			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(chatPreferences.getAirScout_asCommunicationPort(), this, this.getChatPreferences().getAirScout_asServerNameString(), this.getChatPreferences().getAirScout_asServerNameString()); //working original
 			airScoutUDPReaderThread.setName("airscoutudpreaderThread");
 			airScoutUDPReaderThread.start();
 
+
 			userActualizationtimer = new Timer();
-			userActualizationtimer.schedule(new UserActualizationTask(this), 4000, 60000);// TODO: Temporary
-																							// userlistoutput
-																							// with
-			// known qrgs
+			userActualizationtimer.schedule(new UserActualizationTask(this), 4000, 60000);// TODO: Temporary userlistoutput known qrgs
 
 			keepAliveTimer = new Timer();
-			keepAliveTimer.schedule(new keepAliveMessageSenderTask(this), 4000, 60000);// TODO: Temporary
-			// userlistoutput
-			// with
+			keepAliveTimer.schedule(new keepAliveMessageSenderTask(this), 4000, 60000);//
 
-//			keepAliveMessageSenderTask = new keepAliveMessageSenderTask(this);
-//			keepAliveMessageSenderTask.run();
 
-//			userActualizationTask = new UserActualizationTask(this); // kst4contest.test 4 23001
-//			userActualizationTask.run();// kst4contest.test 4 23001
+			/**
+			 * Since here: DX cluster service running config
+			 */
+			dxClusterServer = new DXClusterThreadPooledServer(this.getChatPreferences().getNotify_dxclusterServerPort(), this);
+			new Thread(dxClusterServer).start();
+
+			/**
+			 * Till here: DX cluster service running config
+			 */
+
 
 			this.setConnectedAndLoggedIn(true);
 
@@ -875,7 +951,7 @@ category = new ChatCategory(2);
 //			Timer beaconTimer;
 			beaconTimer = new Timer();
 			beaconTimer.schedule(new BeaconTask(this), 10000,
-					this.getChatPreferences().getBcn_beaconIntervalInMinutes() * 60000);
+					this.getChatPreferences().getBcn_beaconIntervalInMinutesMainCat() * 60000);
 			// 60000 * intervalInMinutes = IntervalInMillis
 
 			/**
@@ -884,7 +960,7 @@ category = new ChatCategory(2);
 			 */
 //			Timer ASQueryTimer;
 			ASQueryTimer = new Timer();
-			ASQueryTimer.schedule(new AirScoutPeriodicalAPReflectionInquirerTask(this), 10000, 12000);
+			ASQueryTimer.schedule(new AirScoutPeriodicalAPReflectionInquirerTask(this), 10000, 60000);
 			// 60000 * intervalInMinutes = IntervalInMillis
 
 			/**
@@ -896,7 +972,7 @@ category = new ChatCategory(2);
 
 				@Override
 				public void run() {
-					System.out.println("[Chatcontroller, info: ] periodical socketcheck");
+//					System.out.println("[Chatcontroller, info: ] periodical socketcheck");
 
 					Thread.currentThread().setName("SocketcheckTimer");
 
@@ -954,9 +1030,7 @@ category = new ChatCategory(2);
 								
 								messageProcessor = new MessageBusManagementThread(chatController);
 								messageProcessor.start();
-								
-//								chatController.setMessageProcessor= new MessageBusManagementThread(chatController);
-//								messageProcessor.start();
+
 								System.out.println("[Chatcontroller, info: initialized new socket, is connected? ] "
 										+ socket.isConnected() + " " + socket.isClosed());
 
@@ -1012,7 +1086,7 @@ category = new ChatCategory(2);
 
 		OffsetDateTime currentTimeInUtc = OffsetDateTime.now(ZoneOffset.UTC);
 
-		System.out.println(currentTimeInUtc.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm X")));
+//		System.out.println(currentTimeInUtc.format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm X")));
 
 		long millisecondsSinceEpoch = currentTimeInUtc.toInstant().toEpochMilli() / 1000;
 //	    System.out.println(millisecondsSinceEpoch);
@@ -1023,7 +1097,7 @@ category = new ChatCategory(2);
 	 * Setting the initial parameters at the chat via port 23001 <br/>
 	 * <br/>
 	 * <b>Login parameter format is like that: </b><br/>
-	 * LOGINC|do5amf|uxskezcj|2|wtKST 3.1.4.6|25|0|1|1663879818|0| <br/>
+	 * LOGINC|do5amf|password|2|kst4contest1251|25|0|1|1663879818|0| <br/>
 	 * SDONE|2| <br/>
 	 * 
 	 * @throws InterruptedException
@@ -1043,8 +1117,8 @@ category = new ChatCategory(2);
 				Thread.currentThread().setName("LoginStringTimer");
 
 				String loginString = "";
-				loginString = "LOGINC|" + chatPreferences.getLoginCallSign() + "|" + chatPreferences.getLoginPassword()
-						+ "|" + chatPreferences.getLoginChatCategory().getCategoryNumber() + "|praktiKST v" + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER
+				loginString = "LOGINC|" + chatPreferences.getStn_loginCallSign() + "|" + chatPreferences.getStn_loginPassword()
+						+ "|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber() + "|praktiKST v" + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER
 						+ "|25|0|1|" + getCurrentEpochTime() + "|0|";
 
 				// System.out.println(loginString);
@@ -1056,6 +1130,39 @@ category = new ChatCategory(2);
 			}
 		}, 2000);
 
+		/**
+		 * Entering second chat
+		 *
+		 * ACHAT|chat id|past messages number|past dx/map number|users list/update flags|last Unix timestamp for messages|last Unix timestamp for dx/map|
+		 */
+
+		if (this.chatController.getChatPreferences().isLoginToSecondChatEnabled()) { //only login to second if wished
+
+			new Timer().schedule(new TimerTask() {
+
+				@Override
+				public void run() { //test second chat
+
+					Thread.currentThread().setName("LoginStringTimerSecond");
+
+					String loginString = "";
+					loginString = "ACHAT|" + chatController.getChatPreferences().getLoginChatCategorySecond().getCategoryNumber() + "|" + "25"
+							+ "|" + "10" + "|2|" + getCurrentEpochTime() + "|" + getCurrentEpochTime();
+
+					// System.out.println(loginString);
+					ChatMessage message = new ChatMessage();
+					message.setMessageText(loginString);
+					message.setMessageDirectedToServer(true);
+					getMessageTXBus().add(message);
+
+				}
+			}, 5000);
+		}
+		/**
+		 * end testing second chat
+		 *
+		 */
+
 		new Timer().schedule(new TimerTask() {
 
 			@Override
@@ -1063,7 +1170,7 @@ category = new ChatCategory(2);
 
 				Thread.currentThread().setName("SDONEStringTimer");
 				ChatMessage message = new ChatMessage();
-				message.setMessageText("SDONE|" + chatPreferences.getLoginChatCategory().getCategoryNumber() + "|\r");
+				message.setMessageText("SDONE|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber() + "|\r");
 				message.setMessageDirectedToServer(true);
 				getMessageTXBus().add(message);
 
@@ -1076,11 +1183,10 @@ category = new ChatCategory(2);
 			public void run() {
 				Thread.currentThread().setName("SETLOCTIMER");
 				ChatMessage message = new ChatMessage();
-				message.setMessageText("MSG|" + chatPreferences.getLoginChatCategory().getCategoryNumber()
-						+ "|0|/SETLOC " + chatPreferences.getLoginLocator() + "|0|\r");
+				message.setMessageText("MSG|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber()
+						+ "|0|/SETLOC " + chatPreferences.getStn_loginLocatorMainCat() + "|0|\r");
 				message.setMessageDirectedToServer(true);
 				getMessageTXBus().add(message);
-
 			}
 		}, 4000);
 
@@ -1090,13 +1196,57 @@ category = new ChatCategory(2);
 			public void run() {
 				Thread.currentThread().setName("SETNAMETIMER");
 				ChatMessage message = new ChatMessage();
-				message.setMessageText("MSG|" + chatPreferences.getLoginChatCategory().getCategoryNumber()
-						+ "|0|/SETNAME " + chatPreferences.getLoginName() + "|0|\r");
+				message.setMessageText("MSG|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber()
+						+ "|0|/SETNAME " + chatPreferences.getStn_loginNameMainCat() + "|0|\r");
 				message.setMessageDirectedToServer(true);
 				getMessageTXBus().add(message);
-
 			}
 		}, 5000);
+
+		new Timer().schedule(new TimerTask() {
+
+			@Override
+			public void run() {
+				Thread.currentThread().setName("SETHereTimerMain");
+				ChatMessage message = new ChatMessage();
+				message.setMessageText("MSG|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber()
+						+ "|0|/BACK" + "|0|\r");
+				message.setMessageDirectedToServer(true);
+				getMessageTXBus().add(message);
+			}
+		}, 6500);
+
+
+		if (chatPreferences.isLoginToSecondChatEnabled()) { //only if second category had been enabled
+
+			new Timer().schedule(new TimerTask() {
+
+				@Override
+				public void run() {
+					Thread.currentThread().setName("SETNAMETIMER2nd");
+					ChatMessage message = new ChatMessage();
+					message.setMessageText("MSG|" + chatPreferences.getLoginChatCategorySecond().getCategoryNumber()
+							+ "|0|/SETNAME " + chatPreferences.getStn_loginNameSecondCat() + "|0|\r");
+					message.setMessageDirectedToServer(true);
+					getMessageTXBus().add(message);
+				}
+			}, 5500);
+
+			new Timer().schedule(new TimerTask() {
+
+				@Override
+				public void run() {
+					Thread.currentThread().setName("SETHereTimerSecond");
+					ChatMessage message = new ChatMessage();
+					message.setMessageText("MSG|" + chatPreferences.getLoginChatCategorySecond().getCategoryNumber()
+							+ "|0|/BACK" + "|0|\r");
+					message.setMessageDirectedToServer(true);
+					getMessageTXBus().add(message);
+				}
+			}, 7000);
+
+		}
+
 
 		new Timer().schedule(new TimerTask() {
 			HashMap<String, ChatMember> getWorkedDataFromDb;
@@ -1227,7 +1377,7 @@ category = new ChatCategory(2);
 //    	
 		message = new ChatMessage();
 //		message.setDirectedToServer(true);
-		message.setMessageText(category + "");
+		message.setMessageText(chatCategoryMain + "");
 		this.getMessageTXBus().add(message);
 //    	
 		message = new ChatMessage();

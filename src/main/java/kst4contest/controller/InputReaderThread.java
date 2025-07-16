@@ -43,7 +43,7 @@ public class InputReaderThread extends Thread {
         		e.printStackTrace();
         	}
 
-        	ownMSG.setMessageText("MSG|" + this.client.getCategory().getCategoryNumber() + "|0|" + sendThisMessage23001 + "|0|");
+        	ownMSG.setMessageText("MSG|" + this.client.getChatCategoryMain().getCategoryNumber() + "|0|" + sendThisMessage23001 + "|0|");
         	
 //        	System.out.println("inreader " + ownMSG.getMessage() + client.getMessageTXBus().size());
         	
