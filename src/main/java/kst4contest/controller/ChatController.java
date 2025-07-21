@@ -713,6 +713,7 @@ public class ChatController {
 					if (chatMessage.getReceiver().getCallSign().equals(getChatPreferences().getStn_loginCallSign())) {
 						return true; //messages addressed to you
 					}
+
 					if ((chatMessage.getSender().getCallSign().equals(getChatPreferences().getStn_loginCallSign())) && (!chatMessage.getReceiver().getCallSign().equals("ALL"))){
 						return true; //your own echo except texts to all (CQ)
 					}
@@ -721,6 +722,7 @@ public class ChatController {
 
 					if ((chatMessage.getMessageText().contains(chatPreferences.getStn_loginCallSign().toLowerCase()) || (chatMessage.getMessageText().contains(chatPreferences.getStn_loginCallSign().toUpperCase())))
 					&& (!chatMessage.getSender().getCallSign().equals(getChatPreferences().getStn_loginCallSign()))) {
+
 						return true; //if someone writes about you, you will get the mail, too, except you are the sender...!
 					}
 
