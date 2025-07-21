@@ -11,6 +11,7 @@ public class ApplicationConstants {
      */
     public static final double APPLICATION_CURRENTVERSIONNUMBER = 1.263;
 
+
     public static final String VERSIONINFOURLFORUPDATES_KST4CONTEST = "https://do5amf.funkerportal.de/kst4ContestVersionInfo.xml";
     public static final String VERSIONINFDOWNLOADEDLOCALFILE  = "kst4ContestVersionInfo.xml";
 
