@@ -1,17 +1,16 @@
-name: Tagged Release Build
+name: Nightly Runtime Artifacts
 
 on:
   push:
-    tags:
-      - "*"
+    branches:
+      - main
+  schedule:
+    - cron: "20 2 * * *"
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build-windows-zip:
-    name: Build Windows ZIP
+    name: Build Windows ZIP Artifact
     runs-on: windows-latest
 
     steps:
@@ -48,14 +47,15 @@ jobs:
           }
           Compress-Archive -Path dist/praktiKST/* -DestinationPath dist/praktiKST-windows-x64.zip -Force
 
-      - name: Upload Windows artifact
+      - name: Upload Windows ZIP artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-zip
+          name: nightly-windows-zip
           path: dist/praktiKST-windows-x64.zip
+          retention-days: 14
 
   build-linux-appimage:
-    name: Build Linux AppImage
+    name: Build Linux AppImage Artifact
     runs-on: ubuntu-latest
 
     steps:
@@ -121,40 +121,9 @@ jobs:
           chmod +x target/appimagetool.AppImage
           APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-linux-x86_64.AppImage
 
-      - name: Upload Linux artifact
+      - name: Upload Linux AppImage artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-appimage
+          name: nightly-linux-appimage
           path: dist/praktiKST-linux-x86_64.AppImage
-
-  release-tag:
-    name: Publish Tagged Release
-    runs-on: ubuntu-latest
-    needs:
-      - build-windows-zip
-      - build-linux-appimage
-
-    steps:
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-zip
-          path: release-assets/windows
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-appimage
-          path: release-assets/linux
-
-      - name: Create tagged release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          allowUpdates: false
-          replacesArtifacts: false
-          makeLatest: true
-          generateReleaseNotes: true
-          artifacts: release-assets/windows/praktiKST-windows-x64.zip,release-assets/linux/praktiKST-linux-x86_64.AppImage
+          retention-days: 14
