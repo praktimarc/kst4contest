@@ -38,7 +38,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          jpackage --type exe --name praktiKST --input target/dist-libs --main-jar praktiKST-1.0-SNAPSHOT.jar --main-class kst4contest.view.Kst4ContestApplication --dest dist
+          jpackage --type exe --name praktiKST --input target/dist-libs --main-jar praktiKST-1.0-SNAPSHOT.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql --dest dist
 
           $exe = Get-ChildItem -Path dist -Filter *.exe | Select-Object -First 1
           if (-not $exe) {
@@ -83,6 +83,8 @@ jobs:
             --input target/dist-libs \
             --main-jar praktiKST-1.0-SNAPSHOT.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
+            --module-path target/dist-libs \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
             --dest dist
 
       - name: Create AppDir metadata
