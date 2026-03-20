@@ -205,7 +205,7 @@ public class ReadUDPByWintestThread extends Thread {
             }
 
             String formattedQRG = String.format(Locale.US, "%.1f", freqFloat);
-            this.client.getChatPreferences().getMYQRG().set(formattedQRG);
+            this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
 
             System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG);
         } catch (Exception e) {
