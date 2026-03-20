@@ -1,6 +1,10 @@
 package kst4contest.model;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.BooleanProperty;
@@ -9,7 +13,10 @@ import javafx.beans.property.StringProperty;
 
 public class ChatMember {
 
-//	private final BooleanProperty workedInfoChangeFireListEventTrigger = new SimpleBooleanProperty();
+
+	long lastFlagsChangeEpochMs; // timestamp of the last worked/not-QRV flag change in the internal DB
+
+	//	private final BooleanProperty workedInfoChangeFireListEventTrigger = new SimpleBooleanProperty();
 	AirPlaneReflectionInfo airPlaneReflectInfo;
 	String callSign;
 	String qra;
@@ -45,6 +52,12 @@ public class ChatMember {
 	boolean worked3400;
 	boolean worked5600;
 	boolean worked10G;
+    boolean Worked50;
+    boolean Worked70;
+    boolean Worked24G;
+    boolean Worked47G;
+    boolean Worked76G;
+
 
 	/**
 	 * Chatmember is qrv at all band except we initialize anything other, depending to user entry
@@ -58,9 +71,35 @@ public class ChatMember {
 	boolean qrv10G = true;
 	boolean qrvAny = true;
 
+	// Stores the last known frequency per band (Context History)
+	private final Map<Band, ActiveFrequencyInfo> knownActiveBands = new ConcurrentHashMap<>();
 
 
+	// --- INNER CLASS FOR QRG HISTORY ---
+	public class ActiveFrequencyInfo {
+		public double frequency;
+		public long timestampEpoch;
 
+		public ActiveFrequencyInfo(double freq) {
+			this.frequency = freq;
+			this.timestampEpoch = System.currentTimeMillis();
+		}
+	}
+
+	// Counter for failed calls (Penalty Logic)
+	private int failedQSOAttempts = 0;
+
+	// Calculated Score for sorting the user list
+	private double currentPriorityScore = 0.0;
+
+
+	public long getLastFlagsChangeEpochMs() {
+		return lastFlagsChangeEpochMs;
+	}
+
+	public void setLastFlagsChangeEpochMs(long lastFlagsChangeEpochMs) {
+		this.lastFlagsChangeEpochMs = lastFlagsChangeEpochMs;
+	}
 
 	public boolean isInAngleAndRange() {
 		return isInAngleAndRange;
@@ -270,8 +309,129 @@ public class ChatMember {
 		return callSign;
 	}
 
+	/**
+	 * Sets the original callsign and derives the normalized base callsign which is
+	 * used as the database key. Prefixes like EA5/ and suffixes like /P or -70 are
+	 * ignored for the raw-key handling.
+	 *
+	 * @param callSign callsign as received from chat or database
+	 */
 	public void setCallSign(String callSign) {
-		this.callSign = callSign;
+
+		if (callSign == null) {
+			this.callSign = null;
+			this.callSignRaw = null;
+			return;
+		}
+
+		this.callSign = callSign.trim().toUpperCase(Locale.ROOT);
+		this.callSignRaw = normalizeCallSignToBaseCallSign(this.callSign);
+	}
+
+	/**
+	 * Normalizes a callsign to the base callsign which is used as the unique key in
+	 * the internal database. The method removes KST suffixes like "-2", portable
+	 * suffixes like "/P" and prefix additions like "EA5/".
+	 *
+	 * @param callSign callsign to normalize
+	 * @return normalized base callsign in upper case
+	 */
+	public static String normalizeCallSignToBaseCallSign(String callSign) {
+
+		if (callSign == null) {
+			return null;
+		}
+
+		String normalizedCallSign = callSign.trim().toUpperCase(Locale.ROOT);
+
+		if (normalizedCallSign.isBlank()) {
+			return normalizedCallSign;
+		}
+
+		String callSignWithoutDashSuffix = normalizedCallSign.split("-", 2)[0].trim();
+
+		if (!callSignWithoutDashSuffix.contains("/")) {
+			return callSignWithoutDashSuffix;
+		}
+
+		String[] callSignParts = callSignWithoutDashSuffix.split("/");
+		String bestMatchingCallsignPart = helper_selectBestCallsignPart(callSignParts);
+
+		if (bestMatchingCallsignPart == null || bestMatchingCallsignPart.isBlank()) {
+			return callSignWithoutDashSuffix;
+		}
+
+		return bestMatchingCallsignPart;
+	}
+
+	/**
+	 * Selects the most plausible base callsign segment from a slash-separated
+	 * callsign. In strings like "EA5/G8MBI/P" the segment "G8MBI" is preferred over
+	 * prefix or portable markers.
+	 *
+	 * @param callSignParts slash-separated callsign parts
+	 * @return best matching base callsign segment
+	 */
+	private static String helper_selectBestCallsignPart(String[] callSignParts) {
+
+		String bestLikelyBaseCallsignPart = null;
+		int bestLikelyBaseCallsignLength = -1;
+		String bestFallbackCallsignPart = null;
+		int bestFallbackCallsignLength = -1;
+
+		for (String rawCallsignPart : callSignParts) {
+
+			String currentCallsignPart = rawCallsignPart == null ? "" : rawCallsignPart.trim().toUpperCase(Locale.ROOT);
+
+			if (currentCallsignPart.isBlank()) {
+				continue;
+			}
+
+			if (currentCallsignPart.length() > bestFallbackCallsignLength) {
+				bestFallbackCallsignPart = currentCallsignPart;
+				bestFallbackCallsignLength = currentCallsignPart.length();
+			}
+
+			if (helper_isLikelyBaseCallsignSegment(currentCallsignPart)
+					&& currentCallsignPart.length() > bestLikelyBaseCallsignLength) {
+				bestLikelyBaseCallsignPart = currentCallsignPart;
+				bestLikelyBaseCallsignLength = currentCallsignPart.length();
+			}
+		}
+
+		if (bestLikelyBaseCallsignPart != null) {
+			return bestLikelyBaseCallsignPart;
+		}
+
+		return bestFallbackCallsignPart;
+	}
+
+	/**
+	 * Checks whether a slash-separated segment looks like a real base callsign. A
+	 * normal amateur-radio callsign typically contains letters and digits and is
+	 * longer than one-character postfix markers.
+	 *
+	 * @param callsignSegment segment to inspect
+	 * @return true if the segment looks like a base callsign
+	 */
+	private static boolean helper_isLikelyBaseCallsignSegment(String callsignSegment) {
+
+		boolean containsLetter = false;
+		boolean containsDigit = false;
+
+		for (int currentIndex = 0; currentIndex < callsignSegment.length(); currentIndex++) {
+			char currentCharacter = callsignSegment.charAt(currentIndex);
+
+			if (Character.isLetter(currentCharacter)) {
+				containsLetter = true;
+			}
+
+			if (Character.isDigit(currentCharacter)) {
+				containsDigit = true;
+			}
+		}
+
+		return containsLetter && containsDigit && callsignSegment.length() >= 3;
 	}
 
 	public String getQra() {
@@ -313,8 +473,50 @@ public class ChatMember {
 		return worked;
 	}
 
-	public void setWorked(boolean worked) {
+    public boolean isWorked50() {
+        return Worked50;
+    }
+
+    public void setWorked50(boolean worked50) {
+        Worked50 = worked50;
+    }
+
+    public boolean isWorked70() {
+        return Worked70;
+    }
+
+    public void setWorked70(boolean worked70) {
+        Worked70 = worked70;
+    }
+
+    public boolean isWorked24G() {
+        return Worked24G;
+    }
+
+    public void setWorked24G(boolean worked24G) {
+        Worked24G = worked24G;
+    }
+
+    public boolean isWorked47G() {
+        return Worked47G;
+    }
+
+    public void setWorked47G(boolean worked47G) {
+        Worked47G = worked47G;
+    }
+
+    public boolean isWorked76G() {
+        return Worked76G;
+    }
+
+    public void setWorked76G(boolean worked76G) {
+        Worked76G = worked76G;
+    }
+
+    public void setWorked(boolean worked) {
 		this.worked = worked;
+
+
 
 	}
 
@@ -324,13 +526,15 @@ public class ChatMember {
 	 */
 	public String getCallSignRaw() {
 
-			String raw = "";
 
-		try {
-			return this.getCallSign().split("-")[0]; //e.g. OK2M-70, returns only ok2m
-		} catch (Exception e) {
-			return getCallSign();
-		}
+        return callSignRaw;
+//			String raw = "";
+//
+//		try {
+//			return this.getCallSign().split("-")[0]; //e.g. OK2M-70, returns only ok2m
+//		} catch (Exception e) {
+//			return getCallSign();
+//		}
 	}
 
 
@@ -342,13 +546,20 @@ public class ChatMember {
 
 		this.setWorked(false);
 		this.setWorked144(false);
+        this.setWorked50(false);
+        this.setWorked70(false);
 		this.setWorked432(false);
 		this.setWorked1240(false);
 		this.setWorked2300(false);
 		this.setWorked3400(false);
 		this.setWorked5600(false);
 		this.setWorked10G(false);
-	}
+        this.setWorked24G(false);
+        this.setWorked47G(false);
+        this.setWorked76G(false);
+
+
+    }
 
 	/**
 	 * Sets all worked information of this object to false. Scope: GUI, Reset Button
@@ -390,5 +601,57 @@ public class ChatMember {
 		} else
 			return false;
 	}
+
+	/**
+	 * Adds a new recognized frequency by band to the internal band/qrg map
+	 * @param band
+	 * @param freq
+	 */
+	public void addKnownFrequency(Band band, double freq) {
+		this.knownActiveBands.put(band, new ActiveFrequencyInfo(freq));
+	}
+
+	/**
+	 * represents a map of bands which are known of this chatmember
+	 *
+	 * @return Band
+	 */
+	public Map<Band, ActiveFrequencyInfo> getKnownActiveBands() {
+		return knownActiveBands;
+	}
+
+
+	/**
+	 * If a sked fails and the user tells this to the client, this counter will be increased to give the station a
+	 * lower score
+	 */
+	public void incrementFailedAttempts() {
+		this.failedQSOAttempts++;
+	}
+
+	public void resetFailedAttempts() {
+		this.failedQSOAttempts = 0;
+	}
+
+	public int getFailedQSOAttempts() {
+		return failedQSOAttempts;
+	}
+
+	/**
+	 * Sets the working-priority score of a chatmember for the "Todo-List"
+	 * @param score
+	 */
+	public void setCurrentPriorityScore(double score) {
+		this.currentPriorityScore = score;
+	}
+
+	/**
+	 * Gets the working-priority score of a chatmember for the "Todo-List"
+	 *
+	 */
+	public double getCurrentPriorityScore() {
+		return currentPriorityScore;
+	}
+
 
 }

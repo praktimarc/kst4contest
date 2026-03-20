@@ -1,8 +1,10 @@
 package kst4contest.controller;
 
+import java.util.Arrays;
 import java.util.TimerTask;
 
 import kst4contest.model.ChatMessage;
+import kst4contest.model.ThreadStateMessage;
 
 /**
  * This class is for sending beacons intervalled to the public chat. Gets all
@@ -20,16 +22,23 @@ import kst4contest.model.ChatMessage;
 public class BeaconTask extends TimerTask {
 
 	private ChatController chatController;
+    private ThreadStatusCallback callBackToController;
+    private String ThreadNickName = "MyBeacon";
 
-	public BeaconTask(ChatController client) {
-
+	public BeaconTask(ChatController client, ThreadStatusCallback callback) {
+        this.callBackToController = callback;
 		this.chatController = client;
 
 	}
 
 	@Override
 	public void run() {
-		Thread.currentThread().setName("BeaconTask");
+
+        ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
+        callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
+        Thread.currentThread().setName("BeaconTask");
+
 
 		ChatMessage beaconMSG = new ChatMessage();
 		
@@ -75,8 +84,12 @@ public class BeaconTask extends TimerTask {
 					+ " [BeaconTask, Info]: Sending CQ: " + beaconMSG.getMessageText());
 			this.chatController.getMessageTXBus().add(beaconMSG);
 
+            threadStateMessage = new ThreadStateMessage(this.ThreadNickName + " 1", true, "on", false);
+            callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
 		} else {
-			//do nothing, CQ is disabled
+            threadStateMessage = new ThreadStateMessage(this.ThreadNickName + " 1", false, "off", false);
+            callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 		}
 
 		/**
@@ -94,13 +107,14 @@ public class BeaconTask extends TimerTask {
 						+ " [BeaconTask, Info]: Sending CQ 2nd Cat: " + beaconMSG2.getMessageText());
 				this.chatController.getMessageTXBus().add(beaconMSG2);
 
+                threadStateMessage = new ThreadStateMessage(this.ThreadNickName + " 2", true, "on", false);
+                callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
 			} else {
-				//do nothing, CQ is disabled
+                threadStateMessage = new ThreadStateMessage(this.ThreadNickName + " 2", false, "off", false);
+                callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 			}
 		}
-
-
-		
 
 	}
 

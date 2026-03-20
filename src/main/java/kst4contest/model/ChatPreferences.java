@@ -18,6 +18,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import javafx.beans.property.*;
 import kst4contest.ApplicationConstants;
 import kst4contest.utils.ApplicationFileUtils;
 import org.w3c.dom.Document;
@@ -26,14 +27,33 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import javafx.beans.property.IntegerProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 
+/**
+ * refactored version if ChatPreferences
+ */
 public class ChatPreferences {
+
+
+	// Main window: right split pane (ChatMember table / Priority list / FurtherInfo)
+	// 3 items => 2 dividers => 2 positions.
+	private double[] GUImainWindowRightSplitPane_dividerposition = new double[] { 0.53, 0.78 };
+
+	// Defaults used for config upgrades / first start.
+	private final double[] GUImainWindowRightSplitPane_dividerpositionDefault = new double[] { 0.53, 0.78 };
+
+
+	/**
+	 * Bump this when you change the XML schema written by {@link #writePreferencesToXmlFile()}.
+	 * <p>
+	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
+	 */
+//	private static final int CONFIG_VERSION = 2;
+	public static final int CONFIG_VERSION = 3;
+
+	// Prefer writing tag names that mirror variable names (human readable). Keep legacy tags for compatibility.
+	private static final String TAG_CONFIG_VERSION = "configVersion";
 
 	/**
 	 * Name of file to store preferences in.
@@ -50,11 +70,13 @@ public class ChatPreferences {
 	/**
 	 * Default constructor will set the default values (also for predefined texts
 	 * and shorts) automatically at initialization
-	 * 
+	 *
 	 * TODO: delete this from the kst4contest.view/Main.java!
 	 */
 	public ChatPreferences() {
 		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, PREFERENCES_FILE);
+
+//        lstNotify_QSOSniffer_sniffedCallSignList.add("DF0GEB");
 
 //		shortcuts[2] = "pse";
 //		shortcuts[3] = "turn";
@@ -91,7 +113,7 @@ public class ChatPreferences {
 //		shortcuts[34] = "!";
 //		shortcuts[35] = ",";
 //		shortcuts[36] = "MYQRG";
-//		
+//
 //		textSnippets[0] = "Hi OM, try sked?";
 //		textSnippets[1] = "I am calling cq ur dir, pse lsn to me at ";
 //		textSnippets[2] = "pse ur qrg?";
@@ -99,15 +121,15 @@ public class ChatPreferences {
 //		textSnippets[4] = "Hrd you but many qrm here, pse agn";
 //
 //		textSnippets[5] = "I turn my ant to you";
-//		
-//		textSnippets[6] = "Sry, strong qrm by local station there, may try ";			
+//
+//		textSnippets[6] = "Sry, strong qrm by local station there, may try ";
 //		textSnippets[7] = "Sry, in qso nw, pse qrx, I will meep you";
-//		
+//
 //		textSnippets[8] = "Ur ant my dir nw?";
 //		textSnippets[9] = "nil?";
 //		textSnippets[10] = "No cw op here, could we use ssb?";
-//		textSnippets[11] = "No chance in ssb, could we use cw?";			
-//		
+//		textSnippets[11] = "No chance in ssb, could we use cw?";
+//
 //		textSnippets[12] = "Nil till now, are you calling?";
 //		textSnippets[13] = "Nil, I will look for an ap";
 //		textSnippets[14] = "Tnx try, maybe later!";
@@ -118,7 +140,7 @@ public class ChatPreferences {
 	 * Preferences for the preferences
 	 * kst4contest@googlegroups.com
 	 * praktimarc+kst4contest@gmail.com
-	 * 
+	 *
 	 */
 
 	String programVersion = "Chat is powered by ON4KST \n\nUsage is free. You are welcome to support: \n\n- my project (donations, bugreports, good ideas are welcome), \n- ON4KST Servers, \n- AirScout developers and \n- OV3T (best AS-data provider of the world). \n\n73 de DO5AMF, Marc (DM5M / DARC X08)";
@@ -131,8 +153,16 @@ public class ChatPreferences {
 	 * Station preferences
 	 */
 
+
+
+	String stn_on4kstServersDns = "www.on4kst.org";
+	int stn_on4kstServersPort = 23001;
+
+	boolean stn_pstRotatorEnabled = false;
+
 	boolean stn_loginAFKState = false; //always start as here
 	String stn_loginCallSign = "do5amf";
+	String stn_loginCallSignRaw = "do5amf"; //for example: do5amf instead of logincallsign do5amf-2
 	String stn_loginPassword = "";
 	String stn_loginNameMainCat = "KST4Contest";
 	String stn_loginNameSecondCat = "KST4ContestSHF";
@@ -146,7 +176,7 @@ public class ChatPreferences {
 	ChatCategory loginChatCategoryMain = new ChatCategory(2);
 	ChatCategory loginChatCategorySecond = new ChatCategory(3);
 	boolean loginToSecondChatEnabled;
-	IntegerProperty actualQTF = new SimpleIntegerProperty(360); // will be updated by user at runtime!
+	DoubleProperty actualQTF = new SimpleDoubleProperty(360); // will be updated by user at runtime!
 
 	boolean stn_bandActive144;
 	boolean stn_bandActive432;
@@ -165,11 +195,20 @@ public class ChatPreferences {
 	int logsynch_ucxUDPWkdCallListenerPort = 12060;
 	boolean logsynch_ucxUDPWkdCallListenerEnabled = true;
 
+	String logsynch_wintestNetworkStationNameOfKST = "KST4Contest";
+	String logsynch_wintestNetworkStationNameOfWintestClient1 = "STN1";
+	boolean logsynch_wintestNetworkSimulationEnabled = false;
+	int logsynch_wintestNetworkStationIDOfKST = 55555;
+	int logsynch_wintestNetworkPort = 9871;
+	boolean logsynch_wintestNetworkListenerEnabled = true; // default true = bisheriges Verhalten
+
+
+
 	/**
 	 * TRX Synch prefs
 	 */
 	StringProperty MYQRGFirstCat = new SimpleStringProperty(); // own qrg will be set by user entry or ucxlog if trx Synch is
-														// activated
+	// activated
 	StringProperty MYQRGSecondCat = new SimpleStringProperty(); // own qrg will be set by user entry or ucxlog if trx Synch is activated
 
 	boolean trxSynch_ucxLogUDPListenerEnabled = false;
@@ -185,6 +224,8 @@ public class ChatPreferences {
 	 * Notification prefs
 	 */
 
+
+
 	//Audio section
 	boolean notify_playSimpleSounds = true;
 	boolean notify_playCWCallsignsOnRxedPMs = true;
@@ -199,6 +240,18 @@ public class ChatPreferences {
 
 	boolean notify_DXClusterServerTriggerBearing;
 	boolean notify_DXClusterServerTriggerOnQRGDetect;
+
+	//    ObservableList<String> lstNotify_QSOSniffer_sniffedCallSignList = FXCollections.observableArrayList();
+	ObservableList<String> lstNotify_QSOSniffer_sniffedWordsList = FXCollections.observableArrayList();
+	ObservableList<String> lstNotify_QSOSniffer_sniffedPrefixLocList = FXCollections.observableArrayList();
+
+	// Scoring / interaction metrics
+	int notify_noReplyPenaltyMinutes = 13;          // if we ping via /cq and no response arrives within X minutes => penalty strike
+	int notify_momentumWindowSeconds = 180;         // momentum window size (count inbound lines)
+	String notify_positiveSignalsPatterns = "QRV;READY;RX;RGR;RR;OK;YES;TNX;TU;HEARD;LSN"; //TODO: to be continued
+
+	boolean notify_bandUpgradeHintOnLogEnabled = true;          // show hint after log entry if station QRV on other unworked enabled band
+	boolean notify_bandUpgradePriorityBoostEnabled = false;     // optional score boost to make it stand out in toplists
 
 
 	/**
@@ -258,15 +311,18 @@ public class ChatPreferences {
 	 *
 	 *********************************************************************************/
 
+	private boolean GUI_darkModeActive = false;
+	private boolean GUI_darkModeActiveByDefault = false;
+
 	private double[] GUIscn_ChatwindowMainSceneSizeHW = new double[] {768, 1234};
 	private double[] GUIclusterAndQSOMonStage_SceneSizeHW = new double[] {700, 500};
-	private double[] GUIstage_updateStage_SceneSizeHW = new double[] {640, 480};
+	private double[] GUIstage_updateStage_SceneSizeHW = new double[] {580, 480};
 	private double[] GUIsettingsStageSceneSizeHW = new double[] {720, 768};
 
 	private double[] GUIselectedCallSignSplitPane_dividerposition = {0.55};
 	private double[] GUImainWindowLeftSplitPane_dividerposition = {0.51};
-	private double[] GUImessageSectionSplitpane_dividerposition = {0.62, 0.7, 0.75}; //3 deviders now //TODO: more should be possible?
-	private double[] GUImainWindowRightSplitPane_dividerposition = {0.72};
+	private double[] GUImessageSectionSplitpane_dividerposition = {0.62, 0.7, 0.75, 0.9}; //3 deviders now //TODO: more should be possible?
+//	private double[] GUImainWindowRightSplitPane_dividerposition = {0.72};
 	private double[] GUIpnl_directedMSGWin_dividerpositionDefault = {0.8};
 
 
@@ -316,6 +372,86 @@ public class ChatPreferences {
 
 	public void setStn_loginNameSecondCat(String stn_loginNameSecondCat) {
 		this.stn_loginNameSecondCat = stn_loginNameSecondCat;
+	}
+
+	public int getStn_on4kstServersPort() {
+		return stn_on4kstServersPort;
+	}
+
+	public void setStn_on4kstServersPort(int stn_on4kstServersPort) {
+		this.stn_on4kstServersPort = stn_on4kstServersPort;
+	}
+
+	public String getStn_on4kstServersDns() {
+		return stn_on4kstServersDns;
+	}
+
+	public void setStn_on4kstServersDns(String stn_on4kstServersDns) {
+		this.stn_on4kstServersDns = stn_on4kstServersDns;
+	}
+
+	public ObservableList<String> getLstNotify_QSOSniffer_sniffedWordsList() {
+		return lstNotify_QSOSniffer_sniffedWordsList;
+	}
+
+	public void setLstNotify_QSOSniffer_sniffedWordsList(ObservableList<String> lstNotify_QSOSniffer_sniffedWordsList) {
+		this.lstNotify_QSOSniffer_sniffedWordsList = lstNotify_QSOSniffer_sniffedWordsList;
+	}
+
+	public ObservableList<String> getLstNotify_QSOSniffer_sniffedPrefixLocList() {
+		return lstNotify_QSOSniffer_sniffedPrefixLocList;
+	}
+
+	public void setLstNotify_QSOSniffer_sniffedPrefixLocList(ObservableList<String> lstNotify_QSOSniffer_sniffedPrefixLocList) {
+		this.lstNotify_QSOSniffer_sniffedPrefixLocList = lstNotify_QSOSniffer_sniffedPrefixLocList;
+	}
+
+	public String getLogsynch_wintestNetworkStationNameOfKST() {
+		return logsynch_wintestNetworkStationNameOfKST;
+	}
+
+	public void setLogsynch_wintestNetworkStationNameOfKST(String logsynch_wintestNetworkStationNameOfKST) {
+		this.logsynch_wintestNetworkStationNameOfKST = logsynch_wintestNetworkStationNameOfKST;
+	}
+
+	public String getLogsynch_wintestNetworkStationNameOfWintestClient1() {
+		return logsynch_wintestNetworkStationNameOfWintestClient1;
+	}
+
+	public void setLogsynch_wintestNetworkStationNameOfWintestClient1(String logsynch_wintestNetworkStationNameOfWintestClient1) {
+		this.logsynch_wintestNetworkStationNameOfWintestClient1 = logsynch_wintestNetworkStationNameOfWintestClient1;
+	}
+
+	public boolean isLogsynch_wintestNetworkSimulationEnabled() {
+		return logsynch_wintestNetworkSimulationEnabled;
+	}
+
+	public void setLogsynch_wintestNetworkSimulationEnabled(boolean logsynch_wintestNetworkSimulationEnabled) {
+		this.logsynch_wintestNetworkSimulationEnabled = logsynch_wintestNetworkSimulationEnabled;
+	}
+
+	public int getLogsynch_wintestNetworkStationIDOfKST() {
+		return logsynch_wintestNetworkStationIDOfKST;
+	}
+
+	public void setLogsynch_wintestNetworkStationIDOfKST(int logsynch_wintestNetworkStationIDOfKST) {
+		this.logsynch_wintestNetworkStationIDOfKST = logsynch_wintestNetworkStationIDOfKST;
+	}
+
+	public int getLogsynch_wintestNetworkPort() {
+		return logsynch_wintestNetworkPort;
+	}
+
+	public void setLogsynch_wintestNetworkPort(int logsynch_wintestNetworkPort) {
+		this.logsynch_wintestNetworkPort = logsynch_wintestNetworkPort;
+	}
+
+	public boolean isLogsynch_wintestNetworkListenerEnabled() {
+		return logsynch_wintestNetworkListenerEnabled;
+	}
+
+	public void setLogsynch_wintestNetworkListenerEnabled(boolean logsynch_wintestNetworkListenerEnabled) {
+		this.logsynch_wintestNetworkListenerEnabled = logsynch_wintestNetworkListenerEnabled;
 	}
 
 	public String getStn_loginLocatorSecondCat() {
@@ -458,6 +594,56 @@ public class ChatPreferences {
 		this.notify_dxClusterServerEnabled = notify_dxClusterServerEnabled;
 	}
 
+
+	public int getNotify_noReplyPenaltyMinutes() {
+		return notify_noReplyPenaltyMinutes;
+	}
+
+	public void setNotify_noReplyPenaltyMinutes(int notify_noReplyPenaltyMinutes) {
+		this.notify_noReplyPenaltyMinutes = notify_noReplyPenaltyMinutes;
+	}
+
+	public int getNotify_momentumWindowSeconds() {
+		return notify_momentumWindowSeconds;
+	}
+
+	public void setNotify_momentumWindowSeconds(int notify_momentumWindowSeconds) {
+		this.notify_momentumWindowSeconds = notify_momentumWindowSeconds;
+	}
+
+	public String getNotify_positiveSignalsPatterns() {
+		return notify_positiveSignalsPatterns;
+	}
+
+	public void setNotify_positiveSignalsPatterns(String notify_positiveSignalsPatterns) {
+		this.notify_positiveSignalsPatterns = notify_positiveSignalsPatterns;
+	}
+
+
+	public boolean isNotify_bandUpgradePriorityBoostEnabled() {
+		return notify_bandUpgradePriorityBoostEnabled;
+	}
+
+	public void setNotify_bandUpgradePriorityBoostEnabled(boolean notify_bandUpgradePriorityBoostEnabled) {
+		this.notify_bandUpgradePriorityBoostEnabled = notify_bandUpgradePriorityBoostEnabled;
+	}
+
+	public boolean isNotify_bandUpgradeHintOnLogEnabled() {
+		return notify_bandUpgradeHintOnLogEnabled;
+	}
+
+	public void setNotify_bandUpgradeHintOnLogEnabled(boolean notify_bandUpgradeHintOnLogEnabled) {
+		this.notify_bandUpgradeHintOnLogEnabled = notify_bandUpgradeHintOnLogEnabled;
+	}
+
+	public boolean isStn_pstRotatorEnabled() {
+		return stn_pstRotatorEnabled;
+	}
+
+	public void setStn_pstRotatorEnabled(boolean stn_pstRotatorEnabled) {
+		this.stn_pstRotatorEnabled = stn_pstRotatorEnabled;
+	}
+
 	public SimpleStringProperty getNotify_optionalFrequencyPrefix() {
 		return notify_optionalFrequencyPrefix;
 	}
@@ -526,17 +712,23 @@ public class ChatPreferences {
 		return GUImessageSectionSplitpane_dividerposition;
 	}
 
-	public void setGUImessageSectionSplitpane_dividerposition(double[] GUImessageSectionSplitpane_dividerposition) {
-		this.GUImessageSectionSplitpane_dividerposition = GUImessageSectionSplitpane_dividerposition;
-	}
-
 	public double[] getGUImainWindowRightSplitPane_dividerposition() {
 		return GUImainWindowRightSplitPane_dividerposition;
 	}
 
-	public void setGUImainWindowRightSplitPane_dividerposition(double[] GUImainWindowRightSplitPane_dividerposition) {
-		this.GUImainWindowRightSplitPane_dividerposition = GUImainWindowRightSplitPane_dividerposition;
+	public void setGUImessageSectionSplitpane_dividerposition(double[] GUImessageSectionSplitpane_dividerposition) {
+		this.GUImessageSectionSplitpane_dividerposition = GUImessageSectionSplitpane_dividerposition;
 	}
+
+
+
+	public void setGUImainWindowRightSplitPane_dividerposition(double[] positions) {
+		this.GUImainWindowRightSplitPane_dividerposition = positions;
+	}
+
+//	public void setGUImainWindowRightSplitPane_dividerposition(double[] GUImainWindowRightSplitPane_dividerposition) {
+//		this.GUImainWindowRightSplitPane_dividerposition = GUImainWindowRightSplitPane_dividerposition;
+//	}
 
 	public double[] getGUIpnl_directedMSGWin_dividerpositionDefault() {
 		return GUIpnl_directedMSGWin_dividerpositionDefault;
@@ -580,6 +772,10 @@ public class ChatPreferences {
 
 	public String getStn_loginCallSign() {
 		return stn_loginCallSign;
+	}
+
+	public String getStn_loginCallSignRaw() {
+		return stn_loginCallSignRaw;
 	}
 
 	public String getAirScout_asBandString() {
@@ -680,11 +876,11 @@ public class ChatPreferences {
 		return MYQRGFirstCat;
 	}
 
-	public IntegerProperty getActualQTF() {
+	public DoubleProperty getActualQTF() {
 		return actualQTF;
 	}
 
-	public void setActualQTF(IntegerProperty actualQTF) {
+	public void setActualQTF(DoubleProperty actualQTF) {
 		this.actualQTF = actualQTF;
 	}
 
@@ -693,7 +889,24 @@ public class ChatPreferences {
 	}
 
 	public void setStn_loginCallSign(String stn_loginCallSign) {
+
 		this.stn_loginCallSign = stn_loginCallSign;
+		this.stn_loginCallSignRaw = stn_loginCallSign;
+
+		if (stn_loginCallSign.contains("-")) {
+
+			this.stn_loginCallSignRaw = stn_loginCallSign.split("-")[0];
+
+		} else if (stn_loginCallSign.contains("/")) {
+
+			this.stn_loginCallSignRaw = stn_loginCallSign.split("/")[0];
+
+		}
+
+		if ((stn_loginCallSign.split("-").length > 2 ) || stn_loginCallSign.split("/").length > 2) {
+			System.out.println("ChatPreferences, WARNING! Logincallsign is not plausible"); //strange login like do5-amf-2
+		}
+
 	}
 
 	public String getStn_loginPassword() {
@@ -846,8 +1059,8 @@ public class ChatPreferences {
 		this.bcn_beaconTextMainCat = bcn_beaconTextMainCat;
 	}
 
-	 
-	
+
+
 	public String messageHandling_beaconUnworkedstationsPrefix() {
 		return messageHandling_beaconUnworkedstationsPrefix;
 	}
@@ -900,48 +1113,72 @@ public class ChatPreferences {
 
 
 	/**
-	 * 
+	 *
 	 * @return true if the file writing was successful, else false
 	 */
 	public boolean writePreferencesToXmlFile() {
-		
+
 		DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
 		try {
 
-		      // root elements
-			  DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-		      Document doc = docBuilder.newDocument();
-		      Element rootElement = doc.createElement("praktiKST");
-		      doc.appendChild(rootElement);
 
 
-		      Element station = doc.createElement("station");
-		      rootElement.appendChild(station);
-		      
-		      Element LoginCallSign = doc.createElement("LoginCallSign");
-		      LoginCallSign.setTextContent(this.getStn_loginCallSign());
-		      station.appendChild(LoginCallSign);
-		      
+			// root elements
+			DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+			Document doc = docBuilder.newDocument();
+			Element rootElement = doc.createElement("praktiKST");
+			doc.appendChild(rootElement);
 
-		      Element LoginPassword = doc.createElement("LoginPassword");
-		      LoginPassword.setTextContent(this.getStn_loginPassword());
-		      station.appendChild(LoginPassword);
+			// Schema version
+			Element configVersion = doc.createElement("configVersion");
+			configVersion.setTextContent(String.valueOf(CONFIG_VERSION));
+			rootElement.appendChild(configVersion);
 
-		      Element LoginDisplayedName = doc.createElement("LoginDisplayedName");
-		      LoginDisplayedName.setTextContent(this.getStn_loginNameMainCat());
-		      station.appendChild(LoginDisplayedName);
+
+			Element station = doc.createElement("station");
+			rootElement.appendChild(station);
+
+			Element LoginCallSign = doc.createElement("LoginCallSign");
+			LoginCallSign.setTextContent(this.getStn_loginCallSign());
+			station.appendChild(LoginCallSign);
+
+			// New preferred tag names (closer to variable names). Keep legacy tags above for old versions.
+			Element stn_loginCallSign = doc.createElement("stn_loginCallSign");
+			stn_loginCallSign.setTextContent(this.getStn_loginCallSign());
+			station.appendChild(stn_loginCallSign);
+
+
+			Element LoginPassword = doc.createElement("LoginPassword");
+			LoginPassword.setTextContent(this.getStn_loginPassword());
+			station.appendChild(LoginPassword);
+
+			Element stn_loginPassword = doc.createElement("stn_loginPassword");
+			stn_loginPassword.setTextContent(this.getStn_loginPassword());
+			station.appendChild(stn_loginPassword);
+
+			Element LoginDisplayedName = doc.createElement("LoginDisplayedName");
+			LoginDisplayedName.setTextContent(this.getStn_loginNameMainCat());
+			station.appendChild(LoginDisplayedName);
+
+			Element stn_loginNameMainCat = doc.createElement("stn_loginNameMainCat");
+			stn_loginNameMainCat.setTextContent(this.getStn_loginNameMainCat());
+			station.appendChild(stn_loginNameMainCat);
 
 			Element stn_loginNameSecondCat = doc.createElement("stn_loginNameSecondCat");
 			stn_loginNameSecondCat.setTextContent(this.getStn_loginNameSecondCat());
 			station.appendChild(stn_loginNameSecondCat);
 
-		      Element LoginLocator = doc.createElement("LoginLocator");
-		      LoginLocator.setTextContent(this.getStn_loginLocatorMainCat());
-		      station.appendChild(LoginLocator);
+			Element LoginLocator = doc.createElement("LoginLocator");
+			LoginLocator.setTextContent(this.getStn_loginLocatorMainCat());
+			station.appendChild(LoginLocator);
 
-		      Element ChatCategory = doc.createElement("ChatCategory");
-		      ChatCategory.setTextContent(this.getLoginChatCategoryMain().getCategoryNumber()+"");
-		      station.appendChild(ChatCategory);
+			Element stn_loginLocatorMainCat = doc.createElement("stn_loginLocatorMainCat");
+			stn_loginLocatorMainCat.setTextContent(this.getStn_loginLocatorMainCat());
+			station.appendChild(stn_loginLocatorMainCat);
+
+			Element ChatCategory = doc.createElement("ChatCategory");
+			ChatCategory.setTextContent(this.getLoginChatCategoryMain().getCategoryNumber()+"");
+			station.appendChild(ChatCategory);
 
 			Element ChatCategorySecond = doc.createElement("ChatCategorySecond");
 			ChatCategorySecond.setTextContent(this.getLoginChatCategorySecond().getCategoryNumber()+"");
@@ -991,79 +1228,126 @@ public class ChatPreferences {
 			stn_bandActive10G.setTextContent(this.stn_bandActive10G+"");
 			station.appendChild(stn_bandActive10G);
 
-		      /**
-		       * LOGSYNCH
-		       */
+			Element stn_on4kstServersDns = doc.createElement("stn_on4kstServersDns");
+			stn_on4kstServersDns.setTextContent(this.stn_on4kstServersDns);
+			station.appendChild(stn_on4kstServersDns);
 
-		      Element logsynch = doc.createElement("logsynch");
-		      rootElement.appendChild(logsynch);
+			Element stn_on4kstServersPort = doc.createElement("stn_on4kstServersPort");
+			stn_on4kstServersPort.setTextContent(this.stn_on4kstServersPort + "");
+			station.appendChild(stn_on4kstServersPort);
 
-		      Element logsynch_fileBasedWkdCallInterpreterFileNameReadOnly = doc.createElement("logsynch_fileBasedWkdCallInterpreterFileNameReadOnly");
-		      logsynch_fileBasedWkdCallInterpreterFileNameReadOnly.setTextContent(this.getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
-		      logsynch.appendChild(logsynch_fileBasedWkdCallInterpreterFileNameReadOnly);
+			Element stn_loginAFKState = doc.createElement("stn_loginAFKState");
+			stn_loginAFKState.setTextContent(this.stn_loginAFKState + "");
+			station.appendChild(stn_loginAFKState);
 
-		      Element logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = doc.createElement("logsynch_storeWorkedCallSignsFileNameUDPMessageBackup");
-		      logsynch_storeWorkedCallSignsFileNameUDPMessageBackup.setTextContent(this.getLogsynch_storeWorkedCallSignsFileNameUDPMessageBackup());
-		      logsynch.appendChild(logsynch_storeWorkedCallSignsFileNameUDPMessageBackup);
+			Element stn_pstRotatorEnabled = doc.createElement("stn_pstRotatorEnabled");
+			stn_pstRotatorEnabled.setTextContent(this.stn_pstRotatorEnabled + "");
+			station.appendChild(stn_pstRotatorEnabled);
 
-		      Element logsynch_fileBasedWkdCallInterpreterEnabled = doc.createElement("logsynch_fileBasedWkdCallInterpreterEnabled");
-		      logsynch_fileBasedWkdCallInterpreterEnabled.setTextContent(this.isLogsynch_fileBasedWkdCallInterpreterEnabled()+"");
-		      logsynch.appendChild(logsynch_fileBasedWkdCallInterpreterEnabled);
 
-		      Element logsynch_ucxUDPWkdCallListenerPort = doc.createElement("logsynch_ucxUDPWkdCallListenerPort");
-		      logsynch_ucxUDPWkdCallListenerPort.setTextContent(this.getLogsynch_ucxUDPWkdCallListenerPort()+"");
-		      logsynch.appendChild(logsynch_ucxUDPWkdCallListenerPort);
 
-		      Element logsynch_ucxUDPWkdCallListenerEnabled = doc.createElement("logsynch_ucxUDPWkdCallListenerEnabled");
-		      logsynch_ucxUDPWkdCallListenerEnabled.setTextContent(this.isTrxSynch_ucxLogUDPListenerEnabled()+"");
-		      logsynch.appendChild(logsynch_ucxUDPWkdCallListenerEnabled);
-		      
-		      
-		      /**
-		       * trxSynchUCX
-		       */
+			/**
+			 * LOGSYNCH
+			 */
 
-		      Element trxSynchUCX = doc.createElement("trxSynchUCX");
-		      rootElement.appendChild(trxSynchUCX);
-		      
-		      Element trxSynch_ucxLogUDPListenerEnabled = doc.createElement("trxSynch_ucxLogUDPListenerEnabled");
-		      trxSynch_ucxLogUDPListenerEnabled.setTextContent(this.isTrxSynch_ucxLogUDPListenerEnabled()+"");
-		      trxSynchUCX.appendChild(trxSynch_ucxLogUDPListenerEnabled);
-		      
-		      Element trxSynch_defaultMYQRGValue = doc.createElement("trxSynch_defaultMYQRGValue");
-		      trxSynch_defaultMYQRGValue.setTextContent(this.getMYQRGFirstCat().getValue());
-		      trxSynchUCX.appendChild(trxSynch_defaultMYQRGValue);
+			Element logsynch = doc.createElement("logsynch");
+			rootElement.appendChild(logsynch);
 
-		      
-		      
-		      
-		      /**
-		       * AirScout
-		       */
+			Element logsynch_fileBasedWkdCallInterpreterFileNameReadOnly = doc.createElement("logsynch_fileBasedWkdCallInterpreterFileNameReadOnly");
+			logsynch_fileBasedWkdCallInterpreterFileNameReadOnly.setTextContent(this.getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
+			logsynch.appendChild(logsynch_fileBasedWkdCallInterpreterFileNameReadOnly);
 
-		      Element AirScoutQuerier = doc.createElement("AirScoutQuerier");
-		      rootElement.appendChild(AirScoutQuerier);
-		      
-		      
-		      Element asQry_airScoutCommunicationEnabled = doc.createElement("asQry_airScoutCommunicationEnabled");
-		      asQry_airScoutCommunicationEnabled.setTextContent(this.isAirScout_asUDPListenerEnabled()+"");
-		      AirScoutQuerier.appendChild(asQry_airScoutCommunicationEnabled);
+			Element logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = doc.createElement("logsynch_storeWorkedCallSignsFileNameUDPMessageBackup");
+			logsynch_storeWorkedCallSignsFileNameUDPMessageBackup.setTextContent(this.getLogsynch_storeWorkedCallSignsFileNameUDPMessageBackup());
+			logsynch.appendChild(logsynch_storeWorkedCallSignsFileNameUDPMessageBackup);
 
-		      Element asQry_airScoutServerName = doc.createElement("asQry_airScoutServerName");
-		      asQry_airScoutServerName.setTextContent(this.getAirScout_asServerNameString());
-		      AirScoutQuerier.appendChild(asQry_airScoutServerName);
-		      
-		      Element asQry_airScoutClientName = doc.createElement("asQry_airScoutClientName");
-		      asQry_airScoutClientName.setTextContent(this.getAirScout_asClientNameString());
-		      AirScoutQuerier.appendChild(asQry_airScoutClientName);
-		      
-		      Element asQry_airScoutUDPPort = doc.createElement("asQry_airScoutUDPPort");
-		      asQry_airScoutUDPPort.setTextContent(this.getAirScout_asCommunicationPort()+"");
-		      AirScoutQuerier.appendChild(asQry_airScoutUDPPort);
-		     
-		      Element asQry_airScoutBandValue = doc.createElement("asQry_airScoutBandValue");
-		      asQry_airScoutBandValue.setTextContent(this.getAirScout_asBandString());
-		      AirScoutQuerier.appendChild(asQry_airScoutBandValue);
+			Element logsynch_fileBasedWkdCallInterpreterEnabled = doc.createElement("logsynch_fileBasedWkdCallInterpreterEnabled");
+			logsynch_fileBasedWkdCallInterpreterEnabled.setTextContent(this.isLogsynch_fileBasedWkdCallInterpreterEnabled()+"");
+			logsynch.appendChild(logsynch_fileBasedWkdCallInterpreterEnabled);
+
+			Element logsynch_ucxUDPWkdCallListenerPort = doc.createElement("logsynch_ucxUDPWkdCallListenerPort");
+			logsynch_ucxUDPWkdCallListenerPort.setTextContent(this.getLogsynch_ucxUDPWkdCallListenerPort()+"");
+			logsynch.appendChild(logsynch_ucxUDPWkdCallListenerPort);
+
+			Element logsynch_ucxUDPWkdCallListenerEnabled = doc.createElement("logsynch_ucxUDPWkdCallListenerEnabled");
+			// BUGFIX: this is the log-synch listener flag, not the TRX-synch flag (copy&paste error in older versions)
+			logsynch_ucxUDPWkdCallListenerEnabled.setTextContent(this.isLogsynch_ucxUDPWkdCallListenerEnabled()+"");
+			logsynch.appendChild(logsynch_ucxUDPWkdCallListenerEnabled);
+
+			// WinTest Settings
+			Element logsynch_wintestNetworkStationNameOfKST = doc.createElement("logsynch_wintestNetworkStationNameOfKST");
+			logsynch_wintestNetworkStationNameOfKST.setTextContent(this.logsynch_wintestNetworkStationNameOfKST);
+			logsynch.appendChild(logsynch_wintestNetworkStationNameOfKST);
+
+			Element logsynch_wintestNetworkStationNameOfWintestClient1 = doc.createElement("logsynch_wintestNetworkStationNameOfWintestClient1");
+			logsynch_wintestNetworkStationNameOfWintestClient1.setTextContent(this.logsynch_wintestNetworkStationNameOfWintestClient1);
+			logsynch.appendChild(logsynch_wintestNetworkStationNameOfWintestClient1);
+
+			Element logsynch_wintestNetworkSimulationEnabled = doc.createElement("logsynch_wintestNetworkSimulationEnabled");
+			logsynch_wintestNetworkSimulationEnabled.setTextContent(this.logsynch_wintestNetworkSimulationEnabled + "");
+			logsynch.appendChild(logsynch_wintestNetworkSimulationEnabled);
+
+			Element logsynch_wintestNetworkStationIDOfKST = doc.createElement("logsynch_wintestNetworkStationIDOfKST");
+			logsynch_wintestNetworkStationIDOfKST.setTextContent(this.logsynch_wintestNetworkStationIDOfKST + "");
+			logsynch.appendChild(logsynch_wintestNetworkStationIDOfKST);
+
+			Element logsynch_wintestNetworkPort = doc.createElement("logsynch_wintestNetworkPort");
+			logsynch_wintestNetworkPort.setTextContent(this.logsynch_wintestNetworkPort + "");
+			logsynch.appendChild(logsynch_wintestNetworkPort);
+
+			Element logsynch_wintestNetworkListenerEnabled = doc.createElement("logsynch_wintestNetworkListenerEnabled");
+			logsynch_wintestNetworkListenerEnabled.setTextContent(this.logsynch_wintestNetworkListenerEnabled + "");
+			logsynch.appendChild(logsynch_wintestNetworkListenerEnabled);
+
+
+			/**
+			 * trxSynchUCX
+			 */
+
+			Element trxSynchUCX = doc.createElement("trxSynchUCX");
+			rootElement.appendChild(trxSynchUCX);
+
+			Element trxSynch_ucxLogUDPListenerEnabled = doc.createElement("trxSynch_ucxLogUDPListenerEnabled");
+			trxSynch_ucxLogUDPListenerEnabled.setTextContent(this.isTrxSynch_ucxLogUDPListenerEnabled()+"");
+			trxSynchUCX.appendChild(trxSynch_ucxLogUDPListenerEnabled);
+
+			Element trxSynch_defaultMYQRGValue = doc.createElement("trxSynch_defaultMYQRGValue");
+			trxSynch_defaultMYQRGValue.setTextContent(this.getMYQRGFirstCat().getValue());
+			trxSynchUCX.appendChild(trxSynch_defaultMYQRGValue);
+
+			Element trxSynch_defaultMYQRG2Value = doc.createElement("trxSynch_defaultMYQRG2Value");
+			// Safe null check falls Property noch nicht initialisiert ist
+			trxSynch_defaultMYQRG2Value.setTextContent(this.getMYQRGSecondCat().getValue() != null ? this.getMYQRGSecondCat().getValue() : "1296.200.00");
+			trxSynchUCX.appendChild(trxSynch_defaultMYQRG2Value);
+
+
+			/**
+			 * AirScout
+			 */
+
+			Element AirScoutQuerier = doc.createElement("AirScoutQuerier");
+			rootElement.appendChild(AirScoutQuerier);
+
+
+			Element asQry_airScoutCommunicationEnabled = doc.createElement("asQry_airScoutCommunicationEnabled");
+			asQry_airScoutCommunicationEnabled.setTextContent(this.isAirScout_asUDPListenerEnabled()+"");
+			AirScoutQuerier.appendChild(asQry_airScoutCommunicationEnabled);
+
+			Element asQry_airScoutServerName = doc.createElement("asQry_airScoutServerName");
+			asQry_airScoutServerName.setTextContent(this.getAirScout_asServerNameString());
+			AirScoutQuerier.appendChild(asQry_airScoutServerName);
+
+			Element asQry_airScoutClientName = doc.createElement("asQry_airScoutClientName");
+			asQry_airScoutClientName.setTextContent(this.getAirScout_asClientNameString());
+			AirScoutQuerier.appendChild(asQry_airScoutClientName);
+
+			Element asQry_airScoutUDPPort = doc.createElement("asQry_airScoutUDPPort");
+			asQry_airScoutUDPPort.setTextContent(this.getAirScout_asCommunicationPort()+"");
+			AirScoutQuerier.appendChild(asQry_airScoutUDPPort);
+
+			Element asQry_airScoutBandValue = doc.createElement("asQry_airScoutBandValue");
+			asQry_airScoutBandValue.setTextContent(this.getAirScout_asBandString());
+			AirScoutQuerier.appendChild(asQry_airScoutBandValue);
 
 
 			/**
@@ -1071,13 +1355,13 @@ public class ChatPreferences {
 			 */
 
 			Element notifications = doc.createElement("notifications");
-				rootElement.appendChild(notifications);
+			rootElement.appendChild(notifications);
 
-				Element notify_SimpleAudioNotificationsEnabled = doc.createElement("notify_SimpleAudioNotificationsEnabled");
+			Element notify_SimpleAudioNotificationsEnabled = doc.createElement("notify_SimpleAudioNotificationsEnabled");
 			notify_SimpleAudioNotificationsEnabled.setTextContent(this.isNotify_playSimpleSounds()+"");
 			notifications.appendChild(notify_SimpleAudioNotificationsEnabled);
 
-				Element notify_CWCallSignAudioNotificationsEnabled = doc.createElement("notify_CWCallsignAudioNotificationsEnabled");
+			Element notify_CWCallSignAudioNotificationsEnabled = doc.createElement("notify_CWCallsignAudioNotificationsEnabled");
 			notify_CWCallSignAudioNotificationsEnabled.setTextContent(this.isNotify_playCWCallsignsOnRxedPMs()+"");
 			notifications.appendChild(notify_CWCallSignAudioNotificationsEnabled);
 
@@ -1109,89 +1393,172 @@ public class ChatPreferences {
 			notify_DXCSrv_SpottersCallSignToFile.setTextContent(this.getNotify_DXCSrv_SpottersCallSign().get());
 			notifications.appendChild(notify_DXCSrv_SpottersCallSignToFile);
 
-		      /**
-		       * Shortcuts
-		       */
-		      
-		      Element shortCuts = doc.createElement("shortCuts");
-		      rootElement.appendChild(shortCuts);
-		         
-		      for (Iterator iterator = lst_txtShortCutBtnList.iterator(); iterator.hasNext();) {
+			Element notify_noReplyPenaltyMinutes = doc.createElement("notify_noReplyPenaltyMinutes");
+			notify_noReplyPenaltyMinutes.setTextContent(this.getNotify_noReplyPenaltyMinutes() + "");
+			notifications.appendChild(notify_noReplyPenaltyMinutes);
+
+			Element notify_momentumWindowSeconds = doc.createElement("notify_momentumWindowSeconds");
+			notify_momentumWindowSeconds.setTextContent(this.getNotify_momentumWindowSeconds() + "");
+			notifications.appendChild(notify_momentumWindowSeconds);
+
+			Element notify_positiveSignalsPatterns = doc.createElement("notify_positiveSignalsPatterns");
+			notify_positiveSignalsPatterns.setTextContent(this.getNotify_positiveSignalsPatterns());
+			notifications.appendChild(notify_positiveSignalsPatterns);
+
+			Element notify_bandUpgradeHintOnLogEnabled = doc.createElement("notify_bandUpgradeHintOnLogEnabled");
+			notify_bandUpgradeHintOnLogEnabled.setTextContent(this.notify_bandUpgradeHintOnLogEnabled + "");
+			notifications.appendChild(notify_bandUpgradeHintOnLogEnabled);
+
+			Element notify_bandUpgradePriorityBoostEnabled = doc.createElement("notify_bandUpgradePriorityBoostEnabled");
+			notify_bandUpgradePriorityBoostEnabled.setTextContent(this.notify_bandUpgradePriorityBoostEnabled + "");
+			notifications.appendChild(notify_bandUpgradePriorityBoostEnabled);
+
+
+			/**
+			 * Shortcuts
+			 */
+
+			Element shortCuts = doc.createElement("shortCuts");
+			rootElement.appendChild(shortCuts);
+
+			for (Iterator iterator = lst_txtShortCutBtnList.iterator(); iterator.hasNext();) {
 				String string = (String) iterator.next();
 				Element temp = doc.createElement("t");
 				temp.setTextContent(string);
 				shortCuts.appendChild(temp);
-		      }
-		      
-		      /**
-		       * Textsnippets (right click menu)
-		       */
-		      
-		      Element textSnippets = doc.createElement("textSnippets");
-		      rootElement.appendChild(textSnippets);
-		         
-		      for (Iterator iterator = lst_txtSnipList.iterator(); iterator.hasNext();) {
+			}
+
+			/**
+			 * QSO Sniffer Lists
+			 */
+			Element snifferWords = doc.createElement("snifferWords");
+			rootElement.appendChild(snifferWords);
+
+			for (String word : lstNotify_QSOSniffer_sniffedWordsList) {
+				Element temp = doc.createElement("w");
+				temp.setTextContent(word);
+				snifferWords.appendChild(temp);
+			}
+
+			Element snifferPrefixes = doc.createElement("snifferPrefixes");
+			rootElement.appendChild(snifferPrefixes);
+
+			for (String prefix : lstNotify_QSOSniffer_sniffedPrefixLocList) {
+				Element temp = doc.createElement("p");
+				temp.setTextContent(prefix);
+				snifferPrefixes.appendChild(temp);
+			}
+
+			/**
+			 * Textsnippets (right click menu)
+			 */
+
+			Element textSnippets = doc.createElement("textSnippets");
+			rootElement.appendChild(textSnippets);
+
+			for (Iterator iterator = lst_txtSnipList.iterator(); iterator.hasNext();) {
 				String string = (String) iterator.next();
 				Element temp = doc.createElement("t");
 				temp.setTextContent(string);
 				textSnippets.appendChild(temp);
-		      }
-		      
+			}
 
-		      /**
-		       * BeaconCQ
-		       */
 
-		      Element beaconCQ = doc.createElement("beaconCQ");
-		      rootElement.appendChild(beaconCQ);
+			/**
+			 * BeaconCQ
+			 */
 
-		      Element beaconCQText = doc.createElement("beaconCQText");
-		      beaconCQText.setTextContent(this.getBcn_beaconTextMainCat());
-		      beaconCQ.appendChild(beaconCQText);
-		      
-		      Element beaconCQIntervalMinutes = doc.createElement("beaconCQIntervalMinutes");
-		      beaconCQIntervalMinutes.setTextContent(this.getBcn_beaconIntervalInMinutesMainCat()+"");
-		      beaconCQ.appendChild(beaconCQIntervalMinutes);
-		      
-		      Element beaconCQEnabled = doc.createElement("beaconCQEnabled");
-		      beaconCQEnabled.setTextContent(this.isBcn_beaconsEnabledMainCat()+"");
-		      beaconCQ.appendChild(beaconCQEnabled);
+			Element beaconCQ = doc.createElement("beaconCQ");
+			rootElement.appendChild(beaconCQ);
+
+			Element beaconCQText = doc.createElement("beaconCQText");
+			beaconCQText.setTextContent(this.getBcn_beaconTextMainCat());
+			beaconCQ.appendChild(beaconCQText);
+
+			// Preferred tag name (close to variable name)
+			Element bcn_beaconTextMainCat = doc.createElement("bcn_beaconTextMainCat");
+			bcn_beaconTextMainCat.setTextContent(this.getBcn_beaconTextMainCat());
+			beaconCQ.appendChild(bcn_beaconTextMainCat);
+
+			Element beaconCQIntervalMinutes = doc.createElement("beaconCQIntervalMinutes");
+			beaconCQIntervalMinutes.setTextContent(this.getBcn_beaconIntervalInMinutesMainCat()+"");
+			beaconCQ.appendChild(beaconCQIntervalMinutes);
+
+			Element bcn_beaconIntervalInMinutesMainCat = doc.createElement("bcn_beaconIntervalInMinutesMainCat");
+			bcn_beaconIntervalInMinutesMainCat.setTextContent(this.getBcn_beaconIntervalInMinutesMainCat()+"");
+			beaconCQ.appendChild(bcn_beaconIntervalInMinutesMainCat);
+
+			Element beaconCQEnabled = doc.createElement("beaconCQEnabled");
+			beaconCQEnabled.setTextContent(this.isBcn_beaconsEnabledMainCat()+"");
+			beaconCQ.appendChild(beaconCQEnabled);
+
+			Element bcn_beaconsEnabledMainCat = doc.createElement("bcn_beaconsEnabledMainCat");
+			bcn_beaconsEnabledMainCat.setTextContent(this.isBcn_beaconsEnabledMainCat()+"");
+			beaconCQ.appendChild(bcn_beaconsEnabledMainCat);
 
 
 			Element beaconCQTextSecondText = doc.createElement("beaconCQTextSecondText");
 			beaconCQTextSecondText.setTextContent(this.getBcn_beaconTextSecondCat());
 			beaconCQ.appendChild(beaconCQTextSecondText);
 
+			Element bcn_beaconTextSecondCat = doc.createElement("bcn_beaconTextSecondCat");
+			bcn_beaconTextSecondCat.setTextContent(this.getBcn_beaconTextSecondCat());
+			beaconCQ.appendChild(bcn_beaconTextSecondCat);
+
 			Element beaconCQIntervalMinutesSecondCat = doc.createElement("beaconCQIntervalMinutesSecondCat");
 			beaconCQIntervalMinutesSecondCat.setTextContent(this.getBcn_beaconIntervalInMinutesSecondCat()+"");
 			beaconCQ.appendChild(beaconCQIntervalMinutesSecondCat);
+
+			Element bcn_beaconIntervalInMinutesSecondCat = doc.createElement("bcn_beaconIntervalInMinutesSecondCat");
+			bcn_beaconIntervalInMinutesSecondCat.setTextContent(this.getBcn_beaconIntervalInMinutesSecondCat()+"");
+			beaconCQ.appendChild(bcn_beaconIntervalInMinutesSecondCat);
 
 			Element beaconCQEnabledSecondCat = doc.createElement("beaconCQEnabledSecondCat");
 			beaconCQEnabledSecondCat.setTextContent(this.isBcn_beaconsEnabledSecondCat()+"");
 			beaconCQ.appendChild(beaconCQEnabledSecondCat);
 
-		      /**
-		       * Messagehandling section / ex Beacon Unworked Stations
-		       */
+			Element bcn_beaconsEnabledSecondCat = doc.createElement("bcn_beaconsEnabledSecondCat");
+			bcn_beaconsEnabledSecondCat.setTextContent(this.isBcn_beaconsEnabledSecondCat()+"");
+			beaconCQ.appendChild(bcn_beaconsEnabledSecondCat);
 
-		      Element beaconUnworkedstations = doc.createElement("beaconUnworkedstations");
-		      rootElement.appendChild(beaconUnworkedstations);
+			/**
+			 * Messagehandling section / ex Beacon Unworked Stations
+			 */
 
-		      Element beaconUnworkedstationsText = doc.createElement("beaconUnworkedstationsText");
-		      beaconUnworkedstationsText.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsText());
-		      beaconUnworkedstations.appendChild(beaconUnworkedstationsText);
-		      
-		      Element beaconUnworkedstationsIntervalMinutes = doc.createElement("beaconUnworkedstationsIntervalMinutes");
-		      beaconUnworkedstationsIntervalMinutes.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsInterval()+"");
-		      beaconUnworkedstations.appendChild(beaconUnworkedstationsIntervalMinutes);
+			Element beaconUnworkedstations = doc.createElement("beaconUnworkedstations");
+			rootElement.appendChild(beaconUnworkedstations);
 
-		      Element beaconUnworkedstationsEnabled = doc.createElement("beaconUnworkedstationsEnabled");
-		      beaconUnworkedstationsEnabled.setTextContent(this.isMessageHandling_unworkedStnRequesterBeaconsEnabled()+"");
-		      beaconUnworkedstations.appendChild(beaconUnworkedstationsEnabled);
-		      
-		      Element beaconUnworkedstationsPrefix = doc.createElement("beaconUnworkedstationsPrefix");
-		      beaconUnworkedstationsPrefix.setTextContent(this.messageHandling_beaconUnworkedstationsPrefix());
-		      beaconUnworkedstations.appendChild(beaconUnworkedstationsPrefix);
+			Element beaconUnworkedstationsText = doc.createElement("beaconUnworkedstationsText");
+			beaconUnworkedstationsText.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsText());
+			beaconUnworkedstations.appendChild(beaconUnworkedstationsText);
+
+			Element messageHandling_unworkedStnRequesterBeaconsText = doc.createElement("messageHandling_unworkedStnRequesterBeaconsText");
+			messageHandling_unworkedStnRequesterBeaconsText.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsText());
+			beaconUnworkedstations.appendChild(messageHandling_unworkedStnRequesterBeaconsText);
+
+			Element beaconUnworkedstationsIntervalMinutes = doc.createElement("beaconUnworkedstationsIntervalMinutes");
+			beaconUnworkedstationsIntervalMinutes.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsInterval()+"");
+			beaconUnworkedstations.appendChild(beaconUnworkedstationsIntervalMinutes);
+
+			Element messageHandling_unworkedStnRequesterBeaconsInterval = doc.createElement("messageHandling_unworkedStnRequesterBeaconsInterval");
+			messageHandling_unworkedStnRequesterBeaconsInterval.setTextContent(this.getMessageHandling_unworkedStnRequesterBeaconsInterval()+"");
+			beaconUnworkedstations.appendChild(messageHandling_unworkedStnRequesterBeaconsInterval);
+
+			Element beaconUnworkedstationsEnabled = doc.createElement("beaconUnworkedstationsEnabled");
+			beaconUnworkedstationsEnabled.setTextContent(this.isMessageHandling_unworkedStnRequesterBeaconsEnabled()+"");
+			beaconUnworkedstations.appendChild(beaconUnworkedstationsEnabled);
+
+			Element messageHandling_unworkedStnRequesterBeaconsEnabled = doc.createElement("messageHandling_unworkedStnRequesterBeaconsEnabled");
+			messageHandling_unworkedStnRequesterBeaconsEnabled.setTextContent(this.isMessageHandling_unworkedStnRequesterBeaconsEnabled()+"");
+			beaconUnworkedstations.appendChild(messageHandling_unworkedStnRequesterBeaconsEnabled);
+
+			Element beaconUnworkedstationsPrefix = doc.createElement("beaconUnworkedstationsPrefix");
+			beaconUnworkedstationsPrefix.setTextContent(this.messageHandling_beaconUnworkedstationsPrefix());
+			beaconUnworkedstations.appendChild(beaconUnworkedstationsPrefix);
+
+			Element messageHandling_beaconUnworkedstationsPrefix = doc.createElement("messageHandling_beaconUnworkedstationsPrefix");
+			messageHandling_beaconUnworkedstationsPrefix.setTextContent(this.messageHandling_beaconUnworkedstationsPrefix());
+			beaconUnworkedstations.appendChild(messageHandling_beaconUnworkedstationsPrefix);
 
 			/*****************************************************************
 			 * MESSAGEHANDLING NEW  .... BEACONUNWORKED HAVE TO BE REPLACED
@@ -1242,6 +1609,25 @@ public class ChatPreferences {
 			Element guiOptions_defaultFilterPublicMsgs = doc.createElement("guiOptions_defaultFilterPublicMsgs");
 			guiOptions_defaultFilterPublicMsgs.setTextContent(this.isGuiOptions_defaultFilterPublicMsgs()+"");
 			guiSaveableOptions.appendChild(guiOptions_defaultFilterPublicMsgs);
+
+			Element guiOptions_darkModeActive = doc.createElement("guiOptions_darkModeActive");
+			guiOptions_darkModeActive.setTextContent(this.GUI_darkModeActive + "");
+			guiSaveableOptions.appendChild(guiOptions_darkModeActive);
+
+			Element guiOptions_darkModeActiveByDefault = doc.createElement("guiOptions_darkModeActiveByDefault");
+			guiOptions_darkModeActiveByDefault.setTextContent(this.GUI_darkModeActiveByDefault + "");
+			guiSaveableOptions.appendChild(guiOptions_darkModeActiveByDefault);
+
+			// --- GUImainWindowRightSplitPane_dividerposition (2 dividers => 2 values) --- NEW
+			ensureMainWindowRightSplitPaneDividerPositions(2);
+
+			Element eDiv0 = doc.createElement("GUImainWindowRightSplitPane_dividerposition0");
+			eDiv0.setTextContent(String.valueOf(GUImainWindowRightSplitPane_dividerposition[0]));
+			guiSaveableOptions.appendChild(eDiv0);
+
+			Element eDiv1 = doc.createElement("GUImainWindowRightSplitPane_dividerposition1");
+			eDiv1.setTextContent(String.valueOf(GUImainWindowRightSplitPane_dividerposition[1]));
+			guiSaveableOptions.appendChild(eDiv1);
 
 			/**
 			 * window sizes
@@ -1294,32 +1680,32 @@ public class ChatPreferences {
 			 ****************************************************************************************/
 
 			writeXml(doc, System.out);
-			
+
 			// write dom document to a file
-	        try (FileOutputStream output =
-	                     new FileOutputStream(storeAndRestorePreferencesFileName)) {
-	            writeXml(doc, output);
-	        } catch (IOException e) {
-	            e.printStackTrace();
-	        } catch (TransformerException e) {
+			try (FileOutputStream output =
+						 new FileOutputStream(storeAndRestorePreferencesFileName)) {
+				writeXml(doc, output);
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (TransformerException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			
+
+
 		} catch (ParserConfigurationException | TransformerException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		return true;
 
-        // root elements
+		// root elements
 
-        //...create XML elements, and others...
+		//...create XML elements, and others...
 
-        // write dom document to a file
+		// write dom document to a file
 
-    }
+	}
 
 	// write doc to output stream
 	private static void writeXml(Document doc, OutputStream output) throws TransformerException {
@@ -1336,7 +1722,7 @@ public class ChatPreferences {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return true if the file reading was successful, else false
 	 */
 	public boolean readPreferencesFromXmlFile() {
@@ -1357,405 +1743,207 @@ public class ChatPreferences {
 
 			DocumentBuilder db = dbf.newDocumentBuilder();
 			Document doc = db.parse(xmlConfigFile);
+			NodeList list;
+
+			// --- Schema version (optional) ---
+			// Missing in older files -> assume version 1.
+			int xmlVersion = getIntFromDoc(doc, CONFIG_VERSION, "configVersion", "ConfigVersion");
+			// Currently we only need the version for debugging / future migrations.
+			if (xmlVersion > CONFIG_VERSION) {
+				System.out.println("[ChatPreferences, Info]: preferences.xml version (" + xmlVersion + ") is newer than this application (" + CONFIG_VERSION + "). Trying best-effort load.");
+			}
 
 
 			/**
 			 * case station settings
-			 * 
+			 *
 			 */
-			NodeList list = doc.getElementsByTagName("station");
-			if (list.getLength() != 0) {
+			Element stationEl = getFirstElement(doc, "station");
+			if (stationEl != null) {
+				// Prefer tag names close to variable names, but accept legacy tags for backwards compatibility.
+				stn_loginCallSign = getText(stationEl, stn_loginCallSign, "stn_loginCallSign", "LoginCallSign");
+				stn_loginPassword = getText(stationEl, stn_loginPassword, "stn_loginPassword", "LoginPassword");
+				stn_loginNameMainCat = getText(stationEl, stn_loginNameMainCat, "stn_loginNameMainCat", "LoginDisplayedName");
+				stn_loginNameSecondCat = getText(stationEl, stn_loginNameSecondCat, "stn_loginNameSecondCat");
+				stn_loginLocatorMainCat = getText(stationEl, stn_loginLocatorMainCat, "stn_loginLocatorMainCat", "LoginLocator");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
+				stn_on4kstServersDns = getText(stationEl, stn_on4kstServersDns, "stn_on4kstServersDns");
+				stn_on4kstServersPort = getInt(stationEl, stn_on4kstServersPort, "stn_on4kstServersPort");
+				stn_loginAFKState = getBoolean(stationEl, stn_loginAFKState, "stn_loginAFKState");
 
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						String call = element.getElementsByTagName("LoginCallSign").item(0).getTextContent();
-						stn_loginCallSign = call;
-
-//						call = call.toLowerCase();
-						String password = element.getElementsByTagName("LoginPassword").item(0).getTextContent();
-						stn_loginPassword = password;
-
-						String loginDisplayedName = element.getElementsByTagName("LoginDisplayedName").item(0)
-								.getTextContent();
-						stn_loginNameMainCat = loginDisplayedName;
-
-						try {
-							String loginDisplayedNameSecondCat = element.getElementsByTagName("stn_loginNameSecondCat").item(0)
-									.getTextContent();
-							stn_loginNameSecondCat = loginDisplayedNameSecondCat;
-						} catch (Exception previousVersionExc) {
-							stn_loginNameSecondCat = "KST4Contest2nd";
-						}
-
-						String qra = element.getElementsByTagName("LoginLocator").item(0).getTextContent();
-						stn_loginLocatorMainCat = qra;
-
-						String category = element.getElementsByTagName("ChatCategory").item(0).getTextContent();
-
-						if (isNumeric(category)) {
-							ChatCategory chatCategory = new ChatCategory(Integer.parseInt(category));
-							loginChatCategoryMain = chatCategory;
-						} else {
-
-							loginChatCategoryMain = new ChatCategory(2); // TODO: Set this default at another place
-						}
-
-						try {
-
-							String ChatCategorySecond = element.getElementsByTagName("ChatCategorySecond").item(0).getTextContent();
-							if (isNumeric(ChatCategorySecond)) {
-								ChatCategory chatCategory2 = new ChatCategory(Integer.parseInt(ChatCategorySecond));
-								loginChatCategorySecond = chatCategory2;
-							} else {
-								loginChatCategorySecond = new ChatCategory(3); // TODO: Set this default at another place
-							}
-
-							String secondCatEnabledOrNot = element
-									.getElementsByTagName("stn_secondCatEnabled").item(0)
-									.getTextContent();
-
-							if (secondCatEnabledOrNot.equals("true")) {
-
-								loginToSecondChatEnabled = true;
-							} else {
-								loginToSecondChatEnabled = false;
-							}
-						} catch (Exception prevVersionExc){
-							loginToSecondChatEnabled = false; //default if setting not found
-						}
-
-
-
-						double antennaBeamWidthDeg = Double.parseDouble(element.getElementsByTagName("stn_antennaBeamWidthDeg").item(0).getTextContent());
-						stn_antennaBeamWidthDeg = antennaBeamWidthDeg;
-						double maxQRBDefault = Double.parseDouble(element.getElementsByTagName("stn_maxQRBDefault").item(0).getTextContent());
-						stn_maxQRBDefault = maxQRBDefault;
-						double qtfDefault = Double.parseDouble(element.getElementsByTagName("stn_qtfDefault").item(0).getTextContent());
-						stn_qtfDefault = qtfDefault;
-
-						try {
-
-							String stnUses144 = element
-									.getElementsByTagName("stn_bandActive144").item(0)
-									.getTextContent();
-
-							if (stnUses144.equals("true")) {
-
-								stn_bandActive144 = true;
-							} else {
-								stn_bandActive144 = false;
-							}
-
-							String stnUses432 = element
-									.getElementsByTagName("stn_bandActive432").item(0)
-									.getTextContent();
-
-							if (stnUses432.equals("true")) {
-
-								stn_bandActive432 = true;
-							} else {
-								stn_bandActive432 = false;
-							}
-
-							String stnUses1240 = element
-									.getElementsByTagName("stn_bandActive1240").item(0)
-									.getTextContent();
-
-							if (stnUses1240.equals("true")) {
-
-								stn_bandActive1240 = true;
-							} else {
-								stn_bandActive1240 = false;
-							}
-
-							String stnUses2300 = element
-									.getElementsByTagName("stn_bandActive2300").item(0)
-									.getTextContent();
-
-							if (stnUses2300.equals("true")) {
-
-								stn_bandActive2300 = true;
-							} else {
-								stn_bandActive2300 = false;
-							}
-
-							String stnUses3400 = element
-									.getElementsByTagName("stn_bandActive3400").item(0)
-									.getTextContent();
-
-							if (stnUses3400.equals("true")) {
-
-								stn_bandActive3400 = true;
-							} else {
-								stn_bandActive3400 = false;
-							}
-
-							String stnUses5600 = element
-									.getElementsByTagName("stn_bandActive5600").item(0)
-									.getTextContent();
-
-							if (stnUses5600.equals("true")) {
-
-								stn_bandActive5600 = true;
-							} else {
-								stn_bandActive5600 = false;
-							}
-
-							String stnUses10G = element
-									.getElementsByTagName("stn_bandActive10G").item(0)
-									.getTextContent();
-
-							if (stnUses10G.equals("true")) {
-
-								stn_bandActive10G = true;
-							} else {
-								stn_bandActive10G = false;
-							}
-
-						} catch (NullPointerException tooOldConfigFileOrFormatError) {
-							/**
-							 * In program version 1 there had not been these settings in the xml and not founding em
-							 * would cause an exception and dumb values for the preferences. So we have to initialize
-							 * these variables and later write a proper configfile which can be used correctly then.
-							 */
-							stn_bandActive144 = true;
-							stn_bandActive432 = true;
-							stn_bandActive1240 = true;
-							stn_bandActive2300 = true;
-							stn_bandActive3400 = true;
-							stn_bandActive5600 = true;
-							stn_bandActive10G = true;
-						}
-
-
-						System.out.println("[ChatPreferences, info]: Current Element: " + node.getNodeName()
-								+ " --> call: " + call + " / " + password + " / " + loginDisplayedName + " / " + qra
-								+ " / " + category + " / " + antennaBeamWidthDeg + " / " + maxQRBDefault + " / " + qtfDefault + " qrv144: " + stn_bandActive144);
-
-					}
+				String category = getText(stationEl, null, "loginChatCategoryMain", "ChatCategory");
+				if (isNumeric(category)) {
+					loginChatCategoryMain = new ChatCategory(Integer.parseInt(category));
+				} else {
+					loginChatCategoryMain = new ChatCategory(2);
 				}
+
+				String categorySecond = getText(stationEl, null, "loginChatCategorySecond", "ChatCategorySecond");
+				if (isNumeric(categorySecond)) {
+					loginChatCategorySecond = new ChatCategory(Integer.parseInt(categorySecond));
+				} else {
+					loginChatCategorySecond = new ChatCategory(3);
+				}
+
+				loginToSecondChatEnabled = getBoolean(stationEl, loginToSecondChatEnabled, "stn_secondCatEnabled");
+
+				stn_antennaBeamWidthDeg = getDouble(stationEl, stn_antennaBeamWidthDeg, "stn_antennaBeamWidthDeg");
+				stn_maxQRBDefault = getDouble(stationEl, stn_maxQRBDefault, "stn_maxQRBDefault");
+				stn_qtfDefault = getDouble(stationEl, stn_qtfDefault, "stn_qtfDefault");
+
+				// Band activity flags (introduced later; if missing -> keep defaults)
+				stn_bandActive144 = getBoolean(stationEl, stn_bandActive144, "stn_bandActive144");
+				stn_bandActive432 = getBoolean(stationEl, stn_bandActive432, "stn_bandActive432");
+				stn_bandActive1240 = getBoolean(stationEl, stn_bandActive1240, "stn_bandActive1240");
+				stn_bandActive2300 = getBoolean(stationEl, stn_bandActive2300, "stn_bandActive2300");
+				stn_bandActive3400 = getBoolean(stationEl, stn_bandActive3400, "stn_bandActive3400");
+				stn_bandActive5600 = getBoolean(stationEl, stn_bandActive5600, "stn_bandActive5600");
+				stn_bandActive10G = getBoolean(stationEl, stn_bandActive10G, "stn_bandActive10G");
+
+				stn_pstRotatorEnabled = getBoolean(stationEl, stn_pstRotatorEnabled, "stn_pstRotatorEnabled");
+
 			}
 
 			/**
 			 * Case log synchronizatrion
 			 */
 
-			list = doc.getElementsByTagName("logsynch");
-			if (list.getLength() != 0) {
+			Element logsynchEl = getFirstElement(doc, "logsynch");
+			if (logsynchEl != null) {
+				logsynch_fileBasedWkdCallInterpreterFileNameReadOnly = getText(
+						logsynchEl,
+						logsynch_fileBasedWkdCallInterpreterFileNameReadOnly,
+						"logsynch_fileBasedWkdCallInterpreterFileNameReadOnly");
+				logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = getText(
+						logsynchEl,
+						logsynch_storeWorkedCallSignsFileNameUDPMessageBackup,
+						"logsynch_storeWorkedCallSignsFileNameUDPMessageBackup");
+				logsynch_fileBasedWkdCallInterpreterEnabled = getBoolean(
+						logsynchEl,
+						logsynch_fileBasedWkdCallInterpreterEnabled,
+						"logsynch_fileBasedWkdCallInterpreterEnabled");
+				logsynch_ucxUDPWkdCallListenerPort = getInt(
+						logsynchEl,
+						logsynch_ucxUDPWkdCallListenerPort,
+						"logsynch_ucxUDPWkdCallListenerPort");
+				logsynch_ucxUDPWkdCallListenerEnabled = getBoolean(
+						logsynchEl,
+						logsynch_ucxUDPWkdCallListenerEnabled,
+						"logsynch_ucxUDPWkdCallListenerEnabled");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
+				// Optional Win-Test network settings
+				logsynch_wintestNetworkStationNameOfKST = getText(
+						logsynchEl,
+						logsynch_wintestNetworkStationNameOfKST,
+						"logsynch_wintestNetworkStationNameOfKST");
+				logsynch_wintestNetworkStationNameOfWintestClient1 = getText(
+						logsynchEl,
+						logsynch_wintestNetworkStationNameOfWintestClient1,
+						"logsynch_wintestNetworkStationNameOfWintestClient1");
+				logsynch_wintestNetworkSimulationEnabled = getBoolean(
+						logsynchEl,
+						logsynch_wintestNetworkSimulationEnabled,
+						"logsynch_wintestNetworkSimulationEnabled");
+				logsynch_wintestNetworkStationIDOfKST = getInt(
+						logsynchEl,
+						logsynch_wintestNetworkStationIDOfKST,
+						"logsynch_wintestNetworkStationIDOfKST");
+				logsynch_wintestNetworkPort = getInt(
+						logsynchEl,
+						logsynch_wintestNetworkPort,
+						"logsynch_wintestNetworkPort");
 
-					Node node = list.item(temp);
+				logsynch_wintestNetworkListenerEnabled = getBoolean(
+						logsynchEl,
+						logsynch_wintestNetworkListenerEnabled,
+						"logsynch_wintestNetworkListenerEnabled");
 
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
 
-						Element element = (Element) node;
-
-						String logsynchReadFile = element
-								.getElementsByTagName("logsynch_fileBasedWkdCallInterpreterFileNameReadOnly").item(0)
-								.getTextContent();
-
-						logsynch_fileBasedWkdCallInterpreterFileNameReadOnly = logsynchReadFile;
-
-						String UDPMessageBackupFileName = element
-								.getElementsByTagName("logsynch_storeWorkedCallSignsFileNameUDPMessageBackup").item(0)
-								.getTextContent();
-
-						logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = UDPMessageBackupFileName;
-
-//						call = call.toLowerCase();
-						String fileBasedLogSynchEnabled = element
-								.getElementsByTagName("logsynch_fileBasedWkdCallInterpreterEnabled").item(0)
-								.getTextContent();
-
-						if (fileBasedLogSynchEnabled.equals("true")) {
-
-							logsynch_fileBasedWkdCallInterpreterEnabled = true;
-						} else {
-							logsynch_fileBasedWkdCallInterpreterEnabled = false;
-						}
-
-						String ucxUDPLogSynchListenerPort = element
-								.getElementsByTagName("logsynch_ucxUDPWkdCallListenerPort").item(0).getTextContent();
-
-						if (isNumeric(ucxUDPLogSynchListenerPort)) {
-							logsynch_ucxUDPWkdCallListenerPort = Integer.parseInt(ucxUDPLogSynchListenerPort);
-						} else {
-							logsynch_ucxUDPWkdCallListenerPort = 12060; // TODO: Set default at another place or with
-																		// STATIC VAR
-						}
-
-						String ucxUDPLogSynchListenerEnabled = element
-								.getElementsByTagName("logsynch_ucxUDPWkdCallListenerEnabled").item(0).getTextContent();
-
-						if (ucxUDPLogSynchListenerEnabled.equals("true")) {
-							logsynch_ucxUDPWkdCallListenerEnabled = true;
-						} else {
-							logsynch_ucxUDPWkdCallListenerEnabled = false;
-						}
-
-						System.out.println(
-								"[ChatPreferences, info]: Set the Universal file based worked-Call Interpreter to : "
-										+ logsynch_fileBasedWkdCallInterpreterEnabled);
-
-						System.out.println("[ChatPreferences, info]: Set the UCX UDP Worked Call Listener to : "
-								+ logsynch_ucxUDPWkdCallListenerEnabled);
-
-					}
-				}
+				System.out.println(
+						"[ChatPreferences, info]: file based worked-call interpreter: " + logsynch_fileBasedWkdCallInterpreterEnabled);
+				System.out.println(
+						"[ChatPreferences, info]: UCX UDP worked-call listener: " + logsynch_ucxUDPWkdCallListenerEnabled);
 			}
 
 			/**
 			 * Case trx synchronizatrion
 			 */
 
-			list = doc.getElementsByTagName("trxSynchUCX");
-			if (list.getLength() != 0) {
+			Element trxSynchEl = getFirstElement(doc, "trxSynchUCX");
+			if (trxSynchEl != null) {
+				trxSynch_ucxLogUDPListenerEnabled = getBoolean(
+						trxSynchEl,
+						trxSynch_ucxLogUDPListenerEnabled,
+						"trxSynch_ucxLogUDPListenerEnabled");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						String trxSynchUCX = element.getElementsByTagName("trxSynch_ucxLogUDPListenerEnabled").item(0)
-								.getTextContent();
-
-						if (trxSynchUCX.equals("true")) {
-							trxSynch_ucxLogUDPListenerEnabled = true;
-						} else {
-							trxSynch_ucxLogUDPListenerEnabled = false;
-						}
-
-						String trxSynch_defaultMYQRGValue = element.getElementsByTagName("trxSynch_defaultMYQRGValue")
-								.item(0).getTextContent();
-
-						this.getMYQRGFirstCat().setValue(trxSynch_defaultMYQRGValue);
-
-						String trxSynch_defaultMYQRG2Value;
-						try{
-							trxSynch_defaultMYQRG2Value = element.getElementsByTagName("trxSynch_defaultMYQRG2Value")
-									.item(0).getTextContent();
-
-						} catch (Exception notFoundExc) {
-							trxSynch_defaultMYQRG2Value = "1296.123.00"; //v1.26, new setting
-						}
-
-						this.getMYQRGSecondCat().setValue(trxSynch_defaultMYQRG2Value);
-
-						System.out.println(
-								"[ChatPreferences, info]: Set the trx qrg synch to " + trxSynch_ucxLogUDPListenerEnabled
-										+ " and default value to " + this.getMYQRGFirstCat().getValue() + " // " + this.getMYQRGSecondCat().getValue());
-
-					}
+				String qrg1 = getText(trxSynchEl, null, "trxSynch_defaultMYQRGValue");
+				if (qrg1 != null) {
+					this.getMYQRGFirstCat().setValue(qrg1);
 				}
+				String qrg2 = getText(trxSynchEl, "1296.123.00", "trxSynch_defaultMYQRG2Value");
+				this.getMYQRGSecondCat().setValue(qrg2);
+
+				System.out.println(
+						"[ChatPreferences, info]: trx qrg synch=" + trxSynch_ucxLogUDPListenerEnabled
+								+ ", default=" + this.getMYQRGFirstCat().getValue() + " // " + this.getMYQRGSecondCat().getValue());
 			}
 
 			/**
 			 * Case notifications
 			 */
 
-			list = doc.getElementsByTagName("notifications");
-			if (list.getLength() != 0) {
+			Element notificationsEl = getFirstElement(doc, "notifications");
+			if (notificationsEl != null) {
+				notify_playSimpleSounds = getBoolean(notificationsEl, notify_playSimpleSounds, "notify_SimpleAudioNotificationsEnabled");
+				notify_playCWCallsignsOnRxedPMs = getBoolean(notificationsEl, notify_playCWCallsignsOnRxedPMs, "notify_CWCallsignAudioNotificationsEnabled");
+				notify_playVoiceCallsignsOnRxedPMs = getBoolean(notificationsEl, notify_playVoiceCallsignsOnRxedPMs, "notify_VoiceCallsignAudioNotificationsEnabled");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
+				// DXCluster / Monitoring (introduced later) -> keep defaults if absent
+				notify_dxClusterServerEnabled = getBoolean(notificationsEl, notify_dxClusterServerEnabled, "notify_dxClusterServerEnabled");
+				notify_DXClusterServerTriggerBearing = getBoolean(notificationsEl, notify_DXClusterServerTriggerBearing, "notify_DXClusterServerTriggerBearing");
+				notify_DXClusterServerTriggerOnQRGDetect = getBoolean(notificationsEl, notify_DXClusterServerTriggerOnQRGDetect, "notify_DXClusterServerTriggerOnQRGDetect");
+				notify_dxclusterServerPort = getInt(notificationsEl, notify_dxclusterServerPort, "notify_dxclusterServerPort");
 
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						String notify_simpleAudioNotificationsEnabled = element.getElementsByTagName("notify_SimpleAudioNotificationsEnabled").item(0)
-								.getTextContent();
-
-						if (notify_simpleAudioNotificationsEnabled.equals("true")) {
-							notify_playSimpleSounds = true;
-						} else {
-							notify_playSimpleSounds = false;
-						}
-
-						String notify_cwAudioNotificationsEnabled = element.getElementsByTagName("notify_CWCallsignAudioNotificationsEnabled").item(0)
-								.getTextContent();
-
-						if (notify_cwAudioNotificationsEnabled.equals("true")) {
-							notify_playCWCallsignsOnRxedPMs = true;
-						} else {
-							notify_playCWCallsignsOnRxedPMs = false;
-						}
-
-						String notify_voiceAudioNotificationsEnabled = element.getElementsByTagName("notify_VoiceCallsignAudioNotificationsEnabled").item(0)
-								.getTextContent();
-
-						if (notify_voiceAudioNotificationsEnabled.equals("true")) {
-							notify_playVoiceCallsignsOnRxedPMs = true;
-						} else {
-							notify_playVoiceCallsignsOnRxedPMs = false;
-						}
-
-						try { //try catch block since Version 1.23 due to new prefs to save and read
-
-							String notify_dxClusterServerEnabledFromFile = element.getElementsByTagName("notify_dxClusterServerEnabled").item(0)
-									.getTextContent();
-
-							if (notify_dxClusterServerEnabledFromFile.equals("true")) {
-								notify_dxClusterServerEnabled = true;
-							} else {
-								notify_dxClusterServerEnabled = false;
-							}
-
-							String notify_DXClusterServerTriggerBearingFromFile = element.getElementsByTagName("notify_DXClusterServerTriggerBearing").item(0)
-									.getTextContent();
-
-							if (notify_DXClusterServerTriggerBearingFromFile.equals("true")) {
-								notify_DXClusterServerTriggerBearing = true;
-							} else {
-								notify_DXClusterServerTriggerBearing = false;
-							}
-
-							String notify_DXClusterServerTriggerOnQRGDetectFromFile = element.getElementsByTagName("notify_DXClusterServerTriggerOnQRGDetect").item(0)
-									.getTextContent();
-
-							if (notify_DXClusterServerTriggerOnQRGDetectFromFile.equals("true")) {
-								notify_DXClusterServerTriggerOnQRGDetect = true;
-							} else {
-								notify_DXClusterServerTriggerOnQRGDetect = false;
-							}
-
-							String notify_dxclusterServerPortFromFile = element
-									.getElementsByTagName("notify_dxclusterServerPort").item(0).getTextContent();
-
-							if (isNumeric(notify_dxclusterServerPortFromFile)) {
-								notify_dxclusterServerPort = Integer.parseInt(notify_dxclusterServerPortFromFile);
-							} else {
-//								notify_dxclusterServerPort = 8000; Default setted on very top of file
-							}
-
-							String notify_DXCSrv_SpottersCallSignFromFile = element.getElementsByTagName("notify_DXCSrv_SpottersCallSign").item(0).getTextContent();
-							notify_DXCSrv_SpottersCallSign.set(notify_DXCSrv_SpottersCallSignFromFile);
-
-							String notify_optionalFrequencyPrefixFromFile = element.getElementsByTagName("notify_optionalFrequencyPrefix").item(0).getTextContent();
-							notify_optionalFrequencyPrefix.set(notify_optionalFrequencyPrefixFromFile);
-
-
-						} catch (NullPointerException e) {
-							e.printStackTrace();
-							System.out.println("[ChatPreferences, Warning:] some monitoring preferences could not be found in "+ storeAndRestorePreferencesFileName +". Using defaults.");
-						}
-
-						System.out.println(
-								"[ChatPreferences, info]: Set the audionotifications simple: " + notify_playSimpleSounds + ", CW: " + notify_playCWCallsignsOnRxedPMs + ", Voice: " + notify_playVoiceCallsignsOnRxedPMs);
-
-					}
+				String spotter = getText(notificationsEl, null, "notify_DXCSrv_SpottersCallSign");
+				if (spotter != null) {
+					notify_DXCSrv_SpottersCallSign.set(spotter);
 				}
+				String prefix = getText(notificationsEl, null, "notify_optionalFrequencyPrefix");
+				if (prefix != null) {
+					notify_optionalFrequencyPrefix.set(prefix);
+				}
+
+				Integer noReply = getInt(notificationsEl, 13, "notify_noReplyPenaltyMinutes");
+				if (noReply != null) {
+					notify_noReplyPenaltyMinutes = noReply;
+				}
+
+				Integer momentum = getInt(notificationsEl, 666, "notify_momentumWindowSeconds");
+				if (momentum != null) {
+					notify_momentumWindowSeconds = momentum;
+				}
+
+				String pos = getText(notificationsEl, null, "notify_positiveSignalsPatterns");
+				if (pos != null) {
+					notify_positiveSignalsPatterns = pos;
+				}
+
+				notify_bandUpgradeHintOnLogEnabled = getBoolean(
+						notificationsEl,
+						notify_bandUpgradeHintOnLogEnabled,
+						"notify_bandUpgradeHintOnLogEnabled"
+				);
+				notify_bandUpgradePriorityBoostEnabled = getBoolean(
+						notificationsEl,
+						notify_bandUpgradePriorityBoostEnabled,
+						"notify_bandUpgradePriorityBoostEnabled"
+				);
+
+
+				System.out.println(
+						"[ChatPreferences, info]: audio notifications simple=" + notify_playSimpleSounds
+								+ ", CW=" + notify_playCWCallsignsOnRxedPMs
+								+ ", Voice=" + notify_playVoiceCallsignsOnRxedPMs);
 			}
 
 
@@ -1763,84 +1951,38 @@ public class ChatPreferences {
 			 * Case AirScout querier
 			 */
 
-			list = doc.getElementsByTagName("AirScoutQuerier");
-			if (list.getLength() != 0) {
+			Element airScoutEl = getFirstElement(doc, "AirScoutQuerier");
+			if (airScoutEl != null) {
+				AirScout_asUDPListenerEnabled = getBoolean(airScoutEl, AirScout_asUDPListenerEnabled, "asQry_airScoutCommunicationEnabled");
+				AirScout_asServerNameString = getText(airScoutEl, AirScout_asServerNameString, "asQry_airScoutServerName");
+				AirScout_asClientNameString = getText(airScoutEl, AirScout_asClientNameString, "asQry_airScoutClientName");
+				AirScout_asCommunicationPort = getInt(airScoutEl, AirScout_asCommunicationPort, "asQry_airScoutUDPPort");
+				AirScout_asBandString = getText(airScoutEl, AirScout_asBandString, "asQry_airScoutBandValue");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						String asQuerierUDPEnabled = element.getElementsByTagName("asQry_airScoutCommunicationEnabled")
-								.item(0).getTextContent();
-
-						if (asQuerierUDPEnabled.equals("true")) {
-							AirScout_asUDPListenerEnabled = true;
-						} else {
-							AirScout_asUDPListenerEnabled = false;
-						}
-
-						this.setAirScout_asServerNameString(
-								element.getElementsByTagName("asQry_airScoutServerName").item(0).getTextContent());
-						this.setAirScout_asClientNameString(
-								element.getElementsByTagName("asQry_airScoutClientName").item(0).getTextContent());
-						this.setAirScout_asCommunicationPort(Integer.parseInt(
-								element.getElementsByTagName("asQry_airScoutUDPPort").item(0).getTextContent()));
-						this.setAirScout_asBandString(
-								element.getElementsByTagName("asQry_airScoutBandValue").item(0).getTextContent());
-//						this.getMYQRG().addListener((observable, oldValue, newValue) -> {
-//						    System.out.println("[Chatprefs.java, Info]: MYQRG changed from " + oldValue + " to " + newValue);
-////						    this.getMYQRG().
-////						    txt_ownqrg.setText(newValue);
-//						});
-
-//						
-						System.out.println("[ChatPreferences, info]: Set the Airscout Querier to " + asQuerierUDPEnabled
-								+ " for qrg " + AirScout_asBandString);
-
-					}
-				}
+				System.out.println(
+						"[ChatPreferences, info]: AirScout querier enabled=" + AirScout_asUDPListenerEnabled
+								+ ", band=" + AirScout_asBandString);
 			}
 
 			/**
 			 * Case shortCuts
 			 */
 
-			list = doc.getElementsByTagName("shortCuts");
-			String[] shortCutsExtractedOutOfXML = new String[0];
-
-			if (list.getLength() != 0) {
-
-				ArrayList<String> textShorts = new ArrayList<String>();
-
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					Element element = (Element) node;
-
-					for (int i = 0; i < element.getChildNodes().getLength(); i++) {
-						if (element.getChildNodes().item(i).getNodeType() == Node.ELEMENT_NODE) {
-							textShorts.add(element.getChildNodes().item(i).getTextContent());
-							shortCutsExtractedOutOfXML = textShorts.toArray(String[]::new); // String[]::new = API
-																							// Collection.toArray(IntFunction<T[]>
-																							// generator)
-//								System.out.println(element.getChildNodes().item(i).getNodeType() + ": " + element.getChildNodes().item(i).getNodeName() + " - " + element.getChildNodes().item(i).getTextContent());
+			Element shortCutsEl = getFirstElement(doc, "shortCuts");
+			if (shortCutsEl != null) {
+				lst_txtShortCutBtnList.clear();
+				NodeList children = shortCutsEl.getChildNodes();
+				for (int i = 0; i < children.getLength(); i++) {
+					Node child = children.item(i);
+					if (child.getNodeType() == Node.ELEMENT_NODE) {
+						String v = child.getTextContent();
+						if (v != null) {
+							v = v.trim();
+						}
+						if (v != null && !v.isEmpty()) {
+							lst_txtShortCutBtnList.add(v);
 						}
 					}
-
-				}
-
-				// if praktiKST found Shortcuts in the configfile, set it to the preferences
-//				shortcuts = shortCutsExtractedOutOfXML;
-				// else use defaults (as the initialization vars had been)
-				for (int i = 0; i < shortCutsExtractedOutOfXML.length; i++) {
-					lst_txtShortCutBtnList.add(shortCutsExtractedOutOfXML[i]);
-					System.out.println("[Chatpreferences, Info]: Setting Short " + i + " \""
-							+ shortCutsExtractedOutOfXML[i] + "\"");
 				}
 			}
 
@@ -1848,38 +1990,73 @@ public class ChatPreferences {
 			 * Case textSnippets
 			 */
 
-			list = doc.getElementsByTagName("textSnippets");
-			String[] textSnippetsExtractedOutOfXML = new String[0];
-
-			if (list.getLength() != 0) {
-
-				ArrayList<String> textShorts = new ArrayList<String>();
-
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					Element element = (Element) node;
-
-					for (int i = 0; i < element.getChildNodes().getLength(); i++) {
-						if (element.getChildNodes().item(i).getNodeType() == Node.ELEMENT_NODE) {
-							textShorts.add(element.getChildNodes().item(i).getTextContent());
-							textSnippetsExtractedOutOfXML = textShorts.toArray(String[]::new); // String[]::new = API
-																								// Collection.toArray(IntFunction<T[]>
-																								// generator)
-//								System.out.println(element.getChildNodes().item(i).getNodeType() + ": " + element.getChildNodes().item(i).getNodeName() + " - " + element.getChildNodes().item(i).getTextContent());
+			Element textSnippetsEl = getFirstElement(doc, "textSnippets");
+			if (textSnippetsEl != null) {
+				lst_txtSnipList.clear();
+				NodeList children = textSnippetsEl.getChildNodes();
+				for (int i = 0; i < children.getLength(); i++) {
+					Node child = children.item(i);
+					if (child.getNodeType() == Node.ELEMENT_NODE) {
+						String v = child.getTextContent();
+						if (v != null) {
+							v = v.trim();
+						}
+						if (v != null && !v.isEmpty()) {
+							lst_txtSnipList.add(v);
 						}
 					}
-
 				}
+			}
 
-				// if praktiKST found Shortcuts in the configfile, set it to the preferences
-//				textSnippets = textSnippetsExtractedOutOfXML;
-				// else use defaults (as the initialization vars had been)
-				for (int i = 0; i < textSnippetsExtractedOutOfXML.length; i++) {
-					lst_txtSnipList.add(textSnippetsExtractedOutOfXML[i]);
-					System.out.println("[Chatpreferences, Info]: Setting Snip " + i + " \""
-							+ textSnippetsExtractedOutOfXML[i] + "\"");
+			/**
+			 * Case QSO-sniffer lists (added later; older configs won't have them)
+			 */
+			list = doc.getElementsByTagName("snifferWords");
+			if (list != null && list.getLength() != 0) {
+				// reset to avoid duplicates when reloading
+				lstNotify_QSOSniffer_sniffedWordsList.clear();
+				for (int temp = 0; temp < list.getLength(); temp++) {
+					Node node = list.item(temp);
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+						Element element = (Element) node;
+						NodeList children = element.getChildNodes();
+						for (int i = 0; i < children.getLength(); i++) {
+							Node child = children.item(i);
+							if (child.getNodeType() == Node.ELEMENT_NODE) {
+								String word = child.getTextContent();
+								if (word != null) {
+									word = word.trim();
+								}
+								if (word != null && !word.isEmpty()) {
+									lstNotify_QSOSniffer_sniffedWordsList.add(word);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			list = doc.getElementsByTagName("snifferPrefixes");
+			if (list != null && list.getLength() != 0) {
+				lstNotify_QSOSniffer_sniffedPrefixLocList.clear();
+				for (int temp = 0; temp < list.getLength(); temp++) {
+					Node node = list.item(temp);
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+						Element element = (Element) node;
+						NodeList children = element.getChildNodes();
+						for (int i = 0; i < children.getLength(); i++) {
+							Node child = children.item(i);
+							if (child.getNodeType() == Node.ELEMENT_NODE) {
+								String prefix = child.getTextContent();
+								if (prefix != null) {
+									prefix = prefix.trim();
+								}
+								if (prefix != null && !prefix.isEmpty()) {
+									lstNotify_QSOSniffer_sniffedPrefixLocList.add(prefix);
+								}
+							}
+						}
+					}
 				}
 			}
 
@@ -1887,124 +2064,47 @@ public class ChatPreferences {
 			 * Case beaconCQ
 			 */
 
-			list = doc.getElementsByTagName("beaconCQ");
-			if (list.getLength() != 0) {
+			Element beaconCQEl = getFirstElement(doc, "beaconCQ");
+			if (beaconCQEl != null) {
+				bcn_beaconsEnabledMainCat = getBoolean(beaconCQEl, bcn_beaconsEnabledMainCat, "bcn_beaconsEnabledMainCat", "beaconCQEnabled");
+				bcn_beaconIntervalInMinutesMainCat = getInt(beaconCQEl, bcn_beaconIntervalInMinutesMainCat, "bcn_beaconIntervalInMinutesMainCat", "beaconCQIntervalMinutes");
+				bcn_beaconTextMainCat = getText(beaconCQEl, bcn_beaconTextMainCat, "bcn_beaconTextMainCat", "beaconCQText");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
+				bcn_beaconsEnabledSecondCat = getBoolean(beaconCQEl, bcn_beaconsEnabledSecondCat, "bcn_beaconsEnabledSecondCat", "beaconCQEnabledSecondCat");
+				bcn_beaconIntervalInMinutesSecondCat = getInt(beaconCQEl, bcn_beaconIntervalInMinutesSecondCat, "bcn_beaconIntervalInMinutesSecondCat", "beaconCQIntervalMinutesSecondCat");
+				bcn_beaconTextSecondCat = getText(beaconCQEl, bcn_beaconTextSecondCat, "bcn_beaconTextSecondCat", "beaconCQTextSecondText");
 
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						String beaconCQEnabled = element.getElementsByTagName("beaconCQEnabled").item(0)
-								.getTextContent();
-
-						if (beaconCQEnabled.equals("true")) {
-
-							bcn_beaconsEnabledMainCat = true;
-						} else {
-							bcn_beaconsEnabledMainCat = false;
-						}
-
-						String beaconCQIntervalMinutes = element.getElementsByTagName("beaconCQIntervalMinutes").item(0)
-								.getTextContent();
-
-						if (isNumeric(beaconCQIntervalMinutes)) {
-							bcn_beaconIntervalInMinutesMainCat = Integer.parseInt(beaconCQIntervalMinutes);
-						} else {
-							bcn_beaconIntervalInMinutesMainCat = 20; // Default value, TODO: Set this in default list
-						}
-
-						String beaconCQText = element.getElementsByTagName("beaconCQText").item(0).getTextContent();
-						this.setBcn_beaconTextMainCat(beaconCQText);
-
-						String beaconCQEnabledSecondCat;
-						try {
-							beaconCQEnabledSecondCat = element.getElementsByTagName("beaconCQEnabledSecondCat").item(0)
-									.getTextContent();
-
-							if (beaconCQEnabledSecondCat.equals("true")) {
-
-								bcn_beaconsEnabledSecondCat = true;
-							} else {
-								bcn_beaconsEnabledSecondCat = false;
-							}
-
-							String beaconCQIntervalMinutesSecondCat = element.getElementsByTagName("beaconCQIntervalMinutesSecondCat").item(0)
-									.getTextContent();
-
-							if (isNumeric(beaconCQIntervalMinutesSecondCat)) {
-								bcn_beaconIntervalInMinutesSecondCat = Integer.parseInt(beaconCQIntervalMinutesSecondCat);
-							} else {
-								bcn_beaconIntervalInMinutesSecondCat = 3; // Default value, TODO: Set this in default list
-							}
-
-							String beaconCQTextSecondText = element.getElementsByTagName("beaconCQTextSecondText").item(0).getTextContent();
-							this.setBcn_beaconTextSecondCat(beaconCQTextSecondText);
-
-						} catch (Exception previousVersionException) {
-							bcn_beaconsEnabledSecondCat = false;
-							bcn_beaconIntervalInMinutesSecondCat = 3;
-							this.setBcn_beaconTextSecondCat(this.getStn_loginCallSign() + " is QRV, pse sked for contact");
-
-						}
-//
-						System.out.println("[ChatPreferences, info]: set the beacon text to: " + beaconCQText  + " and " + this.getBcn_beaconTextSecondCat());
-
-					}
-				}
+				System.out.println("[ChatPreferences, info]: beaconCQ main='" + bcn_beaconTextMainCat + "', second='" + bcn_beaconTextSecondCat + "'");
 			}
 
 			/**
 			 * Case beaconUnworkedstations
-			 * 
+			 *
 			 */
 
-			list = doc.getElementsByTagName("beaconUnworkedstations");
-			if (list.getLength() != 0) {
-
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-//
-						String beaconUnworkedstationsText = element.getElementsByTagName("beaconUnworkedstationsText")
-								.item(0).getTextContent();
-						messageHandling_unworkedStnRequesterBeaconsText = beaconUnworkedstationsText;
-
-						String beaconUnworkedstationsIntervalMinutes = element
-								.getElementsByTagName("beaconUnworkedstationsIntervalMinutes").item(0).getTextContent();
-
-						if (isNumeric(beaconUnworkedstationsIntervalMinutes)) {
-							messageHandling_unworkedStnRequesterBeaconsInterval = Integer
-									.parseInt(beaconUnworkedstationsIntervalMinutes);
-						} else {
-							messageHandling_unworkedStnRequesterBeaconsInterval = 20;
-						}
-
-						String beaconUnworkedstationsEnabled = element
-								.getElementsByTagName("beaconUnworkedstationsEnabled").item(0).getTextContent();
-
-						if (beaconUnworkedstationsEnabled.equals("true")) {
-							messageHandling_unworkedStnRequesterBeaconsEnabled = true;
-						} else {
-							messageHandling_unworkedStnRequesterBeaconsEnabled = false;
-						}
-						
-						String beaconUnworkedstationsPrefix = element
-								.getElementsByTagName("beaconUnworkedstationsPrefix").item(0).getTextContent();
-
-						messageHandling_beaconUnworkedstationsPrefix = beaconUnworkedstationsPrefix;
-
-					}
-				}
-				System.out.println("[ChatPreferences, info]: set the unworked stn beacon text to: "
-						+ messageHandling_unworkedStnRequesterBeaconsText);
+			Element beaconUnworkedEl = getFirstElement(doc, "beaconUnworkedstations");
+			if (beaconUnworkedEl != null) {
+				messageHandling_unworkedStnRequesterBeaconsText = getText(
+						beaconUnworkedEl,
+						messageHandling_unworkedStnRequesterBeaconsText,
+						"messageHandling_unworkedStnRequesterBeaconsText",
+						"beaconUnworkedstationsText");
+				messageHandling_unworkedStnRequesterBeaconsInterval = getInt(
+						beaconUnworkedEl,
+						messageHandling_unworkedStnRequesterBeaconsInterval,
+						"messageHandling_unworkedStnRequesterBeaconsInterval",
+						"beaconUnworkedstationsIntervalMinutes");
+				messageHandling_unworkedStnRequesterBeaconsEnabled = getBoolean(
+						beaconUnworkedEl,
+						messageHandling_unworkedStnRequesterBeaconsEnabled,
+						"messageHandling_unworkedStnRequesterBeaconsEnabled",
+						"beaconUnworkedstationsEnabled");
+				messageHandling_beaconUnworkedstationsPrefix = getText(
+						beaconUnworkedEl,
+						messageHandling_beaconUnworkedstationsPrefix,
+						"messageHandling_beaconUnworkedstationsPrefix",
+						"beaconUnworkedstationsPrefix");
+				System.out.println("[ChatPreferences, info]: unworked-stations beacon text='" + messageHandling_unworkedStnRequesterBeaconsText + "'");
 			}
 
 
@@ -2014,85 +2114,35 @@ public class ChatPreferences {
 			 * case messageHandling
 			 *
 			 ***********************************************/
-			list = doc.getElementsByTagName("messageHandling");
-			if (list.getLength() != 0) {
+			Element messageHandlingEl = getFirstElement(doc, "messageHandling");
+			if (messageHandlingEl != null) {
+				messageHandling_autoAnswerTextMainCat = getText(
+						messageHandlingEl,
+						messageHandling_autoAnswerTextMainCat,
+						"messageHandling_autoAnswerTextMainCat",
+						"autoAnswerText");
+				messageHandling_autoAnswerEnabled = getBoolean(
+						messageHandlingEl,
+						messageHandling_autoAnswerEnabled,
+						"messageHandling_autoAnswerEnabled",
+						"autoAnswerEnabled");
+				messageHandling_autoAnswerToQRGRequestEnabled = getBoolean(
+						messageHandlingEl,
+						messageHandling_autoAnswerToQRGRequestEnabled,
+						"messageHandling_autoAnswerToQRGRequestEnabled",
+						"autoAnswerToQrgRequestEnabled",
+						"autoAnswerToQRGRequestEnabled");
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						try{
-
-							String autoAnswerText = element.getElementsByTagName("autoAnswerText").item(0)
-									.getTextContent();
-
-							this.setMessageHandling_autoAnswerTextMainCat(autoAnswerText);
-
-							String autoAnswerEnabled = element.getElementsByTagName("autoAnswerEnabled").item(0)
-									.getTextContent();
-
-							if (autoAnswerEnabled.equals("true")) {
-								this.setMessageHandling_autoAnswerEnabled(true);
-							} else {
-								this.setMessageHandling_autoAnswerEnabled(false);
-							}
-
-							String autoAnswerToQrgRequestEnabled = element.getElementsByTagName("autoAnswerToQrgRequestEnabled").item(0)
-									.getTextContent();
-
-							if (autoAnswerToQrgRequestEnabled.equals("true")) {
-								this.setMessageHandling_autoAnswerToQRGRequestEnabled(true);
-							} else {
-								this.setMessageHandling_autoAnswerToQRGRequestEnabled(false);
-							}
-
-
-						}
-
-						catch (NullPointerException tooOldConfigFileOrFormatError) {
-							/**
-							 * In program version 1.24 there had not been these settings in the xml and not founding em
-							 * would cause an exception and dumb values for the preferences. So we have to initialize
-							 * these variables and later write a proper configfile which can be used correctly then.
-							 *
-							 * So THESE ARE DEFAULTS for the new variables
-							 */
-
-							tooOldConfigFileOrFormatError.printStackTrace();
-							this.setMessageHandling_autoAnswerTextMainCat("Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
-							this.setMessageHandling_autoAnswerEnabled(false);
-							this.setMessageHandling_autoAnswerToQRGRequestEnabled(true);
-						}
-
-						try {
-							String autoAnswerTextSecondCat = element.getElementsByTagName("autoAnswerTextSecondCat").item(0)
-									.getTextContent();
-
-							this.setMessageHandling_autoAnswerTextSecondCat(autoAnswerTextSecondCat);
-
-
-							String autoAnswerEnabledSecondCat = element.getElementsByTagName("autoAnswerEnabledSecondCat").item(0)
-									.getTextContent();
-
-							if (autoAnswerEnabledSecondCat.equals("true")) {
-								this.setMessageHandling_autoAnswerEnabledSecondCat(true);
-							} else {
-								this.setMessageHandling_autoAnswerEnabledSecondCat(false);
-							}
-						} catch (Exception prevVersionExc) {
-
-							String autoAnswerTextSecondCat = "[KST4Contest autoreply] change me ... ";
-							this.setMessageHandling_autoAnswerEnabledSecondCat(false);
-
-						}
-
-
-					}
-				}
+				messageHandling_autoAnswerTextSecondCat = getText(
+						messageHandlingEl,
+						messageHandling_autoAnswerTextSecondCat,
+						"messageHandling_autoAnswerTextSecondCat",
+						"autoAnswerTextSecondCat");
+				messageHandling_autoAnswerEnabledSecondCat = getBoolean(
+						messageHandlingEl,
+						messageHandling_autoAnswerEnabledSecondCat,
+						"messageHandling_autoAnswerEnabledSecondCat",
+						"autoAnswerEnabledSecondCat");
 			}
 
 
@@ -2119,77 +2169,69 @@ public class ChatPreferences {
 
 						Element element = (Element) node;
 
-						try{
+						// Scene sizes (semicolon separated), defaults are already in the arrays.
+						parseSemicolonDoublesInto(getText(element, null, "GUIscn_ChatwindowMainSceneSizeHW"), this.getGUIscn_ChatwindowMainSceneSizeHW());
+						parseSemicolonDoublesInto(getText(element, null, "GUIclusterAndQSOMonStage_SceneSizeHW"), this.getGUIclusterAndQSOMonStage_SceneSizeHW());
+						parseSemicolonDoublesInto(getText(element, null, "GUIstage_updateStage_SceneSizeHW"), this.getGUIstage_updateStage_SceneSizeHW());
+						parseSemicolonDoublesInto(getText(element, null, "GUIsettingsStageSceneSizeHW"), this.getGUIsettingsStageSceneSizeHW());
 
-							String GUIscn_ChatwindowMainSceneSizeHW = element.getElementsByTagName("GUIscn_ChatwindowMainSceneSizeHW").item(0)
-									.getTextContent();
-
-							for (int i = 0; i < (GUIscn_ChatwindowMainSceneSizeHW.split(";").length); i++) {
-								this.getGUIscn_ChatwindowMainSceneSizeHW()[i] =
-										Double.parseDouble(GUIscn_ChatwindowMainSceneSizeHW.split(";")[i]);
+						// Splitpane divider positions
+						String s1 = getText(element, null, "GUIselectedCallSignSplitPane_dividerposition");
+						if (s1 != null) {
+							this.setGUIselectedCallSignSplitPane_dividerposition(csvStringToDoubleArray(s1));
+						}
+						String s2 = getText(element, null, "GUImainWindowLeftSplitPane_dividerposition");
+						if (s2 != null) {
+							this.setGUImainWindowLeftSplitPane_dividerposition(csvStringToDoubleArray(s2));
+						}
+						String s3 = getText(element, null, "GUImessageSectionSplitpane_dividerposition");
+						if (s3 != null) {
+							double[] parsed = csvStringToDoubleArray(s3);
+							// Config files older than ~1.40 had fewer panes.
+							if (parsed.length >= 4) {
+								this.setGUImessageSectionSplitpane_dividerposition(parsed);
 							}
+						}
+						// GUImainWindowRightSplitPane divider positions (2 dividers => 2 values)
+// Backward compatible: old configs stored a single CSV tag.
+						String rightLegacy = getText(element, null, "GUImainWindowRightSplitPane_dividerposition");
+						String right0 = getText(element, null, "GUImainWindowRightSplitPane_dividerposition0");
+						String right1 = getText(element, null, "GUImainWindowRightSplitPane_dividerposition1");
 
-							System.out.println(
-									"[ChatPreferences, info]: Set the GUIscn_ChatwindowMainSceneSizeHW size to " + GUIclusterAndQSOMonStage_SceneSizeHW);
+						if (right0 != null || right1 != null) {
 
+							// New format: two dedicated tags
+							double p0 = (right0 != null) ? parseDoubleOrDefault(right0, this.GUImainWindowRightSplitPane_dividerpositionDefault[0])
+									: this.GUImainWindowRightSplitPane_dividerpositionDefault[0];
 
-							String GUIclusterAndQSOMonStage_SceneSizeHW = element.getElementsByTagName("GUIclusterAndQSOMonStage_SceneSizeHW").item(0)
-									.getTextContent();
+							double p1 = (right1 != null) ? parseDoubleOrDefault(right1, this.GUImainWindowRightSplitPane_dividerpositionDefault[1])
+									: this.GUImainWindowRightSplitPane_dividerpositionDefault[1];
 
-							for (int i = 0; i < (GUIclusterAndQSOMonStage_SceneSizeHW.split(";").length); i++) {
-								this.getGUIclusterAndQSOMonStage_SceneSizeHW()[i] =
-										Double.parseDouble(GUIclusterAndQSOMonStage_SceneSizeHW.split(";")[i]);
+							this.setGUImainWindowRightSplitPane_dividerposition(new double[] { p0, p1 });
+
+						} else if (rightLegacy != null) {
+
+							// Old format: CSV array (often length 1)
+							double[] parsed = csvStringToDoubleArray(rightLegacy);
+
+							// Upgrade older config files gracefully
+							if (parsed.length >= 2) {
+								this.setGUImainWindowRightSplitPane_dividerposition(new double[] { parsed[0], parsed[1] });
+							} else if (parsed.length == 1) {
+								this.setGUImainWindowRightSplitPane_dividerposition(new double[] {
+										parsed[0],
+										this.GUImainWindowRightSplitPane_dividerpositionDefault[1]
+								});
 							}
-
-							String GUIselectedCallSignSplitPane_dividerposition = element.getElementsByTagName("GUIselectedCallSignSplitPane_dividerposition").item(0)
-									.getTextContent();
-							this.setGUIselectedCallSignSplitPane_dividerposition(csvStringToDoubleArray(GUIselectedCallSignSplitPane_dividerposition));
-
-							String GUImainWindowLeftSplitPane_dividerposition = element.getElementsByTagName("GUImainWindowLeftSplitPane_dividerposition").item(0)
-									.getTextContent();
-							this.setGUImainWindowLeftSplitPane_dividerposition(csvStringToDoubleArray(GUImainWindowLeftSplitPane_dividerposition));
-
-							String GUImessageSectionSplitpane_dividerposition = element.getElementsByTagName("GUImessageSectionSplitpane_dividerposition").item(0)
-									.getTextContent();
-							this.setGUImessageSectionSplitpane_dividerposition(csvStringToDoubleArray(GUImessageSectionSplitpane_dividerposition));
-
-							String GUImainWindowRightSplitPane_dividerposition = element.getElementsByTagName("GUImainWindowRightSplitPane_dividerposition").item(0)
-									.getTextContent();
-							this.setGUImainWindowRightSplitPane_dividerposition(csvStringToDoubleArray(GUImainWindowRightSplitPane_dividerposition));
-
-							String GUIpnl_directedMSGWin_dividerpositionDefault = element.getElementsByTagName("GUIpnl_directedMSGWin_dividerpositionDefault").item(0)
-									.getTextContent();
-							this.setGUIpnl_directedMSGWin_dividerpositionDefault(csvStringToDoubleArray(GUIpnl_directedMSGWin_dividerpositionDefault));
-
-
-
-
-//							System.out.println(
-//									"[ChatPreferences, info]: Set the GUIclusterAndQSOMonStage_SceneSizeHW size to " + GUIclusterAndQSOMonStage_SceneSizeHW);
-
 						}
 
-						catch (NullPointerException tooOldConfigFileOrFormatError) {
-							/**
-							 * In program version 1.2 there had not been these settings in the xml and not founding em
-							 * would cause an exception and dumb values for the preferences. So we have to initialize
-							 * these variables and later write a proper configfile which can be used correctly then.
-							 *
-							 * So THESE ARE DEFAULTS
-							 */
+						// Ensure correct length no matter what was in the config (prevents AIOOBE)
+						ensureMainWindowRightSplitPaneDividerPositions(2);
 
-							tooOldConfigFileOrFormatError.printStackTrace();
-							GUIscn_ChatwindowMainSceneSizeHW = new double[] {768, 1234};
-							GUIclusterAndQSOMonStage_SceneSizeHW = new double[] {700, 500};
-							GUIstage_updateStage_SceneSizeHW = new double[] {640, 480};
-							GUIsettingsStageSceneSizeHW = new double[] {720, 768};
 
-							GUIselectedCallSignSplitPane_dividerposition = new double[]{0.9};
-							setGUImainWindowLeftSplitPane_dividerposition(new double[]{0.7});
-							GUImessageSectionSplitpane_dividerposition = new double[]{0.5};
-							GUImainWindowRightSplitPane_dividerposition = new double[]{0.8};
-							GUIpnl_directedMSGWin_dividerpositionDefault = new double[]{0.8};
-//							GUImainWindowLeftSplitPane_dividerposition
+						String s5 = getText(element, null, "GUIpnl_directedMSGWin_dividerpositionDefault");
+						if (s5 != null) {
+							this.setGUIpnl_directedMSGWin_dividerpositionDefault(csvStringToDoubleArray(s5));
 						}
 					}
 				}
@@ -2200,76 +2242,16 @@ public class ChatPreferences {
 			 * case read guiSaveableOptions
 			 *
 			 ***********************************************/
-			list = doc.getElementsByTagName("guiSaveableOptions");
-			if (list.getLength() != 0) {
+			Element guiSaveableOptionsEl = getFirstElement(doc, "guiSaveableOptions");
+			if (guiSaveableOptionsEl != null) {
+				this.setGuiOptions_defaultFilterNothing(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterNothing(), "guiOptions_defaultFilterNothing"));
+				this.setGuiOptions_defaultFilterPmToMe(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPmToMe(), "guiOptions_defaultFilterPmToMe"));
+				this.setGuiOptions_defaultFilterPmToOther(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPmToOther(), "guiOptions_defaultFilterPmToOther"));
+				this.setGuiOptions_defaultFilterPublicMsgs(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPublicMsgs(), "guiOptions_defaultFilterPublicMsgs"));
 
-				for (int temp = 0; temp < list.getLength(); temp++) {
-
-					Node node = list.item(temp);
-
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-
-						Element element = (Element) node;
-
-						try{
-
-							String guiOptions_defaultFilterNothing = element.getElementsByTagName("guiOptions_defaultFilterNothing").item(0)
-									.getTextContent();
-
-							if (guiOptions_defaultFilterNothing.equals("true")) {
-								this.setGuiOptions_defaultFilterNothing(true);
-							} else {
-								this.setGuiOptions_defaultFilterNothing(false);
-							}
-
-							String guiOptions_defaultFilterPmToMe = element.getElementsByTagName("guiOptions_defaultFilterPmToMe").item(0)
-									.getTextContent();
-
-							if (guiOptions_defaultFilterPmToMe.equals("true")) {
-								this.setGuiOptions_defaultFilterPmToMe(true);
-							} else {
-								this.setGuiOptions_defaultFilterNothing(false);
-							}
-
-							String guiOptions_defaultFilterPmToOther = element.getElementsByTagName("guiOptions_defaultFilterPmToOther").item(0)
-									.getTextContent();
-
-							if (guiOptions_defaultFilterPmToOther.equals("true")) {
-								this.setGuiOptions_defaultFilterPmToOther(true);
-							} else {
-								this.setGuiOptions_defaultFilterPmToOther(false);
-							}
-
-							String guiOptions_defaultFilterPublicMsgs = element.getElementsByTagName("guiOptions_defaultFilterPublicMsgs").item(0)
-									.getTextContent();
-
-							if (guiOptions_defaultFilterPublicMsgs.equals("true")) {
-								this.setGuiOptions_defaultFilterPublicMsgs(true);
-							} else {
-								this.setGuiOptions_defaultFilterPublicMsgs(false);
-							}
-
-
-						}
-
-
-
-
-
-						catch (NullPointerException tooOldConfigFileOrFormatError) {
-							/**
-							 * In program version 1.24 there had not been these settings in the xml and not founding em
-							 * would cause an exception and dumb values for the preferences. So we have to initialize
-							 * these variables and later write a proper configfile which can be used correctly then.
-							 *
-							 * So THESE ARE DEFAULTS for the new variables
-							 */
-
-							tooOldConfigFileOrFormatError.printStackTrace();
-							this.setGuiOptions_defaultFilterPmToMe(true);
-						}
-					}
-				}
+				// Added in later versions: dark mode flags
+				this.GUI_darkModeActive = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActive, "guiOptions_darkModeActive");
+				this.GUI_darkModeActiveByDefault = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActiveByDefault, "guiOptions_darkModeActiveByDefault");
 			}
 
 
@@ -2375,8 +2357,24 @@ public class ChatPreferences {
 		this.stn_bandActive10G = stn_bandActive10G;
 	}
 
+	public boolean isGUI_darkModeActive() {
+		return GUI_darkModeActive;
+	}
+
+	public void setGUI_darkModeActive(boolean GUI_darkModeActive) {
+		this.GUI_darkModeActive = GUI_darkModeActive;
+	}
+
+	public boolean isGUI_darkModeActiveByDefault() {
+		return GUI_darkModeActiveByDefault;
+	}
+
+	public void setGUI_darkModeActiveByDefault(boolean GUI_darkModeActiveByDefault) {
+		this.GUI_darkModeActiveByDefault = GUI_darkModeActiveByDefault;
+	}
+
 	/**
-	 * 
+	 *
 	 * If the file-reading goes wrong, set the defaults
 	 */
 	public void setPreferencesDefaults() {
@@ -2384,10 +2382,130 @@ public class ChatPreferences {
 
 	}
 
+	// ---------------------------------------------------------------------
+	// XML helper methods
+	// ---------------------------------------------------------------------
+
+	private static Element getFirstElement(Document doc, String tagName) {
+		NodeList nl = doc.getElementsByTagName(tagName);
+		if (nl == null || nl.getLength() == 0) {
+			return null;
+		}
+		Node n = nl.item(0);
+		return (n instanceof Element) ? (Element) n : null;
+	}
+
+	/**
+	 * Returns the text content of the first matching child tag (directly under {@code parent})
+	 * or {@code defaultValue} if the tag does not exist or is empty.
+	 */
+	private static String getText(Element parent, String defaultValue, String... tagNames) {
+		if (parent == null || tagNames == null) {
+			return defaultValue;
+		}
+		for (String t : tagNames) {
+			if (t == null || t.isEmpty()) {
+				continue;
+			}
+			NodeList nl = parent.getElementsByTagName(t);
+			if (nl == null || nl.getLength() == 0) {
+				continue;
+			}
+			Node n = nl.item(0);
+			if (n == null) {
+				continue;
+			}
+			String v = n.getTextContent();
+			if (v != null) {
+				v = v.trim();
+			}
+			if (v != null && !v.isEmpty()) {
+				return v;
+			}
+		}
+		return defaultValue;
+	}
+
+	private static boolean getBoolean(Element parent, boolean defaultValue, String... tagNames) {
+		String v = getText(parent, null, tagNames);
+		if (v == null) {
+			return defaultValue;
+		}
+		return "true".equalsIgnoreCase(v) || "1".equals(v) || "yes".equalsIgnoreCase(v);
+	}
+
+	private static int getInt(Element parent, int defaultValue, String... tagNames) {
+		String v = getText(parent, null, tagNames);
+		if (v == null) {
+			return defaultValue;
+		}
+		try {
+			return Integer.parseInt(v.trim());
+		} catch (NumberFormatException ignore) {
+			return defaultValue;
+		}
+	}
+
+	private static double getDouble(Element parent, double defaultValue, String... tagNames) {
+		String v = getText(parent, null, tagNames);
+		if (v == null) {
+			return defaultValue;
+		}
+		try {
+			return Double.parseDouble(v.trim());
+		} catch (NumberFormatException ignore) {
+			return defaultValue;
+		}
+	}
+
+	private static int getIntFromDoc(Document doc, int defaultValue, String... tagNames) {
+		if (doc == null) {
+			return defaultValue;
+		}
+		for (String t : tagNames) {
+			if (t == null || t.isEmpty()) {
+				continue;
+			}
+			NodeList nl = doc.getElementsByTagName(t);
+			if (nl == null || nl.getLength() == 0) {
+				continue;
+			}
+			Node n = nl.item(0);
+			if (n == null) {
+				continue;
+			}
+			String v = n.getTextContent();
+			if (v == null) {
+				continue;
+			}
+			try {
+				return Integer.parseInt(v.trim());
+			} catch (NumberFormatException ignore) {
+				// try next
+			}
+		}
+		return defaultValue;
+	}
+
+	private static void parseSemicolonDoublesInto(String input, double[] target) {
+		if (input == null || target == null) {
+			return;
+		}
+		String[] parts = input.trim().split(";");
+		int len = Math.min(parts.length, target.length);
+		for (int i = 0; i < len; i++) {
+			try {
+				target[i] = Double.parseDouble(parts[i].trim());
+			} catch (NumberFormatException ignore) {
+				// keep existing value in target[i]
+			}
+		}
+	}
+
 	/**
 	 * Checks wheter the input value of the String is numeric or not, true if yes
 	 * TODO: Move to a utils class for checking input values by user...
-	 * 
+	 *
 	 * @param str
 	 * @return
 	 */
@@ -2397,14 +2515,63 @@ public class ChatPreferences {
 
 //	public ObservableList<String> getTxtSnippetsAsObservableList(){
 //		ObservableList<String> lst_txtSnipList = FXCollections.observableArrayList();
-//		
+//
 //		for (int i = 0; i < textSnippets.length; i++) {
 //			lst_txtSnipList.add(textSnippets[i]);
 //			System.out.println(textSnippets[i]);
 //		}
-//		
+//
 //		return lst_txtSnipList;
-//		
+//
 //	}
 
+
+	/**
+	 * Ensures that the divider position array matches the current number of dividers.
+	 * This upgrades older XML configs (e.g. only 1 divider stored) without crashing.
+	 */
+	public void ensureMainWindowRightSplitPaneDividerPositions(int requiredDividerCount) {
+		if (requiredDividerCount < 0) return;
+
+		if (GUImainWindowRightSplitPane_dividerposition != null
+				&& GUImainWindowRightSplitPane_dividerposition.length == requiredDividerCount) {
+			return;
+		}
+
+		double[] upgraded = new double[requiredDividerCount];
+
+		for (int i = 0; i < requiredDividerCount; i++) {
+
+			// Prefer existing stored values if present
+			if (GUImainWindowRightSplitPane_dividerposition != null
+					&& i < GUImainWindowRightSplitPane_dividerposition.length) {
+				upgraded[i] = GUImainWindowRightSplitPane_dividerposition[i];
+				continue;
+			}
+
+			// Otherwise use defaults, fallback to even spacing
+			if (i < GUImainWindowRightSplitPane_dividerpositionDefault.length) {
+				upgraded[i] = GUImainWindowRightSplitPane_dividerpositionDefault[i];
+			} else {
+				upgraded[i] = (i + 1.0) / (requiredDividerCount + 1.0);
+			}
+		}
+
+		GUImainWindowRightSplitPane_dividerposition = upgraded;
+	}
+
+	private static double parseDoubleOrDefault(String value, double defaultValue) {
+		if (value == null) return defaultValue;
+		String v = value.trim();
+		if (v.isEmpty()) return defaultValue;
+		try {
+			return Double.parseDouble(v);
+		} catch (Exception ignore) {
+			return defaultValue;
+		}
+	}
+
 }
+
+
+

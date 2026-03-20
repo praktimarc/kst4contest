@@ -51,21 +51,10 @@ public class UserActualizationTask extends TimerTask {
 		UCXLogFileToHashsetParser getWorkedCallsignsOfUCXLogFile = new UCXLogFileToHashsetParser(
 				this.client.getChatPreferences().getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
 
-//		UCXLogFileToHashsetParser getWorkedCallsignsOfUDPBackupFile = new UCXLogFileToHashsetParser(
-//				this.client.getChatPreferences().getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup());		
-
 		try {
 			fetchedWorkedSet = getWorkedCallsignsOfUCXLogFile.parse();
-//			fetchedWorkedSetUdpBckup = getWorkedCallsignsOfUDPBackupFile.parse();
-
-//			for (HashMap.Entry entry : fetchedWorkedSet.entrySet()) {
-//			    String key = (String) entry.getKey();
-//			    Object value = entry.getValue();
-//			    System.out.println("key " + key);
-//			}
 
 			System.out.println("USERACT: fetchedWorkedSet size: " + fetchedWorkedSet.size());
-//			System.out.println("USERACT: fetchedWorkedSetudpbckup size: " + fetchedWorkedSetUdpBckup.size());
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

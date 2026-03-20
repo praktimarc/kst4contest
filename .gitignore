@@ -16,3 +16,19 @@ target
 debug.out
 .DS_Store
 
+#Logfiles
+SimpleLogFile.txt
+udpReaderBackup.txt
+
+#tempfiles
+.idea/
+out/
+
+#targetfiles - mvn wrapper
+target/
+
+#builds
+build/
+
+#zip files for local backups
+*.zip

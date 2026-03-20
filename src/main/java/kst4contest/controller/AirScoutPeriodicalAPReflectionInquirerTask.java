@@ -41,10 +41,25 @@ public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 //		String prefix_asWatchList  = "ASWATCHLIST: \"KST\" \"AS\" "; //working original
 
 		String prefix_asSetpath ="ASSETPATH: \"" + this.client.getChatPreferences().getAirScout_asClientNameString() + "\" \"" + this.client.getChatPreferences().getAirScout_asServerNameString() + "\" ";
-		String prefix_asWatchList  = "ASWATCHLIST:\" "+ this.client.getChatPreferences().getAirScout_asClientNameString()+ "\" \"" + this.client.getChatPreferences().getAirScout_asServerNameString() + "\" ";
+		String prefix_asWatchList  = "ASWATCHLIST: \""+ this.client.getChatPreferences().getAirScout_asClientNameString()+ "\" \"" + this.client.getChatPreferences().getAirScout_asServerNameString() + "\" ";
 
-		String bandString = "1440000";
-		String myCallAndMyLocString = this.client.getChatPreferences().getStn_loginCallSign() + "," + this.client.getChatPreferences().getStn_loginLocatorMainCat();
+		String bandString = "1440000"; //TODO: this must variable in case of higher bands! ... default: 1440000
+//		String myCallAndMyLocString = this.client.getChatPreferences().getStn_loginCallSign() + "," + this.client.getChatPreferences().getStn_loginLocatorMainCat(); //before fix 1.266
+
+
+        String ownCallSign = this.client.getChatPreferences().getStn_loginCallSign();
+        try {
+            if (this.client.getChatPreferences().getStn_loginCallSign().contains("-")) {
+                ownCallSign = this.client.getChatPreferences().getStn_loginCallSign().split("-")[0];
+            } else {
+                ownCallSign = this.client.getChatPreferences().getStn_loginCallSign();
+            }
+        } catch (Exception e) {
+            System.out.println("[ASPERIODICAL, Error]: " + e.getMessage());
+        }
+        String myCallAndMyLocString = ownCallSign + "," + this.client.getChatPreferences().getStn_loginLocatorMainCat(); //bugfix, Airscout do not process 9A1W-2 but 9A1W like formatted calls
+
+
 		String suffix = ""; //"FOREIGNCALL,FOREIGNLOC " -- dont forget the space at the end!!!
 		String asWatchListString = prefix_asWatchList + bandString + "," + myCallAndMyLocString;
 		String asWatchListStringSuffix = asWatchListString;
@@ -70,10 +85,9 @@ public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 		
 		for (ChatMember i : ary_threadSafeChatMemberArray) {
 
-
-
 			if (i.getQrb() < this.client.getChatPreferences().getStn_maxQRBDefault())
 			//Here: check if maximum distance to the chatmember is reached, only ask AS if distance is lower!
+                //this counts for AS request and Aswatchlist
 			{
 					suffix = i.getCallSign() + "," + i.getQra() + " ";
 

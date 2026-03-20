@@ -8,8 +8,8 @@ public class TestReadUDPUCXListenerThread {
 	@Test
 	public static void main(String[] args) {
 		
-		ReadUDPbyUCXMessageThread ucxUDPReader = new ReadUDPbyUCXMessageThread(12060);
-		ucxUDPReader.start();
+//		ReadUDPbyUCXMessageThread ucxUDPReader = new ReadUDPbyUCXMessageThread(12060);
+//		ucxUDPReader.start();
 		
 		
 		String testThis;

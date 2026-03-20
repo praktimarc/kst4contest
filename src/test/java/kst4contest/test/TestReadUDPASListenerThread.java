@@ -8,8 +8,8 @@ public class TestReadUDPASListenerThread {
 	@Test
 	public static void main(String[] args) {
 
-		ReadUDPbyAirScoutMessageThread asUDPReader = new ReadUDPbyAirScoutMessageThread(9872, null, "AS", "KST");
-		asUDPReader.start();
+//		ReadUDPbyAirScoutMessageThread asUDPReader = new ReadUDPbyAirScoutMessageThread(9872, null, "AS", "KST");
+//		asUDPReader.start();
 
 		String testThis;
 

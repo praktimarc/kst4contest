@@ -15,7 +15,10 @@ import kst4contest.model.ChatMember;
 public class UCXLogFileToHashsetParser {
 
 	public BufferedReader fileReader;
-	private final String PTRN_CallSign = "(([a-zA-Z]{1,2}[\\d{1}]?\\/)?(\\d{1}[a-zA-Z][\\d{1}][a-zA-Z]{1,3})((\\/p)|(\\/\\d))?)|(([a-zA-Z0-9]{1,2}[\\d{1}]?\\/)?(([a-zA-Z]{1,2}(\\d{1}[a-zA-Z]{1,4})))((\\/p)|(\\/\\d))?)";
+//	private final String PTRN_CallSign = "(([a-zA-Z]{1,2}[\\d{1}]?\\/)?(\\d{1}[a-zA-Z][\\d{1}][a-zA-Z]{1,3})((\\/p)|(\\/\\d))?)|(([a-zA-Z0-9]{1,2}[\\d{1}]?\\/)?(([a-zA-Z]{1,2}(\\d{1}[a-zA-Z]{1,4})))((\\/p)|(\\/\\d))?)"; //OLD, S51AR for example will not work
+	private final String PTRN_CallSign = "(([a-zA-Z]{1,2}[\\d]{1}?\\/)?(\\d{1}[a-zA-Z][\\d]{1}[a-zA-Z]{1,3})((\\/p)|(\\/\\d))?)|(([a-zA-Z0-9]{1,2}[\\d]{1}?\\/)?(([a-zA-Z]{1,2}(\\d{1}[a-zA-Z]{1,4})))((\\/p)|(\\/\\d))?)|([A-Z]\\d{2}[A-Z]{1,3})";
+
+
 
 	public UCXLogFileToHashsetParser(String filePathAndName) {
 

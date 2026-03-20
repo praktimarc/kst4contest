@@ -7,6 +7,15 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.collections.FXCollections;
+import javafx.event.Event;
+import kst4contest.view.TimelineView; // The new class we created
+import kst4contest.model.ContestSked; // The new model
+import javafx.scene.control.TableRow; // For the priority coloring
+
+import javafx.animation.PauseTransition;
 import javafx.beans.binding.Bindings;
 import javafx.css.PseudoClass;
 import javafx.geometry.*;
@@ -15,8 +24,10 @@ import javafx.scene.input.*;
 import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
+import javafx.util.Duration;
 import kst4contest.ApplicationConstants;
 import kst4contest.controller.ChatController;
+import kst4contest.controller.StatusUpdateListener;
 import kst4contest.controller.Utils4KST;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -48,8 +59,36 @@ import javafx.scene.shape.Polygon;
 import kst4contest.utils.ApplicationFileUtils;
 
 
-public class Kst4ContestApplication extends Application {
+public class Kst4ContestApplication extends Application implements StatusUpdateListener  {
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
+
+
+	private final Button btnBandUpgradeIndicator = new Button("BAND+");
+	private final Tooltip tipBandUpgradeIndicator = new Tooltip();
+	private Timeline bandUpgradeBlinkTimeline;
+
+	private final Button btnSkedWarnIndicator = new Button("SKED");
+	private final Tooltip tipSkedWarnIndicator = new Tooltip();
+	private Timeline skedWarnBlinkTimeline;
+
+
+	// Timeline: show at most N priority markers per minute bucket (minute 0/1 often has many planes)
+	private static final int TIMELINE_PRIORITY_MARKERS_PER_MINUTE = 2;
+
+	// Timeline: show 2 more in other directions
+	private static final int TIMELINE_BEAM_MARKERS_PER_MINUTE = 2;
+
+
+	// Keep in sync with TimelineView PREVIEW_TIME_MS (currently 30 minutes = 30L * 60L * 1000L)
+	private static final long TIMELINE_PREVIEW_TIME_MS = 30L * 60L * 1000L;
+
+
+	//recoloring of the chatmembers list is turned on and off here
+	private static final boolean ENABLE_PRIORITY_SCORE_ROW_COLORING = false;
+
+	private TimelineView timelineView; //timeline view above the sendtext-field
+
+    private final Map<String, Button> statusButtons = new HashMap<>(); //there we will place some flickering
 
 	public static final String STYLE_DEFAULTCSSDAY_FILE = "KST4ContestDefaultDay.css";
 	public static final String STYLE_DEFAULTCSSDAY_RESOURCE = "/KST4ContestDefaultDay.css";
@@ -59,16 +98,47 @@ public class Kst4ContestApplication extends Application {
 
 	String chatState;
 	ChatController chatcontroller;
+
+
 	Button MYQRGButton; // TODO: clean code? Got the myqrg button out of the factory method to modify
 						// the text later
 	Button MYCALLSetQRGButton;
 
 	Timer timer_buildWindowTitle;
-	Timer timer_chatMemberTableSortTimer; // need that because javafx bug, it´s the only way to actualize the table...
+//	Timer timer_chatMemberTableSortTimer; // need that because javafx bug, it´s the only way to actualize the table...
 	Timer timer_updatePrivatemessageTable; // same here
 	VBox selectedCallSignFurtherInfoPane = new VBox();
 
-	Button[] btnQtfButtonsAvl = new Button[8];
+	ToggleButton[] btnQtfButtonsAvl = new ToggleButton[8];
+
+	/**
+	 * helper DTO for planes and arriving time in minutes. Maybe
+	 */
+	private static final class NextApInfo {
+		final AirPlane plane;
+		final int arrivingMinutes;
+
+		private NextApInfo(AirPlane plane, int arrivingMinutes) {
+			this.plane = plane;
+			this.arrivingMinutes = arrivingMinutes;
+		}
+	}
+
+	/**
+	 * Helper DTO for timeline building
+	 */
+	private static final class TimelineCandidateTmp {
+		final kst4contest.controller.ScoreService.TopCandidate top;
+		final ChatMember representativeMember;
+		final NextApInfo nextAp;
+
+		TimelineCandidateTmp(kst4contest.controller.ScoreService.TopCandidate top, ChatMember representativeMember, NextApInfo nextAp) {
+			this.top = top;
+			this.representativeMember = representativeMember;
+			this.nextAp = nextAp;
+		}
+	}
+
 
 	public static void showUserInputErrorWindow (String message) {
 
@@ -121,6 +191,123 @@ public class Kst4ContestApplication extends Application {
 		return new javafx.scene.Group(arrowLine, arrowhead);
 	}
 
+    /**
+     * Gets thread notifications and makes new statusbuttons at the top
+     *
+     * @param sourceName
+     */
+    private void updateStatusButton(String sourceName, ThreadStateMessage threadStateMessage) {
+        Button button = statusButtons.computeIfAbsent(sourceName, name -> {
+            Button b = new Button(threadStateMessage.getThreadNickName());
+            b.getStyleClass().removeIf(cls -> cls.startsWith("btn-showstate"));
+
+            b.getStyleClass().add("btn-showstate-enabled");
+             b.setTooltip(new Tooltip(threadStateMessage.getRunningInformation()));
+
+            this.flwpne_StatusBar.getChildren().add(b); // BorderPane oder HBox o. ä.
+            return b;
+        });
+
+
+        button.setText(sourceName + ": " + threadStateMessage.getRunningInformationTextDescription());
+
+        button.getTooltip().setText(threadStateMessage.getRunningInformation());
+        button.getStyleClass().removeIf(cls -> cls.startsWith("btn-showstate"));
+        button.getStyleClass().add("btn-showstate-enabled-furtherInfo");
+//        button.setStyle("-fx-text-fill: red;");
+
+
+        PauseTransition pause = new PauseTransition(Duration.seconds(0.2));
+        pause.setOnFinished(e -> {
+            button.getStyleClass().removeIf(cls -> cls.startsWith("btn-showstate"));
+            button.getStyleClass().add("btn-showstate-enabled-default");
+//                button.setStyle("-fx-text-fill: blue;");
+        });
+        pause.play();
+
+    }
+
+	/**
+	 * Helps the view to format the RX Bands for a callsign, using the chatmembers frequencies detected MAP
+	 * @param callSignRaw
+	 * @param maxAgeMs
+	 * @return
+	 */
+	private String formatDetectedRxBandsForCallsignRaw(String callSignRaw, long maxAgeMs) {
+
+		if (callSignRaw == null) return "Bands: -";
+
+		// band -> (freq,timestamp) newest across ALL category-variants
+		Map<kst4contest.model.Band, ChatMember.ActiveFrequencyInfo> newestPerBand = new java.util.EnumMap<>(kst4contest.model.Band.class);
+
+		synchronized (chatcontroller.getLst_chatMemberList()) {
+			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
+				if (m == null) continue;
+				if (m.getCallSignRaw() == null) continue;
+				if (!m.getCallSignRaw().equalsIgnoreCase(callSignRaw)) continue;
+
+				Map<kst4contest.model.Band, ChatMember.ActiveFrequencyInfo> map = m.getKnownActiveBands();
+				if (map == null) continue;
+
+				for (Map.Entry<kst4contest.model.Band, ChatMember.ActiveFrequencyInfo> e : map.entrySet()) {
+					kst4contest.model.Band band = e.getKey();
+					ChatMember.ActiveFrequencyInfo info = e.getValue();
+					if (band == null || info == null) continue;
+
+					// optional age filter (e.g. last 30 minutes)
+					if (maxAgeMs > 0 && (System.currentTimeMillis() - info.timestampEpoch) > maxAgeMs) {
+						continue;
+					}
+
+					ChatMember.ActiveFrequencyInfo existing = newestPerBand.get(band);
+					if (existing == null || info.timestampEpoch > existing.timestampEpoch) {
+						newestPerBand.put(band, info);
+					}
+				}
+			}
+		}
+
+		if (newestPerBand.isEmpty()) {
+			return "Bands: -";
+		}
+
+		// Render sorted by band enum order
+		StringBuilder sb = new StringBuilder("Bands: ");
+		boolean first = true;
+
+		for (kst4contest.model.Band b : kst4contest.model.Band.values()) {
+			ChatMember.ActiveFrequencyInfo info = newestPerBand.get(b);
+			if (info == null) continue;
+
+			long ageMin = (System.currentTimeMillis() - info.timestampEpoch) / 60000L;
+
+			if (!first) sb.append(" | ");
+			first = false;
+
+			sb.append(String.format(java.util.Locale.US, "%.3f", info.frequency))
+					.append(" MHz")
+					.append(" (")
+					.append(ageMin)
+					.append(" min ago)");
+		}
+
+		return sb.toString();
+	}
+
+	private String bandToHumanLabel(kst4contest.model.Band b) {
+		// Human-friendly labels for VHF/UHF/microwave contesting
+		return switch (b) {
+			case B_144 -> "2m";
+			case B_432 -> "70cm";
+			case B_1296 -> "23cm";
+			case B_2320 -> "13cm";
+			case B_3400 -> "9cm";
+			case B_5760 -> "6cm";
+			case B_10G -> "3cm";
+			case B_24G -> "24G";
+		};
+	}
+
 
 	/**
 	 * This method generates a BoderPane which shows some additional information about a callsign which had been
@@ -158,6 +345,96 @@ public class Kst4ContestApplication extends Application {
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblQRBInfo, 0,1,1,1);
 		selectedCallSignDownerSiteGridPane.add(new Label("Last activity: " + new Utils4KST().time_convertEpochToReadable(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"")), 0,2,1,1);
 		selectedCallSignDownerSiteGridPane.add(new Label(("(" + Utils4KST.time_getSecondsBetweenEpochAndNow(selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch()+"") /60%60) +" min ago)"), 0,3,1,1);
+
+		// Show detected RX bands based on frequency recognition in chat history.
+		// Default: last 30 minutes (same horizon as Smart Parser history usage)
+		Label lblDetectedRxBands = new Label(
+				formatDetectedRxBandsForCallsignRaw(selectedCallSignInfoStageChatMember.getCallSignRaw(), 30L * 60L * 1000L)
+			);
+		lblDetectedRxBands.setWrapText(true);
+		selectedCallSignDownerSiteGridPane.add(lblDetectedRxBands, 0, 4, 1, 1);
+
+
+		Label selectedCallSignInfoLblPriorityScore = new Label();
+		selectedCallSignInfoLblPriorityScore.textProperty().bind(Bindings.createStringBinding(
+				() -> {
+					double s = chatcontroller.getScoreService().selectedCallPriorityScoreProperty().get();
+					if (Double.isNaN(s)) return "Priority score: -";
+					return String.format(java.util.Locale.US, "Priority score: %.0f", s);
+				},
+				chatcontroller.getScoreService().selectedCallPriorityScoreProperty()));
+//		selectedCallSignDownerSiteGridPane.add(selectedCallSignInfoLblPriorityScore, 0,5,1,1);
+
+		Button btnSkedFail = new Button("Sked fail");
+		btnSkedFail.setTooltip(new Tooltip("Marks the path as failed (permanent until reset). Strongly reduces priority score."));
+		btnSkedFail.setOnAction(e -> {
+			ChatMember sel = chatcontroller.getScoreService().selectedChatMemberProperty().get();
+			if (sel == null) return;
+			chatcontroller.getStationMetricsService().markManualSkedFail(sel.getCallSignRaw());
+			chatcontroller.getScoreService().requestRecompute("manual-sked-fail");
+		});
+
+		Button btnSkedFailReset = new Button("Reset fail");
+		btnSkedFailReset.setTooltip(new Tooltip("Resets the manual sked-fail flag for this station."));
+		btnSkedFailReset.setOnAction(e -> {
+			ChatMember sel = chatcontroller.getScoreService().selectedChatMemberProperty().get();
+			if (sel == null) return;
+			chatcontroller.getStationMetricsService().resetManualSkedFail(sel.getCallSignRaw());
+			chatcontroller.getScoreService().requestRecompute("manual-sked-fail-reset");
+		});
+
+		HBox priorityRow = new HBox(8, selectedCallSignInfoLblPriorityScore, btnSkedFail, btnSkedFailReset);
+		priorityRow.setAlignment(Pos.CENTER_LEFT);
+
+		selectedCallSignDownerSiteGridPane.add(priorityRow, 0, 5, 1, 1);
+
+		ChoiceBox<Integer> cbSkedMinutes = new ChoiceBox<>(FXCollections.observableArrayList(2, 3, 4, 5, 6,7,8,9, 10,11,12,13,14, 15, 20));
+		cbSkedMinutes.getSelectionModel().select(Integer.valueOf(5));
+
+		ChoiceBox<String> cbReminderOffsets = new ChoiceBox<>(FXCollections.observableArrayList("2+1", "5+2+1", "10+5+2+1"));
+		cbReminderOffsets.getSelectionModel().select("2+1");
+
+		CheckBox chkPmReminders = new CheckBox("Remind-PM in ");
+
+		Button btnCreateSked = new Button("Create sked");
+		btnCreateSked.setTooltip(new Tooltip("Creates a sked entry and boosts priority (ramp-up)."));
+
+		btnCreateSked.setOnAction(e -> {
+			ChatMember sel = chatcontroller.getScoreService().selectedChatMemberProperty().get();
+			if (sel == null) return;
+
+			int minutes = cbSkedMinutes.getValue() == null ? 5 : cbSkedMinutes.getValue();
+			long skedTime = System.currentTimeMillis() + minutes * 60_000L;
+
+			double az = sel.getQTFdirection() != null ? sel.getQTFdirection() : 0.0;
+
+			// band is not strictly required for scoring; keep current category context
+			Band band = Band.B_144; // if you want, replace with a real dropdown later
+			ContestSked sked = new ContestSked(sel.getCallSignRaw(), az, skedTime, band);
+
+			chatcontroller.addSked(sked);
+			chatcontroller.getScoreService().requestRecompute("sked-created");
+
+			if (chkPmReminders.isSelected()) {
+				List<Integer> offsets = parseMinuteOffsets(cbReminderOffsets.getValue());
+				chatcontroller.getSkedReminderService().armReminders(sel.getCallSignRaw(), sel.getChatCategory(), skedTime, offsets);
+			}
+		});
+
+		HBox skedRow = new HBox(10,
+				new Label("Sked in"),
+				cbSkedMinutes,
+				new Label("min"),
+				btnCreateSked,
+				chkPmReminders,
+				cbReminderOffsets
+		);
+		skedRow.setAlignment(Pos.CENTER_LEFT);
+
+		selectedCallSignDownerSiteGridPane.add(skedRow, 0, 6, 1, 1);
+
+
+
 		Label selectedCallSignChatCategoryLabelDesc = new Label(selectedCallSignInfoStageChatMember.getCallSign() + " in chatcategory: " + selectedCallSignInfoStageChatMember.getChatCategory().getChatCategoryName(selectedCallSignInfoStageChatMember.getChatCategory().getCategoryNumber()));
 
 		selectedCallSignChatCategoryLabelDesc.getStyleClass().clear();
@@ -399,8 +676,29 @@ public class Kst4ContestApplication extends Application {
 				chatcontroller.airScout_SendAsShowPathPacket(selectedCallSignInfoStageChatMember);
 			}
 		});
-
 		selectedCallSignShowAsPathBtn.setGraphic(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()));
+
+
+        Button selectedCallSignTurnAntBtn = new Button("Turn ant1 to " + selectedCallSignInfoStageChatMember.getCallSignRaw());
+        selectedCallSignTurnAntBtn.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+//                chatcontroller.airScout_SendAsShowPathPacket(selectedCallSignInfoStageChatMember);
+//                Alert a = new Alert(AlertType.INFORMATION);
+//
+//                a.setTitle("Not yet implemented!");
+//                a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER + ": This is a todo!");
+//                a.setContentText("Mach mal hinne!");
+//                a.show();
+//                chatcontroller.stopRotator(); //if it´s running, stop it firstly, then set the new value
+//                chatcontroller.stopRotator();
+                chatcontroller.rotateTo(selectedCallSignInfoStageChatMember.getQTFdirection());
+
+
+                //TODO: Hier muss was hin
+            }
+        });
+        selectedCallSignTurnAntBtn.setGraphic(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()));
 
 		Button selectedCallSignShowQRZprofile = new Button("Lookup on qrz.com");
 		selectedCallSignShowQRZprofile.setOnAction(new EventHandler<ActionEvent>() {
@@ -419,8 +717,10 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,1);
-		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowQRZprofile, 1,1,1,1);
-		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowQRZCqprofile, 1,2,1,1);
+        selectedCallSignDownerSiteGridPane.add(selectedCallSignTurnAntBtn, 1,1,1,1);
+
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowQRZprofile, 1,2,1,1);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowQRZCqprofile, 1,3,1,1);
 
 
 
@@ -475,6 +775,11 @@ public class Kst4ContestApplication extends Application {
 						public boolean test(ChatMessage chatMessage) {
 
 							try {
+
+                                //message is directed to all and I am not mentioned
+                                if (chatMessage.getReceiver().getCallSign().equals("ALL") && !(chatMessage.getMessageText().toLowerCase().contains(chatcontroller.getChatPreferences().getStn_loginCallSign().toLowerCase()))) {
+                                    return false;
+                                }
 
 								if (((chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign())) || (chatMessage.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign()))
 								) && ((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) || (chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())))) {
@@ -611,6 +916,24 @@ public class Kst4ContestApplication extends Application {
 		return selectedCallSignInfoBorderPane;
 
 	}
+
+	/**
+	 * Helper method for furtherinfoPane
+	 * @param s
+	 * @return
+	 */
+	private static List<Integer> parseMinuteOffsets(String s) {
+		if (s == null || s.isBlank()) return List.of();
+		String[] parts = s.split("\\+");
+		List<Integer> out = new ArrayList<>();
+		for (String p : parts) {
+			try {
+				out.add(Integer.parseInt(p.trim()));
+			} catch (Exception ignore) {}
+		}
+		return out;
+	}
+
 
 	private TableView<ChatMember> initChatMemberTable() {
 
@@ -842,7 +1165,7 @@ public class Kst4ContestApplication extends Application {
 //				qrg = (cellDataFeatures.getValue().getFrequency());
 
 //				if (!qrg.getValue().equals("")) {
-//					
+//
 //				}
 
 				return cellDataFeatures.getValue().getFrequency();
@@ -1272,146 +1595,136 @@ public class Kst4ContestApplication extends Application {
 		 * the table in intervals to keep the table up to date.
 		 */
 
-		timer_chatMemberTableSortTimer = new Timer();
-
-		timer_chatMemberTableSortTimer.scheduleAtFixedRate(new TimerTask() {
-
-			public void run() {
-				Thread.currentThread().setName("chatMemberTableSortTimer");
-
-//				System.out.println("[KST4CApp, Info:] Chatmemberlist-Filterlist predicates size: " + chatcontroller.getLst_chatMemberListFilterPredicates().size());
-
-//				{
-//					//trick to trigger gui changes on property changes of obects
+//		timer_chatMemberTableSortTimer = new Timer();
+//		timer_chatMemberTableSortTimer.scheduleAtFixedRate(new TimerTask() {
 //
-//					Predicate<ChatMember> dummyPredicate = new Predicate<ChatMember>() {
-//						@Override
-//						public boolean test(ChatMember chatMember) {
-//							return true;
-//						}
-//					};
+//			public void run() {
+//				Thread.currentThread().setName("chatMemberTableSortTimer");
 //
-//					/**
-//					 * //TODO: following 2 lines are a quick fix to making disappear worked chatmembers of the list
-//					 * Thats uncomfortable due to this also causes selection changes,
-//					 * Better way is to change all worked and qrv values to observables and then trigger the underlying
-//					 * list to fire an invalidationevent. Really Todo!
-//					 */
-//					chatcontroller.getLst_chatMemberListFilterPredicates().add(dummyPredicate);
-////					chatcontroller.getLst_chatMemberListFilterPredicates().remove(dummyPredicate);
+//				Platform.runLater(() -> {
 //
-//				}
-
-//				System.out.println("[KST4CApp, Info:] Deviderpos: " + spl);
-//				for (int i = 0; i < chatcontroller.getLst_chatMemberListFilterPredicates().size(); i++) {
+//					try {
 //
-//					Predicate test = chatcontroller.getLst_chatMemberListFilterPredicates().get(i);
-//					test.so
-//				}
-
-
-				Platform.runLater(() -> {
-
-					try {
-						
-//						tbl_chatMemberTable.sort();
-
-					} catch (Exception e) {
-						System.out.println("[Main.java, Warning:] Table sorting (actualizing) failed this time.");
-					}
-
-
-					tbl_chatMemberTable.refresh();
-
-//					tbl_chatMemberTable.
-
-				});
-			}
-		}, new Date(), 5000);
+////						tbl_chatMemberTable.sort();
+//
+//					} catch (Exception e) {
+//						System.out.println("[Main.java, Warning:] Table sorting (actualizing) failed this time.");
+//					}
+//
+//
+//					tbl_chatMemberTable.refresh();
+//
+////					tbl_chatMemberTable.
+//
+//				});
+//			}
+//		}, new Date(), 5000);
 
 		tbl_chatMemberTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		tbl_chatMemberTable.autosize();
 
+
+		/**
+		 * expoerimental, new since 1.40: priorities
+		 */
+
+		tbl_chatMemberTable.setRowFactory(tv -> new TableRow<ChatMember>() {
+			@Override
+			protected void updateItem(ChatMember item, boolean empty) {
+				super.updateItem(item, empty);
+
+				if (!ENABLE_PRIORITY_SCORE_ROW_COLORING) {
+
+					setStyle(""); // Reset style for empty rows
+				} else {
+					double score = item.getCurrentPriorityScore(); // Ensure ChatMember has this getter!
+
+					// Color Logic:
+					// > 1000 = NUCLEAR (Imminent Sked) -> Blinking Red (simulated here with solid red)
+					// > 200  = High Prio (AirScout / Good Sked) -> Orange
+					// > 100  = Medium Prio (Unworked / New Multi) -> Light Yellow
+					// <= 0   = Low Prio / Not Reachable -> Greyed out text
+
+					// Note: Styles need to be adjusted if Dark Mode is active!
+
+					boolean isDark = chatcontroller.getChatPreferences().isGUI_darkModeActive();
+
+					if (score > 1000) {
+						// Critical Alert
+						setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-font-weight: bold;");
+					} else if (score >= 200) {
+						// High Priority
+						setStyle("-fx-background-color: " + (isDark ? "#cc6600" : "#ffcc00") + "; -fx-text-fill: black;");
+					} else if (score >= 100) {
+						// Medium Priority
+						setStyle("-fx-background-color: " + (isDark ? "#888800" : "#ffffcc") + "; -fx-text-fill: black;");
+					} else if (score <= 0) {
+						// Penalty / Not Reachable
+						setStyle("-fx-text-fill: " + (isDark ? "#666666" : "#aaaaaa") + ";");
+					} else {
+						// Standard Reset
+						setStyle("");
+					}
+				}
+			}
+		});
+
 		return tbl_chatMemberTable;
 	}
 
-	/**
-	 * Initializes the right click contextmenu for the chatmember-table, sets the
-	 * clickhandler for the contextmenu out of a string array (each menuitam will be
-	 * created out of exact one array-entry). These are initialized by the
-	 * chatpreferences object out of the config-xml
-	 * 
-	 *
-	 * @return
-	 */
-//	private ContextMenu initChatMemberTableContextMenu(String[] menuTexts) { old mechanic
-//
-//		ContextMenu chatMemberContextMenu = new ContextMenu();
-//
-//		for (int i = 0; i < menuTexts.length; i++) {
-//			final MenuItem menuItem = new MenuItem(menuTexts[i]);
-//			menuItem.setOnAction(new EventHandler<ActionEvent>() {
-//				public void handle(ActionEvent event) {
-//					txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText() + menuItem.getText());
-//				}
-//			});
-//
-//			chatMemberContextMenu.getItems().add(menuItem);
-//		}
-//
-////		MenuItem macro1 = new MenuItem("Pse Sked?");
-////		macro1.setOnAction(new EventHandler<ActionEvent>() {
-////	         public void handle(ActionEvent event) {
-////	        	 txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText() + macro1.getText());
-////	          }
-////	       });
-////		MenuItem macro10 = new MenuItem("Pse qrg 2m?");
-////		MenuItem macro20 = new MenuItem("Pse Call at ");
-////		MenuItem macro30 = new MenuItem("In qso nw, pse qrx, I will meep you");
-////		MenuItem macro40 = new MenuItem("Pse qrg 70cm?");
-////		MenuItem macro50 = new MenuItem("pse qrg 23cm?");
-////		MenuItem macro60 = new MenuItem("____________________________________");
-////		MenuItem macro70 = new MenuItem("Watch QSO history");
-////
-////		chatMemberContextMenu.getItems().add(macro1);
-////		chatMemberContextMenu.getItems().add(macro10);
-////		chatMemberContextMenu.getItems().add(macro20);
-////		chatMemberContextMenu.getItems().add(macro30);
-////		chatMemberContextMenu.getItems().add(macro40);
-////		chatMemberContextMenu.getItems().add(macro50);
-////		chatMemberContextMenu.getItems().add(macro60);
-////		chatMemberContextMenu.getItems().add(macro70);
-//
-//		return chatMemberContextMenu;
-//
-//	}
+	private ChatMember resolveChatMemberForCallRawAndCategory(String callRaw, ChatCategory preferredCategory) {
 
-//	private Stage initializeCommunicationOverMyHeadVizalizationStage(ChatMember selectedChatMember) {
-//		Stage stage_CommunicationOverMyHeadVizalizationStage = new Stage();
-//		stage_CommunicationOverMyHeadVizalizationStage.setAlwaysOnTop(true);
-//
-//		MaidenheadLocatorMapPane locatorMapPane = new MaidenheadLocatorMapPane();
-//		locatorMapPane.addLocator("JO51IJ", Color.RED);
-//		locatorMapPane.addLocator("JN39OC", Color.BLUE);
-//		locatorMapPane.addLocator("JN49GL", Color.GREEN);
-//		locatorMapPane.connectLocators("JO51IJ", "JN49GL");
-//
-//		try {
-//
-//
-//		BorderPane bp_CommunicationOverMyHeadVizalizationStage = new BorderPane();
-//
-//			stage_CommunicationOverMyHeadVizalizationStage.setTitle("Further info on "+ selectedChatMember.getCallSign());
-//
-//			stage_CommunicationOverMyHeadVizalizationStage.setScene(new Scene(locatorMapPane));
-//			stage_CommunicationOverMyHeadVizalizationStage.show();
-//
-//			return stage_CommunicationOverMyHeadVizalizationStage;
-//		} catch (Exception exception){
-//
-//		}
-//		return stage_CommunicationOverMyHeadVizalizationStage;
-//	}
+		if (callRaw == null) return null;
+
+		// 1) Prefer exact (callRaw + category)
+		synchronized (chatcontroller.getLst_chatMemberList()) {
+			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
+				if (m == null) continue;
+				if (m.getCallSignRaw() == null) continue;
+				if (!m.getCallSignRaw().equalsIgnoreCase(callRaw)) continue;
+
+				if (preferredCategory != null && preferredCategory.equals(m.getChatCategory())) {
+					return m;
+				}
+			}
+
+			// 2) Fallback: any variant with same callsignRaw
+			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
+				if (m == null) continue;
+				if (m.getCallSignRaw() == null) continue;
+				if (m.getCallSignRaw().equalsIgnoreCase(callRaw)) return m;
+			}
+		}
+
+		return null;
+	}
+
+	private void focusChatMemberAndPrepareCq(ChatMember member) {
+		if (member == null) return;
+
+		// Try selecting in table if it is visible (nice UX), but do not depend on it
+		try {
+			if (tbl_chatMember != null && tbl_chatMember.getItems() != null && tbl_chatMember.getItems().contains(member)) {
+				tbl_chatMember.getSelectionModel().select(member);
+				tbl_chatMember.scrollTo(member);
+			}
+		} catch (Exception ignored) {
+			// ignore: table not ready or filtered
+		}
+
+		// Force selection effects regardless of filters/selection state
+		selectedCallSignInfoStageChatMember = member;
+		chatcontroller.getScoreService().setSelectedChatMember(member);
+
+		selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(member));
+
+		txt_chatMessageUserInput.clear();
+		txt_chatMessageUserInput.setText("/cq " + member.getCallSign() + " ");
+		txt_chatMessageUserInput.requestFocus();
+		txt_chatMessageUserInput.selectEnd();
+	}
+
+
 
 	/**
 	 * Initializes the right click contextmenu for the chatmember-table, sets the
@@ -1709,6 +2022,7 @@ public class Kst4ContestApplication extends Application {
 		TableColumn<ChatMessage, String> qrgCol = new TableColumn<ChatMessage, String>("Last QRG");
 		qrgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
 
+
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
 				StringProperty qrg = new SimpleStringProperty();
@@ -1725,7 +2039,7 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-
+		applyQrgUiFormatting(qrgCol); //fills ending 0 to format the qrgs pretty
 
 
 		TableColumn<ChatMessage, String> msgCol = new TableColumn<ChatMessage, String>("Message");
@@ -1934,6 +2248,8 @@ public class Kst4ContestApplication extends Application {
 				return qrg;
 			}
 		});
+		applyQrgUiFormatting(qrgCol); //fills ending 0 to format the qrgs pretty
+
 
 		TableColumn<ChatMessage, String> msgCol = new TableColumn<ChatMessage, String>("Message");
 		msgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -2277,6 +2593,8 @@ public class Kst4ContestApplication extends Application {
 				return qrg;
 			}
 		});
+		applyQrgUiFormatting(qrgCol); //fills ending 0 to format the qrgs pretty
+
 
 		TableColumn<ClusterMessage, String> msgCol = new TableColumn<ClusterMessage, String>("Message");
 		msgCol.setCellValueFactory(new Callback<CellDataFeatures<ClusterMessage, String>, ObservableValue<String>>() {
@@ -2553,29 +2871,394 @@ public class Kst4ContestApplication extends Application {
 				flwPane_textSnippets.getChildren().clear();
 				flwPane_textSnippets.getChildren()
 						.addAll(buttonFactory(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()));
-
-//TODO: redraw panel
-//				chatMessageContextMenu = initChatMemberTableContextMenu(chatcontroller.getChatPreferences().getLst_txtSnipList()); // TODO: thats not
-//																									// clean, there had
-//																									// to be a listener
-//																									// triggered update
-//																									// method
-//				chatMemberContextMenu = initChatMemberTableContextMenu(chatcontroller.getChatPreferences().getLst_txtSnipList());
-
 			}
 		});
 
 		tbl_txtShorts.getColumns().addAll(ShortCol);
 
 		tbl_txtShorts.setEditable(true);
-//		tbl_txtSnips.set
-
-//		ObservableList<String> lst_textSnipList = );
 		tbl_txtShorts.setItems(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList());
-//		tbl_txtSnips.bind
 
 		return tbl_txtShorts;
 	} // TODO: Textsnippets table
+
+
+	private BorderPane initTopPriorityListPane(TableView<ChatMember> tbl_chatMember, TextField txt_chatMessageUserInput) {
+
+		BorderPane pane = new BorderPane();
+		pane.setStyle("-fx-padding: 3;");
+
+		Label header = new Label("Top priority candidates");
+		header.getStyleClass().add("label");
+
+		ListView<kst4contest.controller.ScoreService.TopCandidate> listView = new ListView<>();
+		listView.setItems(chatcontroller.getScoreService().getTopCandidatesFx());
+
+		listView.setCellFactory(lv -> new ListCell<>() {
+			@Override
+			protected void updateItem(kst4contest.controller.ScoreService.TopCandidate item, boolean empty) {
+				super.updateItem(item, empty);
+				if (empty || item == null) {
+					setText(null);
+					return;
+				}
+				// Keep it compact; score is mainly evaluated in FurtherInfo
+				setText(item.getDisplayCallSign() + "  |  score " + String.format(java.util.Locale.US, "%.0f", item.getScore()));
+			}
+		});
+
+		listView.setOnMouseClicked(evt -> {
+			if (evt.getClickCount() < 1) return;
+			kst4contest.controller.ScoreService.TopCandidate c = listView.getSelectionModel().getSelectedItem();
+			if (c == null) return;
+
+			ChatMember resolved = resolveChatMemberForTopCandidate(c);
+			if (resolved == null) return;
+
+			// Try to select in table (reuses existing selection logic)
+			if (tbl_chatMember.getItems().contains(resolved)) {
+				tbl_chatMember.getSelectionModel().select(resolved);
+				tbl_chatMember.scrollTo(resolved);
+			} else {
+				// Fallback: if filtered out, still show FurtherInfo + prepare /cq
+				selectedCallSignInfoStageChatMember = resolved;
+				chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+
+				selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
+				txt_chatMessageUserInput.clear();
+				txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
+				txt_chatMessageUserInput.requestFocus();
+				txt_chatMessageUserInput.selectEnd();
+
+				// Keep ScoreService selection in sync
+				chatcontroller.getScoreService().setSelectedChatMember(resolved);
+			}
+		});
+
+		pane.setTop(header);
+		pane.setCenter(listView);
+		return pane;
+	}
+
+	private ChatMember resolveChatMemberForTopCandidate(kst4contest.controller.ScoreService.TopCandidate c) {
+
+		String callRaw = c.getCallSignRaw();
+		ChatCategory preferredCategory = c.getPreferredChatCategory();
+
+		// 1) Prefer exact (callRaw + category) match
+		synchronized (chatcontroller.getLst_chatMemberList()) {
+			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
+				if (m == null) continue;
+				if (m.getCallSignRaw() == null) continue;
+				if (!m.getCallSignRaw().equalsIgnoreCase(callRaw)) continue;
+
+				if (preferredCategory != null && preferredCategory.equals(m.getChatCategory())) {
+					return m;
+				}
+			}
+
+			// 2) Fallback: any variant with the same callsignRaw
+			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
+				if (m == null) continue;
+				if (m.getCallSignRaw() == null) continue;
+				if (m.getCallSignRaw().equalsIgnoreCase(callRaw)) return m;
+			}
+		}
+
+		return null;
+	}
+
+
+	private void updateTimelineVisuals() {
+		if (timelineView == null || chatcontroller == null) return;
+
+		if (!Platform.isFxApplicationThread()) {
+			Platform.runLater(this::updateTimelineVisuals);
+			return;
+		}
+
+		List<ContestSked> skedsSnapshot = new ArrayList<>(chatcontroller.getActiveSkeds());
+		List<TimelineView.CandidateEvent> candidates = buildTimelinePriorityCandidateEvents();
+
+		timelineView.updateVisuals(skedsSnapshot, candidates);
+	}
+
+	/**
+	 * Build candidate markers for the timeline:
+	 * - Use ScoreService TopCandidates (already sorted)
+	 * - Resolve representative ChatMember (preferred category if possible)
+	 * - Use "next airplane arriving minute" as time basis
+	 * - Bucket by minute, keep top 1-2 per minute (config above)
+	 */
+	private List<TimelineView.CandidateEvent> buildTimelinePriorityCandidateEvents() {
+
+		if (chatcontroller.getScoreService() == null) return Collections.emptyList();
+
+		long now = System.currentTimeMillis();
+
+		// Snapshot to avoid concurrent modifications (TopCandidates list is FX observable)
+		List<kst4contest.controller.ScoreService.TopCandidate> topSnapshot =
+				new ArrayList<>(chatcontroller.getScoreService().getTopCandidatesFx());
+
+		Map<Integer, List<TimelineCandidateTmp>> byMinute = new HashMap<>();
+
+		for (kst4contest.controller.ScoreService.TopCandidate c : topSnapshot) {
+
+			ChatMember representative = resolveChatMemberForTopCandidate(c);
+			if (representative == null) continue;
+
+			AirPlaneReflectionInfo apInfo = representative.getAirPlaneReflectInfo();
+
+			// choose airplane by (highest potential) then (shortest time) within preview window
+			int maxMinutes = (int) (TIMELINE_PREVIEW_TIME_MS / 60_000L);
+			NextApInfo selectedAp = findBestAirplane(apInfo, maxMinutes);
+			if (selectedAp == null) continue;
+
+			long timeUntilMs = selectedAp.arrivingMinutes * 60_000L;
+			if (timeUntilMs < 0 || timeUntilMs > TIMELINE_PREVIEW_TIME_MS) continue;
+
+			int minuteBucket = selectedAp.arrivingMinutes;
+
+			byMinute.computeIfAbsent(minuteBucket, k -> new ArrayList<>())
+					.add(new TimelineCandidateTmp(c, representative, selectedAp));
+		}
+
+		List<TimelineView.CandidateEvent> out = new ArrayList<>();
+
+		for (Map.Entry<Integer, List<TimelineCandidateTmp>> e : byMinute.entrySet()) {
+
+			int minuteBucket = e.getKey();
+			List<TimelineCandidateTmp> bucket = e.getValue();
+
+			// Highest score first
+			bucket.sort((a, b) -> Double.compare(b.top.getScore(), a.top.getScore()));
+
+
+			// 1) Pick top-N in beam -> lanes 0..1
+			List<TimelineCandidateTmp> inBeam = new ArrayList<>();
+			for (TimelineCandidateTmp tmp : bucket) {
+				if (chatcontroller.isChatMemberInMyBeam(tmp.representativeMember)) {
+					inBeam.add(tmp);
+				}
+			}
+
+			// Avoid duplicates between beam and global selection
+			Set<String> used = new HashSet<>();
+
+			int beamTake = Math.min(TIMELINE_BEAM_MARKERS_PER_MINUTE, inBeam.size());
+			for (int lane = 0; lane < beamTake; lane++) {
+
+				TimelineCandidateTmp tmp = inBeam.get(lane);
+				used.add(tmp.top.getCallSignRaw());
+
+				double az = (tmp.representativeMember.getQTFdirection() != null) ? tmp.representativeMember.getQTFdirection() : 0.0;
+				long timeUntilMs = minuteBucket * 60_000L;
+
+				String tooltip = buildTimelineCandidateTooltip(tmp, minuteBucket);
+				int potential = (tmp.nextAp != null && tmp.nextAp.plane != null) ? tmp.nextAp.plane.getPotential() : 0;
+
+				out.add(new TimelineView.CandidateEvent(
+						tmp.top.getCallSignRaw(),
+						tmp.top.getDisplayCallSign(),
+						tmp.top.getPreferredChatCategory(),
+						timeUntilMs,
+						minuteBucket,
+						lane, // lanes 0..1 = in-beam
+						az,
+						tmp.top.getScore(),
+						potential,
+						tooltip
+				));
+			}
+
+			// 2) Pick top-N global distinct -> lanes 2..3
+			int globalAdded = 0;
+			for (TimelineCandidateTmp tmp : bucket) {
+
+				if (globalAdded >= TIMELINE_PRIORITY_MARKERS_PER_MINUTE) break;
+				if (used.contains(tmp.top.getCallSignRaw())) continue;
+
+				double az = (tmp.representativeMember.getQTFdirection() != null) ? tmp.representativeMember.getQTFdirection() : 0.0;
+				long timeUntilMs = minuteBucket * 60_000L;
+
+				String tooltip = buildTimelineCandidateTooltip(tmp, minuteBucket);
+				int potential = (tmp.nextAp != null && tmp.nextAp.plane != null) ? tmp.nextAp.plane.getPotential() : 0;
+
+				int laneIndex = TIMELINE_BEAM_MARKERS_PER_MINUTE + globalAdded; // lanes 2..3
+
+				out.add(new TimelineView.CandidateEvent(
+						tmp.top.getCallSignRaw(),
+						tmp.top.getDisplayCallSign(),
+						tmp.top.getPreferredChatCategory(),
+						timeUntilMs,
+						minuteBucket,
+						laneIndex,
+						az,
+						tmp.top.getScore(),
+						potential,
+						tooltip
+				));
+
+				globalAdded++;
+			}
+		}
+
+		out.sort(Comparator
+				.comparingInt(TimelineView.CandidateEvent::getMinuteBucket)
+				.thenComparingInt(TimelineView.CandidateEvent::getLaneIndex));
+
+		return out;
+	}
+
+	private String buildTimelineCandidateTooltip(TimelineCandidateTmp tmp, int minuteBucket) {
+		AirPlane p = tmp.nextAp.plane;
+
+		String planeStr = "-";
+		if (p != null) {
+			planeStr = p.getApCallSign()
+					+ " | " + p.getPotencialDescriptionAsWord()
+					+ " | pot " + p.getPotential()
+					+ " | dist " + p.getDistanceKm() + " km";
+		}
+
+		NextApInfo earliest = findEarliestAirplane(
+				tmp.representativeMember.getAirPlaneReflectInfo(),
+				(int) (TIMELINE_PREVIEW_TIME_MS / 60_000L)
+		);
+
+		String earliestStr = "";
+		if (earliest != null && earliest.plane != null) {
+			// only show if it differs from the selected/best plane minute
+			if (earliest.arrivingMinutes != minuteBucket) {
+				earliestStr = "\nearliest AP: +" + earliest.arrivingMinutes
+						+ " min (pot " + earliest.plane.getPotential() + "%)";
+			}
+		}
+
+		return tmp.top.getDisplayCallSign()
+				+ "\nscore: " + String.format(Locale.US, "%.0f", tmp.top.getScore())
+				+ "\nbest AP: +" + minuteBucket + " min"
+				+ "\nplane: " + planeStr
+				+ earliestStr;
+	}
+
+	/**
+	 * Select the airplane that should drive timeline/sked decisions.
+	 *
+	 * Rule: prefer highest potential; if tied, prefer shortest arriving time.
+	 * Only considers planes within [0..maxMinutes] to avoid dropping stations completely.
+	 */
+	private NextApInfo findBestAirplane(AirPlaneReflectionInfo apInfo, int maxMinutes) {
+		if (apInfo == null) return null;
+		if (apInfo.getRisingAirplanes() == null) return null;
+
+		AirPlane best = null;
+		int bestMin = Integer.MAX_VALUE;
+		int bestPot = Integer.MIN_VALUE;
+
+		for (AirPlane p : apInfo.getRisingAirplanes()) {
+			if (p == null) continue;
+
+			int m = p.getArrivingDurationMinutes();
+			if (m < 0 || m > maxMinutes) continue;
+
+			int pot = p.getPotential();
+
+			// primary: potential DESC, secondary: time ASC
+			if (best == null || pot > bestPot || (pot == bestPot && m < bestMin)) {
+				best = p;
+				bestPot = pot;
+				bestMin = m;
+			}
+		}
+
+		if (best == null) return null;
+		return new NextApInfo(best, bestMin);
+	}
+
+	/**
+	 * Select the earliest airplane (used for additional tooltip info).
+	 * Rule: prefer shortest arriving time; if tied, prefer higher potential.
+	 */
+	private NextApInfo findEarliestAirplane(AirPlaneReflectionInfo apInfo, int maxMinutes) {
+		if (apInfo == null) return null;
+		if (apInfo.getRisingAirplanes() == null) return null;
+
+		AirPlane best = null;
+		int bestMin = Integer.MAX_VALUE;
+
+		for (AirPlane p : apInfo.getRisingAirplanes()) {
+			if (p == null) continue;
+
+			int m = p.getArrivingDurationMinutes();
+			if (m < 0 || m > maxMinutes) continue;
+
+			if (m < bestMin) {
+				bestMin = m;
+				best = p;
+			} else if (m == bestMin && best != null && p.getPotential() > best.getPotential()) {
+				best = p;
+			}
+		}
+
+		if (best == null || bestMin == Integer.MAX_VALUE) return null;
+		return new NextApInfo(best, bestMin);
+	}
+
+
+	private TableView<String> initNotifyAtCallSignTable() {
+
+        TableView<String> tbl_notifyTxtCallSign = new TableView<String>();
+        tbl_notifyTxtCallSign.setTooltip(new Tooltip("Add Callsigns which you want to observe. Their Communcation will added to your PM Table"));
+
+
+
+        TableColumn<String, String> callSignCol = new TableColumn<String, String>("Sniff QSO of Callsign");
+        callSignCol.setCellValueFactory(new Callback<CellDataFeatures<String, String>, ObservableValue<String>>() {
+
+            @Override
+            public ObservableValue<String> call(CellDataFeatures<String, String> cellDataFeatures) {
+                SimpleStringProperty callSign = new SimpleStringProperty();
+                callSign.setValue(cellDataFeatures.getValue());
+                return callSign;
+            }
+        });
+        callSignCol.setCellFactory(TextFieldTableCell.forTableColumn());
+
+        callSignCol.setOnEditCommit(new EventHandler<CellEditEvent<String, String>>() {
+            @Override
+            public void handle(CellEditEvent<String, String> t) {
+
+                String newValue = t.getNewValue().toUpperCase(); //its better as all callsigns in the chat are uppercase
+
+
+                t.getTableView().getItems().set(t.getTablePosition().getRow(), newValue);
+
+                if (newValue == "") { // delete lines which had been cleared
+                    t.getTableView().getItems().remove(t.getTablePosition().getRow());
+                } else {
+                    if (GuiUtils.isCallSignSyntax(newValue)) {
+
+                    } else {
+                        alertWindowEvent("Please try again with correct callsign syntax");
+                        t.getTableView().getItems().remove(t.getTablePosition().getRow());
+                    }
+                }
+
+                //TODO: Observe logic - add to the filters list!
+//                flwPane_textSnippets.getChildren().clear();
+//                flwPane_textSnippets.getChildren()
+//                        .addAll(buttonFactory(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()));
+            }
+        });
+
+        tbl_notifyTxtCallSign.getColumns().addAll(callSignCol);
+
+        tbl_notifyTxtCallSign.setEditable(true);
+//        tbl_notifyTxtCallSign.setItems(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()); //TODO: Init aus Speicher muss noch her
+
+        return tbl_notifyTxtCallSign;
+    } // TODO: Callsign sniffer table
 
 	private TableView<String> initTextSnippetsTable() {
 
@@ -3013,6 +3696,9 @@ public class Kst4ContestApplication extends Application {
 				scn_ChatwindowMainScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
 				clusterAndQSOMonScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
 				settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
+
+				chatcontroller.getChatPreferences().setGUI_darkModeActive(true);
+
 			}
 		});
 
@@ -3030,6 +3716,7 @@ public class Kst4ContestApplication extends Application {
 				scn_ChatwindowMainScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
 				clusterAndQSOMonScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
 				settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+				chatcontroller.getChatPreferences().setGUI_darkModeActive(false);
 			}
 		});
 
@@ -3056,7 +3743,6 @@ public class Kst4ContestApplication extends Application {
 			public void handle(ActionEvent event) {
 
 				getHostServices().showDocument("https://www.paypal.com/paypalme/do5amf");
-
 
 			}
 		});
@@ -3125,20 +3811,177 @@ public class Kst4ContestApplication extends Application {
 			}
 		});
 
-//		helpMenu.getItems().add(help1);
 		helpMenu.getItems().addAll(help2, help3, help4, menuItmDonateOV3T, menuItmDonateON4KST, help6, help8, help10);
-
-//		helpMenu.getItems().add(help2);
-//		helpMenu.getItems().add(help4);
-//		
-//		helpMenu.getItems().add(help10);
 
 		MenuBar menubar = new MenuBar();
 		menubar.getMenus().addAll(fileMenu, optionsMenu, windowMenu, helpMenu); // macromenu deleted
 
 		return menubar;
-
 	}
+
+
+	/*****************************************************
+	 * Sked warning Initializing and functional section
+	 ****************************************************/
+
+	/**
+	 * Initializes the button for the Sked Warning (its an non clickable Info button)
+	 */
+	private void initSkedWarnIndicatorButton() {
+		btnSkedWarnIndicator.setVisible(false);
+		btnSkedWarnIndicator.managedProperty().bind(btnSkedWarnIndicator.visibleProperty());
+
+		// "no click function" - it is just an indicator
+		btnSkedWarnIndicator.setMouseTransparent(true);
+		btnSkedWarnIndicator.setFocusTraversable(false);
+
+		btnSkedWarnIndicator.setStyle(
+				"-fx-background-color: rgba(255,0,255,0.85);" +
+						"-fx-text-fill: black;" +
+						"-fx-font-weight: bold;" +
+						"-fx-padding: 2 8 2 8;" +
+						"-fx-background-radius: 6;"
+		);
+
+		btnSkedWarnIndicator.setTooltip(tipSkedWarnIndicator);
+	}
+
+	private void maybeShowSkedWarnIndicator(String key, ThreadStateMessage msg) {
+		if (msg == null) return;
+
+		String text = msg.getRunningInformationTextDescription();
+		if (text == null || text.isBlank()) text = msg.getRunningInformation();
+		if (text == null || text.isBlank()) return;
+
+		String nick = msg.getThreadNickName() == null ? "" : msg.getThreadNickName().toLowerCase(Locale.ROOT);
+		String k = key == null ? "" : key.toLowerCase(Locale.ROOT);
+		String t = text.toLowerCase(Locale.ROOT);
+
+		boolean isSkedRelated = k.contains("sked") || nick.contains("sked") || t.contains("reminder");
+		if (!isSkedRelated) return;
+
+		final String finalText = text;
+		Platform.runLater(() -> showBlinkingSkedWarnIndicator(finalText + " SKED!"));
+	}
+
+	private void showBlinkingSkedWarnIndicator(String text) {
+		// short text for the button; full text in tooltip
+		String shown = text;
+		if (shown.length() > 38) shown = shown.substring(0, 35) + "...";
+
+		btnSkedWarnIndicator.setText(shown);
+		tipSkedWarnIndicator.setText(text);
+
+		btnSkedWarnIndicator.setVisible(true);
+		btnSkedWarnIndicator.setOpacity(1.0);
+
+		if (skedWarnBlinkTimeline != null) {
+			skedWarnBlinkTimeline.stop();
+		}
+
+		skedWarnBlinkTimeline = new Timeline(
+				new KeyFrame(Duration.ZERO, e -> btnSkedWarnIndicator.setOpacity(1.0)),
+				new KeyFrame(Duration.millis(250), e -> btnSkedWarnIndicator.setOpacity(0.25)),
+				new KeyFrame(Duration.millis(500), e -> btnSkedWarnIndicator.setOpacity(1.0))
+		);
+		skedWarnBlinkTimeline.setCycleCount(24); // 12 = 6 seconds
+		skedWarnBlinkTimeline.setOnFinished(e -> hideSkedWarnIndicator());
+		skedWarnBlinkTimeline.playFromStart();
+	}
+
+	private void hideSkedWarnIndicator() {
+		btnSkedWarnIndicator.setOpacity(1.0);
+		btnSkedWarnIndicator.setVisible(false);
+	}
+
+
+	/*****************************************************
+	 * Band-Upgrade warning (after log entry) section
+	 ****************************************************/
+
+	/**
+	 * Initializes the button for the Band-Upgrade Hint.
+	 * Non-clickable; it blinks and shows the reason (call + remaining bands).
+	 */
+	private void initBandUpgradeIndicatorButton() {
+		btnBandUpgradeIndicator.setVisible(false);
+		btnBandUpgradeIndicator.managedProperty().bind(btnBandUpgradeIndicator.visibleProperty());
+
+		btnBandUpgradeIndicator.setMouseTransparent(true);
+		btnBandUpgradeIndicator.setFocusTraversable(false);
+
+		btnBandUpgradeIndicator.setStyle(
+				"-fx-background-color: rgba(255,255,0,0.85);" +
+						"-fx-text-fill: black;" +
+						"-fx-font-weight: bold;" +
+						"-fx-padding: 2 8 2 8;" +
+						"-fx-background-radius: 6;"
+		);
+
+		btnBandUpgradeIndicator.setTooltip(tipBandUpgradeIndicator);
+	}
+
+	private void maybeShowBandUpgradeIndicator(String key, ThreadStateMessage msg) {
+		if (msg == null) return;
+
+		String nick = msg.getThreadNickName() == null ? "" : msg.getThreadNickName().toLowerCase(Locale.ROOT);
+		String k = key == null ? "" : key.toLowerCase(Locale.ROOT);
+
+		boolean isBandUpgrade = k.contains("bandupgrade") || nick.contains("bandupgrade");
+		if (!isBandUpgrade) return;
+
+		String buttonText = msg.getRunningInformationTextDescription();
+		if (buttonText == null || buttonText.isBlank()) buttonText = "BAND+";
+
+		String tooltip = msg.getRunningInformation();
+		if (tooltip == null || tooltip.isBlank()) tooltip = buttonText;
+
+		final String finalButtonText = buttonText;
+		final String finalTooltip = tooltip;
+
+		Platform.runLater(() -> showBlinkingBandUpgradeIndicator(finalButtonText, finalTooltip));
+	}
+
+	private void showBlinkingBandUpgradeIndicator(String buttonText, String tooltipText) {
+
+		// short text for the button; full text in tooltip
+		String shown = buttonText;
+		if (shown.length() > 38) shown = shown.substring(0, 35) + "...";
+
+		btnBandUpgradeIndicator.setText(shown);
+		tipBandUpgradeIndicator.setText(tooltipText);
+
+		btnBandUpgradeIndicator.setVisible(true);
+		btnBandUpgradeIndicator.setOpacity(1.0);
+
+		if (bandUpgradeBlinkTimeline != null) {
+			bandUpgradeBlinkTimeline.stop();
+		}
+
+		bandUpgradeBlinkTimeline = new Timeline(
+				new KeyFrame(Duration.ZERO, e -> btnBandUpgradeIndicator.setOpacity(1.0)),
+				new KeyFrame(Duration.millis(250), e -> btnBandUpgradeIndicator.setOpacity(0.25)),
+				new KeyFrame(Duration.millis(500), e -> btnBandUpgradeIndicator.setOpacity(1.0))
+		);
+		bandUpgradeBlinkTimeline.setCycleCount(24); // ~12 seconds
+		bandUpgradeBlinkTimeline.setOnFinished(e -> hideBandUpgradeIndicator());
+		bandUpgradeBlinkTimeline.playFromStart();
+	}
+
+	private void hideBandUpgradeIndicator() {
+		btnBandUpgradeIndicator.setOpacity(1.0);
+		btnBandUpgradeIndicator.setVisible(false);
+	}
+
+/**
+ * End Band-Upgrade section
+ */
+
+
+	/**
+	 * End Sked warning section
+	 */
+
 
 //	SimpleStringProperty messageBusOfChatCtrl = messageBus;
 	Scene scn_ChatwindowMainScene;
@@ -3159,17 +4002,21 @@ public class Kst4ContestApplication extends Application {
 	ContextMenu chatMemberContextMenu;// public due need to update it on modify
 	HBox chatMemberTableFilterQTFAndQRBHbox;
 
+    TableView<ChatMember> tbl_chatMember = new TableView<ChatMember>();
+
 	FlowPane flwPane_textSnippets;
+    FlowPane flwpne_StatusBar;
 
 	Stage clusterAndQSOMonStage;
 //	Stage stage_selectedCallSignInfoStage;
 	ChatMember selectedCallSignInfoStageChatMember;
 	BorderPane selectedCallSignInfoBorderPane;
 
-
 	Stage stage_updateStage;
-
 	Stage settingsStage;
+
+    Stage notify_setSnifferEntitiesStage;
+
 
 	ChoiceBox<ChatCategory> stn_choiceBxChatChategorySecond;
 
@@ -3296,8 +4143,8 @@ public class Kst4ContestApplication extends Application {
 		timer_buildWindowTitle.purge();
 		timer_buildWindowTitle.cancel();
 
-		timer_chatMemberTableSortTimer.purge();
-		timer_chatMemberTableSortTimer.cancel();
+//		timer_chatMemberTableSortTimer.purge();
+//		timer_chatMemberTableSortTimer.cancel();
 
 		timer_updatePrivatemessageTable.purge();
 		timer_updatePrivatemessageTable.cancel();
@@ -3309,6 +4156,9 @@ public class Kst4ContestApplication extends Application {
 
 	private Queue<Media> musicList = new LinkedList<Media>();
 	private MediaPlayer mediaPlayer ;
+
+
+
 
 	private void playCWLauncher(String playThisChars) {
 
@@ -3625,20 +4475,71 @@ public class Kst4ContestApplication extends Application {
 	@Override
 	public void start(Stage primaryStage) throws InterruptedException, IOException, URISyntaxException {
 
+
+
+		VBox pnl_inputAndSendButtons = new VBox(); //gets the sendtext field, send button and the timeline
+		timelineView = new TimelineView();
+		timelineView.prefWidthProperty().bind(pnl_inputAndSendButtons.widthProperty());
+		timelineView.setMinHeight(80); //min height
+		timelineView.setPrefHeight(80);
+		timelineView.setStyle("-fx-background-color: #333333; -fx-border-color: red;"); //TODO:Debug!
+		pnl_inputAndSendButtons.getChildren().add(timelineView);
+
+		timelineView.setSkedTooltipExtraTextProvider(this::buildSkedHoverInfo);
+
+		/**
+		 * if user changing width
+		 */
+		timelineView.widthProperty().addListener((obs, oldV, newV) -> {
+			if (newV.doubleValue() > 10) {
+				updateTimelineVisuals();
+			}
+		});
+
+		/**
+		 * if user changing height
+		 */
+		timelineView.heightProperty().addListener((obs, oldV, newV) -> {
+			if (newV.doubleValue() > 10) {
+				updateTimelineVisuals();
+			}
+		});
+
+
 		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, STYLE_DEFAULTCSSDAY_RESOURCE, STYLE_DEFAULTCSSDAY_FILE);
 		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, STYLE_DEFAULTCSSEVENING_RESOURCE, STYLE_DEFAULTCSSEVENING_FILE);
 		ChatMember ownChatMemberObject = new ChatMember();
 
-		chatcontroller = new ChatController(ownChatMemberObject); // instantiate the Chatcontroller with the user object
+		chatcontroller = new ChatController(ownChatMemberObject, this); // instantiate the Chatcontroller with the user object
+        chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
 
-//		this.chatcontroller.getPlayAudioUtils().playNoiseLauncher('!');
+		// 1. Timeline an die Sked-Liste binden
+		chatcontroller.getActiveSkeds().addListener((ListChangeListener<ContestSked>) c -> {
+			updateTimelineVisuals();
+		});
 
-//		chatcontroller.execute(); //TODO:THAT IS THE MAIN POINT WHERE THE CHAT WILL BE STARTED --- MOVED TO CONNECT BUTTON EVENTHANDLER
+		// 1. bind table to the sked list
+		chatcontroller.getScoreService().uiPulseProperty().addListener((obs, oldVal, newVal) -> {
+			updateTimelineVisuals();
+		});
 
-//		System.out.println(chatcontroller.getChatMemberTable().size());
+		// Keep TimelineView antenna azimuth in sync with preferences (rotator / QTF)
+//		chatcontroller.getChatPreferences().getActualQTF().addListener((obs, oldV, newV) -> {
+//			timelineView.setCurrentAntennaAzimuth(newV.doubleValue());
+//			timelineView.updateVisuals(chatcontroller.getActiveSkeds());
+//		});
+
+		// initial value
+		timelineView.setCurrentAntennaAzimuth(chatcontroller.getChatPreferences().getActualQTF().get());
+		timelineView.setBeamWidthDeg(chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg());
+
+		// Update visuals when rotor direction changes
+		chatcontroller.getChatPreferences().getActualQTF().addListener((obs, oldV, newV) -> {
+			timelineView.setCurrentAntennaAzimuth(newV.doubleValue());
+			updateTimelineVisuals();
+		});
 
 		try {
-//			txt_ownqrg.setStyle("-fx-text-inner-color: #BA55D3;");
 
 			txt_ownqrgMainCategory.getStyleClass().clear();
 			txt_ownqrgMainCategory.getStyleClass().add("text-input");
@@ -3682,6 +4583,10 @@ public class Kst4ContestApplication extends Application {
 			txt_myQTF.getStyleClass().add("text-input");
 			txt_myQTF.getStyleClass().add("text-input-MYQRG1");
 
+            txt_myQTF.textProperty().bind(Bindings.createStringBinding(
+                    () -> Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()),
+                    chatcontroller.getChatPreferences().getActualQTF()));
+
 			txt_myQTF.focusedProperty().addListener(new ChangeListener<Boolean>() {
 				@Override
 				public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
@@ -3705,7 +4610,7 @@ public class Kst4ContestApplication extends Application {
 			txt_myQTF.setPrefSize(40, 0);
 //			txt_ownqrg.setMinSize(40, 0);
 			txt_myQTF.setAlignment(Pos.BASELINE_RIGHT);
-			txt_myQTF.setTooltip(new Tooltip("Enter/update your actual qtf here for using path suggestions"));
+			txt_myQTF.setTooltip(new Tooltip("This is your current QTF, read out at PSTRotator"));
 			txt_myQTF.setFocusTraversable(false);
 
 			SplitPane mainWindowLeftSplitPane = new SplitPane();
@@ -3810,11 +4715,19 @@ public class Kst4ContestApplication extends Application {
 //			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 
 			MenuBar mainScreenMenuBar = initMenuBar();
-			bPaneChatWindow.setTop(mainScreenMenuBar);
+//            HPane hbxNorthForStatusBar = new HBox();
+            flwpne_StatusBar = new FlowPane();
 
-//			bPaneChatWindow.setLeft(new Label("This will be at the left"));  
+            flwpne_StatusBar.getChildren().add(mainScreenMenuBar);
+			bPaneChatWindow.setTop(flwpne_StatusBar);
 
-//			bPaneChatWindow.setRight(scrollabeUserListPanel);  
+			initSkedWarnIndicatorButton();
+			flwpne_StatusBar.getChildren().add(btnSkedWarnIndicator);
+
+			initBandUpgradeIndicatorButton();
+			flwpne_StatusBar.getChildren().add(btnBandUpgradeIndicator);
+
+
 
 			SplitPane messageSectionSplitpane = new SplitPane();
 			messageSectionSplitpane.setOrientation(Orientation.VERTICAL);
@@ -3823,8 +4736,8 @@ public class Kst4ContestApplication extends Application {
 
 //			FlowPane textInputFlowPane = new FlowPane();
 
-			sendButton = new Button("send");
-			sendButton.setMinSize(60, 0);
+			sendButton = new Button("TX");
+			sendButton.setMinSize(20, 0);
 			sendButton.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent event) {
@@ -3855,6 +4768,11 @@ public class Kst4ContestApplication extends Application {
 
 					sendMe.setChatCategory(sendMeInThisCat); //new in 1.26, answer in channel of the selected member
 					sendMe.setMessageText(txt_chatMessageUserInput.getText());
+
+					// If operator sends "/cq CALL ..." => arm pending ping metrics for reply-time / no-reply tracking
+					chatcontroller.getStationMetricsService().tryRecordOutboundCq(sendMe.getMessageText(), System.currentTimeMillis());
+					chatcontroller.getScoreService().requestRecompute("outbound-tx");
+
 					sendMe.setMessageDirectedToServer(false);
 
 					chatcontroller.getMessageTXBus().add(sendMe); //move the message to the tx queue
@@ -3868,7 +4786,7 @@ public class Kst4ContestApplication extends Application {
 //			sendButton.setMnemonicParsing(true);
 
 			Button btn_clear = new Button("clear");
-			btn_clear.setMinSize(60, 0);
+			btn_clear.setMinSize(20, 0);
 			btn_clear.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent event) {
@@ -4051,6 +4969,7 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
+
 			final Separator sepVert1 = new Separator();
 			sepVert1.setOrientation(Orientation.VERTICAL);
 			sepVert1.setValignment(VPos.CENTER);
@@ -4058,14 +4977,14 @@ public class Kst4ContestApplication extends Application {
 			sepVert1.setPrefWidth(30);
 
 			txt_ownqrgMainCategory.setText("MYQRG");
-			txt_ownqrgMainCategory.setPrefSize(80, 0);
-			txt_ownqrgMainCategory.setAlignment(Pos.BASELINE_RIGHT);
+			txt_ownqrgMainCategory.setPrefSize(70, 0);
+			txt_ownqrgMainCategory.setAlignment(Pos.BASELINE_LEFT);
 			txt_ownqrgMainCategory.setFocusTraversable(false);
 
 //			txt_ownqrgSecondCategory.setText("SECONDQRG");
 			txt_ownqrgSecondCategory.setText(chatcontroller.getChatPreferences().getMYQRGSecondCat().getValue());
-			txt_ownqrgSecondCategory.setPrefSize(140, 0);
-			txt_ownqrgSecondCategory.setAlignment(Pos.BASELINE_RIGHT);
+			txt_ownqrgSecondCategory.setPrefSize(70, 0);
+			txt_ownqrgSecondCategory.setAlignment(Pos.BASELINE_CENTER);
 			txt_ownqrgSecondCategory.setFocusTraversable(false);
 			txt_ownqrgSecondCategory.setTooltip(new Tooltip("Enter frequency for second chat-category here by hand! <fixme>"));
 
@@ -4115,23 +5034,21 @@ public class Kst4ContestApplication extends Application {
 				}
 			}, new Date(), 5000);
 
+
+
+			textInputFlowPane.setSpacing(6);
+			textInputFlowPane.setAlignment(Pos.CENTER_LEFT);
+
 			textInputFlowPane.getChildren().addAll(txt_chatMessageUserInput, sendButton, btn_clear, sepVert1,
 					txt_ownqrgMainCategory, txt_ownqrgSecondCategory, txt_myQTF);
 
-//			HBox hbx_textSnippets = new HBox();
 
 			flwPane_textSnippets = new FlowPane();
 
 			flwPane_textSnippets.getChildren()
 					.addAll(buttonFactory(this.chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()));
 
-//			hbx_textSnippets.getChildren().add(flwPane_textSnippets);
-//			hbx_textSnippets.set				
-
 			TableView<ChatMessage> privateMessageTable = initChatprivateMSGTable();
-//
-//			ContextMenu chatMessageContextMenu = initChatMemberTableContextMenu( old mechanic
-//					this.chatcontroller.getChatPreferences().getTextSnippets());
 
 			chatMessageContextMenu = initChatMemberTableContextMenu(
 					this.chatcontroller.getChatPreferences().getLst_txtSnipList()); // new mechanic
@@ -4186,15 +5103,23 @@ public class Kst4ContestApplication extends Application {
 
 						} else {
 
+
 							txt_chatMessageUserInput.clear();
 							txt_chatMessageUserInput.setText("/cq "
 									+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
 							txt_chatMessageUserInput.requestFocus();
 							txt_chatMessageUserInput.selectEnd();
 
+
+							focusChatMemberAndPrepareCq(selectedChatMemberPrivateChat.getList().get(0).getSender());
+
+
 							try {
 								selectedCallSignFurtherInfoPane.getChildren().clear();
 								selectedCallSignInfoStageChatMember = selectedChatMemberPrivateChat.getList().get(0).getSender();
+								chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+
+								chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection change
 								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
 								txt_chatMessageUserInput.requestFocus();
 								txt_chatMessageUserInput.selectEnd();
@@ -4256,12 +5181,24 @@ public class Kst4ContestApplication extends Application {
 								+ selectedChatMemberGeneralChat.getList().get(0).getSender().getCallSign() + " ");
 						txt_chatMessageUserInput.requestFocus();
 						txt_chatMessageUserInput.selectEnd();
-						System.out.println("privChat selected ChatMember: "
+						System.out.println("cq chat selected ChatMember: "
 								+ selectedChatMemberGeneralChat.getList().get(0).getSender());
+
+
+						try {
+							//scroll the chatmembers table to the entry - try because of sender could be null
+							focusChatMemberAndPrepareCq(selectedChatMemberGeneralChat.getList().get(0).getSender());
+
+						} catch (Exception exception) {
+							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
+						}
 
 						try {
 							selectedCallSignFurtherInfoPane.getChildren().clear();
 							selectedCallSignInfoStageChatMember = selectedChatMemberGeneralChat.getList().get(0).getSender();
+							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+
+							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection change
 							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
 							txt_chatMessageUserInput.requestFocus();
 							txt_chatMessageUserInput.selectEnd();
@@ -4276,7 +5213,7 @@ public class Kst4ContestApplication extends Application {
 
 
 
-			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets, textInputFlowPane,
+			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets,pnl_inputAndSendButtons, textInputFlowPane,
 					tbl_generalMessageTable);
 			messageSectionSplitpane.setDividerPositions(chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition());
 
@@ -4302,8 +5239,19 @@ public class Kst4ContestApplication extends Application {
 
 			bPaneChatWindow.setCenter(mainWindowLeftSplitPane);
 
-			TableView<ChatMember> tbl_chatMember = new TableView<ChatMember>();
+
 			tbl_chatMember = initChatMemberTable();
+
+			timelineView.setOnCandidateClicked(ev -> {
+				if (ev == null) return;
+
+				ChatMember resolved = resolveChatMemberForCallRawAndCategory(ev.getCallSignRaw(), ev.getPreferredChatCategory());
+				if (resolved == null) return;
+
+				// Always prepare /cq + FurtherInfo (even if filtered out in table)
+				focusChatMemberAndPrepareCq(resolved);
+			});
+
 
 			TableViewSelectionModel<ChatMember> selectionModelChatMember = tbl_chatMember.getSelectionModel();
 			selectionModelChatMember.setSelectionMode(SelectionMode.SINGLE);
@@ -4325,6 +5273,7 @@ public class Kst4ContestApplication extends Application {
 
 
 							selectedCallSignInfoStageChatMember = selectionModelChatMember.getSelectedItems().get(0); //TODO: temp test 1.26: get selected chatmember out of ist
+							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection cchange
 
 //							selectedCallSignInfoStageChatMember = chatcontroller.getLst_chatMemberList()
 //									.get(chatcontroller.checkListForChatMemberIndexByCallSign(
@@ -4388,7 +5337,7 @@ public class Kst4ContestApplication extends Application {
 
 			SplitPane mainWindowRightSplitPane = new SplitPane();
 			mainWindowRightSplitPane.setOrientation(Orientation.VERTICAL);
-			mainWindowRightSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition());
+//			mainWindowRightSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition());
 
 			BorderPane chatMemberTableBorderPane = new BorderPane();
 			chatMemberTableBorderPane.setCenter(tbl_chatMember);
@@ -4475,6 +5424,7 @@ public class Kst4ContestApplication extends Application {
 					if (!newValue.matches("\\d*")) {
 						chatMemberTableFilterQtfTF.setText(newValue.replaceAll("[^\\d]", ""));
 					}
+					System.out.println("new default QTF: " + newValue);
 					chatMemberTableFilterQtfEnableChkbx.setSelected(false);
 					chatMemberTableFilterQtfEnableChkbx.setSelected(true);
 				}
@@ -4517,7 +5467,22 @@ public class Kst4ContestApplication extends Application {
 
 
 
-			Button qtfNorth = new Button("N");
+            ToggleGroup tglGrpQTF = new ToggleGroup(); //Tooglegroup for the qtf filter options
+
+            tglGrpQTF.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
+                @Override
+                public void changed(ObservableValue<? extends Toggle> observableValue, Toggle toggle, Toggle t1) {
+                    if (t1 == null) {
+                        chatMemberTableFilterQtfEnableChkbx.setSelected(false);
+                    } else {
+                        chatMemberTableFilterQtfEnableChkbx.setSelected(true);
+                    }
+                }
+            });
+
+//			Button qtfNorth = new Button("N");
+            ToggleButton qtfNorth = new ToggleButton("N");
+            qtfNorth.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[0] = qtfNorth;
 
 			qtfNorth.setOnAction(new EventHandler<ActionEvent>() {
@@ -4529,7 +5494,8 @@ public class Kst4ContestApplication extends Application {
 
 			});
 
-			Button qtfNorthEast = new Button("NE");
+            ToggleButton qtfNorthEast = new ToggleButton("NE");
+            qtfNorthEast.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[1] = qtfNorthEast;
 			qtfNorthEast.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -4539,7 +5505,8 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
-			Button qtfEast = new Button("E");
+            ToggleButton qtfEast = new ToggleButton("E");
+            qtfEast.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[2] = qtfEast;
 			qtfEast.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -4549,7 +5516,8 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
-			Button qtfSouthEast = new Button("SE");
+            ToggleButton qtfSouthEast = new ToggleButton("SE");
+            qtfSouthEast.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[3] = qtfSouthEast;
 			qtfSouthEast.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -4558,7 +5526,9 @@ public class Kst4ContestApplication extends Application {
 //					uiHelper_recolorQtfDirectionButtonsExceptThisOne(qtfSouthEast);
 				}
 			});
-			Button qtfSouth = new Button("S");
+
+            ToggleButton qtfSouth = new ToggleButton("S");
+            qtfSouth.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[4] = qtfSouth;
 			qtfSouth.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -4568,7 +5538,8 @@ public class Kst4ContestApplication extends Application {
 				}
 			});
 
-			Button qtfSouthWest = new Button("SW");
+            ToggleButton qtfSouthWest = new ToggleButton("SW");
+            qtfSouthWest.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[5] = qtfSouthWest;
 			qtfSouthWest.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -4577,7 +5548,8 @@ public class Kst4ContestApplication extends Application {
 //					uiHelper_recolorQtfDirectionButtonsExceptThisOne(qtfSouthWest);
 				}
 			});
-			Button qtfWest = new Button("W");
+            ToggleButton qtfWest = new ToggleButton("W");
+            qtfWest.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[6] = qtfWest;
 			qtfWest.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
@@ -4587,8 +5559,10 @@ public class Kst4ContestApplication extends Application {
 				}
 
 			});
-			Button qtfNorthWest = new Button("NW");
+            ToggleButton qtfNorthWest = new ToggleButton("NW");
+            qtfNorthWest.setToggleGroup(tglGrpQTF);
 			btnQtfButtonsAvl[7] = qtfNorthWest;
+            qtfNorthWest.setToggleGroup(tglGrpQTF);
 			qtfNorthWest.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent actionEvent) {
@@ -4596,7 +5570,6 @@ public class Kst4ContestApplication extends Application {
 //					uiHelper_recolorQtfDirectionButtonsExceptThisOne(qtfNorthWest);
 				}
 			});
-
 
 
 //			chatMemberTableFilterQTFHBox.setSpacing(5);
@@ -4616,8 +5589,6 @@ public class Kst4ContestApplication extends Application {
 
 
 			chatcontroller.getLst_chatMemberListFiltered().predicateProperty().bind(Bindings.createObjectBinding(() -> chatcontroller.getLst_chatMemberListFilterPredicates().stream().reduce(x -> true, Predicate::and), chatcontroller.getLst_chatMemberListFilterPredicates()));
-
-
 
 
 			TextField chatMemberTableFilterTextField = new TextField("Find...");
@@ -4958,6 +5929,9 @@ public class Kst4ContestApplication extends Application {
 
 			mainWindowRightSplitPane.getItems().add(chatMemberTableBorderPane);
 
+			BorderPane topPriorityListPane = initTopPriorityListPane(tbl_chatMember, txt_chatMessageUserInput);
+			mainWindowRightSplitPane.getItems().add(topPriorityListPane);//adds priority list panel
+
 
 			mainWindowLeftSplitPane.getItems().addAll(messageSectionSplitpane, mainWindowRightSplitPane);
 			mainWindowLeftSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUImainWindowLeftSplitPane_dividerposition());
@@ -4979,27 +5953,14 @@ public class Kst4ContestApplication extends Application {
 
 			}
 
-/**
- * initializing the furter infos of a callsign part of the right splitpane
- */
-
-
-
-
-
-
-//			selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
-
-
-//			selectedCallSignInfoPane.getChildren().add(selectedCallSignInfoBorderPane);
-
-
-
-	/**
-	 * end of initializing the furter infos of a callsign part of the right splitpane
-	 */
 
 			mainWindowRightSplitPane.getItems().add(selectedCallSignFurtherInfoPane);
+
+			// Ensure the stored divider array matches the current UI layout (2 dividers = 3 items).
+			chatcontroller.getChatPreferences().ensureMainWindowRightSplitPaneDividerPositions(mainWindowRightSplitPane.getDividers().size());
+
+			// Apply persisted divider positions AFTER all items exist.
+			mainWindowRightSplitPane.setDividerPositions(chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition());
 
 			//first initialize how much divider positions we need...
 //			chatcontroller.getChatPreferences().setGUImainWindowRightSplitPane_dividerposition(new double[mainWindowRightSplitPane.getDividers().size()]);
@@ -5013,7 +5974,19 @@ public class Kst4ContestApplication extends Application {
 					@Override
 					public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
 						System.out.println("<<<<<<<<<<<<<<<<<<<>>>>>> devider mainwindowRIGHTsplitpane " + mainWindowRightSplitPane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  mainWindowRightSplitPane.getDividers().size());
-						chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition()[mainWindowRightSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+//						chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition()[mainWindowRightSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+
+						int dividerIndex = mainWindowRightSplitPane.getDividers().indexOf(divider);
+						double[] storedPositions = chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition();
+
+						if (dividerIndex >= 0 && dividerIndex < storedPositions.length) {
+							storedPositions[dividerIndex] = newDividerPosition.doubleValue();
+						} else {
+							// Avoid crashes if preferences are older than the current UI layout.
+							System.out.println("WARN: cannot store mainWindowRightSplitPane divider position: index="
+									+ dividerIndex + ", storedLen=" + storedPositions.length + ", dividerCount="
+									+ mainWindowRightSplitPane.getDividers().size());
+						}
 					}
 				});
 
@@ -5050,10 +6023,6 @@ public class Kst4ContestApplication extends Application {
 		pnl_directedMSGWin.getItems().addAll(initDXClusterTable(), initChatToOtherMSGTable());
 
 
-
-		//first initialize how much divider positions we need...
-//		chatcontroller.getChatPreferences().setGUIpnl_directedMSGWin_dividerpositionDefault(new double[pnl_directedMSGWin.getDividers().size()]);
-
 		/**
 		 * here will follow the Splitpane divider listener to save the user made UI changes, should been made at the very end of all splitpane operations
 		 */
@@ -5088,8 +6057,6 @@ public class Kst4ContestApplication extends Application {
 		});
 
 		clusterAndQSOMonStage.setScene(clusterAndQSOMonScene);
-
-
 		clusterAndQSOMonStage.show();
 
 		/**
@@ -5101,15 +6068,10 @@ public class Kst4ContestApplication extends Application {
 		 * Window updates
 		 */
 		stage_updateStage = new Stage();
-//		clusterAndQSOMonStage.initStyle(StageStyle.UTILITY);
-		stage_updateStage.setTitle("Update information");
-//		SplitPane pnl_directedMSGWin = new SplitPane();
-//		apnl_directedMSGWin.setOrientation(Orientation.VERTICAL);
 
-//		pnl_directedMSGWin.getItems().addAll(initDXClusterTable(), initChatToOtherMSGTable());
+		stage_updateStage.setTitle("Update information");
 
 		try {
-
 
 		stage_updateStage.setAlwaysOnTop(true);
 
@@ -5209,7 +6171,7 @@ public class Kst4ContestApplication extends Application {
 			stage_updateStage.show();
 		} else {
 
-			stage_updateStage.show();
+//			stage_updateStage.show(); only for debugging check
 
 			//nothing to do
 		}
@@ -5512,13 +6474,23 @@ public class Kst4ContestApplication extends Application {
 					txtFldstn_qtfDefault.setText(newString.replaceAll("[^\\d]", ""));
 				}
 
-				System.out.println("[Main.java, Info]: Setted the QRB: " + txtFldstn_qtfDefault.getText());
-				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_qtfDefault.getText()));
+				System.out.println("[Main.java, Info]: Setted the QTF: " + txtFldstn_qtfDefault.getText());
+				chatcontroller.getChatPreferences().setStn_qtfDefault(Double.parseDouble(txtFldstn_qtfDefault.getText()));
 //				chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
 //				chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
 			}
 
 		});
+
+		Label lbl_station_pstRotatorEnabled = new Label("Enable PSTRotator interface (auto QTF):");
+		CheckBox chkBx_station_pstRotatorEnabled = new CheckBox();
+		chkBx_station_pstRotatorEnabled.setSelected(chatcontroller.getChatPreferences().isStn_pstRotatorEnabled());
+		chkBx_station_pstRotatorEnabled.setTooltip(new Tooltip(
+				"If disabled: no PSTRotator connection is started and antenna direction is ignored in priority scoring."
+		));
+		chkBx_station_pstRotatorEnabled.selectedProperty().addListener((obs, oldV, newV) ->
+				chatcontroller.getChatPreferences().setStn_pstRotatorEnabled(newV)
+		);
 
 
 		grdPnlStation.add(lblCallSign, 0, 0);
@@ -5537,10 +6509,37 @@ public class Kst4ContestApplication extends Application {
 		grdPnlStation.add(txtFldstn_maxQRBDefault, 1, 6);
 		grdPnlStation.add(new Label("Default filter QTF:"), 0, 7);
 		grdPnlStation.add(txtFldstn_qtfDefault, 1, 7);
+		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 8);
+		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 8);
 
 		VBox vbxStation = new VBox();
 		vbxStation.setPadding(new Insets(10, 10, 10, 10));
-		vbxStation.getChildren().addAll(
+
+        GridPane grdPanelServerHostName = new GridPane();
+
+        TextField stn_txtServerDNS = new TextField(this.chatcontroller.getChatPreferences().getStn_on4kstServersDns());
+        stn_txtServerDNS.focusedProperty().addListener(new ChangeListener<Boolean>() {
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+
+                System.out.println("[Main.java, Info]: Set the Server DNS property by hand to: "
+                        + stn_txtServerDNS.getText());
+                chatcontroller.getChatPreferences().setStn_on4kstServersDns(stn_txtServerDNS.getText());
+            }
+        });
+
+
+        grdPanelServerHostName.add(new Label("ON4KST Server [www.on4kst.org]: "), 0,1);
+        grdPanelServerHostName.add(stn_txtServerDNS, 1,1);
+
+        TextField stn_txtServerPort = new TextField(this.chatcontroller.getChatPreferences().getStn_on4kstServersPort()+"");
+
+        grdPanelServerHostName.add(new Label(" Port [23001]: "), 2,1);
+        grdPanelServerHostName.add(stn_txtServerPort, 3,1);
+
+        vbxStation.getChildren().addAll(grdPanelServerHostName);
+
+        vbxStation.getChildren().addAll(
 				generateLabeledSeparator(100, "Set your Login Credentials and Station Parameters here"), grdPnlStation);
 		vbxStation.getChildren().addAll(generateLabeledSeparator(50,
 				"! ! ! ! Don´t forget to reset the worked stations information before starting a new contest ! ! ! !"));
@@ -5774,10 +6773,72 @@ public class Kst4ContestApplication extends Application {
 				
 			}
 		});
-		
-		
-		
-		
+
+
+		grdPnlLog.add(generateLabeledSeparator(100, "Win-Test Network-Listener"), 0, 6, 2, 1);
+
+		Label lblEnableWintest = new Label("Receive Win-Test network based UDP log messages");
+		CheckBox chkBxEnableWintestUDPReceiver = new CheckBox();
+		chkBxEnableWintestUDPReceiver.setSelected(
+				this.chatcontroller.getChatPreferences().isLogsynch_wintestNetworkListenerEnabled()
+		);
+
+		Label lblUDPByWintest = new Label("UDP-Port for Win-Test listener (default is 9871)");
+		TextField txtFldUDPPortforWintest = new TextField(
+				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkPort() + ""
+		);
+
+		txtFldUDPPortforWintest.focusedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue, Boolean newPropertyValue) {
+				if (newPropertyValue) {
+					// focus gained -> nichts
+				} else {
+					if (GuiUtils.isNumeric(txtFldUDPPortforWintest.getText())) {
+
+						chatcontroller.getChatPreferences()
+								.setLogsynch_wintestNetworkPort(Integer.parseInt(txtFldUDPPortforWintest.getText()));
+
+						// Wenn enabled: Listener auf neuem Port neu starten
+						if (chatcontroller.getChatPreferences().isLogsynch_wintestNetworkListenerEnabled()) {
+							chatcontroller.restartWintestUdpListenerIfEnabled();
+						}
+
+						System.out.println("[Main.java, Info]: set Win-Test listener port to: "
+								+ txtFldUDPPortforWintest.getText());
+
+					} else {
+						txtFldUDPPortforWintest.setText(txtFldUDPPortforWintest.getText() + " is an invalid Port");
+					}
+				}
+			}
+		});
+
+
+		chkBxEnableWintestUDPReceiver.selectedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+
+				chatcontroller.getChatPreferences()
+						.setLogsynch_wintestNetworkListenerEnabled(chkBxEnableWintestUDPReceiver.isSelected());
+
+				txtFldUDPPortforWintest.setDisable(!chkBxEnableWintestUDPReceiver.isSelected());
+
+				if (chkBxEnableWintestUDPReceiver.isSelected()) {
+					chatcontroller.restartWintestUdpListenerIfEnabled();
+				} else {
+					chatcontroller.stopWintestUdpListener();
+				}
+
+				System.out.println("[Main.java, Info]: Win-Test UDP listener enabled: "
+						+ chatcontroller.getChatPreferences().isLogsynch_wintestNetworkListenerEnabled());
+			}
+		});
+
+
+
+		txtFldUDPPortforWintest.setFocusTraversable(false);
+		txtFldUDPPortforWintest.setDisable(!chkBxEnableWintestUDPReceiver.isSelected());
 
 //		grdPnlLog.add(new Label("Settings for the file interpreter, which can interprete ASCII Callsigns out of all kinds of files by Patternmatching"), 0,0,1,1);
 		grdPnlLog.add(generateLabeledSeparator(100, "File polling for worked callsigns"), 0, 0, 2, 1);
@@ -5794,6 +6855,10 @@ public class Kst4ContestApplication extends Application {
 //		grdPnlLog.add(lblUDPbyUCXLogBackupFilePathAndNameTitle, 0, 6); removed due to db usage now
 //		grdPnlLog.add(lblUDPbyUCXLogBackupFilePathAndName, 1, 6); removed due to db usage now
 //		grdPnlLog.add(new Button("Change..."), 2, 6); removed due to db usage now
+		grdPnlLog.add(lblEnableWintest, 0, 7);
+		grdPnlLog.add(chkBxEnableWintestUDPReceiver, 1, 7);
+		grdPnlLog.add(lblUDPByWintest, 0, 8);
+		grdPnlLog.add(txtFldUDPPortforWintest, 1, 8);
 
 		VBox vbxLog = new VBox();
 		vbxLog.setPadding(new Insets(10, 10, 10, 10));
@@ -5810,6 +6875,17 @@ public class Kst4ContestApplication extends Application {
 
 		Label lblEnableTRXMsgbyUCX = new Label("Receive UCXLog network based UDP trx messages at Port 12060");
 		CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
+
+		CheckBox chkBxEnableXVTRUsage = new CheckBox();
+
+		Label lblXVTRRFQrg = new Label("XVTR RF QRG in kHz, e.g. \"144000\" for 144 MHz), default = 144000");
+		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your xvtr send?"));
+
+		Label lblTRXIFQrg = new Label("TRX IF QRG in kHz, e.g. \"28000\" for 28 MHz), default = 28000");
+		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your TRX IF be?"));
+
+//		Label lblRedultingLoQRG = new Label("The value of " + asd + " will be added to the readed QRG of your TRX to show correct QRG");
+
 
 		chkBxEnableTRXMsgbyUCX
 				.setSelected(this.chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled());
@@ -6180,14 +7256,24 @@ public class Kst4ContestApplication extends Application {
 				@Override
 				public void handle(ActionEvent event) {
 
-					ChatMember dummy = new ChatMember();
-					dummy.setFrequency(new SimpleStringProperty("144300"));
-					dummy.setQra("Congrats, you donated $100");
-					dummy.setCallSign("DO5AMF");
+//                    ChatMember dummyCopy = new ChatMember();
+//                    dummyCopy.setCallSign(selectedCallSignInfoStageChatMember.getCallSign());
+//                    dummyCopy.setFrequency(new SimpleStringProperty("144300"));
+//                    dummyCopy.setQra(selectedCallSignInfoStageChatMember.getQra() + " AP: " +
+//                            selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(0).getPotential() + "%, " +
+//                            selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(0).getArrivingDurationMinutes() + "min" +
+//                            ", " +
+//                                    selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(1).getPotential() + "%, " +
+//                                    selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(1).getArrivingDurationMinutes() + "min");
+
+					ChatMember dummyCopy = new ChatMember();
+                    dummyCopy.setFrequency(new SimpleStringProperty("144300"));
+                    dummyCopy.setQra("Congrats, you donated $100");
+                    dummyCopy.setCallSign("DO5AMF");
 
 					try {
 
-						chatcontroller.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(dummy);
+						chatcontroller.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(dummyCopy);
 
 //						dummy = new ChatMember();
 //						dummy.setFrequency(new SimpleStringProperty("144366"));
@@ -6305,7 +7391,51 @@ public class Kst4ContestApplication extends Application {
 		grdPnlNotify.add(lblNotifyDXClusterServerTriggerOnEveryQRGDetect, 0, 12);
 		grdPnlNotify.add(chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect, 1, 12);
 
+		grdPnlNotify.add(generateLabeledSeparator(100, "Band-upgrade hint (after log entry)"), 0, 13, 2, 1);
 
+		Label lblNotifyBandUpgradeHint = new Label("Blink + sound if logged station is still QRV on other unworked enabled band(s)");
+		CheckBox chkBxNotifyBandUpgradeHint = new CheckBox();
+		chkBxNotifyBandUpgradeHint.setSelected(chatcontroller.getChatPreferences().isNotify_bandUpgradeHintOnLogEnabled());
+		chkBxNotifyBandUpgradeHint.selectedProperty().addListener((obs, o, n) ->
+				chatcontroller.getChatPreferences().setNotify_bandUpgradeHintOnLogEnabled(n)
+		);
+
+		Label lblNotifyBandUpgradeBoost = new Label("Priority boost for band-upgrade cases (better visibility in toplists)");
+		CheckBox chkBxNotifyBandUpgradeBoost = new CheckBox();
+		chkBxNotifyBandUpgradeBoost.setSelected(chatcontroller.getChatPreferences().isNotify_bandUpgradePriorityBoostEnabled());
+		chkBxNotifyBandUpgradeBoost.selectedProperty().addListener((obs, o, n) ->
+				chatcontroller.getChatPreferences().setNotify_bandUpgradePriorityBoostEnabled(n)
+		);
+
+		grdPnlNotify.add(lblNotifyBandUpgradeHint, 0, 14);
+		grdPnlNotify.add(chkBxNotifyBandUpgradeHint, 1, 14);
+
+		grdPnlNotify.add(lblNotifyBandUpgradeBoost, 0, 15);
+		grdPnlNotify.add(chkBxNotifyBandUpgradeBoost, 1, 15);
+
+
+//        grdPnlNotify.add(generateLabeledSeparator(100, "QSO Sniffing tool"), 0, 14, 2, 1);
+		grdPnlNotify.add(generateLabeledSeparator(100, "QSO Sniffing tool"), 0, 17, 2, 1);
+
+
+        TableView<String> tblVw_notify_sniffCallSigns = new TableView<String>();
+        tblVw_notify_sniffCallSigns = initNotifyAtCallSignTable();
+        tblVw_notify_sniffCallSigns.setItems(this.chatcontroller.getLstNotify_QSOSniffer_sniffedCallSignList());
+
+        Button btn_notifySniffCall_addLine = new Button("Add new CallSign");
+        btn_notifySniffCall_addLine.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                String newTextSnippet = "Pse change (DOUBLECLICK)";
+                chatcontroller.getLstNotify_QSOSniffer_sniffedCallSignList().add(0, newTextSnippet);
+            }
+        });
+
+//        grdPnlNotify.add(tblVw_notify_sniffCallSigns,0,15);
+//        grdPnlNotify.add(btn_notifySniffCall_addLine, 0, 16);
+
+		grdPnlNotify.add(tblVw_notify_sniffCallSigns,0,18);
+		grdPnlNotify.add(btn_notifySniffCall_addLine, 0, 19);
 
 		VBox vbxNotify = new VBox();
 		vbxNotify.setPadding(new Insets(10, 10, 10, 10));
@@ -6609,6 +7739,17 @@ public class Kst4ContestApplication extends Application {
 
 		TextField txtFld_messageHandlingAutoAnswer = new TextField();
 		txtFld_messageHandlingAutoAnswer.setText(this.chatcontroller.getChatPreferences().getMessageHandling_autoAnswerTextMainCat());
+		txtFld_messageHandlingAutoAnswer.textProperty().addListener(new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
+				System.out.println("[Main.java, Info]: Setted the autoanswer: " + txtFld_messageHandlingAutoAnswer.getText().toUpperCase());
+				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextMainCat(txtFld_messageHandlingAutoAnswer.getText().toUpperCase());
+				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextSecondCat(txtFld_messageHandlingAutoAnswer.getText().toUpperCase());
+			}
+		});
+
+
 		grdPnlMessageHandlingBeacon.add(txtFld_messageHandlingAutoAnswer,1,2);
 		grdPnlMessageHandlingBeacon.add(chkbx_msgHandlingAutoAnswerEnabled,0,2);
 
@@ -6642,30 +7783,38 @@ public class Kst4ContestApplication extends Application {
 		vbxInternalDB.getChildren().addAll(grdPnlInternalDBPane);
 
 		TableView<ChatMember> tblVw_worked = new TableView<ChatMember>();
+		final TableView<ChatMember> finalTblVwWorked = tblVw_worked; //effectively final variable
+
 		tblVw_worked = initWkdStnTable();
 //		tblVw_worked.setItems(); TODO
+
+		Button btn_wkdDB_refresh = new Button("Refresh worked database");
+		btn_wkdDB_refresh.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent event) {
+				chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
+				finalTblVwWorked.refresh();
+			}
+		});
 
 		Button btn_wkdDB_reset = new Button("Reset worked-tags and NOT-QRV-tags");
 		btn_wkdDB_reset.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
 
-				// TODO: get the way to the appcontroller, there should be a reset method which
-				// drives the db and resets the 2 worked lists, also.
-
 				int affectedLines;
 				affectedLines = chatcontroller.getDbHandler().resetWorkedDataInDB();
-				chatcontroller.resetWorkedInfoInGuiLists();
-				
-				
+				chatcontroller.resetWorkedAndQrvInfoInGuiLists();
+				chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
+				finalTblVwWorked.refresh();
+
 				if (affectedLines >= 0) {
 
 					Alert a = new Alert(AlertType.INFORMATION);
 
 					a.setTitle("Worked data");
-					a.setHeaderText("All worked data had been resetted." + affectedLines
-							+ " worked callsign entries resetted.");
-//		        a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
+					a.setHeaderText("All worked data had been resetted. " + affectedLines
+							+ " callsign entries had been updated.");
 					a.show();
 
 				} else {
@@ -6673,18 +7822,15 @@ public class Kst4ContestApplication extends Application {
 
 					a.setTitle("Worked data");
 					a.setHeaderText("Something went wrong, DB have to be rebuilt or other error!");
-//		        a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
 					a.show();
 				}
-
-//				System.out.println("DB reset via DBHandler needs to be implemented");
 			}
 		});
 
 		HBox hbxwkdShortBtnBox = new HBox();
-
 		grdPnlInternalDBPane.add(hbxwkdShortBtnBox, 0, 2, 2, 1);
-		hbxwkdShortBtnBox.getChildren().addAll(btn_wkdDB_reset);
+		hbxwkdShortBtnBox.getChildren().addAll(btn_wkdDB_refresh, btn_wkdDB_reset);
+
 
 		grdPnlInternalDBPane.add(tblVw_worked, 0, 1, 2, 1);
 
@@ -6813,6 +7959,20 @@ public class Kst4ContestApplication extends Application {
 		Tab tbMsgHandling = new Tab("Messagehandling", vbxMsgHandlBeacon);
 		Tab tbInternalDB = new Tab("Workedstn database", vbxInternalDB);
 		Tab tbGui = new Tab("GUI", vbxGuiOptions);
+
+
+		/**
+		 * Automatic update of tab contents out of the database
+		 */
+		tbInternalDB.setOnSelectionChanged(new EventHandler<Event>() {
+			@Override
+			public void handle(Event event) {
+				if (tbInternalDB.isSelected()) {
+					chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
+				}
+			}
+		});
+
 
 		tabPaneOptions.getTabs().addAll(tbStationSettings, tbLogSynchSet, tbTRXSynchSet, tbAirScoutSettings, tbNotify,
 				tbShorts, tbBeacon, tbMsgHandling, tbInternalDB, tbGui);
@@ -6999,40 +8159,99 @@ public class Kst4ContestApplication extends Application {
 
 		settingsStage.show();
 
+		chatcontroller.lastUiReminderEventProperty().addListener((obs, oldVal, ev) -> {
+			if (ev == null) return;
+
+			String text = "REMINDER: " + ev.getCallSignRaw() + "  T-" + ev.getMinutesBefore() + "m";
+			Platform.runLater(() -> showBlinkingSkedWarnIndicator(text));
+
+		});
+
+		//initialize the timeline
+		Platform.runLater(this::updateTimelineVisuals);
+
+
 	}
 
 	/**
-	 *
-	 * resets the style of the not selected direction buttons
-	 *
-	 * REPLACED BY CSS USAGE
-	 * @deprecated
-	 * @param exceptThisButton
+	 * This is a helping class for providing information for the TimeLineView to give full information about the
+	 * Chatmember objects on which the Sked object is referring to.
+	 * @param sked
 	 * @return
 	 */
-	public boolean uiHelper_recolorQtfDirectionButtonsExceptThisOne(Button exceptThisButton) {
+	private String buildSkedHoverInfo(ContestSked sked) {
+		if (sked == null || sked.getTargetCallsign() == null) return "";
 
-//		Button[] qtfButtons = new Button[8];
+		String callRaw = sked.getTargetCallsign().trim().toUpperCase();
 
-		for (int i = 0; i < btnQtfButtonsAvl.length; i++) {
-
-//			if (!btnQtfButtonsAvl[i].equals(exceptThisButton)) {
-//				btnQtfButtonsAvl[i].setStyle("");
-//			} else {
-//				btnQtfButtonsAvl[i].setStyle("-fx-background-color:\n" +
-//						"        linear-gradient(#f0ff35, #a9ff00),\n" +
-//						"        radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);\n" +
-//						"    -fx-background-radius: 6, 5;\n" +
-//						"    -fx-background-insets: 0, 1;\n" +
-//						"    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );\n" +
-//						"    -fx-text-fill: #395306;"); //Todo fancy button style
-//			}
-
+		ChatMember member = null;
+		for (ChatMember cm : chatcontroller.getLst_chatMemberList()) {
+			if (cm == null || cm.getCallSignRaw() == null) continue;
+			if (callRaw.equals(cm.getCallSignRaw().trim().toUpperCase())) {
+				member = cm;
+				break;
+			}
 		}
+		if (member == null) return "";
 
-		return true;
+		AirPlaneReflectionInfo ap = member.getAirPlaneReflectInfo();
+		if (ap == null) return "";
 
+		StringBuilder sb = new StringBuilder();
+		sb.append("AP reachable: ").append(ap.getAirPlanesReachableCntr());
+
+		if (ap.getRisingAirplanes() != null && !ap.getRisingAirplanes().isEmpty()) {
+			AirPlane a0 = ap.getRisingAirplanes().get(0);
+			sb.append("\nNext: ")
+					.append(a0.getArrivingDurationMinutes())
+					.append(" min (")
+					.append(a0.getPotential())
+					.append("%)");
+
+			if (ap.getRisingAirplanes().size() > 1) {
+				AirPlane a1 = ap.getRisingAirplanes().get(1);
+				sb.append(" / ")
+						.append(a1.getArrivingDurationMinutes())
+						.append(" min (")
+						.append(a1.getPotential())
+						.append("%)");
+			}
+		}
+		return sb.toString();
 	}
+
+//	/**
+//	 *
+//	 * resets the style of the not selected direction buttons
+//	 *
+//	 * REPLACED BY CSS USAGE
+//	 * @deprecated
+//	 * @param exceptThisButton
+//	 * @return
+//	 */
+//	public boolean uiHelper_recolorQtfDirectionButtonsExceptThisOne(Button exceptThisButton) {
+//
+////		Button[] qtfButtons = new Button[8];
+//
+//		for (int i = 0; i < btnQtfButtonsAvl.length; i++) {
+//
+////			if (!btnQtfButtonsAvl[i].equals(exceptThisButton)) {
+////				btnQtfButtonsAvl[i].setStyle("");
+////			} else {
+////				btnQtfButtonsAvl[i].setStyle("-fx-background-color:\n" +
+////						"        linear-gradient(#f0ff35, #a9ff00),\n" +
+////						"        radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);\n" +
+////						"    -fx-background-radius: 6, 5;\n" +
+////						"    -fx-background-insets: 0, 1;\n" +
+////						"    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );\n" +
+////						"    -fx-text-fill: #395306;"); //Todo fancy button style
+////			}
+//
+//		}
+//
+//		return true;
+//
+//	}
 
 	/**
 	 * 
@@ -7096,18 +8315,53 @@ public class Kst4ContestApplication extends Application {
 
 //        if(storageModel.dataSetChanged()) {  // if the dataset has changed, alert the user with a popup
 		Alert alert = new Alert(Alert.AlertType.WARNING);
-		alert.getButtonTypes().remove(ButtonType.OK);
+//		alert.getButtonTypes().remove(ButtonType.OK);
 //		alert.getButtonTypes().add(ButtonType.CANCEL);
 //		alert.getButtonTypes().add(ButtonType.YES);
 		alert.setTitle("WARNING");
 		alert.setContentText(String.format(warning));
 
+        alert.show();
+
 	}
+
+//    public void updateStatusButtons() {
+//        //TODO: Hier muss noch was hin
+////        get
+//    }
 
 
 	public static void main(String[] args) {
 		launch(args);
 	}
+
+    @Override
+    public void onThreadStatusChanged(String key, ThreadStateMessage threadStateMessage) {
+
+        Platform.runLater(() -> {
+            updateStatusButton(key, threadStateMessage);
+		});
+
+		maybeShowSkedWarnIndicator(key, threadStateMessage);
+		maybeShowBandUpgradeIndicator(key, threadStateMessage);
+
+
+		//if we receive a threadstatemessage for sked warning, enable the sked warning
+
+
+    }
+
+    @Override
+    public void onUserListUpdated(String reason) {
+        Platform.runLater(() -> {
+
+//            tbl_chatMember.sort();
+            tbl_chatMember.refresh();
+
+            System.out.println("KST4Capp, UI Update Trigger: " + reason);
+        });
+    }
+
 
 //	public class MaidenheadLocatorMapPane extends Pane {
 //
@@ -7203,6 +8457,74 @@ public class Kst4ContestApplication extends Application {
 //		}
 //	}
 
+
+	/**
+	 * helper method, in cases of QRG ending qith 0 as double values, it will fill the ending 0 to the qrg string
+	 * @param raw
+	 * @return
+	 */
+	private static String formatQrgForUi(String raw) {
+
+		if (raw == null) return "";
+		String s = raw.trim();
+		if (s.isEmpty()) return "";
+
+		// Einheitlich Punkt als Dezimaltrenner
+		s = s.replace(',', '.');
+
+		// Wenn es nicht numerisch ist: einfach anzeigen wie es ist
+		try {
+			Double.parseDouble(s);
+		} catch (NumberFormatException e) {
+			return s;
+		}
+
+		int dot = s.indexOf('.');
+		if (dot < 0) {
+			// keine Nachkommastellen -> .000 ergänzen
+			return s + ".000";
+		}
+
+		String dec = s.substring(dot + 1);
+		if (dec.length() >= 3) {
+			// schon >= 3 Nachkommastellen -> unverändert lassen
+			return s;
+		}
+
+		StringBuilder sb = new StringBuilder(s);
+		while (dec.length() < 3) {
+			sb.append('0');
+			dec += "0";
+		}
+		return sb.toString();
+	}
+
+	private static <T> void applyQrgUiFormatting(TableColumn<T, String> col) {
+		col.setCellFactory(tc -> new TableCell<T, String>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+				setText(empty ? "" : formatQrgForUi(item));
+			}
+		});
+	}
+
+	/**
+	 * Interface for the chatcontroller to update the timeline
+	 *
+	 * @return
+	 */
+	public TimelineView getTimelineView() {
+		return timelineView;
+	}
+
+	// NEW: Helper to force-refresh the table (triggering row color update)
+	public void refreshChatMemberTable() {
+		if (tbl_chatMember != null) {
+			tbl_chatMember.refresh();
+		}
+	}
+
 }
 
 /**
@@ -7262,6 +8584,7 @@ class CheckBoxTableCell<S, T> extends TableCell<S, T> {
 	public static <S, T> Callback<TableColumn<S, T>, TableCell<S, T>> forTableColumn(String label, Consumer<S> function) {
 		return param -> new CheckBoxTableCell<>(label, function);
 	}
+
 	@Override
 	public void updateItem(T item, boolean empty) {
 		super.updateItem(item, empty);
@@ -7271,4 +8594,9 @@ class CheckBoxTableCell<S, T> extends TableCell<S, T> {
 			setGraphic(actionCheckBox);
 		}
 	}
+
+
+
+
+
 }

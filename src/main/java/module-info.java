@@ -3,6 +3,7 @@ module praktiKST {
 	requires jdk.xml.dom;
 	requires java.sql;
     requires javafx.media;
+    exports kst4contest.controller.interfaces;
     exports kst4contest.controller;
 	exports kst4contest.locatorUtils;
 	exports kst4contest.model;

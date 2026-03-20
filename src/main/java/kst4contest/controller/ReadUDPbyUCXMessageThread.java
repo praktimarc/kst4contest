@@ -4,6 +4,7 @@ import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -11,6 +12,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import kst4contest.ApplicationConstants;
+import kst4contest.model.ThreadStateMessage;
 import kst4contest.view.GuiUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -32,13 +34,19 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 	private BufferedReader reader;
 	private Socket socket;
 	private ChatController client;
+    private int udpPortNr = 12060;
+    private ThreadStatusCallback callBackToController;
+    private String ThreadNickName = "UDP-Log msg";
 
-	public ReadUDPbyUCXMessageThread(int localPort) {
+//	public ReadUDPbyUCXMessageThread(int localPort , ThreadStatusCallback callback) {
+//
+////        this.callBackToController = callback;
+//	}
 
-	}
-
-	public ReadUDPbyUCXMessageThread(int localPort, ChatController client) {
-		this.client = client;
+	public ReadUDPbyUCXMessageThread(int localPort, ChatController client, ThreadStatusCallback callback) {
+		this.udpPortNr = localPort;
+        this.client = client;
+        this.callBackToController = callback;
 	}
 
 	@Override
@@ -48,6 +56,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			if (this.socket != null) {
 				System.out.println(">>>>>>>>>>>>>>ReadUdpbyUCS: closing socket");
 				terminateConnection();
+//                callBackToController.onThreadStatus("UDPReceiver", new String[]);
 			}
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -57,17 +66,22 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 	
 	public void run() {
 
-
-
+        System.out.println("ReadUDPByUCXLogThread: started Thread for UCXLog getUDP");
 		Thread.currentThread().setName("ReadUDPByUCXLogThread");
-		
+
+
+        ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
+        callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
 		DatagramSocket socket = null;
-		boolean running;
+
+        boolean running;
 		byte[] buf = new byte[1777];
 		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
 		try {
-			socket = new DatagramSocket(12060);
+//			socket = new DatagramSocket(12060);
+            socket = new DatagramSocket(udpPortNr);
 			socket.setSoTimeout(2000); //TODO try for end properly
 		}
 		
@@ -98,8 +112,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 				// TODO Auto-generated catch block
 				nE.printStackTrace();
 				System.out.println("ReadUdpByUCXTH: Socket not ready");
-
-
 
 				try {
 					socket = new DatagramSocket(client.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort());
@@ -136,6 +148,12 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 				System.out.println("ReadUdpByUCX, Info: got poison, now dieing....");
 				socket.close();
 				timeOutIndicator = true;
+
+//                threadStatusMessage = new String[2];
+//                threadStatusMessage[0] = "stopped";
+//                threadStatusMessage[1] = "by poisonpill message (disconnect on purpose)";
+                threadStateMessage = new ThreadStateMessage(this.ThreadNickName, false, "stopped by Poisonpill", false);
+                callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 				break;
 			}
 
@@ -163,7 +181,17 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 		ChatMember modifyThat = null;
 
-//		System.out.println(udpMsg);
+//		System.out.println("ReadUDPByUCX, message catched: " + udpMsg);
+
+//        String[] threadStatusMessage = new String[2];
+//        threadStatusMessage = new String[3];
+//        threadStatusMessage[0] = "on";
+//        threadStatusMessage[1] = "received message:";
+//        threadStatusMessage[2] = udpMsg;
+
+        ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "received Message\n" + udpMsg, false);
+
+        callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		try {
@@ -240,7 +268,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 						case "10G": {
 							workedCall.setWorked10G(true);
-
+                            break;
 						}
 
 						/**
@@ -310,56 +338,41 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 									modifyThat = client.getLst_chatMemberList().get(index);
 
 									modifyThat.setWorked(true);
-//									client.getLst_chatMemberList()
-//											.get(client.checkListForChatMemberIndexByCallSign(modifyThat)).setWorked(true);
 
 									if (workedCall.isWorked144()) {
 										modifyThat.setWorked144(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked144(true);
 
 									} else if (workedCall.isWorked432()) {
 										modifyThat.setWorked432(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked432(true);
 
 									} else if (workedCall.isWorked1240()) {
 										modifyThat.setWorked1240(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked1240(true);
 
 									} else if (workedCall.isWorked2300()) {
 										modifyThat.setWorked2300(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked2300(true);
 
 									} else if (workedCall.isWorked3400()) {
 										modifyThat.setWorked3400(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked3400(true);
 
 									} else if (workedCall.isWorked5600()) {
 										modifyThat.setWorked5600(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked5600(true);
 
 									} else if (workedCall.isWorked10G()) {
 										modifyThat.setWorked10G(true);
-//										client.getLst_chatMemberList()
-//												.get(client.checkListForChatMemberIndexByCallSign(modifyThat))
-//												.setWorked10G(true);
 									}
 								}
 
 								try {
 
-									GuiUtils.triggerGUIFilteredChatMemberListChange(client); //not clean at all
+									GuiUtils.triggerGUIFilteredChatMemberListChange(this.client);
+									// BEGIN PATCH: trigger band-upgrade hint after log entry (UCXLog)
+									try {
+										client.onExternalLogEntryReceived(workedCall.getCallSignRaw());
+									} catch (Exception e) {
+										System.out.println("[UCXUDPRcvr, warning]: band-upgrade hint failed: " + e.getMessage());
+									}
+
+
 								} catch (Exception IllegalStateException) {
 									//do nothing, as it works...
 								}
@@ -539,7 +552,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 						this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
 						
-						System.out.println("[ReadUDPbyUCXTh: ] Radioinfo processed: " + formattedQRG);
+//						System.out.println("[ReadUDPbyUCXTh: ] Radioinfo processed: " + formattedQRG);
 					}
 				}
 
@@ -549,9 +562,27 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			e.printStackTrace();
 			System.out.println(e.getCause());
 			System.out.println(e.getMessage());
+
+//            threadStatusMessage = new String[2];
+//            threadStatusMessage[0] = "STOPPED";
+//            threadStatusMessage[1] = Arrays.toString(e.getStackTrace());
+            threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "CRASHED" + udpMsg, true);
+            threadStateMessage.setCriticalStateFurtherInfo(Arrays.toString(e.getStackTrace()));
+
+            callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+            threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "CRASHED" + udpMsg, true);
+            threadStateMessage.setCriticalStateFurtherInfo(Arrays.toString(e.getStackTrace()));
+
+            callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
+//            threadStatusMessage = new String[2];
+//            threadStatusMessage[0] = "STOPPED";
+//            threadStatusMessage[1] = Arrays.toString(e.getStackTrace());
+//            callBackToController.onThreadStatus(ThreadNickName,threadStatusMessage);
 		}
 
 //		System.out.println("[ReadUDPbyUCXTh: ] worked size = " + this.client.getMap_ucxLogInfoWorkedCalls().size());
@@ -561,6 +592,14 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 	}
 
 	public boolean terminateConnection() throws IOException {
+//        String[] threadStatusMessage = new String[2];
+//        threadStatusMessage = new String[2];
+//        threadStatusMessage[0] = "STOPPED";
+//        threadStatusMessage[1] = "Connection terminated for purpose.";
+//        callBackToController.onThreadStatus(ThreadNickName,threadStatusMessage);
+
+        ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, false, "terminated", false);
+        callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
 		this.socket.close();
 

@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Comparator;
 
 import javafx.collections.FXCollections;
@@ -10,6 +11,7 @@ import kst4contest.ApplicationConstants;
 import kst4contest.model.AirPlane;
 import kst4contest.model.AirPlaneReflectionInfo;
 import kst4contest.model.ChatMember;
+import kst4contest.model.ThreadStateMessage;
 
 /**
  * This thread is responsible for reading server's input and printing it to the
@@ -24,15 +26,16 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 	private ChatController client;
 	private int localPort;
 	private String ASIdentificator, ChatClientIdentificator;
-
-	public ReadUDPbyAirScoutMessageThread(int localPort) {
-		this.localPort = localPort;
-	}
+    private ThreadStatusCallback callBackToController;
+    private String ThreadNickName = "AirScout msg";
+//	public ReadUDPbyAirScoutMessageThread(int localPort) {
+//		this.localPort = localPort;
+//	}
 
 	public ReadUDPbyAirScoutMessageThread(int localPort, ChatController client, String ASIdentificator,
-			String ChatClientIdentificator) {
+			String ChatClientIdentificator, ThreadStatusCallback callback) {
 
-
+        this.callBackToController = callback;
 		this.localPort = localPort;
 		this.client = client;
 		this.ASIdentificator = ASIdentificator;
@@ -54,7 +57,13 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 		}
 	}
 
-	
+    private void callThreadStateToUi (ThreadStateMessage threadStateMessage) {
+        if (callBackToController != null) {
+            //update the visual control of running thread
+            callBackToController.onThreadStatus("AirScout", threadStateMessage);
+        }
+    }
+
 	
 	public void run() {
 		Thread.currentThread().setName("ReadUDPByAirScoutThread");
@@ -128,26 +137,30 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 			if (received.contains("ASSETPATH") || received.contains("ASWATCHLIST")) {
 				// do nothing, that is your own message
 			} else if (received.contains("ASNEAREST:")) { //answer by airscout
-				processASUDPMessage(received);
 
-//				System.out.println("[ReadUSPASTh, info:] received AS String " + received);
+//				processASUDPMessage(received); //TODO: 2025-11-Zeile deaktiviert. Fand hier Doppelberechnung statt?!
 
 				AirPlaneReflectionInfo apReflectInfoForChatMember;
 
 				apReflectInfoForChatMember = processASUDPMessage(received);
-				if (this.client.getLst_chatMemberList().size() != 0) {
+				if (!this.client.getLst_chatMemberList().isEmpty()) {
 
 					try {
 
-//					if (this.client.checkListForChatMemberIndexByCallSign(apReflectInfoForChatMember.getReceiver()) != -1) {
+//						this.client.getLst_chatMemberList()
+//								.get(this.client.checkListForChatMemberIndexByCallSign(
+//										apReflectInfoForChatMember.getReceiver()))
+//								.setAirPlaneReflectInfo(apReflectInfoForChatMember); // TODO: here we set the ap info at
+//																						// the central instance of
+//																						// chatmember list .... -1 is a
+//																						// problem!
 
-						this.client.getLst_chatMemberList()
-								.get(this.client.checkListForChatMemberIndexByCallSign(
-										apReflectInfoForChatMember.getReceiver()))
-								.setAirPlaneReflectInfo(apReflectInfoForChatMember); // TODO: here we set the ap info at
-																						// the central instance of
-																						// chatmember list .... -1 is a
-																						// problem!
+                        ArrayList<Integer> addApInfoToThese = this.client.checkListForChatMemberIndexesByCallSign(apReflectInfoForChatMember.getReceiver());
+                        addApInfoToThese.forEach((integerIndex) -> {this.client.getLst_chatMemberList().get(integerIndex).setAirPlaneReflectInfo(apReflectInfoForChatMember); });
+
+						// AirScout availability strongly affects priority => request recompute the score of the chatmember
+						this.client.getScoreService().requestRecompute("airscout-update");
+
 						/**
 						 * CK| MSGBUS BGFX Listactualizer Exception in thread "Thread-10"
 						 * java.util.ConcurrentModificationException at
@@ -158,6 +171,7 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 						 * kst4contest.controller.ReadUDPbyAirScoutMessageThread.run(ReadUDPbyAirScoutMessageThread.java:93)
 						 * 
 						 */
+//                        System.out.println("[ReadUdpByASth, AP-Info catched: ] " + apReflectInfoForChatMember.toString());
 //					}
 					} catch (Exception e) {
 
@@ -167,6 +181,13 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 						// TODO: handle exception
 					}
 
+//                    String[] newState = new String[3];
+//                    newState[0] = "On";
+//                    newState[1] = "received line";
+//                    newState[2] = apReflectInfoForChatMember.toString();
+//                    callThreadStateToUi(newState);
+                    ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "received line\n" + apReflectInfoForChatMember.toString(), false);
+                    callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 				}
 
 			}

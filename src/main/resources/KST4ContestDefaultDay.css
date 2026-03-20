@@ -6,6 +6,52 @@
     -fx-border-color: #ff7777;
 }
 
+.btn-showstate-enabled-default {
+    /*-fx-background-color:linear-gradient(#f0ff35, #b8ee36),*/
+    /*radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);*/
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: black;
+}
+.btn-showstate-enabled-default:hover {
+    /*-fx-background-color:linear-gradient(#f0ff35, #b8ee36),*/
+    /*radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);*/
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: black;
+}
+
+.btn-showstate-enabled-furtherInfo {
+    /*-fx-background-color:linear-gradient(#f0ff35, #b8ee36),*/
+    /* radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);*/
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: green;
+}
+
+.btn-showstate-enabled-furtherInfo:hover {
+    /*-fx-background-color:linear-gradient(#f0ff35, #b8ee36),*/
+    /* radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);*/
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: green;
+}
+
+.btn-showstate-disabled {
+    -fx-background-color:linear-gradient(#f0ff35, #111111),
+    radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+    -fx-text-fill: red;
+}
+
+
+
 .toggle-button:selected {
     -fx-background-color:linear-gradient(#f0ff35, #a9ff00),
     radial-gradient(center 50% -40%, radius 200%, #b8ee36 45%, #80c800 50%);
@@ -29,6 +75,7 @@
 .text-input-MYQRG1 {
     -fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, orange 0%, red 100%);
     -fx-font-weight: 300;
+    -fx-padding: 1,1,1,1;
 }
 
 .button{

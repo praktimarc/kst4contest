@@ -13,7 +13,7 @@ public class DXClusterThreadPooledServerTest {
         testPreferences.setStn_loginCallSign("DM5M");
 
         client.setChatPreferences(testPreferences);
-        DXClusterThreadPooledServer dxClusterServer = new DXClusterThreadPooledServer(8000, client);
+        DXClusterThreadPooledServer dxClusterServer = new DXClusterThreadPooledServer(8000, client, client);
 
         new Thread(dxClusterServer).start();
 

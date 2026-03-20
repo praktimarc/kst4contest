@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatPreferences;
+import kst4contest.model.ThreadStateMessage;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -14,6 +15,8 @@ public class DXClusterThreadPooledServer implements Runnable{
 
     private List<Socket> clientSockets = Collections.synchronizedList(new ArrayList<>()); //list of all connected clients
 
+    private ThreadStatusCallback callBackToController;
+    private String ThreadNickName = "DXCluster-Server";
     ChatController chatController = null;
     protected int          serverPort   = 8080;
     protected ServerSocket serverSocket = null;
@@ -23,12 +26,16 @@ public class DXClusterThreadPooledServer implements Runnable{
             Executors.newFixedThreadPool(10);
     Socket clientSocket;
 
-    public DXClusterThreadPooledServer(int port, ChatController chatController){
+    public DXClusterThreadPooledServer(int port, ChatController chatController, ThreadStatusCallback callback){
         this.serverPort = port;
         this.chatController = chatController;
+        this.callBackToController = callback;
     }
 
     public void run(){
+
+        ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
+        callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
         synchronized(this){
             this.runningThread = Thread.currentThread();
@@ -53,7 +60,7 @@ public class DXClusterThreadPooledServer implements Runnable{
                         "Error accepting client connection", e);
             }
 
-            DXClusterServerWorkerRunnable worker = new DXClusterServerWorkerRunnable(clientSocket, "Thread Pooled DXCluster Server ", chatController, clientSockets);
+            DXClusterServerWorkerRunnable worker = new DXClusterServerWorkerRunnable(clientSocket, "Thread Pooled DXCluster Server ", chatController, clientSockets, chatController);
 
             this.threadPool.execute(worker);
 
@@ -111,6 +118,7 @@ public class DXClusterThreadPooledServer implements Runnable{
             for (Socket socket : clientSockets) {
 
                 try {
+
                 OutputStream output = socket.getOutputStream();
 
                     String singleDXClusterMessage = "DX de ";
@@ -134,6 +142,9 @@ public class DXClusterThreadPooledServer implements Runnable{
 
                     output.write((singleDXClusterMessage).getBytes());
 
+                    ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "Last msg to " + clientSockets.size() + " Cluster Clients:\n" + singleDXClusterMessage, false);
+                    callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+
                 } catch (IOException e) {
                     e.printStackTrace();
                     System.out.println("[DXClusterSrvr, Error:] broadcasting DXC-message to clients went wrong!");
@@ -152,12 +163,16 @@ class DXClusterServerWorkerRunnable implements Runnable{
     protected String serverText = null;
     private ChatController client = null;
     private List<Socket> dxClusterClientSocketsConnectedList;
+    private ThreadStatusCallback callBackToController;
+    private String ThreadNickName = "DXCluster-Server";
 
-    public DXClusterServerWorkerRunnable(Socket clientSocket, String serverText, ChatController chatController, List<Socket> clientSockets) {
+    public DXClusterServerWorkerRunnable(Socket clientSocket, String serverText, ChatController chatController, List<Socket> clientSockets, ThreadStatusCallback callback) {
         this.clientSocket = clientSocket;
         this.serverText = serverText;
         this.client = chatController;
         this.dxClusterClientSocketsConnectedList = clientSockets;
+        this.callBackToController = callback;
+
     }
 
     public void run() {
@@ -171,7 +186,11 @@ class DXClusterServerWorkerRunnable implements Runnable{
                 @Override
                 public void run() {
 
+                    StringBuilder connectedClients = new StringBuilder(); //only for statistics
+
                     for (Socket socket : dxClusterClientSocketsConnectedList) {
+
+                        connectedClients.append(socket.getInetAddress()).append("\n");
 
                         try {
                             OutputStream output = socket.getOutputStream();
@@ -193,6 +212,9 @@ class DXClusterServerWorkerRunnable implements Runnable{
                             dxClusterClientSocketsConnectedList.remove(socket); //if socket is closed by client, remove it from the broadcast list and close it
                         }
                     }
+
+//                    ThreadStateMessage threadStateMessage = new ThreadStateMessage(ThreadNickName, true, "Connected clients: " + connectedClients.toString(), false);
+//                    callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
                 }
             }, 30000, 30000);

@@ -5,6 +5,7 @@ import java.net.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMessage;
 
 /**
@@ -169,8 +170,8 @@ public class WriteThread extends Thread {
 			try {
 				messageToBeSend = client.getMessageTXBus().take();
 
-				if (messageToBeSend.getMessageText().equals("POISONPILL_KILLTHREAD")
-						&& messageToBeSend.getMessageSenderName().equals("POISONPILL_KILLTHREAD")) {
+				if (messageToBeSend.getMessageText().equals(ApplicationConstants.DISCONNECT_RDR_POISONPILL)
+						&& messageToBeSend.getMessageSenderName().equals(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
 					client.getMessageRXBus().clear();
 					this.interrupt();
 					break;

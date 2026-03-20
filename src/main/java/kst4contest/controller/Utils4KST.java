@@ -52,7 +52,8 @@ public class Utils4KST {
 //		Instant instant = Instant.ofEpochSecond(epoch);
 
 		Date date = new Date(epoch * 1000L);
-		DateFormat format = new SimpleDateFormat("dd.MM HH:mm:ss");
+//		DateFormat format = new SimpleDateFormat("dd.MM HH:mm:ss"); //old value which is too long
+        DateFormat format = new SimpleDateFormat("H:mm:ss");
 		format.setTimeZone(TimeZone.getTimeZone("Etc/UTC"));
 		String formatted = format.format(date);
 		  

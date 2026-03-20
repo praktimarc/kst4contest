@@ -30,6 +30,8 @@
 
 .text-input-MYQRG1 {
     -fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, #f98aff 0%, #f98aff 100%); /*purple*/
+    -fx-font-weight: 300;
+    -fx-padding: 1,1,1,1;
 }
 
 
@@ -44,6 +46,7 @@
 
 .button:hover{
     -fx-text-fill: white;
+    -fx-border-color: #ff7777;
 }
 
 .separator *.line {
@@ -81,6 +84,54 @@
     -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
     -fx-text-fill: #395306;
 }
+
+.btn-showstate-enabled-default {
+    -fx-base: #373e43;
+    -fx-text-fill: lightgray;
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+}
+
+.btn-showstate-enabled-default:hover {
+    -fx-base: #373e43;
+    -fx-text-fill: black;
+    -fx-background-radius: 6, 5;
+    -fx-background-insets: 0, 1;
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+}
+
+.btn-showstate-enabled-furtherInfo {
+    -fx-base: #373e43;
+    -fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, green 0%, lightgreen 100%);
+    -fx-background-radius: 6, 5;
+
+    -fx-background-insets: 0, 1;
+
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+}
+
+.btn-showstate-enabled-furtherInfo:hover {
+    -fx-base: #373e43;
+	-fx-text-fill: linear-gradient(from 0% 0% to 100% 200%, green 0%, lightgreen 100%);
+	-fx-background-radius: 6, 5;
+
+    -fx-background-insets: 0, 1;
+
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+}
+
+.btn-showstate-disabled {
+    -fx-base: #373e43 ;
+    -fx-font-weight: bold;
+    -fx-text-fill: red;
+    -fx-background-radius: 6, 5;
+
+    -fx-background-insets: 0, 1;
+
+    -fx-effect: dropshadow( three-pass-box , rgba(0,0,0,0.4) , 5, 0.0 , 0 , 1 );
+}
+
 
 
 .toggle-button:selected {
