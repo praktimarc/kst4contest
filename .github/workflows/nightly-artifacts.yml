@@ -17,6 +17,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Extract version from pom.xml
+        shell: pwsh
+        run: |
+          $xml = [xml](Get-Content pom.xml)
+          $version = $xml.project.version
+          Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -49,13 +56,13 @@ jobs:
           if (-not (Test-Path dist/praktiKST)) {
             throw "No Windows app-image produced by jpackage"
           }
-          Compress-Archive -Path dist/praktiKST/* -DestinationPath dist/praktiKST-windows-x64.zip -Force
+          Compress-Archive -Path dist/praktiKST -DestinationPath dist/praktiKST-${{ env.VERSION }}-windows-x64.zip -Force
 
       - name: Upload Windows ZIP artifact
         uses: actions/upload-artifact@v4
         with:
           name: nightly-windows-zip
-          path: dist/praktiKST-windows-x64.zip
+          path: dist/praktiKST-${{ env.VERSION }}-windows-x64.zip
           retention-days: 14
 
   build-linux-appimage:
@@ -65,6 +72,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Extract version from pom.xml
+        run: |
+          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -123,11 +135,11 @@ jobs:
         run: |
           wget -q -O target/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x target/appimagetool.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-linux-x86_64.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-${{ env.VERSION }}-linux-x86_64.AppImage
 
       - name: Upload Linux AppImage artifact
         uses: actions/upload-artifact@v4
         with:
           name: nightly-linux-appimage
-          path: dist/praktiKST-linux-x86_64.AppImage
+          path: dist/praktiKST-${{ env.VERSION }}-linux-x86_64.AppImage
           retention-days: 14

@@ -50,13 +50,13 @@ jobs:
           if (-not (Test-Path dist/praktiKST)) {
             throw "No Windows app-image produced by jpackage"
           }
-          Compress-Archive -Path dist/praktiKST/* -DestinationPath dist/praktiKST-windows-x64.zip -Force
+          Compress-Archive -Path dist/praktiKST -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: windows-zip
-          path: dist/praktiKST-windows-x64.zip
+          path: dist/praktiKST-${{ github.ref_name }}-windows-x64.zip
 
   build-linux-appimage:
     name: Build Linux AppImage
@@ -123,13 +123,13 @@ jobs:
         run: |
           wget -q -O target/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x target/appimagetool.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-linux-x86_64.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: linux-appimage
-          path: dist/praktiKST-linux-x86_64.AppImage
+          path: dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
 
   release-tag:
     name: Publish Tagged Release
@@ -161,4 +161,4 @@ jobs:
           replacesArtifacts: false
           makeLatest: true
           generateReleaseNotes: true
-          artifacts: release-assets/windows/praktiKST-windows-x64.zip,release-assets/linux/praktiKST-linux-x86_64.AppImage
+          artifacts: release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,release-assets/linux/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
