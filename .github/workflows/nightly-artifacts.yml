@@ -31,13 +31,17 @@ jobs:
         shell: pwsh
         run: |
           .\mvnw.cmd -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          Copy-Item target/praktiKST-1.0-SNAPSHOT.jar target/dist-libs/
+          $jar = Get-ChildItem -Path target -Filter 'praktiKST-*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $jar) {
+            throw "No project JAR produced"
+          }
+          Copy-Item $jar.FullName target/dist-libs/app.jar
 
       - name: Build app-image with jpackage
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          jpackage --type app-image --name praktiKST --input target/dist-libs --main-jar praktiKST-1.0-SNAPSHOT.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql --dest dist
+          jpackage --type app-image --name praktiKST --input target/dist-libs --main-jar app.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql --dest dist
 
       - name: Create Windows ZIP
         shell: pwsh
@@ -74,7 +78,7 @@ jobs:
       - name: Build JAR and copy runtime dependencies
         run: |
           ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp target/praktiKST-1.0-SNAPSHOT.jar target/dist-libs/
+          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
 
       - name: Build app-image with jpackage
         run: |
@@ -83,7 +87,7 @@ jobs:
             --type app-image \
             --name praktiKST \
             --input target/dist-libs \
-            --main-jar praktiKST-1.0-SNAPSHOT.jar \
+            --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
