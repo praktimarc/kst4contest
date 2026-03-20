@@ -13,10 +13,15 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ReadUDPByWintestThread extends Thread {
+
+    private static final Pattern STATUS_TOKEN_PATTERN = Pattern.compile("\"([^\"]*)\"|(\\S+)");
 
     private DatagramSocket socket;
     private ChatController client;
@@ -115,6 +120,9 @@ public class ReadUDPByWintestThread extends Thread {
                 callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
             }
 
+        } else if (msg.startsWith("STATUS")) {
+            parseStatus(msg);
+
         } else if (msg.startsWith("IHAVE:")) { //periodical message of wintest, which qsos are in the log
 //            parseIHave(msg); //TODO
         }
@@ -151,6 +159,58 @@ public class ReadUDPByWintestThread extends Thread {
         int sum = 0;
         for (byte b : bytes) sum += b;
         return (byte) ((sum | 0x80) & 0xFF);
+    }
+
+    /**
+     * Parse Win-Test STATUS packets and update own QRG from WT station.
+     *
+     * Parsing model (tokenized with quotes preserved):
+     * parts[0] = "STATUS"
+     * parts[1] = station name (example: "STN1")
+     * parts[5] = val2 (used to derive mode: 1 => SSB, else CW)
+     * parts[7] = frequency in 0.1 kHz units (example: 1443210 => 144321.0)
+     */
+    private void parseStatus(String msg) {
+        try {
+            ArrayList<String> parts = new ArrayList<>();
+            Matcher matcher = STATUS_TOKEN_PATTERN.matcher(msg);
+            while (matcher.find()) {
+                if (matcher.group(1) != null) {
+                    parts.add(matcher.group(1));
+                } else {
+                    parts.add(matcher.group(2));
+                }
+            }
+
+            if (parts.size() < 8) {
+                System.out.println("[WinTest] STATUS too short: " + msg);
+                return;
+            }
+
+            String stn = parts.get(1);
+            String stationFilter = client.getChatPreferences().getLogsynch_wintestNetworkStationNameOfWintestClient1();
+            if (stationFilter != null && !stationFilter.isBlank() && !stn.equalsIgnoreCase(stationFilter)) {
+                return;
+            }
+
+            String val2 = parts.get(5);
+            String freqRaw = parts.get(7);
+            double freqFloat = Integer.parseInt(freqRaw) / 10.0;
+
+            String mode;
+            if ("1".equals(val2)) {
+                mode = freqFloat > 10000.0 ? "usb" : "lsb";
+            } else {
+                mode = "cw";
+            }
+
+            String formattedQRG = String.format(Locale.US, "%.1f", freqFloat);
+            this.client.getChatPreferences().getMYQRG().set(formattedQRG);
+
+            System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG);
+        } catch (Exception e) {
+            System.out.println("[WinTest] STATUS parsing error: " + e.getMessage());
+        }
     }
 
 //    private void send_needqso() throws IOException {
