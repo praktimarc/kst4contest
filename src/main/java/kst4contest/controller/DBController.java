@@ -32,9 +32,28 @@ public class DBController {
 	 */
 	private static final long WORKED_DATA_EXPIRATION_IN_MILLISECONDS = 65L * 60L * 60L * 1000L;
 
+	/**
+	 * Database schema version that includes the raw-callsign normalization migration
+	 * marker. The marker is stored in SQLite PRAGMA user_version so the expensive
+	 * normalization rebuild is executed only once per database file.
+	 */
+	private static final int CURRENT_DATABASE_SCHEMA_VERSION = 13;
+
+	/**
+	 * Minimum interval between two expiration cleanup runs. This avoids repeated full
+	 * UPDATE statements during program startup when several database reads happen
+	 * shortly after each other.
+	 */
+	private static final long EXPIRATION_CLEANUP_MIN_INTERVAL_IN_MILLISECONDS = 60L * 1000L;
+
 	private static final DBController dbcontroller = new DBController();
 	private static Connection connection;
 	private static String DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
+
+	/**
+	 * Remembers the last timestamp at which the expiration cleanup had been executed.
+	 */
+	private long lastExpirationCleanupExecutionEpochMs = 0L;
 
 	public DBController() {
 		initDBConnection();
@@ -112,14 +131,76 @@ public class DBController {
 	/**
 	 * Ensures that the ChatMember table exists, that all required columns are
 	 * available for newer software versions, that existing old callsign keys are
-	 * normalized to callsignRaw semantics and that outdated worked data is removed.
+	 * normalized to callsignRaw semantics only once per database file and that
+	 * outdated worked data is removed.
 	 */
 	private synchronized void ensureChatMemberTableCompatibility() {
 		createChatMemberTableIfRequired();
 		versionUpdateOfDBCheckAndChangeV11ToV12();
 		versionUpdateOfDBCheckAndChangeV12ToV13();
-		normalizeStoredCallsignsToRawCallsigns();
+
+		if (helper_isDatabaseSchemaVersionOlderThanCurrent() || helper_isCallsignNormalizationMigrationRequired()) {
+			normalizeStoredCallsignsToRawCallsigns();
+			helper_writeCurrentDatabaseSchemaVersion();
+		}
+
 		resetExpiredWorkedDataIfRequired();
+	}
+
+	/**
+	 * Checks whether the SQLite user_version marker is still older than the schema
+	 * version expected by the current software release.
+	 *
+	 * @return true if the database should still be migrated to the current schema
+	 */
+	private synchronized boolean helper_isDatabaseSchemaVersionOlderThanCurrent() {
+
+		try (Statement statement = connection.createStatement();
+			 ResultSet resultSet = statement.executeQuery("PRAGMA user_version;")) {
+
+			if (resultSet.next()) {
+				return resultSet.getInt(1) < CURRENT_DATABASE_SCHEMA_VERSION;
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not read database schema version", e);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Writes the current software schema version into SQLite PRAGMA user_version. The
+	 * marker is used to avoid executing the expensive raw-callsign normalization on
+	 * every application start.
+	 */
+	private synchronized void helper_writeCurrentDatabaseSchemaVersion() {
+
+		try (Statement statement = connection.createStatement()) {
+			statement.execute("PRAGMA user_version = " + CURRENT_DATABASE_SCHEMA_VERSION + ";");
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not write database schema version", e);
+		}
+	}
+
+	/**
+	 * Performs a cheap pre-check whether legacy callsign keys are still present in the
+	 * database. The expensive full-table rebuild is only required if rows still
+	 * contain slash or dash decorations like "EA5/G8MBI/P" or "OK2M-70".
+	 *
+	 * @return true if a normalization rebuild is still required
+	 */
+	private synchronized boolean helper_isCallsignNormalizationMigrationRequired() {
+
+		String detectLegacyCallsignSql =
+				"SELECT 1 FROM ChatMember WHERE callsign LIKE '%/%' OR callsign LIKE '%-%' LIMIT 1;";
+
+		try (Statement statement = connection.createStatement();
+			 ResultSet resultSet = statement.executeQuery(detectLegacyCallsignSql)) {
+
+			return resultSet.next();
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not detect legacy callsign rows", e);
+		}
 	}
 
 	/**
@@ -241,9 +322,14 @@ public class DBController {
 	 * Rebuilds the ChatMember table so that every stored row uses the normalized raw
 	 * callsign as primary key. Old keys like "EA5/G8MBI/P" or "OK2M-70" are merged to
 	 * "G8MBI" and "OK2M". This prevents duplicate logical stations and fixes legacy
-	 * databases created by earlier software versions.
+	 * databases created by earlier software versions. The rebuild is executed inside
+	 * one transaction so startup remains fast even for a few thousand rows.
 	 */
 	private synchronized void normalizeStoredCallsignsToRawCallsigns() {
+
+		if (!helper_isCallsignNormalizationMigrationRequired()) {
+			return;
+		}
 
 		Map<String, ChatMember> normalizedChatMembersByRawCallsign = new LinkedHashMap<>();
 
@@ -270,14 +356,36 @@ public class DBController {
 			throw new RuntimeException("[DBH, ERROR:] Could not normalize stored callsigns", e);
 		}
 
-		try (Statement deleteStatement = connection.createStatement()) {
-			deleteStatement.executeUpdate("DELETE FROM ChatMember;");
-		} catch (SQLException e) {
-			throw new RuntimeException("[DBH, ERROR:] Could not clear ChatMember table for callsign normalization", e);
-		}
+		boolean originalAutoCommitState;
 
-		for (ChatMember normalizedChatMember : normalizedChatMembersByRawCallsign.values()) {
-			helper_upsertCompleteChatMemberRow(normalizedChatMember);
+		try {
+			originalAutoCommitState = connection.getAutoCommit();
+			connection.setAutoCommit(false);
+
+			try (Statement deleteStatement = connection.createStatement()) {
+				deleteStatement.executeUpdate("DELETE FROM ChatMember;");
+			}
+
+			for (ChatMember normalizedChatMember : normalizedChatMembersByRawCallsign.values()) {
+				helper_upsertCompleteChatMemberRow(normalizedChatMember);
+			}
+
+			connection.commit();
+			connection.setAutoCommit(originalAutoCommitState);
+		} catch (SQLException e) {
+			try {
+				connection.rollback();
+			} catch (SQLException rollbackException) {
+				rollbackException.printStackTrace();
+			}
+
+			try {
+				connection.setAutoCommit(true);
+			} catch (SQLException autoCommitResetException) {
+				autoCommitResetException.printStackTrace();
+			}
+
+			throw new RuntimeException("[DBH, ERROR:] Could not rebuild ChatMember table with normalized raw callsigns", e);
 		}
 	}
 
@@ -328,11 +436,19 @@ public class DBController {
 
 	/**
 	 * Removes outdated worked and not-QRV flags if their last change timestamp is
-	 * older than the configured contest lifetime.
+	 * older than the configured contest lifetime. The cleanup is throttled so that it
+	 * cannot run multiple times within a few seconds during application startup.
 	 */
 	public synchronized void resetExpiredWorkedDataIfRequired() {
 
-		long expirationThresholdEpochMs = System.currentTimeMillis() - WORKED_DATA_EXPIRATION_IN_MILLISECONDS;
+		long currentEpochMilliseconds = System.currentTimeMillis();
+
+		if (currentEpochMilliseconds - lastExpirationCleanupExecutionEpochMs
+				< EXPIRATION_CLEANUP_MIN_INTERVAL_IN_MILLISECONDS) {
+			return;
+		}
+
+		long expirationThresholdEpochMs = currentEpochMilliseconds - WORKED_DATA_EXPIRATION_IN_MILLISECONDS;
 
 		String resetExpiredDataSql =
 				"UPDATE ChatMember SET "
@@ -357,6 +473,7 @@ public class DBController {
 		try (PreparedStatement preparedStatement = connection.prepareStatement(resetExpiredDataSql)) {
 			preparedStatement.setLong(1, expirationThresholdEpochMs);
 			preparedStatement.executeUpdate();
+			lastExpirationCleanupExecutionEpochMs = currentEpochMilliseconds;
 		} catch (SQLException e) {
 			throw new RuntimeException("[DBH, ERROR:] Could not reset expired worked data", e);
 		}
