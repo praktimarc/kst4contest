@@ -824,7 +824,50 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		Platform.runLater(() -> {
 			this.activeSkeds.add(sked);
 			scoreService.requestRecompute("sked-added");
-		}); //TODO: Addsked muss noch genutzt werden
+		});
+
+		// Push sked to Win-Test via UDP if enabled
+		if (chatPreferences.isLogsynch_wintestNetworkSkedPushEnabled()
+				&& chatPreferences.isLogsynch_wintestNetworkListenerEnabled()) {
+			pushSkedToWinTest(sked);
+		}
+	}
+
+	/**
+	 * Pushes a sked to Win-Test via UDP broadcast (LOCKSKED / ADDSKED / UNLOCKSKED).
+	 * Runs on a background thread to avoid blocking the UI.
+	 */
+	private void pushSkedToWinTest(ContestSked sked) {
+		new Thread(() -> {
+			try {
+				InetAddress broadcastAddr = InetAddress.getByName(
+						chatPreferences.getLogsynch_wintestNetworkBroadcastAddress());
+				int port = chatPreferences.getLogsynch_wintestNetworkPort();
+				String stationName = chatPreferences.getLogsynch_wintestNetworkStationNameOfKST();
+
+				WinTestSkedSender sender = new WinTestSkedSender(stationName, broadcastAddr, port, this);
+
+				// Get current frequency from QRG property (set by Win-Test STATUS or user)
+				double freqKHz = 144300.0; // fallback default
+				try {
+					String qrgStr = chatPreferences.getMYQRGFirstCat().get();
+					if (qrgStr != null && !qrgStr.isBlank()) {
+						freqKHz = Double.parseDouble(qrgStr.trim());
+					}
+				} catch (NumberFormatException ignored) { }
+
+				// Build notes string with locator/azimuth info
+				String notes = "sked via KST4Contest";
+				if (sked.getTargetAzimuth() > 0) {
+					notes = String.format("[%.0f°] %s", sked.getTargetAzimuth(), notes);
+				}
+
+				sender.pushSkedToWinTest(sked, freqKHz, notes);
+			} catch (Exception e) {
+				System.out.println("[ChatController] Error pushing sked to Win-Test: " + e.getMessage());
+				e.printStackTrace();
+			}
+		}, "WinTestSkedPush").start();
 	}
 
 	public StationMetricsService getStationMetricsService() {

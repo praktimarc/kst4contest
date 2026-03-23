@@ -201,6 +201,8 @@ public class ChatPreferences {
 	int logsynch_wintestNetworkStationIDOfKST = 55555;
 	int logsynch_wintestNetworkPort = 9871;
 	boolean logsynch_wintestNetworkListenerEnabled = true; // default true = bisheriges Verhalten
+	String logsynch_wintestNetworkBroadcastAddress = "255.255.255.255"; // UDP broadcast address for sending to Win-Test
+	boolean logsynch_wintestNetworkSkedPushEnabled = false; // push SKEDs to Win-Test via UDP
 
 
 
@@ -452,6 +454,22 @@ public class ChatPreferences {
 
 	public void setLogsynch_wintestNetworkListenerEnabled(boolean logsynch_wintestNetworkListenerEnabled) {
 		this.logsynch_wintestNetworkListenerEnabled = logsynch_wintestNetworkListenerEnabled;
+	}
+
+	public String getLogsynch_wintestNetworkBroadcastAddress() {
+		return logsynch_wintestNetworkBroadcastAddress;
+	}
+
+	public void setLogsynch_wintestNetworkBroadcastAddress(String logsynch_wintestNetworkBroadcastAddress) {
+		this.logsynch_wintestNetworkBroadcastAddress = logsynch_wintestNetworkBroadcastAddress;
+	}
+
+	public boolean isLogsynch_wintestNetworkSkedPushEnabled() {
+		return logsynch_wintestNetworkSkedPushEnabled;
+	}
+
+	public void setLogsynch_wintestNetworkSkedPushEnabled(boolean logsynch_wintestNetworkSkedPushEnabled) {
+		this.logsynch_wintestNetworkSkedPushEnabled = logsynch_wintestNetworkSkedPushEnabled;
 	}
 
 	public String getStn_loginLocatorSecondCat() {
@@ -1299,6 +1317,14 @@ public class ChatPreferences {
 			logsynch_wintestNetworkListenerEnabled.setTextContent(this.logsynch_wintestNetworkListenerEnabled + "");
 			logsynch.appendChild(logsynch_wintestNetworkListenerEnabled);
 
+			Element logsynch_wintestNetworkBroadcastAddress = doc.createElement("logsynch_wintestNetworkBroadcastAddress");
+			logsynch_wintestNetworkBroadcastAddress.setTextContent(this.logsynch_wintestNetworkBroadcastAddress);
+			logsynch.appendChild(logsynch_wintestNetworkBroadcastAddress);
+
+			Element logsynch_wintestNetworkSkedPushEnabled = doc.createElement("logsynch_wintestNetworkSkedPushEnabled");
+			logsynch_wintestNetworkSkedPushEnabled.setTextContent(this.logsynch_wintestNetworkSkedPushEnabled + "");
+			logsynch.appendChild(logsynch_wintestNetworkSkedPushEnabled);
+
 
 			/**
 			 * trxSynchUCX
@@ -1858,6 +1884,15 @@ public class ChatPreferences {
 						logsynch_wintestNetworkListenerEnabled,
 						"logsynch_wintestNetworkListenerEnabled");
 
+				logsynch_wintestNetworkBroadcastAddress = getText(
+						logsynchEl,
+						logsynch_wintestNetworkBroadcastAddress,
+						"logsynch_wintestNetworkBroadcastAddress");
+
+				logsynch_wintestNetworkSkedPushEnabled = getBoolean(
+						logsynchEl,
+						logsynch_wintestNetworkSkedPushEnabled,
+						"logsynch_wintestNetworkSkedPushEnabled");
 
 				System.out.println(
 						"[ChatPreferences, info]: file based worked-call interpreter: " + logsynch_fileBasedWkdCallInterpreterEnabled);
