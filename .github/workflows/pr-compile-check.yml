@@ -1,0 +1,28 @@
+name: PR Compile Check
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  compile:
+    name: Compile (Java 17)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure mvnw is executable
+        run: chmod +x mvnw
+
+      - name: Compile
+        run: ./mvnw -B -DskipTests compile

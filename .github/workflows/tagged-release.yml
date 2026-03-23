@@ -1,0 +1,164 @@
+name: Tagged Release Build
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-zip:
+    name: Build Windows ZIP
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install WiX Toolset
+        shell: pwsh
+        run: choco install wixtoolset --no-progress -y
+
+      - name: Build JAR and copy runtime dependencies
+        shell: pwsh
+        run: |
+          .\mvnw.cmd -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
+          $jar = Get-ChildItem -Path target -Filter 'praktiKST-*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $jar) {
+            throw "No project JAR produced"
+          }
+          Copy-Item $jar.FullName target/dist-libs/app.jar
+
+      - name: Build app-image with jpackage
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          jpackage --type app-image --name praktiKST --input target/dist-libs --main-jar app.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql --dest dist
+
+      - name: Create Windows ZIP
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/praktiKST)) {
+            throw "No Windows app-image produced by jpackage"
+          }
+          Compress-Archive -Path dist/praktiKST -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: dist/praktiKST-${{ github.ref_name }}-windows-x64.zip
+
+  build-linux-appimage:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure mvnw is executable
+        run: chmod +x mvnw
+
+      - name: Build JAR and copy runtime dependencies
+        run: |
+          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
+          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+
+      - name: Build app-image with jpackage
+        run: |
+          mkdir -p dist
+          jpackage \
+            --type app-image \
+            --name praktiKST \
+            --input target/dist-libs \
+            --main-jar app.jar \
+            --main-class kst4contest.view.Kst4ContestApplication \
+            --module-path target/dist-libs \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --dest dist
+
+      - name: Create AppDir metadata
+        run: |
+          rm -rf target/praktiKST.AppDir
+          cp -a dist/praktiKST target/praktiKST.AppDir
+
+          cat > target/praktiKST.AppDir/AppRun << 'EOF'
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "$0")")"
+          exec "$HERE/bin/praktiKST" "$@"
+          EOF
+          chmod +x target/praktiKST.AppDir/AppRun
+
+          cat > target/praktiKST.AppDir/praktiKST.desktop << 'EOF'
+          [Desktop Entry]
+          Type=Application
+          Name=praktiKST
+          Exec=praktiKST
+          Icon=praktiKST
+          Categories=Network;HamRadio;
+          Terminal=false
+          EOF
+
+          if [ -f target/praktiKST.AppDir/lib/praktiKST.png ]; then
+            cp target/praktiKST.AppDir/lib/praktiKST.png target/praktiKST.AppDir/praktiKST.png
+          fi
+
+      - name: Build AppImage
+        run: |
+          wget -q -O target/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x target/appimagetool.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-appimage
+          path: dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
+
+  release-tag:
+    name: Publish Tagged Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-windows-zip
+      - build-linux-appimage
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+          path: release-assets/windows
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-appimage
+          path: release-assets/linux
+
+      - name: Create tagged release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          allowUpdates: false
+          replacesArtifacts: false
+          makeLatest: true
+          generateReleaseNotes: true
+          artifacts: release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,release-assets/linux/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
