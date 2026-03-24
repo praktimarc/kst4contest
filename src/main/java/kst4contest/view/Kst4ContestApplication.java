@@ -391,6 +391,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		ChoiceBox<Integer> cbSkedMinutes = new ChoiceBox<>(FXCollections.observableArrayList(2, 3, 4, 5, 6,7,8,9, 10,11,12,13,14, 15, 20));
 		cbSkedMinutes.getSelectionModel().select(Integer.valueOf(5));
 
+		ChoiceBox<String> cbSkedMode = new ChoiceBox<>(FXCollections.observableArrayList("AUTO", "SSB", "CW"));
+		String configuredSkedMode = this.chatcontroller.getChatPreferences().getLogsynch_wintestSkedMode();
+		if (configuredSkedMode == null || configuredSkedMode.isBlank()) {
+			configuredSkedMode = "AUTO";
+		}
+		String configuredSkedModeUpper = configuredSkedMode.trim().toUpperCase(java.util.Locale.ROOT);
+		if (!"AUTO".equals(configuredSkedModeUpper)
+				&& !"SSB".equals(configuredSkedModeUpper)
+				&& !"CW".equals(configuredSkedModeUpper)) {
+			configuredSkedModeUpper = "AUTO";
+		}
+		cbSkedMode.setValue(configuredSkedModeUpper);
+		cbSkedMode.setTooltip(new Tooltip("Mode for Win-Test ADDSKED packets"));
+		cbSkedMode.setOnAction(e ->
+				chatcontroller.getChatPreferences().setLogsynch_wintestSkedMode(cbSkedMode.getValue()));
+
 		ChoiceBox<String> cbReminderOffsets = new ChoiceBox<>(FXCollections.observableArrayList("2+1", "5+2+1", "10+5+2+1"));
 		cbReminderOffsets.getSelectionModel().select("2+1");
 
@@ -402,6 +418,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		btnCreateSked.setOnAction(e -> {
 			ChatMember sel = chatcontroller.getScoreService().selectedChatMemberProperty().get();
 			if (sel == null) return;
+
+			if (cbSkedMode.getValue() != null) {
+				chatcontroller.getChatPreferences().setLogsynch_wintestSkedMode(cbSkedMode.getValue());
+			}
 
 			int minutes = cbSkedMinutes.getValue() == null ? 5 : cbSkedMinutes.getValue();
 			long skedTime = System.currentTimeMillis() + minutes * 60_000L;
@@ -425,6 +445,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				new Label("Sked in"),
 				cbSkedMinutes,
 				new Label("min"),
+				new Label("Mode"),
+				cbSkedMode,
 				btnCreateSked,
 				chkPmReminders,
 				cbReminderOffsets
@@ -6860,6 +6882,86 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlLog.add(lblUDPByWintest, 0, 8);
 		grdPnlLog.add(txtFldUDPPortforWintest, 1, 8);
 
+		// --- Win-Test SKED push settings ---
+		Label lblEnableSkedPush = new Label("Push SKEDs to Win-Test via UDP (ADDSKED)");
+		CheckBox chkBxEnableSkedPush = new CheckBox();
+		chkBxEnableSkedPush.setSelected(
+				this.chatcontroller.getChatPreferences().isLogsynch_wintestNetworkSkedPushEnabled()
+		);
+		chkBxEnableSkedPush.selectedProperty().addListener((obs, oldVal, newVal) -> {
+			chatcontroller.getChatPreferences().setLogsynch_wintestNetworkSkedPushEnabled(newVal);
+			System.out.println("[Main.java, Info]: Win-Test SKED push enabled: " + newVal);
+		});
+
+		Label lblWtStationName = new Label("KST station name in Win-Test network (src of SKED packets)");
+		TextField txtFldWtStationName = new TextField(
+				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkStationNameOfKST()
+		);
+		txtFldWtStationName.setFocusTraversable(false);
+		txtFldWtStationName.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) { // focus lost
+				chatcontroller.getChatPreferences()
+						.setLogsynch_wintestNetworkStationNameOfKST(txtFldWtStationName.getText().trim());
+				System.out.println("[Main.java, Info]: Win-Test KST station name set to: "
+						+ txtFldWtStationName.getText().trim());
+			}
+		});
+
+		Label lblWtStationFilter = new Label("Win-Test station name filter (e.g. STN1, empty = accept all)");
+		TextField txtFldWtStationFilter = new TextField(
+				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkStationNameOfWintestClient1()
+		);
+		txtFldWtStationFilter.setFocusTraversable(false);
+		txtFldWtStationFilter.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) {
+				chatcontroller.getChatPreferences()
+						.setLogsynch_wintestNetworkStationNameOfWintestClient1(txtFldWtStationFilter.getText().trim());
+				System.out.println("[Main.java, Info]: Win-Test station filter set to: "
+						+ txtFldWtStationFilter.getText().trim());
+			}
+		});
+
+		Label lblWtBroadcastAddr = new Label("UDP broadcast address for Win-Test (default = internet interface broadcast)");
+		TextField txtFldWtBroadcastAddr = new TextField(
+				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress()
+		);
+		txtFldWtBroadcastAddr.setFocusTraversable(false);
+		txtFldWtBroadcastAddr.focusedProperty().addListener((obs, oldVal, newVal) -> {
+			if (!newVal) {
+				chatcontroller.getChatPreferences()
+						.setLogsynch_wintestNetworkBroadcastAddress(txtFldWtBroadcastAddr.getText().trim());
+				System.out.println("[Main.java, Info]: Win-Test broadcast address set to: "
+						+ txtFldWtBroadcastAddr.getText().trim());
+			}
+		});
+
+		grdPnlLog.add(lblEnableSkedPush, 0, 9);
+		grdPnlLog.add(chkBxEnableSkedPush, 1, 9);
+
+		grdPnlLog.add(lblWtStationName, 0, 11);
+		grdPnlLog.add(txtFldWtStationName, 1, 11);
+		grdPnlLog.add(lblWtStationFilter, 0, 12);
+		grdPnlLog.add(txtFldWtStationFilter, 1, 12);
+
+		// Auto-detect subnet broadcast if preference is still the default
+		String currentBroadcast = this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress();
+		if ("255.255.255.255".equals(currentBroadcast)) {
+			try {
+				String detected = detectPreferredWintestBroadcastAddress();
+				if (detected != null && !detected.isBlank()) {
+					this.chatcontroller.getChatPreferences().setLogsynch_wintestNetworkBroadcastAddress(detected);
+					System.out.println("[Main.java, Info]: Auto-detected WT broadcast: " + detected);
+				}
+			} catch (Exception ex) {
+				System.out.println("[Main.java, Warning]: Could not auto-detect broadcast: " + ex.getMessage());
+			}
+		}
+		// Re-read (may have been auto-detected)
+		txtFldWtBroadcastAddr.setText(this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress());
+
+		grdPnlLog.add(lblWtBroadcastAddr, 0, 13);
+		grdPnlLog.add(txtFldWtBroadcastAddr, 1, 13);
+
 		VBox vbxLog = new VBox();
 		vbxLog.setPadding(new Insets(10, 10, 10, 10));
 		vbxLog.getChildren().addAll(grdPnlLog);
@@ -8523,6 +8625,75 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		if (tbl_chatMember != null) {
 			tbl_chatMember.refresh();
 		}
+	}
+
+	private String detectPreferredWintestBroadcastAddress() {
+		String internetRouteBroadcast = detectInternetRouteBroadcastAddress();
+		if (internetRouteBroadcast != null && !internetRouteBroadcast.isBlank()) {
+			return internetRouteBroadcast;
+		}
+		return detectFirstUsableBroadcastAddress();
+	}
+
+	private String detectInternetRouteBroadcastAddress() {
+		java.net.DatagramSocket routeProbe = null;
+		try {
+			routeProbe = new java.net.DatagramSocket();
+			routeProbe.connect(java.net.InetAddress.getByName("8.8.8.8"), 53);
+
+			java.net.InetAddress localAddress = routeProbe.getLocalAddress();
+			if (localAddress == null || localAddress.isAnyLocalAddress() || localAddress.isLoopbackAddress()) {
+				return null;
+			}
+
+			java.net.NetworkInterface networkInterface = java.net.NetworkInterface.getByInetAddress(localAddress);
+			if (networkInterface == null || !networkInterface.isUp()) {
+				return null;
+			}
+
+			for (java.net.InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses()) {
+				if (!(interfaceAddress.getAddress() instanceof java.net.Inet4Address)) {
+					continue;
+				}
+				if (!localAddress.equals(interfaceAddress.getAddress())) {
+					continue;
+				}
+				if (interfaceAddress.getBroadcast() != null) {
+					return interfaceAddress.getBroadcast().getHostAddress();
+				}
+			}
+
+			for (java.net.InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses()) {
+				if (interfaceAddress.getBroadcast() != null && interfaceAddress.getAddress() instanceof java.net.Inet4Address) {
+					return interfaceAddress.getBroadcast().getHostAddress();
+				}
+			}
+		} catch (Exception ignored) {
+			// Fallback to generic detection if internet-route probing fails
+		} finally {
+			if (routeProbe != null && !routeProbe.isClosed()) {
+				routeProbe.close();
+			}
+		}
+		return null;
+	}
+
+	private String detectFirstUsableBroadcastAddress() {
+		try {
+			for (java.net.NetworkInterface networkInterface : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+				if (!networkInterface.isUp() || networkInterface.isLoopback() || networkInterface.isVirtual() || networkInterface.isPointToPoint()) {
+					continue;
+				}
+				for (java.net.InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses()) {
+					if (interfaceAddress.getBroadcast() != null && interfaceAddress.getAddress() instanceof java.net.Inet4Address) {
+						return interfaceAddress.getBroadcast().getHostAddress();
+					}
+				}
+			}
+		} catch (Exception ignored) {
+			// Keep configured value if no interface can be detected
+		}
+		return null;
 	}
 
 }

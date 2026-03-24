@@ -203,6 +203,7 @@ public class ChatPreferences {
 	boolean logsynch_wintestNetworkListenerEnabled = true; // default true = bisheriges Verhalten
 	String logsynch_wintestNetworkBroadcastAddress = "255.255.255.255"; // UDP broadcast address for sending to Win-Test
 	boolean logsynch_wintestNetworkSkedPushEnabled = false; // push SKEDs to Win-Test via UDP
+	String logsynch_wintestSkedMode = "SSB"; // CW, SSB or AUTO
 
 
 
@@ -470,6 +471,14 @@ public class ChatPreferences {
 
 	public void setLogsynch_wintestNetworkSkedPushEnabled(boolean logsynch_wintestNetworkSkedPushEnabled) {
 		this.logsynch_wintestNetworkSkedPushEnabled = logsynch_wintestNetworkSkedPushEnabled;
+	}
+
+	public String getLogsynch_wintestSkedMode() {
+		return logsynch_wintestSkedMode;
+	}
+
+	public void setLogsynch_wintestSkedMode(String logsynch_wintestSkedMode) {
+		this.logsynch_wintestSkedMode = logsynch_wintestSkedMode;
 	}
 
 	public String getStn_loginLocatorSecondCat() {
@@ -1325,6 +1334,10 @@ public class ChatPreferences {
 			logsynch_wintestNetworkSkedPushEnabled.setTextContent(this.logsynch_wintestNetworkSkedPushEnabled + "");
 			logsynch.appendChild(logsynch_wintestNetworkSkedPushEnabled);
 
+			Element logsynch_wintestSkedMode = doc.createElement("logsynch_wintestSkedMode");
+			logsynch_wintestSkedMode.setTextContent(this.logsynch_wintestSkedMode);
+			logsynch.appendChild(logsynch_wintestSkedMode);
+
 
 			/**
 			 * trxSynchUCX
@@ -1893,6 +1906,11 @@ public class ChatPreferences {
 						logsynchEl,
 						logsynch_wintestNetworkSkedPushEnabled,
 						"logsynch_wintestNetworkSkedPushEnabled");
+
+				logsynch_wintestSkedMode = getText(
+						logsynchEl,
+						logsynch_wintestSkedMode,
+						"logsynch_wintestSkedMode");
 
 				System.out.println(
 						"[ChatPreferences, info]: file based worked-call interpreter: " + logsynch_fileBasedWkdCallInterpreterEnabled);

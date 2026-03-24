@@ -46,10 +46,10 @@ public class WinTestSkedSender {
      * @param frequencyKHz  current operating frequency in kHz (e.g. 144321.0)
      * @param notes         free-text notes (e.g. "[JO62QM - 123°] sked via KST")
      */
-    public void pushSkedToWinTest(ContestSked sked, double frequencyKHz, String notes) {
+    public void pushSkedToWinTest(ContestSked sked, double frequencyKHz, String notes, int modeOverride) {
         try {
             sendLockSked();
-            sendAddSked(sked, frequencyKHz, notes);
+            sendAddSked(sked, frequencyKHz, notes, modeOverride);
             sendUnlockSked();
 
             reportStatus("Sked pushed to WT: " + sked.getTargetCallsign(), false);
@@ -95,7 +95,7 @@ public class WinTestSkedSender {
      * Win-Test uses a timestamp reference of 1970-01-01 00:01:00 UTC (60s offset from Unix epoch).
      * The C# code adds 60 seconds to compensate.
      */
-    private void sendAddSked(ContestSked sked, double frequencyKHz, String notes) throws Exception {
+    private void sendAddSked(ContestSked sked, double frequencyKHz, String notes, int modeOverride) throws Exception {
         // Win-Test timestamp: epoch seconds with 60s offset
         long epochSeconds = sked.getSkedTimeEpoch() / 1000;
         long wtTimestamp = epochSeconds + 60;
@@ -106,9 +106,13 @@ public class WinTestSkedSender {
         // Win-Test band ID
         int bandId = toWinTestBandId(sked.getBand());
 
-        // Mode: 0 = CW, 1 = SSB. Default to CW; detect SSB from frequency.
-        int mode = (frequencyKHz > 144_000 || isInSsbSegment(frequencyKHz)) ? 0 : 0;
-        // Simple heuristic: could be refined with actual mode info later
+        // Mode: -1 = auto-detect from frequency, 0 = CW, 1 = SSB
+        int mode;
+        if (modeOverride >= 0) {
+            mode = modeOverride;
+        } else {
+            mode = isInSsbSegment(frequencyKHz) ? 1 : 0;
+        }
 
         String data = wtTimestamp
                 + " " + freqTenthKHz
@@ -167,9 +171,10 @@ public class WinTestSkedSender {
      * A more complete implementation would check actual mode from Win-Test STATUS.
      */
     private boolean isInSsbSegment(double frequencyKHz) {
-        // Example: 144.300+ is typically SSB on 2m
-        if (frequencyKHz >= 144.300 && frequencyKHz <= 144.400) return true;
-        if (frequencyKHz >= 432.200 && frequencyKHz <= 432.400) return true;
+        // SSB segments (kHz ranges)
+        if (frequencyKHz >= 144300 && frequencyKHz <= 144399) return true;  // 2m SSB
+        if (frequencyKHz >= 432200 && frequencyKHz <= 432399) return true;  // 70cm SSB
+        if (frequencyKHz >= 1296200 && frequencyKHz <= 1296399) return true; // 23cm SSB
         return false;
     }
 
