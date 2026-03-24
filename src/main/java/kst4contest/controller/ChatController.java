@@ -852,22 +852,56 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 				try {
 					String qrgStr = chatPreferences.getMYQRGFirstCat().get();
 					if (qrgStr != null && !qrgStr.isBlank()) {
-						freqKHz = Double.parseDouble(qrgStr.trim());
+						// QRG is in display format like "144.300.00" – strip dots → "14430000" → / 100 → 144300.0 kHz
+						String cleaned = qrgStr.trim().replace(".", "");
+						freqKHz = Double.parseDouble(cleaned) / 100.0;
 					}
 				} catch (NumberFormatException ignored) { }
 
-				// Build notes string with locator/azimuth info
+				// Build notes string with target locator/azimuth info like reference: [JO02OB - 279°]
+				String targetLocator = resolveSkedTargetLocator(sked.getTargetCallsign());
 				String notes = "sked via KST4Contest";
-				if (sked.getTargetAzimuth() > 0) {
+				if (targetLocator != null && !targetLocator.isBlank() && sked.getTargetAzimuth() > 0) {
+					notes = String.format("[%s - %.0f°] %s", targetLocator, sked.getTargetAzimuth(), notes);
+				} else if (targetLocator != null && !targetLocator.isBlank()) {
+					notes = String.format("[%s] %s", targetLocator, notes);
+				} else if (sked.getTargetAzimuth() > 0) {
 					notes = String.format("[%.0f°] %s", sked.getTargetAzimuth(), notes);
 				}
 
-				sender.pushSkedToWinTest(sked, freqKHz, notes);
+				// Determine mode: -1 = auto-detect, 0 = CW, 1 = SSB
+				String modeStr = chatPreferences.getLogsynch_wintestSkedMode();
+				int modeOverride = -1; // AUTO
+				if ("CW".equalsIgnoreCase(modeStr)) modeOverride = 0;
+				else if ("SSB".equalsIgnoreCase(modeStr)) modeOverride = 1;
+
+				sender.pushSkedToWinTest(sked, freqKHz, notes, modeOverride);
 			} catch (Exception e) {
 				System.out.println("[ChatController] Error pushing sked to Win-Test: " + e.getMessage());
 				e.printStackTrace();
 			}
 		}, "WinTestSkedPush").start();
+	}
+
+	private String resolveSkedTargetLocator(String targetCallsignRaw) {
+		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
+			return null;
+		}
+
+		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
+		synchronized (getLst_chatMemberList()) {
+			for (ChatMember member : getLst_chatMemberList()) {
+				if (member == null || member.getCallSignRaw() == null) continue;
+				if (!normalizeCallRaw(member.getCallSignRaw()).equals(normalizedTargetCall)) continue;
+
+				String locator = member.getQra();
+				if (locator != null && !locator.isBlank()) {
+					return locator.trim().toUpperCase(Locale.ROOT);
+				}
+			}
+		}
+
+		return null;
 	}
 
 	public StationMetricsService getStationMetricsService() {

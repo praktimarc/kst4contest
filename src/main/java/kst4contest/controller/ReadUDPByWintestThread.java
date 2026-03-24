@@ -204,7 +204,26 @@ public class ReadUDPByWintestThread extends Thread {
                 mode = "cw";
             }
 
-            String formattedQRG = String.format(Locale.US, "%.1f", freqFloat);
+            // Format as MMM.KKK.HH display format (e.g. 144.300.00) consistent with UCX thread
+            // freqFloat is in kHz (e.g. 144300.0), convert to Hz-string for formatting
+            long freqHzTimes100 = Math.round(freqFloat * 100.0); // e.g. 14430000
+            String hzStr = String.valueOf(freqHzTimes100);
+            String formattedQRG;
+            if (hzStr.length() == 8) {
+                // 144MHz range: 14430000 -> 144.300.00
+                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 3), hzStr.substring(3, 6), hzStr.substring(6, 8));
+            } else if (hzStr.length() == 9) {
+                // 1296MHz range: 129600000 -> 1296.000.00
+                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 4), hzStr.substring(4, 7), hzStr.substring(7, 9));
+            } else if (hzStr.length() == 7) {
+                // 70MHz range: 7010000 -> 70.100.00
+                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 2), hzStr.substring(2, 5), hzStr.substring(5, 7));
+            } else if (hzStr.length() == 6) {
+                // 50MHz range: 5030000 but 6 digits: 503000 -> 5.030.00
+                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 1), hzStr.substring(1, 4), hzStr.substring(4, 6));
+            } else {
+                formattedQRG = String.format(Locale.US, "%.1f", freqFloat); // fallback
+            }
             this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
 
             System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG);
