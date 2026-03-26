@@ -12,14 +12,14 @@ Developed by **DO5AMF (Marc Fröhlich)**, operator at DM5M.
 
 | Page | Contents |
 |---|---|
-| [Installation](en-Installation) | Download, Java requirements, updates |
+| [Installation](en-Installation) | Download, Java requirements, update |
 | [Configuration](en-Configuration) | All settings in detail |
 | [Log Synchronisation](en-Log-Sync) | UCXLog, N1MM+, QARTest, DXLog.net, WinTest |
 | [AirScout Integration](en-AirScout-Integration) | Aircraft scatter detection |
 | [DX Cluster Server](en-DX-Cluster-Server) | Built-in DX cluster for your logging software |
 | [Features](en-Features) | All features at a glance |
 | [Macros and Variables](en-Macros-and-Variables) | Text snippets, shortcuts, variables |
-| [User Interface](en-User-Interface) | UI explained and how to operate it |
+| [User Interface](en-User-Interface) | UI explanation and operation |
 | [Changelog](en-Changelog) | Version history |
 
 ---

@@ -32,6 +32,8 @@ An account is required for this service. Please consider donating to Thomas – 
 
 1. Start AirScout.
 2. Enter your OV3T feed account details (username, password, URL) in the AirScout settings.
+![AirscoutStep1](as_plane_feed_1.png)
+![AirscoutStep2](as_plane_feed_2.png)
 3. Test the connection.
 
 ### Step 2: Enable UDP Communication for KST4Contest
@@ -46,6 +48,9 @@ In AirScout, enable the UDP interface:
 In KST4Contest Preferences → **AirScout Settings**:
 - Enable AirScout communication
 - Leave IP and port at their default values (unless changed)
+![AirscoutStep3](as_plane_feed_3.png)
+
+
 
 ---
 
