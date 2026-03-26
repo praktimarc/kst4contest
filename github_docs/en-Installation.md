@@ -4,23 +4,19 @@
 
 ## Prerequisites
 
-### Java
-
-KST4Contest is a Java application. A current **Java Runtime Environment (JRE)** is required. The recommended version is Java 17 or higher.
-
 ### ON4KST Account
 
-To use the chat client, you need a registered account with the ON4KST chat service:
+To use the chat, a registered account with the ON4KST chat service is required:
 
 - Register at: http://www.on4kst.info/chat/register.php
 
-### Behavioural Etiquette
+### Chat Etiquette
 
 The official language in the ON4KST Chat is **English**. Please use English even when communicating with stations from your own country. Common HAM abbreviations (agn, dir, pse, rrr, tnx, 73 …) are widely used and understood.
 
-### Sending Personal Messages
+### Personal Messages
 
-To send a private message to another station, always use this format:
+To send a private message to another station, always use the following format:
 
 ```
 /CQ CALLSIGN message text
@@ -28,45 +24,78 @@ To send a private message to another station, always use this format:
 
 Example: `/CQ DL5ASG pse sked 144.205?`
 
-During contest operation (5–6 messages per second in the public channel), public messages directed at a specific callsign are easily missed. KST4Contest also catches such messages if they are accidentally posted publicly (see [Features – PM Catching](Features#pm-catching)).
+During heavy chat traffic (5–6 messages per second in a contest), public messages directed at a specific callsign are easily missed. However, KST4Contest also catches such messages if they are accidentally posted publicly (see [Features – PM Catching](Features#catching-personal-messages)).
 
 ---
 
 ## Download
 
+### Windows
+
 The latest version can be downloaded as a ZIP file:
 
-**https://do5amf.funkerportal.de/**
+**https://github.com/praktimarc/kst4contest/releases/latest**
 
-The filename follows the pattern `kst4Contest_v<version>.zip`.
+The filename has the format `praktiKST-v<version_number>-windows-x64.zip`.
+
+### Linux
+
+The latest version can be downloaded as an AppImage:
+
+**https://github.com/praktimarc/kst4contest/releases/latest**
+
+The filename has the format `praktiKST-v<version_number>-linux-x86_64.AppImage`.
+
 
 ---
 
 ## Installation
 
-1. Download the ZIP file.
-2. Unzip into a folder of your choice.
-3. Run `praktiKST.exe` (Windows) or the corresponding start script.
+### Windows
 
-Settings are stored at `%USERPROFILE%\.praktikst\preferences.xml` (Windows).
+1. Download the ZIP file.
+2. Unzip the ZIP file into a folder of your choice.
+3. Run `praktiKST.exe`.
+
+Settings are stored at `%USERPROFILE%\.praktikst\preferences.xml`.
+
+### Linux
+1. Download the AppImage.
+2. Unzip the AppImage into a folder of your choice.
+3. Make the AppImage executable (in the terminal with `chmod +x praktiKST-v<version_number>-linux-x86_64.AppImage`)
+4. Run the AppImage.
+
+Settings are stored at `~/.praktikst/preferences.xml`.
 
 ---
 
 ## Updating
 
-KST4Contest includes an **automatic update notification service**: when a new version is available, a window will appear at startup showing:
-- A notification that a new version is available
-- A changelog
-- The download link for the latest package
+KST4Contest includes an **automatic update notification service**: as soon as a new version is available, a window will appear at startup with:
+- information that a new version is available,
+- a changelog,
+- the download link for the new version.
+
+![Example Update Window](update_window.png)
 
 ### Update Process
 
-Currently the only way to update is:
+#### Windows
+
+Currently, there is only one way to update:
 
 1. Delete the old folder.
-2. Unzip the new package.
+2. Unzip the new ZIP file.
 
-Your settings file (`preferences.xml`) is preserved since it is stored in your user folder, not the program folder.
+The settings file (`preferences.xml`) is preserved because it is stored in the user folder, not the program folder.
+
+#### Linux
+
+Currently as follows:
+1. Download the new AppImage
+2. Mark the new AppImage as executable
+3. (optional) Delete the old AppImage.
+
 
 ---
 
@@ -74,10 +103,10 @@ Your settings file (`preferences.xml`) is preserved since it is stored in your u
 
 ### Norton 360
 
-Norton 360 flags `praktiKST.exe` as dangerous (false positive). You need to add an exception:
+Norton 360 classifies `praktiKST.exe` as dangerous (false positive). An exception must be created for the file:
 
 1. Open Norton 360.
-2. Security → History → Find the relevant event.
+2. Security → History → Find the corresponding event.
 3. Select "Restore & Add Exception".
 
 *(Reported by PE0WGA, Franz van Velzen – thank you!)*
