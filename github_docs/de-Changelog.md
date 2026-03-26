@@ -6,6 +6,8 @@ Versionsverlauf von KST4Contest / PraktiKST.
 
 ---
 
+letzter Changelog bitte aus GitHub entnehmen. Der bisherige Changelog
+
 ## v1.263 (2025-06-08)
 **AirScout-Kommunikation und Login-Name**
 

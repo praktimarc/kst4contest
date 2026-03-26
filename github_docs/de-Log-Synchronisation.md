@@ -5,6 +5,7 @@
 KST4Contest markiert gearbeitete Stationen automatisch in der Chat-Benutzerliste. Dafür gibt es zwei grundlegende Methoden:
 
 ---
+![Log-Synchronisation Einstellungsfenster](client_settings_window_logsync.png)
 
 ## Methode 1: Universal File Based Callsign Interpreter (Simplelogfile)
 
@@ -32,6 +33,7 @@ Das Logprogramm sendet beim Speichern eines QSOs ein UDP-Paket an die Broadcast-
 ## Unterstützte Logprogramme
 
 ### UCXLog (DL7UCX)
+![UCXLog Konfiguration](ucxlog_logsync.png)
 
 UCXLog sendet QSO-UDP-Pakete und Transceiver-Frequenzpakete.
 
@@ -45,6 +47,8 @@ Grün markierte Felder in den UCXLog-Einstellungen beachten: IP und Port müssen
 Hinweis für Multi-Setup (2 Computer, 2 Radios, eine KST4Contest-Instanz): Beide Logprogramme müssen die QSO-Pakete an die IP des KST4Contest-Computers senden. Dann ist mindestens eine IP nicht `127.0.0.1`.
 
 ### QARTest (IK3QAR)
+
+![QARTest Konfiguration](qartest_logsync.png)
 
 **Besonderheit**: QARTest kann das **vollständige Log** an KST4Contest senden (Schaltfläche „Invia log completo" in den QARTest-Einstellungen). Damit werden auch QSOs erfasst, die vor dem Start von KST4Contest geloggt wurden.
 
@@ -68,20 +72,41 @@ Für den integrierten DX-Cluster-Server: N1MM+ als DX-Cluster-Client konfigurier
 
 ### DXLog.net
 
+![DXLog.net Konfiguration](dxlog_net_logsync.png)
+
 **Einstellungen in DXLog.net:**
 - UDP-Broadcast aktivieren
 - IP des KST4Contest-Computers eintragen (grün markierte Felder)
 - Port: 12060
 
-### WinTest
+### Win-Test
 
-WinTest wird ebenfalls unterstützt. KST4Contest empfängt WinTest-UDP-Pakete über einen dedizierten Listener. Die Konfiguration erfolgt analog zu den anderen Programmen.
+Win-Test wird mit einem dedizierten UDP-Netzwerk-Listener unterstützt, der das native Win-Test Netzwerkprotokoll versteht. 
+
+**Vorteile der Win-Test Integration:**
+- Automatische QSO-Synchronisation zur Markierung gearbeiteter Stationen.
+- **Sked-Übergabe (ADDSKED):** Über den Button "Create sked" im Stationsinfo-Panel wird nicht nur in KST4Contest ein Sked angelegt, sondern dieses auch *direkt per UDP an das Win-Test Netzwerk als ADDSKED-Paket gesendet*.
+- Es kann zwischen den Sked-Modi "AUTO", "SSB" oder "CW" gewählt werden.
+
+**Notwendige Einstellungen in KST4Contest:**
+- `UDP-Port for Win-Test listener` (Standard: 9871).
+- `Receive Win-Test network based UDP log messages` aktivieren.
+- `Win-Test sked transmission (push via ADDSKED to Win-Test network)` aktivieren.
+- `KST station name in Win-Test network (src of SKED packets)`: Legt fest, unter welchem Stationsnamen KST4Contest im WT-Netzwerk auftritt (z.B. "KST").
+- `Win-Test station name filter`: Wenn hier ein Name eingetragen wird (z.B. "STN1"), werden nur QSOs von dieser bestimmten Win-Test Instanz verarbeitet. Leer lassen, um alle zu akzeptieren.
+- `Win-Test network broadcast address`: Wird idR automatisch erkannt und ist erforderlich, um die Sked-Pakete ins Netzwerk zu senden.
+
+**Einstellungen in Win-Test:**
+- Das Netzwerk in Win-Test muss aktiv sein.
+- Win-Test muss so konfiguriert sein, dass es seine Broadcasts an den entsprechenden Port (Standard 9871) sendet bzw. empfängt.
 
 ---
 
 ## TRX-Frequenz-Synchronisation
 
 Neben der QSO-Synchronisation übertragen UCXLog und andere Programme auch die **aktuelle Transceiverfrequenz** via UDP. KST4Contest verarbeitet diese Information und stellt sie als Variable `MYQRG` bereit.
+
+![FrequenzButtons](qrg_buttons.png)
 
 **Ergebnis**: Die eigene QRG muss im Chat nie mehr manuell eingegeben werden – ein Klick auf den MYQRG-Button oder die Verwendung der Variable im Beacon genügt.
 

@@ -48,6 +48,6 @@ Entwickelt von **DO5AMF (Marc Fröhlich)**, Operator bei DM5M.
 
 ## Schnellinfo / Quick Info
 
-- **Download**: https://do5amf.funkerportal.de/
+- **Download**: https://github.com/praktimarc/kst4contest/releases
 - **GitHub**: https://github.com/praktimarc/kst4contest
 - **Kontakt / Contact**: praktimarc+kst4contest@gmail.com
