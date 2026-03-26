@@ -4,11 +4,18 @@
 
 Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist der zentrale Ausgangspunkt für alle Konfigurationen. Es empfiehlt sich, das Einstellungsfenster während des Betriebs geöffnet zu lassen (z. B. um den Beacon schnell ein- und auszuschalten).
 
-> **Wichtig**: Nach jeder Änderung unbedingt **„Save Settings"** klicken! Die Einstellungen werden in `~/.praktikst/preferences.xml` gespeichert. Ab v1.21 werden auch Fenstergrößen und Divider-Positionen beim Speichern gesichert.
+> **Wichtig**: Nach jeder Änderung unbedingt **„Save Settings"** klicken! Die Einstellungen werden unter Linux in `~/.praktikst/preferences.xml` und unter Windows in `%USERPROFILE%\.praktikst\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktikst\preferences.xml`) gespeichert. Ab v1.21 werden auch Fenstergrößen und Divider-Positionen beim Speichern gesichert.
 
 ---
 
 ## Station Settings (Stationseinstellungen)
+![Stationseinstellungen](client_settings_window_station.png)
+### Login und Chat-Kategorien
+
+Hier werden die Zugangsdaten für den ON4KST-Chat eingetragen (Rufzeichen und Passwort). 
+Zudem wird die **primäre Chat-Kategorie** (z. B. IARU Region 1 VHF/Microwave) ausgewählt.
+
+Mit der Option für einen **zweiten Chat** (Multi-Channel-Login) kann man sich gleichzeitig in eine weitere Kategorie (z. B. UHF/SHF) einloggen. Beide Chats werden dann parallel überwacht. Hier kann optional auch ein abweichender Login-Name für den zweiten Chat vergeben werden (nützlich für Opposite Station Multi-Callsign Logging).
 
 ### Rufzeichen und Locator
 
@@ -32,7 +39,7 @@ Maximale Entfernung (in km), für die Richtungs-Warnungen ausgelöst werden soll
 
 ## Log-Sync-Einstellungen
 
-Zwei Methoden stehen zur Verfügung, um gearbeitete Stationen automatisch zu markieren. Details: [Log-Synchronisation](de-Log-Synchronisation).
+Drei Methoden stehen zur Verfügung, um gearbeitete Stationen automatisch zu markieren. Details: [Log-Synchronisation](de-Log-Synchronisation).
 
 ### Universal File Based Callsign Interpreter (Simplelogfile)
 
@@ -40,7 +47,11 @@ Interpretiert beliebige Log-Dateien per Regex nach Rufzeichen-Mustern. Keine Ban
 
 ### Netzwerk-Listener für QSO-UDP-Broadcast
 
-**Empfohlene Methode.** KST4Contest hört auf UDP-Pakete, die das Logprogramm beim Speichern eines QSOs an die Broadcast-Adresse sendet. Die Stationen werden mit Bandinformation markiert. UDP-Port: Standard **12060**.
+**Empfohlene Methode.** KST4Contest hört auf UDP-Pakete, die das Logprogramm beim Speichern eines QSOs an die Broadcast-Adresse sendet. Die Stationen werden mit Bandinformation markiert. UDP-Port: Standard **12060**. (Wird z. B. von UCXLog, N1MM+, QARTest, DXLog.net genutzt).
+
+### Win-Test Network-Listener (Zusätzlicher UDP-Listener)
+
+Dedizierter Netzwerk-Erkenner für Win-Test. KST4Contest empfängt und verarbeitet Win-Test-spezifische UDP-Pakete (inkl. Sked-Übergabe) auf dem dafür konfigurierten Port.
 
 ---
 
@@ -130,6 +141,6 @@ Umschaltbar über das Menü: **Window → Use Dark Mode**. Die Farben können ü
 
 Nach **jeder** Änderung **„Save Settings"** klicken! Ohne Speichern gehen alle Änderungen beim nächsten Start verloren.
 
-- Speicherort: `~/.praktikst/preferences.xml`
+- Speicherort: unter Linux `~/.praktikst/preferences.xml` und unter Windows `%USERPROFILE%\.praktikst\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktikst\preferences.xml`)
 - Ab v1.21: Fenstergrößen und Divider-Positionen werden ebenfalls gespeichert.
 - Bei Problemen: Konfigurationsdatei löschen → KST4Contest erstellt eine neue mit Standardwerten.

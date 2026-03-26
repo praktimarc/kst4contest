@@ -42,7 +42,7 @@ The ON4KST Chat is the de-facto standard for skeds on the 144 MHz and higher ban
 
 - **Email**: praktimarc+kst4contest@gmail.com *(for kst4contest topics only)*
 - **GitHub**: https://github.com/praktimarc/kst4contest
-- **Download**: https://do5amf.funkerportal.de/
+- **Download**: https://github.com/praktimarc/kst4contest/releases/latest
 
 ---
 
