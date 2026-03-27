@@ -8,6 +8,83 @@ Versionsverlauf von KST4Contest / PraktiKST.
 
 letzter Changelog bitte aus GitHub entnehmen. Der bisherige Changelog
 
+## v1.40 (2026-02-16)
+**Großes Feature-Release: Score-System, AP-Timeline, Win-Test, PSTRotator**
+
+**Neu:**
+- **Chatmember Score-System**: Jeder Chatmember erhält automatisch eine Prioritätsbewertung anhand von Antennenrichtung, Aktivitätszeit, Nachrichtenanzahl, aktiven Bändern, Frequenzen, Sked-Richtung und anderen Faktoren. Die Top-Kandidaten werden in einer eigenen Liste hervorgehoben.
+- **AP-Timeline**: Für jeden möglichen AP-Ankunftsminuten-Slot werden bis zu 4 hochbewertete Stationen angezeigt, die erreichbar wären. Bevorzugt werden APs mit dem höchsten Potenzial, nicht die schnellste Ankunft. Stationen, auf die die eigene Antenne nicht zeigt, werden transparent dargestellt.
+- **Win-Test-Unterstützung** (ab v1.31 als Beta, jetzt vollständig konfigurierbar): Log-Synchronisation, Frequenzauswertung und **Sked-Übergabe via UDP** vollständig integriert. In den Preferences aktivier-/deaktivierbar.
+- **PSTRotator-Interface** (ab v1.31 als Beta, jetzt vollständig konfigurierbar): Aktualisierung der Rotatorposition direkt aus KST4Contest. In den Preferences aktivier-/deaktivierbar.
+- **QSO-Sniffer**: Nachrichten von konfigurierbaren Rufzeichen-Listen werden automatisch in das PM-Fenster weitergeleitet.
+- **Band-Alert bei gearbeiteten Stationen**: Wenn eine Station geloggt wird, erscheint ein Hinweis, wenn diese Station ein weiteres Band aktiv hat, auf dem man selbst ebenfalls QRV ist.
+- **Sked-Erinnerungs-ALERT**: Pro Chatmember kann ein Sked-Alarm mit automatischen Nachrichten in konfigurierbaren Intervallen (2+1 / 5+2+1 / 10+5+2+1 Minuten vor dem Sked) eingerichtet werden, plus akustische und optische Benachrichtigung.
+- **Chat-Historie beim Start laden**: Beim Verbindungsaufbau wird die Serverhistorie geladen, um aktive Chatmember und letzte Nachrichten sofort sichtbar zu machen.
+- **Skedfail-Button**: Im FurtherInfo-Panel kann ein Sked-Misserfolg für einen Chatmember markiert werden, was dessen Score senkt.
+
+**Geändert:**
+- AP-Notizen in DX-Cluster-Spots integriert.
+- Scrolling der Chatmember-Tabelle folgt automatisch der aktuellen Nachrichtenauswahl.
+- Generic Auto-Antwort und QRG-Auto-Antwort senden max. einmal pro 45 Sekunden pro Rufzeichen (verhindert Spam-Schleifen).
+- Speicherbare Einstellungen erweitert: ServerDNS/Port, PSTRotator-Interface, Win-Test-Interface, Callsign-Sniffer, Dark-Mode-Standard.
+- Datum in der Chat-Tabelle entfernt (nur Uhrzeit verbleibt – spart Platz).
+
+**Behoben:**
+- Benutzerliste wird jetzt bei jedem Neu-Login automatisch sortiert.
+- Posonpill-Nachrichten beenden jetzt nur genau eine Client-Instanz (nicht alle und nicht wtKST).
+- wtKST: Absturz bei KST4Contest-Trennung behoben.
+- Mehrere Probleme mit Rufzeichen-Suffixen wie `/p`, `-2` etc. behoben.
+- `QTFDefault` wurde nicht korrekt gespeichert → behoben.
+- AirScout-Watchlist (ASWATCHLIST) wurde nicht korrekt aktualisiert → behoben.
+- Dark Mode: QRG-Felder wurden nicht vollständig angezeigt → behoben.
+- Versionsnummer-Anzeige korrigiert.
+
+---
+
+## v1.31 (2025-12-13)
+**Win-Test + PSTRotator Beta, QSO-Sniffer, DNS-Hotfix**
+
+**Neu:**
+- **Win-Test-Unterstützung** (Beta, noch nicht deaktivierbar): Log-Synchronisation und Frequenzauswertung.
+- **PSTRotator-Unterstützung** (Beta, noch nicht deaktivierbar).
+- **QSO-Sniffer**: Nachrichten von konfigurierbaren Rufzeichen werden ins PM-Fenster weitergeleitet.
+
+**Geändert:**
+- **DNS-Server geändert**: Von `www.on4kst.info` auf `www.on4kst.org` (Hotfix). Der DNS-Server ist ab sofort in den Preferences änderbar.
+
+**Behoben:**
+- Endlosschleife im Fehlerfall friert den Client ein → behoben.
+
+---
+
+## v1.266 (2025-10-03)
+**AirScout-Fix für Rufzeichen mit Suffix**
+
+**Behoben:**
+- AirScout-Interface funktionierte nicht, wenn das Login-Rufzeichen einen Suffix enthielt (z. B. `9A1W-2`). AirScout kann mit diesem Format nicht umgehen – es wird jetzt nur noch das Basis-Rufzeichen ohne Suffix an AirScout übergeben.
+
+*(Fehler gemeldet und getestet von 9A2HM / Kreso – herzlichen Dank!)*
+
+---
+
+## v1.265 (2025-09-28)
+**Richtungs-Buttons bleiben aktiviert eingefärbt**
+
+**Behoben:**
+- Richtungs-Buttons (N / NE / E usw.) behalten jetzt ihre Farbe, wenn sie aktiviert sind, sodass der Aktivierungsstatus auf einen Blick erkennbar ist.
+
+---
+
+## v1.264 (2025-08-02)
+**Simplelogfile: Rufzeichen-Erkennung verbessert**
+
+**Behoben:**
+- Rufzeichen wie `S53CC`, `S51A` usw. wurden in der SimpleLogFile-Auswertung nicht als gearbeitet markiert → Erkennungsmuster verbessert.
+
+*(Fehler gemeldet von Boris, S53CC – danke!)*
+
+---
+
 ## v1.263 (2025-06-08)
 **AirScout-Kommunikation und Login-Name**
 
@@ -153,6 +230,6 @@ Erste öffentlich veröffentlichte Version. Grundfunktionen:
 ## Geplante Features
 
 - `MYQTF`-Variable (eigene Antennenrichtung als Text)
-- Lebensdauer für den Worked-Status (automatisches Zurücksetzen)
+- ~~Lebensdauer für den Worked-Status (automatisches Zurücksetzen)~~ ✅ **Umgesetzt in v1.40** (3-Tage-Lebensdauer, kein manuelles Zurücksetzen mehr nötig)
 - Filterung des „Cluster & QSO der anderen"-Fensters auf eigenes QTF
 - Weitere Topografie-basierte Berechnungen für die Richtungswarnung

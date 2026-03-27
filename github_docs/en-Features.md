@@ -135,22 +135,86 @@ For selected stations in the user list, there are direct buttons to open the **Q
 
 ---
 
-## Sked Reminders (Sked Reminder Service)
+## Sked Reminders with ALERT (from v1.40)
 
-For agreed skeds, automatic reminder PMs can be configured, sent X minutes before the agreed time. Reminders are activated from the FurtherInfo panel.
+A sked reminder service with automatic messages can be activated for each chat member. Configurable interval patterns:
+
+- **2+1 minutes**: Messages at 2 min and 1 min before the sked.
+- **5+2+1 minutes**: Messages at 5, 2 and 1 min before the sked.
+- **10+5+2+1 minutes**: Messages at 10, 5, 2 and 1 min before the sked.
+
+In addition to the automated messages to the remote station, there is an **acoustic and visual notification** for your own operator so no sked is ever missed.
+
+Activate from the FurtherInfo panel of the corresponding station.
 
 ---
 
-## Priority List / Score Service
+## QSO Sniffer (from v1.31)
 
-KST4Contest automatically calculates a **priority list** of the most interesting contacts, based on:
+The QSO sniffer monitors the chat for messages from a configurable callsign list and automatically forwards them to the **PM window**. This prevents relevant messages from being lost in the general chat traffic.
 
-- Direction detection
+Configuration: [Configuration – Sniffer Settings](en-Configuration#sniffer-settings-from-v131)
+
+---
+
+## Win-Test Integration (from v1.31, fully configurable from v1.40)
+
+KST4Contest fully supports [Win-Test](https://www.win-test.com/) as a logging programme:
+
+- **Log synchronisation**: Worked stations are automatically retrieved from Win-Test and marked in the user list.
+- **Frequency parsing**: The current TRX frequency is read from Win-Test UDP packets and populates the `MYQRG` variable.
+- **Sked handover (SKED push via UDP)**: Agreed skeds from KST4Contest can be pushed directly to Win-Test, so the remote callsign appears in Win-Test's sked window.
+
+Details: [Configuration – Win-Test Network Listener](en-Configuration#win-test-network-listener)
+
+---
+
+## PSTRotator Interface (from v1.31, fully configurable from v1.40)
+
+KST4Contest can control antenna direction directly via **PSTRotator**. When a station is selected in the user list, the rotator can automatically be turned to the QTF of the selected station.
+
+Configuration: [Configuration – PSTRotator Settings](en-Configuration#pstrotator-settings-from-v131)
+
+---
+
+## Band Alert for New QSOs (from v1.40)
+
+When a station is logged, KST4Contest automatically checks whether that station has shown any other active bands in the chat that you are also QRV on. If so, a **hint alert** appears so no multi-band opportunity is missed.
+
+---
+
+## Worked Tag Lifetime (from v1.40)
+
+Worked stations are automatically removed from the database after **3 days**. Manually resetting the worked database before each contest is therefore no longer strictly necessary – the database keeps itself up to date.
+
+---
+
+## Chatmember Score System / Priority List (from v1.40)
+
+KST4Contest automatically calculates a **priority score** for each active chat member. The score is derived from:
+
+- Antenna direction of the remote station (is it pointing towards me?)
 - QRB (distance)
+- Activity time and message count
+- Active bands and frequencies
 - AP availability (AirScout)
-- Worked status
+- Sked direction (degrees)
+- Sked success rate and skedfail markings
 
-The top candidates are shown in a separate list, helping you not to miss the most important stations during contest stress.
+The top candidates are highlighted in a dedicated priority list, helping you not to miss the most important contacts during contest stress.
+
+Stations with a failed sked can be marked using the **Skedfail button** in the FurtherInfo panel – this temporarily lowers their score.
+
+---
+
+## AP Timeline (from v1.40)
+
+A visual timeline shows up to 4 highly-scored stations per minute slot that should be workable via aircraft scatter. Prioritisation criteria:
+
+- **Highest reflection potential** is preferred (not necessarily the fastest arrival).
+- Stations towards which your antenna is not pointing are shown **transparently**.
+
+This gives the contest operator a quick overview of which stations will be reachable via which aircraft and at what time.
 
 ---
 

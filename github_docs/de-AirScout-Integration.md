@@ -32,8 +32,10 @@ Für diesen Dienst ist ein Account erforderlich. Bitte eine Spende für Thomas i
 
 1. AirScout starten.
 2. In den AirScout-Einstellungen den OV3T-Feed-Account eintragen (Benutzername, Passwort, URL).
+
 ![AirscoutSchritt1](as_plane_feed_1.png)
 ![AirscoutSchritt2](as_plane_feed_2.png)
+
 3. Verbindung testen.
 
 ### Schritt 2: UDP-Kommunikation für KST4Contest aktivieren
