@@ -4,6 +4,8 @@
 
 ## Prerequisites
 
+An resolution of 1200px by 720px is recommended
+
 ### ON4KST Account
 
 To use the chat, a registered account with the ON4KST chat service is required:

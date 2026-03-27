@@ -4,6 +4,8 @@
 
 ## Voraussetzungen
 
+Es wird eine Mindestauflösung von 1200px mal 720px empfohlen
+
 ### ON4KST-Account
 
 Um den Chat zu nutzen, ist ein registrierter Account beim ON4KST-Chat-Dienst erforderlich:
