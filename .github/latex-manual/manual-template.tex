@@ -1,0 +1,255 @@
+%% ============================================================
+%%  KST4Contest – pandoc LaTeX manual template
+%%  PDF engine: XeLaTeX
+%%  Usage: pandoc --template=manual-template.tex --pdf-engine=xelatex
+%% ============================================================
+\documentclass[11pt,a4paper]{article}
+
+%% ─── Font / encoding ──────────────────────────────────────────────────────
+\usepackage{fontspec}
+% Latin Modern handles all Western European characters (umlauts etc.)
+\defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+
+%% ─── Language ─────────────────────────────────────────────────────────────
+\usepackage{polyglossia}
+$if(polyglossia-lang)$
+\setmainlanguage{$polyglossia-lang$}
+$else$
+\setmainlanguage{english}
+$endif$
+
+%% ─── Page layout ──────────────────────────────────────────────────────────
+\usepackage[a4paper, top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm]{geometry}
+
+%% ─── Colors ───────────────────────────────────────────────────────────────
+\usepackage[dvipsnames,svgnames,x11names]{xcolor}
+\definecolor{brand-green}{RGB}{7,166,54}
+\definecolor{link-blue}{RGB}{0,86,163}
+\definecolor{code-bg}{RGB}{245,247,250}
+\definecolor{code-border}{RGB}{180,200,225}
+\definecolor{blockquote-line}{RGB}{7,166,54}
+
+%% ─── Hyperlinks ───────────────────────────────────────────────────────────
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks  = true,
+  linkcolor   = link-blue,
+  urlcolor    = link-blue,
+  filecolor   = link-blue,
+  citecolor   = link-blue,
+  pdftitle    = {$title$},
+  pdfauthor   = {DO5AMF (Marc Fröhlich), DN9APW (Philipp Wagner)},
+  pdfsubject  = {KST4Contest User Manual},
+  pdfkeywords = {KST4Contest, pratiKST, VHF, Contest, Ham Radio},
+  bookmarks            = true,
+  bookmarksnumbered    = true,
+  bookmarksopen        = true,
+  bookmarksopenlevel   = 2,
+  pdfpagemode          = UseOutlines,
+}
+
+%% ─── Graphics ─────────────────────────────────────────────────────────────
+\usepackage{graphicx}
+\graphicspath{{./}{./github_docs/}}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>0.65\textheight 0.65\textheight\else\Gin@nat@height\fi}
+\makeatother
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+
+%% ─── Tables ───────────────────────────────────────────────────────────────
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{calc}
+\usepackage{multirow}
+\setlength{\tabcolsep}{8pt}
+\renewcommand{\arraystretch}{1.35}
+% Pandoc pipe-table helpers
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+
+%% ─── Lists ────────────────────────────────────────────────────────────────
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{2pt}\setlength{\parskip}{0pt}}
+
+%% ─── Code blocks (--listings flag) ───────────────────────────────────
+\usepackage{listings}
+\lstset{
+  basicstyle       = \ttfamily\small,
+  backgroundcolor  = \color{code-bg},
+  frame            = single,
+  framesep         = 4pt,
+  rulecolor        = \color{code-border},
+  breaklines       = true,
+  breakatwhitespace= false,
+  showstringspaces = false,
+  extendedchars    = true,
+  xleftmargin      = 6pt,
+  xrightmargin     = 6pt,
+  aboveskip        = 8pt,
+  belowskip        = 8pt,
+  literate         = {→}{{\ensuremath{\rightarrow}}}1
+                     {←}{{\ensuremath{\leftarrow}}}1
+                     {↔}{{\ensuremath{\leftrightarrow}}}1,
+}
+
+%% ─── Blockquotes ──────────────────────────────────────────────────────────
+\usepackage{mdframed}
+\newmdenv[
+  topline      = false,
+  rightline    = false,
+  bottomline   = false,
+  leftline     = true,
+  linewidth    = 3pt,
+  linecolor    = blockquote-line,
+  backgroundcolor = code-bg,
+  leftmargin   = 0pt,
+  rightmargin  = 0pt,
+  innerleftmargin  = 12pt,
+  innerrightmargin = 8pt,
+  innertopmargin   = 6pt,
+  innerbottommargin= 6pt,
+  skipabove    = 8pt,
+  skipbelow    = 8pt,
+]{blockquotebox}
+
+\renewenvironment{quote}
+  {\begin{blockquotebox}\small\itshape}
+  {\end{blockquotebox}}
+
+%% ─── Section styling ──────────────────────────────────────────────────────
+\usepackage{titlesec}
+
+\titleformat{\section}
+  {\Large\bfseries\color{brand-green}}
+  {}
+  {0em}
+  {}
+  [\color{brand-green}\titlerule]
+\titlespacing{\section}{0pt}{20pt}{10pt}
+
+\titleformat{\subsection}
+  {\large\bfseries\color{brand-green}}
+  {}
+  {0em}
+  {}
+\titlespacing{\subsection}{0pt}{14pt}{6pt}
+
+\titleformat{\subsubsection}
+  {\normalsize\bfseries}
+  {}
+  {0em}
+  {}
+\titlespacing{\subsubsection}{0pt}{10pt}{4pt}
+
+% Level 4 (####): displayed as a named block heading in dark-grey
+\titleformat{\paragraph}
+  {\normalsize\bfseries\color{brand-green}}
+  {}
+  {0em}
+  {}
+\titlespacing{\paragraph}{0pt}{8pt}{2pt}
+
+% Level 5 (#####): slightly smaller, italic, lighter grey
+\titleformat{\subparagraph}
+  {\small\bfseries\itshape\color{brand-green!85!black}}
+  {}
+  {0em}
+  {}
+\titlespacing{\subparagraph}{0pt}{6pt}{1pt}
+
+% Reserve two additional section levels for future use (###### and deeper).
+% Pandoc currently maps up to \subparagraph for standard Markdown headings.
+\titleclass{\subsubsubsection}{straight}[\subparagraph]
+\newcounter{subsubsubsection}[subparagraph]
+\renewcommand\thesubsubsubsection{\thesubparagraph.\arabic{subsubsubsection}}
+\titleformat{\subsubsubsection}
+  {\small\bfseries\color{brand-green!75!black}}
+  {}
+  {0em}
+  {}
+\titlespacing{\subsubsubsection}{0pt}{5pt}{1pt}
+
+\titleclass{\subsubsubsubsection}{straight}[\subsubsubsection]
+\newcounter{subsubsubsubsection}[subsubsubsection]
+\renewcommand\thesubsubsubsubsection{\thesubsubsubsection.\arabic{subsubsubsubsection}}
+\titleformat{\subsubsubsubsection}
+  {\small\itshape\color{brand-green!65!black}}
+  {}
+  {0em}
+  {}
+\titlespacing{\subsubsubsubsection}{0pt}{4pt}{1pt}
+
+\setcounter{secnumdepth}{6}
+\setcounter{tocdepth}{6}
+
+%% ─── Header / Footer ──────────────────────────────────────────────────────
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{brand-green}\textbf{KST4Contest}}
+\fancyhead[R]{\small\color{brand-green}$if(version)$$version$$endif$}
+\fancyfoot[L]{\small\color{gray}DO5AMF (Marc Fröhlich) \textbar\ DN9APW (Philipp Wagner)}
+\fancyfoot[C]{\small\color{gray}\thepage}
+\fancyfoot[R]{\small\color{gray}$title$}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.3pt}
+\renewcommand{\headrule}{\color{brand-green}\hrule width\headwidth height\headrulewidth}
+
+%% ─── Paragraph spacing ────────────────────────────────────────────────────
+\usepackage{parskip}
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+
+%% ─── TOC styling ──────────────────────────────────────────────────────────
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\Large\bfseries\color{brand-green}}
+\renewcommand{\cftsecfont}{\bfseries\color{brand-green}}
+\renewcommand{\cftsecpagefont}{\bfseries\color{brand-green}}
+\renewcommand{\cftsubsecfont}{\color{brand-green}}
+\renewcommand{\cftsubsecpagefont}{\color{brand-green}}
+\renewcommand{\cftsubsubsecfont}{\color{brand-green!85!black}}
+\renewcommand{\cftsubsubsecpagefont}{\color{brand-green!85!black}}
+\renewcommand{\cftparafont}{\color{brand-green!75!black}}
+\renewcommand{\cftparapagefont}{\color{brand-green!75!black}}
+\renewcommand{\cftsubparafont}{\color{brand-green!65!black}}
+\renewcommand{\cftsubparapagefont}{\color{brand-green!65!black}}
+\setlength{\cftbeforesecskip}{4pt}
+
+%% ─── Misc ─────────────────────────────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{microtype}
+% Pandoc helper macros
+\newcommand{\passthrough}[1]{#1}
+
+%% ══════════════════════════════════════════════════════════════════════════
+\begin{document}
+
+%% ─── Title page ───────────────────────────────────────────────────────────
+\begin{titlepage}
+  \pagecolor{brand-green}
+  \centering
+  \vspace*{3.5cm}
+  {\fontsize{52}{62}\selectfont\bfseries\color{white}KST4Contest}\\[0.4cm]
+  {\fontsize{22}{28}\selectfont\color{white!75!brand-green}pratiKST (ON4KST Chat Client)}\\[2.8cm]
+  \color{white!40!brand-green}\rule{10cm}{0.6pt}\\[1.8cm]
+  {\LARGE\bfseries\color{white}$title$}\\[1cm]
+  $if(version)${\large\color{white!80!brand-green}Version:\space$version$}\\[0.6cm]$endif$
+  \vfill
+  {\large\color{white}DO5AMF · Marc Fröhlich · DM5M · DN9APW · Philipp Wagner}\\[0.4cm]
+  {\color{white!70!brand-green}\today}\\[2cm]
+\end{titlepage}
+
+\pagecolor{white}
+\newpage
+
+%% ─── Table of Contents ────────────────────────────────────────────────────
+\tableofcontents
+\newpage
+
+%% ─── Main content ─────────────────────────────────────────────────────────
+$body$
+
+\end{document}
