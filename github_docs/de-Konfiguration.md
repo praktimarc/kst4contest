@@ -39,6 +39,17 @@ Maximale Entfernung (in km), für die Richtungs-Warnungen ausgelöst werden soll
 
 ---
 
+## Server-Einstellungen (ab v1.31)
+
+Der Chat-Server-DNS und -Port sind in den Preferences konfigurierbar:
+
+- **Server-DNS**: Standard `www.on4kst.org` (ab v1.31 geändert von `www.on4kst.info`).
+- **Port**: Standardport des ON4KST-Servers.
+
+Eine Änderung ist nur notwendig, wenn der Server umzieht oder ein alternativer Endpunkt genutzt wird.
+
+---
+
 ## Log-Sync-Einstellungen
 
 Drei Methoden stehen zur Verfügung, um gearbeitete Stationen automatisch zu markieren. Details: [Log-Synchronisation](de-Log-Synchronisation).
@@ -122,14 +133,55 @@ Neuer Einstellungsbereich mit folgenden Optionen:
 
 ---
 
+## Win-Test-Netzwerk-Listener (ab v1.31)
+
+Dedizierter Empfänger für Win-Test-spezifische UDP-Pakete. Ermöglicht:
+
+- **Log-Synchronisation**: Gearbeitete Stationen werden aus Win-Test übernommen und in der Benutzerliste markiert.
+- **Frequenz-Auswertung**: Die aktuelle TRX-Frequenz aus Win-Test befüllt die `MYQRG`-Variable.
+- **Sked-Übergabe (SKED Push)**: Skeds aus KST4Contest werden via UDP direkt an Win-Test übergeben. Der UDP-Broadcast-Standardport von Win-Test (9871) wird verwendet.
+
+Einstellungen:
+- **Aktivieren/Deaktivieren**: Checkbox in den Preferences (ab v1.40).
+- **Port**: Konfigurierbarer UDP-Port für den Win-Test-Listener.
+- **Sked-UDP-Adresse und Port**: Zieladresse und Port für die SKED-Übergabe an Win-Test.
+
+> **Hinweis**: Der Win-Test-Listener ist ein **zusätzlicher** Listener – der Standard-QSO-UDP-Broadcast-Listener auf Port 12060 bleibt davon unabhängig.
+
+---
+
+## PSTRotator-Einstellungen (ab v1.31)
+
+KST4Contest kann die Antennenrichtung über PSTRotator steuern.
+
+Einstellungen:
+- **Aktivieren/Deaktivieren**: Checkbox in den Preferences (ab v1.40).
+- **IP-Adresse**: IP-Adresse des PSTRotator-Rechners (Standard: `127.0.0.1` bei Betrieb auf demselben PC).
+- **Port**: Kommunikationsport von PSTRotator.
+
+> **Hinweis**: Nach einem Klick auf den Richtungs-Button wartet KST4Contest kurz auf die Rotatorantwort. Bei langsamen Rotoren (z. B. SPID) kann es zu einer kleinen Verzögerung kommen.
+
+---
+
+## Sniffer-Einstellungen (ab v1.31)
+
+Der QSO-Sniffer filtert Chat-Nachrichten von konfigurierbaren Rufzeichen und leitet sie ins PM-Fenster weiter.
+
+Einstellungen:
+- **Rufzeichen-Liste**: Kommagetrennte Liste von Rufzeichen, deren Nachrichten immer in das PM-Fenster weitergeleitet werden sollen.
+
+Anwendungsfall: Wichtige Stationen (z. B. DX-Peditionen oder feste Verbündete im Contest) im Auge behalten, ohne den Haupt-Chat ständig zu beobachten.
+
+---
+
 ## Worked Station Database Settings (Gearbeitete-Stationen-Datenbank)
 
-Vor jedem Contest die interne Worked-Datenbank zurücksetzen! Enthält:
+Die interne Worked-Datenbank enthält:
 
 - Worked-Status aller Stationen (pro Band)
 - NOT-QRV-Tags (seit v1.2)
 
-Schaltfläche **„Reinitialize"** unter der Tabelle verwenden. Eine geplante Funktion ist eine automatische Ablaufzeit für den Worked-Status.
+**Ab v1.40**: Einträge haben eine automatische Lebensdauer von **3 Tagen** – ein manuelles Zurücksetzen vor jedem Contest ist nicht mehr zwingend notwendig. Für ein vollständiges Reset kann trotzdem die Schaltfläche **„Reinitialize"** verwendet werden.
 
 ---
 

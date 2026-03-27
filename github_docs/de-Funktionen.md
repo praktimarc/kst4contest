@@ -135,22 +135,86 @@ Für ausgewählte Stationen in der Benutzerliste gibt es direkte Buttons, um das
 
 ---
 
-## Sked-Erinnerungen (Sked Reminder Service)
+## Sked-Erinnerungen mit ALERT (ab v1.40)
 
-Für vereinbarte Skeds können automatische Erinnerungs-PMs konfiguriert werden, die X Minuten vor dem vereinbarten Zeitpunkt gesendet werden. Die Erinnerungen werden aus dem FurtherInfo-Panel heraus aktiviert.
+Für jeden Chatmember kann ein Sked-Erinnerungsdienst mit automatischen Nachrichten aktiviert werden. Konfigurierbare Intervallmuster:
+
+- **2+1 Minuten**: Nachrichten bei 2 min und 1 min vor dem Sked.
+- **5+2+1 Minuten**: Nachrichten bei 5, 2 und 1 min vor dem Sked.
+- **10+5+2+1 Minuten**: Nachrichten bei 10, 5, 2 und 1 min vor dem Sked.
+
+Zusätzlich zu den Nachrichten an die Gegenstation gibt es eine **akustische und optische Benachrichtigung** für den eigenen Operator, sodass kein Sked vergessen wird.
+
+Aktivierung: FurtherInfo-Panel der entsprechenden Station.
 
 ---
 
-## Prioritätsliste / Score-Service
+## QSO-Sniffer (ab v1.31)
 
-KST4Contest berechnet automatisch eine **Prioritätsliste** der interessantesten Gesprächspartner, basierend auf:
+Der QSO-Sniffer überwacht den Chat auf Nachrichten von einer konfigurierbaren Rufzeichen-Liste und leitet diese automatisch in das **PM-Fenster** weiter. So gehen keine relevanten Nachrichten im allgemeinen Chat-Rauschen unter.
 
-- Richtungserkennung
+Konfiguration: [Konfiguration – Sniffer-Einstellungen](de-Konfiguration#sniffer-einstellungen-ab-v131)
+
+---
+
+## Win-Test-Integration (ab v1.31, vollständig ab v1.40)
+
+KST4Contest unterstützt [Win-Test](https://www.win-test.com/) vollständig als Logprogramm:
+
+- **Log-Synchronisation**: Gearbeitete Stationen werden automatisch aus Win-Test übernommen und in der Benutzerliste markiert.
+- **Frequenz-Auswertung**: Die aktuelle TRX-Frequenz wird aus Win-Test-UDP-Paketen ausgewertet und befüllt die `MYQRG`-Variable.
+- **Sked-Übergabe (SKED Push via UDP)**: Vereinbarte Skeds aus KST4Contest können direkt an Win-Test übertragen werden, sodass das Rufzeichen der Gegenstation im Win-Test-Sked-Fenster erscheint.
+
+Details zur Konfiguration: [Konfiguration – Win-Test-Netzwerk-Listener](de-Konfiguration#win-test-netzwerk-listener)
+
+---
+
+## PSTRotator-Interface (ab v1.31, vollständig ab v1.40)
+
+KST4Contest kann die Antennenrichtung direkt über **PSTRotator** steuern. Wenn in der Benutzerliste eine Station ausgewählt wird, kann der Rotator automatisch auf den QTF zur ausgewählten Station gedreht werden.
+
+Konfiguration: [Konfiguration – PSTRotator-Einstellungen](de-Konfiguration#pstrotator-einstellungen-ab-v131)
+
+---
+
+## Band-Alert bei neuen QSOs (ab v1.40)
+
+Wenn eine Station geloggt wird, prüft KST4Contest automatisch, ob diese Station im Chat weitere aktive Bänder angezeigt hat, auf denen man selbst ebenfalls QRV ist. Falls ja, erscheint ein **Hinweis-Alert**, damit keine Multi-Band-Möglichkeit übersehen wird.
+
+---
+
+## Worked-Tag-Lebensdauer (ab v1.40)
+
+Gearbeitete Stationen werden nach **3 Tagen** automatisch aus der Datenbank entfernt. Ein manuelles Zurücksetzen der Worked-Datenbank vor jedem Contest ist damit nicht mehr zwingend notwendig – die Datenbank hält sich selbst aktuell.
+
+---
+
+## Chatmember Score-System / Prioritätsliste (ab v1.40)
+
+KST4Contest berechnet automatisch eine **Prioritätsbewertung** für jeden aktiven Chatmember. Der Score setzt sich zusammen aus:
+
+- Antennenrichtung der Gegenstation (zeigt sie auf mich?)
 - QRB (Entfernung)
+- Aktivitätszeit und Nachrichtenanzahl
+- Aktive Bänder und Frequenzen
 - AP-Verfügbarkeit (AirScout)
-- Worked-Status
+- Sked-Richtung
+- Sked-Erfolgsrate und Skedfail-Markierungen
 
-Die Top-Kandidaten werden in einer eigenen Liste angezeigt und helfen, im Contest-Stress die wichtigsten Stationen nicht zu übersehen.
+Die Top-Kandidaten werden in einer eigenen Prioritätsliste hervorgehoben und helfen, im Contest-Stress die wichtigsten Stationen nicht zu übersehen.
+
+Stationen, bei denen ein Sked gescheitert ist, können über den **Skedfail-Button** im FurtherInfo-Panel markiert werden – das senkt ihren Score vorübergehend.
+
+---
+
+## AP-Timeline (ab v1.40)
+
+Eine visuelle Zeitleiste zeigt für jeden möglichen AP-Ankunftsminuten-Slot bis zu 4 hochbewertete Stationen, die per Aircraft Scatter erreichbar wären. Priorisierungskriterien:
+
+- Bevorzugt werden APs mit dem **höchsten Reflexionspotenzial** (nicht unbedingt die schnellste Ankunft).
+- Stationen, auf die die eigene Antenne nicht zeigt, werden **transparent** dargestellt.
+
+So kann der Contest-Operator auf einem Blick sehen, welche Stationen wann und über welche Flugzeuge erreichbar sein werden.
 
 ---
 
