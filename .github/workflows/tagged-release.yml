@@ -134,25 +134,109 @@ jobs:
           name: linux-appimage
           path: dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
 
+  build-docs-pdf:
+    name: Build Documentation PDF
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Install pandoc and LaTeX toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            pandoc \
+            texlive-xetex \
+            texlive-fonts-recommended \
+            texlive-latex-extra \
+            texlive-plain-generic
+
+      - name: Build English PDF manual
+        run: |
+          mkdir -p dist
+          pandoc \
+            --from=markdown-yaml_metadata_block \
+            --template=.github/latex-manual/manual-template.tex \
+            --pdf-engine=xelatex \
+            --lua-filter=.github/latex-manual/strip-wiki-links.lua \
+            --resource-path=.:github_docs \
+            --listings \
+            --toc \
+            --toc-depth=3 \
+            -V title="User Manual" \
+            -V polyglossia-lang=english \
+            -V version="${{ github.ref_name }}" \
+            -o dist/KST4Contest-${{ github.ref_name }}-manual-en.pdf \
+            github_docs/en-Home.md \
+            github_docs/en-Installation.md \
+            github_docs/en-Configuration.md \
+            github_docs/en-Features.md \
+            github_docs/en-User-Interface.md \
+            github_docs/en-Macros-and-Variables.md \
+            github_docs/en-Log-Sync.md \
+            github_docs/en-AirScout-Integration.md \
+            github_docs/en-DX-Cluster-Server.md \
+            github_docs/en-Changelog.md
+
+      - name: Build German PDF manual
+        run: |
+          pandoc \
+            --from=markdown-yaml_metadata_block \
+            --template=.github/latex-manual/manual-template.tex \
+            --pdf-engine=xelatex \
+            --lua-filter=.github/latex-manual/strip-wiki-links.lua \
+            --resource-path=.:github_docs \
+            --listings \
+            --toc \
+            --toc-depth=3 \
+            -V title="Benutzerhandbuch" \
+            -V polyglossia-lang=german \
+            -V version="${{ github.ref_name }}" \
+            -o dist/KST4Contest-${{ github.ref_name }}-manual-de.pdf \
+            github_docs/de-Home.md \
+            github_docs/de-Installation.md \
+            github_docs/de-Konfiguration.md \
+            github_docs/de-Funktionen.md \
+            github_docs/de-Benutzeroberflaeche.md \
+            github_docs/de-Makros-und-Variablen.md \
+            github_docs/de-Log-Synchronisation.md \
+            github_docs/de-AirScout-Integration.md \
+            github_docs/de-DX-Cluster-Server.md \
+            github_docs/de-Changelog.md
+
+      - name: Upload PDF artifacts
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: docs-pdf
+          path: dist/KST4Contest-${{ github.ref_name }}-manual-*.pdf
+
   release-tag:
     name: Publish Tagged Release
     runs-on: ubuntu-latest
     needs:
       - build-windows-zip
       - build-linux-appimage
+      - build-docs-pdf
 
     steps:
       - name: Download Windows artifact
-        uses: actions/download-artifact@v4.1.1
+        uses: actions/download-artifact@v4.1.3
         with:
           name: windows-zip
           path: release-assets/windows
 
       - name: Download Linux artifact
-        uses: actions/download-artifact@v4.1.1
+        uses: actions/download-artifact@v4.1.3
         with:
           name: linux-appimage
           path: release-assets/linux
+
+      - name: Download PDF manuals
+        uses: actions/download-artifact@v4.1.3
+        with:
+          name: docs-pdf
+          path: release-assets/docs
 
       - name: Create tagged release
         uses: ncipollo/release-action@v1
@@ -165,4 +249,8 @@ jobs:
           replacesArtifacts: false
           makeLatest: ${{ !startsWith(github.ref_name, 'beta-') }}
           generateReleaseNotes: true
-          artifacts: release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,release-assets/linux/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
+          artifacts: >-
+            release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
+            release-assets/linux/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage,
+            release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-en.pdf,
+            release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-de.pdf

@@ -5,6 +5,7 @@
 KST4Contest automatically marks worked stations in the chat user list. Two basic methods are available:
 
 ---
+
 ![Log Sync Settings Window](client_settings_window_logsync.png)
 
 ## Method 1: Universal File Based Callsign Interpreter (Simplelogfile)
@@ -33,6 +34,7 @@ When saving a QSO, the logging software sends a UDP packet to the broadcast addr
 ## Supported Logging Software
 
 ### UCXLog (DL7UCX)
+
 ![UCXLog Configuration](ucxlog_logsync.png)
 
 UCXLog sends QSO UDP packets and transceiver frequency packets.

@@ -9,7 +9,9 @@ After the first start, the **settings window** opens – this is the central sta
 ---
 
 ## Station Settings
+
 ![Station Settings](client_settings_window_station.png)
+
 ### Login and Chat Categories
 
 Enter your ON4KST chat credentials here (callsign and password).

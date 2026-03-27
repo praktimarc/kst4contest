@@ -1,0 +1,107 @@
+name: Build Documentation PDF
+
+# Runs when documentation changes are pushed to main, or on manual trigger.
+# Also triggered as a dependency from the tagged-release workflow.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - github_docs/**
+      - .github/latex-manual/**
+      - .github/workflows/docs-pdf.yml
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-docs-pdf:
+    name: Build Documentation PDF
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Resolve version string
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')-${GITHUB_SHA::7}"
+          fi
+          echo "DOC_VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Install pandoc and LaTeX toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            pandoc \
+            texlive-xetex \
+            texlive-fonts-recommended \
+            texlive-latex-extra \
+            texlive-plain-generic
+
+      - name: Build English PDF manual
+        run: |
+          mkdir -p dist
+          pandoc \
+            --from=markdown-yaml_metadata_block \
+            --template=.github/latex-manual/manual-template.tex \
+            --pdf-engine=xelatex \
+            --lua-filter=.github/latex-manual/strip-wiki-links.lua \
+            --resource-path=.:github_docs \
+            --listings \
+            --toc \
+            --toc-depth=6 \
+            -V title="User Manual" \
+            -V polyglossia-lang=english \
+            -V version="${DOC_VERSION}" \
+            -o dist/KST4Contest-${DOC_VERSION}-manual-en.pdf \
+            github_docs/en-Home.md \
+            github_docs/en-Installation.md \
+            github_docs/en-Configuration.md \
+            github_docs/en-Features.md \
+            github_docs/en-User-Interface.md \
+            github_docs/en-Macros-and-Variables.md \
+            github_docs/en-Log-Sync.md \
+            github_docs/en-AirScout-Integration.md \
+            github_docs/en-DX-Cluster-Server.md \
+            github_docs/en-Changelog.md
+
+      - name: Build German PDF manual
+        run: |
+          pandoc \
+            --from=markdown-yaml_metadata_block \
+            --template=.github/latex-manual/manual-template.tex \
+            --pdf-engine=xelatex \
+            --lua-filter=.github/latex-manual/strip-wiki-links.lua \
+            --resource-path=.:github_docs \
+            --listings \
+            --toc \
+            --toc-depth=6 \
+            -V title="Benutzerhandbuch" \
+            -V polyglossia-lang=german \
+            -V version="${DOC_VERSION}" \
+            -o dist/KST4Contest-${DOC_VERSION}-manual-de.pdf \
+            github_docs/de-Home.md \
+            github_docs/de-Installation.md \
+            github_docs/de-Konfiguration.md \
+            github_docs/de-Funktionen.md \
+            github_docs/de-Benutzeroberflaeche.md \
+            github_docs/de-Makros-und-Variablen.md \
+            github_docs/de-Log-Synchronisation.md \
+            github_docs/de-AirScout-Integration.md \
+            github_docs/de-DX-Cluster-Server.md \
+            github_docs/de-Changelog.md
+
+      - name: Upload PDF artifacts
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: docs-pdf
+          path: dist/KST4Contest-*-manual-*.pdf
+          retention-days: 30

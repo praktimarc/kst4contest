@@ -48,7 +48,8 @@ In AirScout, enable the UDP interface:
 In KST4Contest Preferences → **AirScout Settings**:
 - Enable AirScout communication
 - Leave IP and port at their default values (unless changed)
-![AirscoutStep3](as_plane_feed_3.png)
+
+![AirscoutStep3](as_plane_feed_3.png){ width=85% }
 
 
 

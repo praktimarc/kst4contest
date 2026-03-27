@@ -5,6 +5,7 @@
 KST4Contest markiert gearbeitete Stationen automatisch in der Chat-Benutzerliste. Dafür gibt es zwei grundlegende Methoden:
 
 ---
+
 ![Log-Synchronisation Einstellungsfenster](client_settings_window_logsync.png)
 
 ## Methode 1: Universal File Based Callsign Interpreter (Simplelogfile)
@@ -33,6 +34,7 @@ Das Logprogramm sendet beim Speichern eines QSOs ein UDP-Paket an die Broadcast-
 ## Unterstützte Logprogramme
 
 ### UCXLog (DL7UCX)
+
 ![UCXLog Konfiguration](ucxlog_logsync.png)
 
 UCXLog sendet QSO-UDP-Pakete und Transceiver-Frequenzpakete.

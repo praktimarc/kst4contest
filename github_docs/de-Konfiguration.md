@@ -9,7 +9,9 @@ Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist de
 ---
 
 ## Station Settings (Stationseinstellungen)
+
 ![Stationseinstellungen](client_settings_window_station.png)
+
 ### Login und Chat-Kategorien
 
 Hier werden die Zugangsdaten für den ON4KST-Chat eingetragen (Rufzeichen und Passwort). 

@@ -48,7 +48,8 @@ In AirScout die UDP-Schnittstelle aktivieren:
 In den KST4Contest-Preferences → **AirScout Settings**:
 - AirScout-Kommunikation aktivieren
 - IP und Port auf Standardwerte lassen (sofern nicht geändert)
-![AirscoutSchritt3](as_plane_feed_3.png)
+
+![AirscoutSchritt3](as_plane_feed_3.png){ width=85% }
 
 
 

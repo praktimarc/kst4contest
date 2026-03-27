@@ -30,5 +30,8 @@ target/
 #builds
 build/
 
+#pdf output directory
+dist/
+
 #zip files for local backups
 *.zip
