@@ -6212,7 +6212,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 *
 		 ****************************************************************************/
 		settingsStage = new Stage();
-		settingsStage.setTitle("Change Client seetings");
+		settingsStage.setTitle("Change Client Settings");
 
 		BorderPane optionsPanel = new BorderPane();
 
