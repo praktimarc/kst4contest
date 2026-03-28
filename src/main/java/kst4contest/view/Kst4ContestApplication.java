@@ -5382,7 +5382,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			FlowPane chatMemberTableFilterQRBHBox  = new FlowPane();
 			chatMemberTableFilterQRBHBox.setAlignment(Pos.CENTER_LEFT);
 			chatMemberTableFilterQRBHBox.setHgap(2);
-			chatMemberTableFilterQRBHBox.setPrefWidth(210);
+			chatMemberTableFilterQRBHBox.setPrefWidth(225);
 
 			TextField chatMemberTableFilterMaxQrbTF = new TextField(chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
 			chatMemberTableFilterMaxQrbTF.setFocusTraversable(false);
@@ -5431,7 +5431,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //			HBox chatMemberTableFilterQTFHBox  = new HBox();
 			FlowPane chatMemberTableFilterQTFHBox  = new FlowPane();
 			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
-			chatMemberTableFilterQTFHBox.setPrefWidth(490);
+			chatMemberTableFilterQTFHBox.setPrefWidth(525);
 			chatMemberTableFilterQTFHBox.setHgap(2);
 
 			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF:");
