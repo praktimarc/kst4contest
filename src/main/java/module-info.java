@@ -1,5 +1,7 @@
 module praktiKST {
 	requires javafx.controls;
+	requires javafx.fxml;
+	requires javafx.web;
 	requires jdk.xml.dom;
 	requires java.sql;
     requires javafx.media;
