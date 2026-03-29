@@ -202,6 +202,9 @@ jobs:
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
             --dest dist
 
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
+
       - name: Rename DMG artifact
         run: |
           DMG=$(ls dist/*.dmg | head -n 1)

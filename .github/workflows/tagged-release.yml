@@ -171,6 +171,9 @@ jobs:
             --module-path target/dist-libs \
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
             --dest dist
+          
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
 
       - name: Rename DMG artifact
         run: |
