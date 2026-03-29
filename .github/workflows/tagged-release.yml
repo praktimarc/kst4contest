@@ -134,6 +134,59 @@ jobs:
           name: linux-appimage
           path: dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
 
+  build-macos-dmg:
+    name: Build macOS DMG (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, macos-13]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure mvnw is executable
+        run: chmod +x mvnw
+
+      - name: Build JAR and copy runtime dependencies
+        run: |
+          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
+          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+
+      - name: Build macOS DMG with jpackage
+        run: |
+          mkdir -p dist
+          jpackage \
+            --type dmg \
+            --name praktiKST \
+            --input target/dist-libs \
+            --main-jar app.jar \
+            --main-class kst4contest.view.Kst4ContestApplication \
+            --module-path target/dist-libs \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --dest dist
+
+      - name: Rename DMG artifact
+        run: |
+          ARCH=$(uname -m)
+          DMG=$(ls dist/*.dmg | head -n 1)
+          if [ -z "$DMG" ]; then
+            echo "No DMG produced by jpackage" && exit 1
+          fi
+          mv "$DMG" "dist/praktiKST-${{ github.ref_name }}-macos-${ARCH}.dmg"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: macos-dmg-${{ matrix.os }}
+          path: dist/praktiKST-${{ github.ref_name }}-macos-*.dmg
+
   build-docs-pdf:
     name: Build Documentation PDF
     runs-on: ubuntu-latest
@@ -217,6 +270,7 @@ jobs:
     needs:
       - build-windows-zip
       - build-linux-appimage
+      - build-macos-dmg
       - build-docs-pdf
 
     steps:
@@ -231,6 +285,13 @@ jobs:
         with:
           name: linux-appimage
           path: release-assets/linux
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4.1.3
+        with:
+          pattern: macos-dmg-*
+          merge-multiple: true
+          path: release-assets/macos
 
       - name: Download PDF manuals
         uses: actions/download-artifact@v4.1.3
@@ -252,5 +313,6 @@ jobs:
           artifacts: >-
             release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
             release-assets/linux/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage,
+            release-assets/macos/praktiKST-${{ github.ref_name }}-macos-*.dmg,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-en.pdf,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-de.pdf
