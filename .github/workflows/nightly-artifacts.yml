@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - test-mac
   schedule:
     - cron: "20 2 * * *"
   workflow_dispatch:
@@ -151,4 +152,70 @@ jobs:
         with:
           name: linux-appimage
           path: dist/praktiKST-*-linux-x86_64.AppImage
+          retention-days: 14
+
+  build-macos-dmg:
+    name: Build macOS DMG (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, macos-15-intel]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Resolve nightly version info
+        run: |
+          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          SHORT_SHA="${GITHUB_SHA::7}"
+          ARCH=$(uname -m)
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
+          echo "ASSET_BASENAME=praktiKST-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
+          echo "ARCH=$ARCH" >> "$GITHUB_ENV"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4.1.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Ensure mvnw is executable
+        run: chmod +x mvnw
+
+      - name: Build JAR and copy runtime dependencies
+        run: |
+          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
+          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+
+      - name: Build macOS DMG with jpackage
+        run: |
+          mkdir -p dist
+          jpackage \
+            --type dmg \
+            --name praktiKST \
+            --input target/dist-libs \
+            --main-jar app.jar \
+            --main-class kst4contest.view.Kst4ContestApplication \
+            --module-path target/dist-libs \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --dest dist
+
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "13.0"
+
+      - name: Rename DMG artifact
+        run: |
+          DMG=$(ls dist/*.dmg | head -n 1)
+          if [ -z "$DMG" ]; then
+            echo "No DMG produced by jpackage" && exit 1
+          fi
+          mv "$DMG" "dist/${ASSET_BASENAME}-macos-${ARCH}.dmg"
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: macos-dmg-${{ matrix.os }}
+          path: dist/praktiKST-*-macos-*.dmg
           retention-days: 14
