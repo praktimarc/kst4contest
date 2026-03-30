@@ -23,6 +23,7 @@ import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.*;
 import kst4contest.test.MockKstServer;
+import kst4contest.utils.BoundedDequeObservableList;
 import kst4contest.utils.PlayAudioUtils;
 import kst4contest.view.Kst4ContestApplication;
 
@@ -1093,7 +1094,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	// ******All abstract types below here are used by the messageprocessor!
 	// ***************
 
-	private ObservableList<ChatMessage> lst_globalChatMessageList = FXCollections.observableArrayList(); //All chatmessages will be put in there, later create filtered message lists
+	private static final int MAX_CHAT_MESSAGES = 10000;
+	private final BoundedDequeObservableList<ChatMessage> lst_globalChatMessageList = new BoundedDequeObservableList<>(MAX_CHAT_MESSAGES); //All chatmessages will be put in there, later create filtered message lists
 //	private ObservableList<ChatMessage> lst_toAllMessageList = FXCollections.observableArrayList(); // directed to all
 																									// (beacon)
 	private FilteredList<ChatMessage> lst_toAllMessageList = new FilteredList<>(lst_globalChatMessageList); // directed to all
@@ -1238,13 +1240,14 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		this.lst_selectedCallSignInfofilteredMessageList = lst_selectedCallSignInfofilteredMessageList;
 	}
 
+	public void addChatMessage(ChatMessage message) {
+		lst_globalChatMessageList.addFirst(message);
+	}
+
 	public ObservableList<ChatMessage> getLst_globalChatMessageList() {
 		return lst_globalChatMessageList;
 	}
 
-	public void setLst_globalChatMessageList(ObservableList<ChatMessage> lst_globalChatMessageList) {
-		this.lst_globalChatMessageList = lst_globalChatMessageList;
-	}
 
 	public String getHostname() {
 		return hostname;
