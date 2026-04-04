@@ -88,7 +88,7 @@ jobs:
           mkdir -p dist
           jpackage \
             --type app-image \
-            --name praktiKST \
+            --name KST4Contest \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -98,41 +98,41 @@ jobs:
 
       - name: Create AppDir metadata
         run: |
-          rm -rf target/praktiKST.AppDir
-          cp -a dist/praktiKST target/praktiKST.AppDir
+          rm -rf target/KST4Contest.AppDir
+          cp -a dist/KST4Contest target/KST4Contest.AppDir
 
-          cat > target/praktiKST.AppDir/AppRun << 'EOF'
+          cat > target/KST4Contest.AppDir/AppRun << 'EOF'
           #!/bin/sh
           HERE="$(dirname "$(readlink -f "$0")")"
-          exec "$HERE/bin/praktiKST" "$@"
+          exec "$HERE/bin/KST4Contest" "$@"
           EOF
-          chmod +x target/praktiKST.AppDir/AppRun
+          chmod +x target/KST4Contest.AppDir/AppRun
 
-          cat > target/praktiKST.AppDir/praktiKST.desktop << 'EOF'
+          cat > target/KST4Contest.AppDir/KST4Contest.desktop << 'EOF'
           [Desktop Entry]
           Type=Application
-          Name=praktiKST
-          Exec=praktiKST
-          Icon=praktiKST
+          Name=KST4Contest
+          Exec=KST4Contest
+          Icon=KST4Contest
           Categories=Network;HamRadio;
           Terminal=false
           EOF
 
-          if [ -f target/praktiKST.AppDir/lib/praktiKST.png ]; then
-            cp target/praktiKST.AppDir/lib/praktiKST.png target/praktiKST.AppDir/praktiKST.png
+          if [ -f target/KST4Contest.AppDir/lib/KST4Contest.png ]; then
+            cp target/KST4Contest.AppDir/lib/KST4Contest.png target/KST4Contest.AppDir/KST4Contest.png
           fi
 
       - name: Build AppImage
         run: |
           wget -q -O target/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x target/appimagetool.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/praktiKST.AppDir dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/KST4Contest.AppDir dist/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4.3.4
         with:
           name: linux-appimage
-          path: dist/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage
+          path: dist/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage
 
   build-macos-dmg:
     name: Build macOS DMG (${{ matrix.os }})
@@ -164,7 +164,7 @@ jobs:
           mkdir -p dist
           jpackage \
             --type dmg \
-            --name praktiKST \
+            --name KST4Contest \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -182,13 +182,13 @@ jobs:
           if [ -z "$DMG" ]; then
             echo "No DMG produced by jpackage" && exit 1
           fi
-          mv "$DMG" "dist/praktiKST-${{ github.ref_name }}-macos-${ARCH}.dmg"
+          mv "$DMG" "dist/KST4Contest-${{ github.ref_name }}-macos-${ARCH}.dmg"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4.3.4
         with:
           name: macos-dmg-${{ matrix.os }}
-          path: dist/praktiKST-${{ github.ref_name }}-macos-*.dmg
+          path: dist/KST4Contest-${{ github.ref_name }}-macos-*.dmg
 
   build-docs-pdf:
     name: Build Documentation PDF
@@ -315,7 +315,7 @@ jobs:
           generateReleaseNotes: true
           artifacts: >-
             release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
-            release-assets/linux/praktiKST-${{ github.ref_name }}-linux-x86_64.AppImage,
-            release-assets/macos/praktiKST-${{ github.ref_name }}-macos-*.dmg,
+            release-assets/linux/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage,
+            release-assets/macos/KST4Contest-${{ github.ref_name }}-macos-*.dmg,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-en.pdf,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-de.pdf
