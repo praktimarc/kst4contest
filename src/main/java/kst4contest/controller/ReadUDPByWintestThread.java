@@ -1,5 +1,6 @@
 package kst4contest.controller;
 
+import javafx.application.Platform;
 import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ThreadStateMessage;
@@ -75,9 +76,10 @@ public class ReadUDPByWintestThread extends Thread {
             socket = new DatagramSocket(null); //first init with null, then make ready for reuse
             socket.setReuseAddress(true);
 //            socket = new DatagramSocket(PORT);
-            socket.bind(new InetSocketAddress(client.getChatPreferences().getLogsynch_wintestNetworkPort()));
+            int boundPort = client.getChatPreferences().getLogsynch_wintestNetworkPort();
+            socket.bind(new InetSocketAddress(boundPort));
             socket.setSoTimeout(3000);
-            System.out.println("[WinTest UDP listener] started at port: " + PORT);
+            System.out.println("[WinTest UDP listener] started at port: " + boundPort);
         } catch (SocketException e) {
             e.printStackTrace();
             return;
@@ -224,36 +226,38 @@ public class ReadUDPByWintestThread extends Thread {
             } else {
                 formattedQRG = String.format(Locale.US, "%.1f", freqFloat); // fallback
             }
-            // Parse pass frequency from parts[8] if available
+            // Parse pass frequency from parts[11] if available (WT STATUS format)
             String formattedPassQRG = null;
-            if (parts.size() >= 9) {
+            if (parts.size() > 11) {
                 try {
-                    String passFreqRaw = parts.get(8);
+                    String passFreqRaw = parts.get(11);
                     double passFreqFloat = Integer.parseInt(passFreqRaw) / 10.0;
-                    long passFreqHzTimes100 = Math.round(passFreqFloat * 100.0);
-                    String passHzStr = String.valueOf(passFreqHzTimes100);
-                    if (passHzStr.length() == 8) {
-                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 3), passHzStr.substring(3, 6), passHzStr.substring(6, 8));
-                    } else if (passHzStr.length() == 9) {
-                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 4), passHzStr.substring(4, 7), passHzStr.substring(7, 9));
-                    } else if (passHzStr.length() == 7) {
-                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 2), passHzStr.substring(2, 5), passHzStr.substring(5, 7));
-                    } else if (passHzStr.length() == 6) {
-                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 1), passHzStr.substring(1, 4), passHzStr.substring(4, 6));
-                    } else {
-                        formattedPassQRG = String.format(Locale.US, "%.1f", passFreqFloat);
+                    if (passFreqFloat > 100) { // Must be a valid radio frequency (> 100 kHz), protects against parsing boolean flag tokens
+                        long passFreqHzTimes100 = Math.round(passFreqFloat * 100.0);
+                        String passHzStr = String.valueOf(passFreqHzTimes100);
+                        if (passHzStr.length() == 8) {
+                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 3), passHzStr.substring(3, 6), passHzStr.substring(6, 8));
+                        } else if (passHzStr.length() == 9) {
+                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 4), passHzStr.substring(4, 7), passHzStr.substring(7, 9));
+                        } else if (passHzStr.length() == 7) {
+                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 2), passHzStr.substring(2, 5), passHzStr.substring(5, 7));
+                        } else if (passHzStr.length() == 6) {
+                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 1), passHzStr.substring(1, 4), passHzStr.substring(4, 6));
+                        } else {
+                            formattedPassQRG = String.format(Locale.US, "%.1f", passFreqFloat);
+                        }
                     }
                 } catch (Exception ignored) {
-                    // parts[8] not a valid frequency, leave formattedPassQRG as null
+                    // parts[11] not a valid frequency, leave formattedPassQRG as null
                 }
             }
 
             if (this.client.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()) {
-                if (this.client.getChatPreferences().isLogsynch_wintestUsePassQrg() && formattedPassQRG != null) {
-                    this.client.getChatPreferences().getMYQRGFirstCat().set(formattedPassQRG);
-                } else {
-                    this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
-                }
+                final String qrgToSet = (this.client.getChatPreferences().isLogsynch_wintestUsePassQrg() && formattedPassQRG != null)
+                        ? formattedPassQRG
+                        : formattedQRG;
+                // JavaFX StringProperty must be updated on the FX Application Thread
+                Platform.runLater(() -> this.client.getChatPreferences().getMYQRGFirstCat().set(qrgToSet));
             }
 
             System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG

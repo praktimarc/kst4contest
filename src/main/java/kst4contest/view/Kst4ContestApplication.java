@@ -6724,7 +6724,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlStation_bands.add(settings_chkbx_QRV3400, 1, 2);
 		grdPnlStation_bands.add(settings_chkbx_QRV5600, 2, 2);
 		grdPnlStation_bands.add(settings_chkbx_QRV10G, 0, 3);
-		grdPnlStation_bands.setMaxWidth(555.0);
 
 		grdPnlStation_bands.setStyle("   -fx-border-color: lightgray;\n" +
 				"    -fx-vgap: 5;\n" +
@@ -6948,6 +6947,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		chkBxWtQrgSync.selectedProperty().addListener((obs, oldVal, newVal) -> {
 			chatcontroller.getChatPreferences().setLogsynch_wintestQrgSyncEnabled(newVal);
 			System.out.println("[Main.java, Info]: Win-Test QRG sync enabled: " + newVal);
+			boolean anyActive = chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled() || newVal;
+			if (!anyActive) {
+				txt_ownqrgMainCategory.textProperty().unbind();
+				txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by hand (watch prefs!)"));
+			} else {
+				txt_ownqrgMainCategory.textProperty().bind(chatcontroller.getChatPreferences().getMYQRGFirstCat());
+				txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by the log program (watch prefs!)"));
+			}
 		});
 		Label lblWtUsePassQrg = new Label("Use pass frequency from Win-Test STATUS (instead of own QRG)");
 		CheckBox chkBxWtUsePassQrg = new CheckBox();
@@ -7056,45 +7063,31 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		chkBxEnableTRXMsgbyUCX.selectedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-//                chk2.setSelected(!newValue);
-				if (!newValue) {
-					chatcontroller.getChatPreferences()
-							.setTrxSynch_ucxLogUDPListenerEnabled(chkBxEnableTRXMsgbyUCX.isSelected());
+				chatcontroller.getChatPreferences().setTrxSynch_ucxLogUDPListenerEnabled(newValue);
+				boolean anyActive = newValue || chatcontroller.getChatPreferences().isLogsynch_wintestQrgSyncEnabled();
+				if (!anyActive) {
 					txt_ownqrgMainCategory.textProperty().unbind();
 					txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by hand (watch prefs!)"));
 					System.out.println("[Main.java, Info]: MYQRG will be changed only by User input");
-					System.out.println("[Main.java, Info]: setted the trx-frequency updated by ucxlog to: "
-							+ chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled());
-
 				} else {
-					chatcontroller.getChatPreferences()
-							.setTrxSynch_ucxLogUDPListenerEnabled(chkBxEnableTRXMsgbyUCX.isSelected());
 					txt_ownqrgMainCategory.textProperty().bind(chatcontroller.getChatPreferences().getMYQRGFirstCat());
 					txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by the log program (watch prefs!)"));
-					System.out.println("[Main.java, Info]: setted the trx-frequency updated by ucxlog to: "
-							+ chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled());
 				}
 			}
 		});
 
-		// Thats the default behaviour of the myqrg textfield
-		if (this.chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled()) {
+		// Unconditionally add listener to manually sync the textfield input to the button 
+		// (this listener also fires correctly when the value is updated by the binding)
+		txt_ownqrgMainCategory.textProperty().addListener((observable, oldValue, newValue) -> {
+			MYQRGButton.textProperty().set(newValue);
+		});
+
+		// That's the default behaviour of the myqrg textfield
+		if (this.chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled() || this.chatcontroller.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()) {
 			txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by the log program (watch prefs!)"));
-			txt_ownqrgMainCategory.textProperty().bind(this.chatcontroller.getChatPreferences().getMYQRGFirstCat());// TODO: Bind darf nur
-																								// gemacht werden, wenn
-																								// ucxlog-Frequenznachrichten
-																								// ausgewerttet werden!
-//        	System.out.println("[Main.java, Info]: MYQRG will be changed only by UCXListener");
+			txt_ownqrgMainCategory.textProperty().bind(this.chatcontroller.getChatPreferences().getMYQRGFirstCat());
 		} else {
 			txt_ownqrgMainCategory.setTooltip(new Tooltip("enter your cq qrg here"));
-//        	System.out.println("[Main.java, Info]: MYQRG will be changed only by User input");
-			txt_ownqrgMainCategory.textProperty().addListener((observable, oldValue, newValue) -> {
-
-				System.out.println(
-						"[Main.java, Info]: MYQRG  Text changed from " + oldValue + " to " + newValue + " by hand");
-				MYQRGButton.textProperty().set(newValue);
-			});
-
 		}
 
 		grdPnltrx.add(generateLabeledSeparator(100, "Receive UCXLog TRX info"), 0, 0, 2, 1);
@@ -8223,8 +8216,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		btnOptionspnlConnect = new Button("Connect to " + chatcontroller.getChatPreferences().getLoginChatCategoryMain()
-				.getChatCategoryName(choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber()));
+		String btnText = "Connect to " + chatcontroller.getChatPreferences().getLoginChatCategoryMain()
+				.getChatCategoryName(choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber());
+		ChatCategory secCat = chatcontroller.getChatPreferences().getLoginChatCategorySecond();
+		if (chatcontroller.getChatPreferences().isLoginToSecondChatEnabled() && secCat != null) {
+			btnText += " & " + secCat.getChatCategoryName(secCat.getCategoryNumber());
+		}
+		btnOptionspnlConnect = new Button(btnText);
 		btnOptionspnlConnect.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
