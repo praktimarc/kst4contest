@@ -224,9 +224,41 @@ public class ReadUDPByWintestThread extends Thread {
             } else {
                 formattedQRG = String.format(Locale.US, "%.1f", freqFloat); // fallback
             }
-            this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
+            // Parse pass frequency from parts[8] if available
+            String formattedPassQRG = null;
+            if (parts.size() >= 9) {
+                try {
+                    String passFreqRaw = parts.get(8);
+                    double passFreqFloat = Integer.parseInt(passFreqRaw) / 10.0;
+                    long passFreqHzTimes100 = Math.round(passFreqFloat * 100.0);
+                    String passHzStr = String.valueOf(passFreqHzTimes100);
+                    if (passHzStr.length() == 8) {
+                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 3), passHzStr.substring(3, 6), passHzStr.substring(6, 8));
+                    } else if (passHzStr.length() == 9) {
+                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 4), passHzStr.substring(4, 7), passHzStr.substring(7, 9));
+                    } else if (passHzStr.length() == 7) {
+                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 2), passHzStr.substring(2, 5), passHzStr.substring(5, 7));
+                    } else if (passHzStr.length() == 6) {
+                        formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 1), passHzStr.substring(1, 4), passHzStr.substring(4, 6));
+                    } else {
+                        formattedPassQRG = String.format(Locale.US, "%.1f", passFreqFloat);
+                    }
+                } catch (Exception ignored) {
+                    // parts[8] not a valid frequency, leave formattedPassQRG as null
+                }
+            }
 
-            System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG);
+            if (this.client.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()) {
+                if (this.client.getChatPreferences().isLogsynch_wintestUsePassQrg() && formattedPassQRG != null) {
+                    this.client.getChatPreferences().getMYQRGFirstCat().set(formattedPassQRG);
+                } else {
+                    this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
+                }
+            }
+
+            System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG
+                    + (formattedPassQRG != null ? ", passQrg=" + formattedPassQRG : "")
+                    + ", syncActive=" + this.client.getChatPreferences().isLogsynch_wintestQrgSyncEnabled());
         } catch (Exception e) {
             System.out.println("[WinTest] STATUS parsing error: " + e.getMessage());
         }

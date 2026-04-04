@@ -3582,7 +3582,57 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		Menu fileMenu = new Menu("File");
 
-		// create menuitems
+		// build "Connect to <configured chat>" label from saved preferences
+		ChatCategory mainCat = chatcontroller.getChatPreferences().getLoginChatCategoryMain();
+		String connectLabel = "Connect to " + mainCat.getChatCategoryName(mainCat.getCategoryNumber());
+		if (chatcontroller.getChatPreferences().isLoginToSecondChatEnabled()) {
+			ChatCategory secCat = chatcontroller.getChatPreferences().getLoginChatCategorySecond();
+			if (secCat != null) {
+				connectLabel += " & " + secCat.getChatCategoryName(secCat.getCategoryNumber());
+			}
+		}
+		menuItemFileConnect = new MenuItem(connectLabel);
+		menuItemFileConnect.setDisable(false);
+
+		if (chatcontroller.isConnectedAndLoggedIn() || chatcontroller.isConnectedAndNOTLoggedIn()) {
+			menuItemFileConnect.setDisable(true);
+		}
+
+		menuItemFileConnect.setOnAction(event -> {
+			System.out.println("[Info] File menu: Connect clicked, using saved preferences");
+
+			String call = chatcontroller.getChatPreferences().getStn_loginCallSign();
+			String pass = chatcontroller.getChatPreferences().getStn_loginPassword();
+
+			if (call == null || call.isBlank() || pass == null || pass.isBlank()) {
+				Alert alert = new Alert(Alert.AlertType.WARNING);
+				alert.setTitle("Cannot connect");
+				alert.setHeaderText("Login credentials missing");
+				alert.setContentText("Please configure your callsign and password in Settings first.");
+				alert.show();
+				return;
+			}
+
+			try {
+				chatcontroller.execute();
+
+				menuItemFileConnect.setDisable(true);
+				menuItemFileDisconnect.setDisable(false);
+				menuItemOptionsAwayBack.setDisable(false);
+				menuItemOptionsSetFrequencyAsName.setDisable(false);
+
+				chatcontroller.setConnectedAndLoggedIn(true);
+				chatcontroller.setDisconnected(false);
+
+			} catch (InterruptedException | IOException e) {
+				e.printStackTrace();
+				Alert alert = new Alert(Alert.AlertType.ERROR);
+				alert.setTitle("Connection failed");
+				alert.setContentText("Could not connect: " + e.getMessage());
+				alert.show();
+			}
+		});
+
 		menuItemFileDisconnect = new MenuItem("Disconnect");
 		menuItemFileDisconnect.setDisable(true);
 
@@ -3595,6 +3645,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public void handle(ActionEvent event) {
 				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
 				menuItemFileDisconnect.setDisable(true);
+				menuItemFileConnect.setDisable(false);
 			}
 		});
 
@@ -3607,6 +3658,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 		// add menu items to menu
+		fileMenu.getItems().add(menuItemFileConnect);
 		fileMenu.getItems().add(menuItemFileDisconnect);
 		fileMenu.getItems().add(m10);
 
@@ -4010,6 +4062,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	Scene clusterAndQSOMonScene;
 	Scene settingsScene;
 
+	MenuItem menuItemFileConnect;
 	MenuItem menuItemFileDisconnect;
 	MenuItem menuItemOptionsAwayBack;
 
@@ -4170,10 +4223,15 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		timer_updatePrivatemessageTable.purge();
 		timer_updatePrivatemessageTable.cancel();
-		chatcontroller.disconnect("CLOSEALL");
+
+		try {
+			chatcontroller.disconnect("CLOSEALL");
+		} catch (Exception e) {
+			System.out.println("[Main.java, Warning:] Exception during disconnect: " + e.getMessage());
+		}
 
 //	    Platform.exit();
-
+		System.exit(0);
 	}
 
 	private Queue<Media> musicList = new LinkedList<Media>();
@@ -6273,11 +6331,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
+		boolean isSecondChatEnabled = this.chatcontroller.getChatPreferences().isLoginToSecondChatEnabled();
 		Label lblNameSecondCat = new Label("Name in Chat 2:");
-		lblNameSecondCat.setVisible(false);
+		lblNameSecondCat.setVisible(isSecondChatEnabled);
+		lblNameSecondCat.setDisable(!isSecondChatEnabled);
 		TextField txtFldNameInChatSecondCat = new TextField(this.chatcontroller.getChatPreferences().getStn_loginNameSecondCat());
 		txtFldNameInChatSecondCat.setFocusTraversable(false);
-		txtFldNameInChatSecondCat.setVisible(false);
+		txtFldNameInChatSecondCat.setVisible(isSecondChatEnabled);
+		txtFldNameInChatSecondCat.setDisable(!isSecondChatEnabled);
 
 		txtFldNameInChatSecondCat.textProperty().addListener(new ChangeListener<String>() {
 
@@ -6397,11 +6458,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 		CheckBox station_chkBxEnableSecondChat = new CheckBox("2nd Chat: ");
-		station_chkBxEnableSecondChat.setSelected(chatcontroller.getChatPreferences().isLoginToSecondChatEnabled());
+		boolean isSecondChatEnabledForCheckbox = chatcontroller.getChatPreferences().isLoginToSecondChatEnabled();
+		station_chkBxEnableSecondChat.setSelected(isSecondChatEnabledForCheckbox);
 
 
 
-		stn_choiceBxChatChategorySecond.setDisable(true);
+		stn_choiceBxChatChategorySecond.setDisable(!isSecondChatEnabledForCheckbox);
 		station_chkBxEnableSecondChat.selectedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
@@ -6431,12 +6493,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		if (chatcontroller.getChatPreferences().isLoginToSecondChatEnabled()) {
-			stn_choiceBxChatChategorySecond.setVisible(chatcontroller.getChatPreferences().isLoginToSecondChatEnabled());
-			stn_choiceBxChatChategorySecond.setDisable(!chatcontroller.getChatPreferences().isLoginToSecondChatEnabled());
-			txtFldNameInChatSecondCat.setVisible(chatcontroller.getChatPreferences().isLoginToSecondChatEnabled());
 
-		}
 
 		TextField txtFldstn_antennaBeamWidthDeg = new TextField(this.chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + "");
 		txtFldstn_antennaBeamWidthDeg.setFocusTraversable(false);
@@ -6882,15 +6939,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlLog.add(lblUDPByWintest, 0, 8);
 		grdPnlLog.add(txtFldUDPPortforWintest, 1, 8);
 
-		// --- Win-Test SKED push settings ---
-		Label lblEnableSkedPush = new Label("Push SKEDs to Win-Test via UDP (ADDSKED)");
-		CheckBox chkBxEnableSkedPush = new CheckBox();
-		chkBxEnableSkedPush.setSelected(
-				this.chatcontroller.getChatPreferences().isLogsynch_wintestNetworkSkedPushEnabled()
+		// --- QRG sync from Win-Test STATUS ---
+		Label lblWtQrgSync = new Label("Win-Test STATUS QRG Sync (updates own QRG from Win-Test transceiver frequency)");
+		CheckBox chkBxWtQrgSync = new CheckBox();
+		chkBxWtQrgSync.setSelected(
+				this.chatcontroller.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()
 		);
-		chkBxEnableSkedPush.selectedProperty().addListener((obs, oldVal, newVal) -> {
-			chatcontroller.getChatPreferences().setLogsynch_wintestNetworkSkedPushEnabled(newVal);
-			System.out.println("[Main.java, Info]: Win-Test SKED push enabled: " + newVal);
+		chkBxWtQrgSync.selectedProperty().addListener((obs, oldVal, newVal) -> {
+			chatcontroller.getChatPreferences().setLogsynch_wintestQrgSyncEnabled(newVal);
+			System.out.println("[Main.java, Info]: Win-Test QRG sync enabled: " + newVal);
+		});
+		Label lblWtUsePassQrg = new Label("Use pass frequency from Win-Test STATUS (instead of own QRG)");
+		CheckBox chkBxWtUsePassQrg = new CheckBox();
+		chkBxWtUsePassQrg.setSelected(
+				this.chatcontroller.getChatPreferences().isLogsynch_wintestUsePassQrg()
+		);
+		chkBxWtUsePassQrg.selectedProperty().addListener((obs, oldVal, newVal) -> {
+			chatcontroller.getChatPreferences().setLogsynch_wintestUsePassQrg(newVal);
+			System.out.println("[Main.java, Info]: Win-Test use pass QRG: " + newVal);
 		});
 
 		Label lblWtStationName = new Label("KST station name in Win-Test network (src of SKED packets)");
@@ -6935,13 +7001,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		grdPnlLog.add(lblEnableSkedPush, 0, 9);
-		grdPnlLog.add(chkBxEnableSkedPush, 1, 9);
-
-		grdPnlLog.add(lblWtStationName, 0, 11);
-		grdPnlLog.add(txtFldWtStationName, 1, 11);
-		grdPnlLog.add(lblWtStationFilter, 0, 12);
-		grdPnlLog.add(txtFldWtStationFilter, 1, 12);
+		grdPnlLog.add(lblWtStationName, 0, 9);
+		grdPnlLog.add(txtFldWtStationName, 1, 9);
 
 		// Auto-detect subnet broadcast if preference is still the default
 		String currentBroadcast = this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress();
@@ -6959,8 +7020,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		// Re-read (may have been auto-detected)
 		txtFldWtBroadcastAddr.setText(this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress());
 
-		grdPnlLog.add(lblWtBroadcastAddr, 0, 13);
-		grdPnlLog.add(txtFldWtBroadcastAddr, 1, 13);
+		grdPnlLog.add(lblWtBroadcastAddr, 0, 10);
+		grdPnlLog.add(txtFldWtBroadcastAddr, 1, 10);
 
 		VBox vbxLog = new VBox();
 		vbxLog.setPadding(new Insets(10, 10, 10, 10));
@@ -7039,6 +7100,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnltrx.add(generateLabeledSeparator(100, "Receive UCXLog TRX info"), 0, 0, 2, 1);
 		grdPnltrx.add(lblEnableTRXMsgbyUCX, 0, 1);
 		grdPnltrx.add(chkBxEnableTRXMsgbyUCX, 1, 1);
+
+		grdPnltrx.add(generateLabeledSeparator(100, "Win-Test TRX sync"), 0, 2, 2, 1);
+		grdPnltrx.add(lblWtQrgSync, 0, 3);
+		grdPnltrx.add(chkBxWtQrgSync, 1, 3);
+		grdPnltrx.add(lblWtUsePassQrg, 0, 4);
+		grdPnltrx.add(chkBxWtUsePassQrg, 1, 4);
+		grdPnltrx.add(lblWtStationFilter, 0, 5);
+		grdPnltrx.add(txtFldWtStationFilter, 1, 5);
 
 		VBox vbxTRXSynch = new VBox();
 		vbxTRXSynch.setPadding(new Insets(10, 10, 10, 10));
@@ -8124,6 +8193,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		else if (chatcontroller.isConnectedAndLoggedIn()) {
 			btnOptionspnlDisconnectOnly.setDisable(false);
 			menuItemFileDisconnect.setDisable(false);
+			menuItemFileConnect.setDisable(true);
 			menuItemOptionsAwayBack.setDisable(false);
 		}
 
@@ -8147,6 +8217,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				txtFldstn_maxQRBDefault.setDisable(false);
 				menuItemOptionsSetFrequencyAsName.setDisable(true);
 				menuItemOptionsAwayBack.setDisable(true);
+				menuItemFileConnect.setDisable(false);
 				station_chkBxEnableSecondChat.setDisable(false);
 				stn_choiceBxChatChategorySecond.setDisable(false);
 			}
@@ -8185,6 +8256,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					btnOptionspnlDisconnectOnly.setDisable(false);
 					menuItemFileDisconnect.setDisable(false);
+					menuItemFileConnect.setDisable(true);
 					menuItemOptionsAwayBack.setDisable(false);
 					menuItemOptionsSetFrequencyAsName.setDisable(false);
 

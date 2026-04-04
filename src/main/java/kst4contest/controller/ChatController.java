@@ -827,8 +827,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		});
 
 		// Push sked to Win-Test via UDP if enabled
-		if (chatPreferences.isLogsynch_wintestNetworkSkedPushEnabled()
-				&& chatPreferences.isLogsynch_wintestNetworkListenerEnabled()) {
+		if (chatPreferences.isLogsynch_wintestNetworkListenerEnabled()) {
 			pushSkedToWinTest(sked);
 		}
 	}
@@ -847,16 +846,40 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 				WinTestSkedSender sender = new WinTestSkedSender(stationName, broadcastAddr, port, this);
 
-				// Get current frequency from QRG property (set by Win-Test STATUS or user)
-				double freqKHz = 144300.0; // fallback default
-				try {
-					String qrgStr = chatPreferences.getMYQRGFirstCat().get();
-					if (qrgStr != null && !qrgStr.isBlank()) {
-						// QRG is in display format like "144.300.00" – strip dots → "14430000" → / 100 → 144300.0 kHz
-						String cleaned = qrgStr.trim().replace(".", "");
-						freqKHz = Double.parseDouble(cleaned) / 100.0;
+				// Frequency resolution:
+				// If the other station mentioned their QRG in a recent message (they proposed it),
+				// use their frequency. Otherwise use our own QRG (we proposed it or no QRG was
+				// exchanged). Only consider their QRG fresh if mentioned within the last 60 minutes,
+				// to avoid picking up a stale entry from a completely different earlier conversation.
+				double freqKHz = -1.0;
+				final long SKED_FREQ_MAX_AGE_MS = 60 * 60 * 1000L; // 60 minutes
+
+				// 1. Other station mentioned their QRG in a recent message for this band
+				ChatMember targetMember = resolveSkedTargetMember(sked.getTargetCallsign());
+				if (targetMember != null && sked.getBand() != null) {
+					ChatMember.ActiveFrequencyInfo fi = targetMember.getKnownActiveBands().get(sked.getBand());
+					if (fi != null && fi.frequency > 0
+							&& (System.currentTimeMillis() - fi.timestampEpoch) <= SKED_FREQ_MAX_AGE_MS) {
+						freqKHz = fi.frequency;
 					}
-				} catch (NumberFormatException ignored) { }
+				}
+
+				// 2. Use our own QRG (Win-Test STATUS or manually set by user)
+				if (freqKHz < 0) {
+					try {
+						String qrgStr = chatPreferences.getMYQRGFirstCat().get();
+						if (qrgStr != null && !qrgStr.isBlank()) {
+							// QRG is in display format like "144.300.00" – strip dots → "14430000" → / 100 → 144300.0 kHz
+							String cleaned = qrgStr.trim().replace(".", "");
+							freqKHz = Double.parseDouble(cleaned) / 100.0;
+						}
+					} catch (NumberFormatException ignored) { }
+				}
+
+				// 3. Fallback
+				if (freqKHz < 0) {
+					freqKHz = 144300.0;
+				}
 
 				// Build notes string with target locator/azimuth info like reference: [JO02OB - 279°]
 				String targetLocator = resolveSkedTargetLocator(sked.getTargetCallsign());
@@ -881,6 +904,22 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 				e.printStackTrace();
 			}
 		}, "WinTestSkedPush").start();
+	}
+
+	private ChatMember resolveSkedTargetMember(String targetCallsignRaw) {
+		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
+			return null;
+		}
+		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
+		synchronized (getLst_chatMemberList()) {
+			for (ChatMember member : getLst_chatMemberList()) {
+				if (member == null || member.getCallSignRaw() == null) continue;
+				if (normalizeCallRaw(member.getCallSignRaw()).equals(normalizedTargetCall)) {
+					return member;
+				}
+			}
+		}
+		return null;
 	}
 
 	private String resolveSkedTargetLocator(String targetCallsignRaw) {
