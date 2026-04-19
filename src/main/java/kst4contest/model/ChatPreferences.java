@@ -204,6 +204,8 @@ public class ChatPreferences {
 	String logsynch_wintestNetworkBroadcastAddress = "255.255.255.255"; // UDP broadcast address for sending to Win-Test
 	boolean logsynch_wintestNetworkSkedPushEnabled = false; // push SKEDs to Win-Test via UDP
 	String logsynch_wintestSkedMode = "SSB"; // CW, SSB or AUTO
+	boolean logsynch_wintestQrgSyncEnabled = true;  // sync QRG from Win-Test STATUS packet
+	boolean logsynch_wintestUsePassQrg = false;      // use pass frequency instead of main QRG from STATUS packet
 
 
 
@@ -479,6 +481,22 @@ public class ChatPreferences {
 
 	public void setLogsynch_wintestSkedMode(String logsynch_wintestSkedMode) {
 		this.logsynch_wintestSkedMode = logsynch_wintestSkedMode;
+	}
+
+	public boolean isLogsynch_wintestQrgSyncEnabled() {
+		return logsynch_wintestQrgSyncEnabled;
+	}
+
+	public void setLogsynch_wintestQrgSyncEnabled(boolean logsynch_wintestQrgSyncEnabled) {
+		this.logsynch_wintestQrgSyncEnabled = logsynch_wintestQrgSyncEnabled;
+	}
+
+	public boolean isLogsynch_wintestUsePassQrg() {
+		return logsynch_wintestUsePassQrg;
+	}
+
+	public void setLogsynch_wintestUsePassQrg(boolean logsynch_wintestUsePassQrg) {
+		this.logsynch_wintestUsePassQrg = logsynch_wintestUsePassQrg;
 	}
 
 	public String getStn_loginLocatorSecondCat() {
@@ -1338,6 +1356,14 @@ public class ChatPreferences {
 			logsynch_wintestSkedMode.setTextContent(this.logsynch_wintestSkedMode);
 			logsynch.appendChild(logsynch_wintestSkedMode);
 
+			Element logsynch_wintestQrgSyncEnabled = doc.createElement("logsynch_wintestQrgSyncEnabled");
+			logsynch_wintestQrgSyncEnabled.setTextContent(this.logsynch_wintestQrgSyncEnabled + "");
+			logsynch.appendChild(logsynch_wintestQrgSyncEnabled);
+
+			Element logsynch_wintestUsePassQrg = doc.createElement("logsynch_wintestUsePassQrg");
+			logsynch_wintestUsePassQrg.setTextContent(this.logsynch_wintestUsePassQrg + "");
+			logsynch.appendChild(logsynch_wintestUsePassQrg);
+
 
 			/**
 			 * trxSynchUCX
@@ -1911,6 +1937,16 @@ public class ChatPreferences {
 						logsynchEl,
 						logsynch_wintestSkedMode,
 						"logsynch_wintestSkedMode");
+
+				logsynch_wintestQrgSyncEnabled = getBoolean(
+						logsynchEl,
+						logsynch_wintestQrgSyncEnabled,
+						"logsynch_wintestQrgSyncEnabled");
+
+				logsynch_wintestUsePassQrg = getBoolean(
+						logsynchEl,
+						logsynch_wintestUsePassQrg,
+						"logsynch_wintestUsePassQrg");
 
 				System.out.println(
 						"[ChatPreferences, info]: file based worked-call interpreter: " + logsynch_fileBasedWkdCallInterpreterEnabled);

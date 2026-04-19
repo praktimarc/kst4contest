@@ -962,6 +962,13 @@ public class MessageBusManagementThread extends Thread {
 									.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
 							this.client.getLst_globalChatMessageList().add(0,newMessageArrived);
 
+							// If our message contained a frequency (e.g. "QRG is: 144.375"), record that
+							// WE sent our QRG to this OM – used by SKED frequency resolution.
+							if (originalMessage != null && newMessageArrived.getReceiver() != null
+									&& originalMessage.matches(".*\\b\\d{3,5}[.,]\\d{1,3}.*")) {
+								this.client.recordOutboundQRG(newMessageArrived.getReceiver().getCallSign());
+							}
+
 							// if you sent the message to another station, it will be sorted in to
 							// the "to me message list" with modified messagetext, added rxers callsign
 

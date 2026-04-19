@@ -46,7 +46,17 @@ Die aktuelle Version kann als AppImage heruntergeladen werden:
 
 **https://github.com/praktimarc/kst4contest/releases/latest**
 
-Der Dateiname hat das Format `praktiKST-v<Versionsnummer>-linux-x86_64.AppImage`.
+Der Dateiname hat das Format `KST4Contest-v<Versionsnummer>-linux-x86_64.AppImage`.
+
+### macOS
+
+> ⚠️ **Best-Effort-Support:** macOS-Builds werden als zusätzliche Option bereitgestellt, sind aber **nicht umfassend getestet**. Wir bauen und veröffentlichen macOS-Binaries mit jedem Release, können allerdings nicht alle Szenarien unter macOS testen. Bei Problemen freuen wir uns über eine Rückmeldung – wir versuchen unser Bestes, können aber nicht den gleichen Support-Umfang wie für Windows und Linux garantieren.
+
+Die aktuelle Version kann als DMG-Disk-Image heruntergeladen werden (für Apple-Silicon- und Intel-Macs verfügbar):
+
+**https://github.com/praktimarc/kst4contest/releases/latest**
+
+Der Dateiname hat das Format `KST4Contest-v<Versionsnummer>-macos-<Architektur>.dmg`, wobei `<Architektur>` entweder `arm64` (Apple Silicon) oder `x86_64` (Intel) ist.
 
 
 ---
@@ -64,8 +74,19 @@ Die Einstellungen werden unter `%USERPROFILE%\.praktikst\preferences.xml` gespei
 ### Linux
 1. AppImage herunterladen.
 2. AppImage in gewünschten Ordner entpacken.
-3. AppImage ausführbar machen (geht im Terminal mit `chmod +x praktiKST-v<Versionsnummer>-linux-x86_64.AppImage`)
+3. AppImage ausführbar machen (geht im Terminal mit `chmod +x KST4Contest-v<Versionsnummer>-linux-x86_64.AppImage`)
 4. AppImage ausführen.
+
+Die Einstellungen werden unter `~/.praktikst/preferences.xml` gespeichert.
+
+### macOS
+1. DMG-Datei für die eigene Architektur herunterladen (Apple Silicon oder Intel).
+2. DMG-Datei öffnen.
+3. `KST4Contest.app` in den **Programme**-Ordner ziehen.
+4. Beim ersten Start zeigt macOS ggf. eine Warnung, da die App nicht notarisiert ist. Zum Öffnen:
+   - Rechtsklick (oder Ctrl-Klick) auf `KST4Contest.app` im Finder → **Öffnen** wählen.
+   - Alternativ: **Systemeinstellungen → Datenschutz & Sicherheit** → **Trotzdem öffnen** klicken.
+5. KST4Contest aus dem Programme-Ordner oder dem Launchpad starten.
 
 Die Einstellungen werden unter `~/.praktikst/preferences.xml` gespeichert.
 
@@ -97,6 +118,12 @@ Derzeit folgendermaßen:
 1. neues AppImage herunterladen
 2. neues AppImage ausführbar makieren
 3. (optional) altes AppImage löschen.
+
+#### macOS
+
+1. Neue DMG-Datei herunterladen.
+2. DMG öffnen.
+3. Die neue `KST4Contest.app` in den **Programme**-Ordner ziehen und die alte Version ersetzen.
 
 
 ---

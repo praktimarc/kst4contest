@@ -810,6 +810,24 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private final Map<String, ChatCategory> lastInboundCategoryByCallSignRaw =
 			new java.util.concurrent.ConcurrentHashMap<>();
 
+	/** Tracks the last time WE sent a message containing a QRG to a specific callsign (UPPERCASE).
+	 *  Compared against knownActiveBands.timestampEpoch to decide whose QRG to use in a SKED. */
+	private final Map<String, Long> lastSentQRGToCallsign =
+			new java.util.concurrent.ConcurrentHashMap<>();
+
+	/** Call this whenever we send a PM to {@code receiverCallsign} that contains our QRG. */
+	public void recordOutboundQRG(String receiverCallsign) {
+		if (receiverCallsign == null) return;
+		lastSentQRGToCallsign.put(receiverCallsign.trim().toUpperCase(), System.currentTimeMillis());
+		System.out.println("[ChatController] Recorded outbound QRG to: " + receiverCallsign);
+	}
+
+	/** Returns epoch-ms of when we last sent our QRG to this callsign, or 0 if never. */
+	public long getLastSentQRGTimestamp(String callsign) {
+		if (callsign == null) return 0L;
+		return lastSentQRGToCallsign.getOrDefault(callsign.trim().toUpperCase(), 0L);
+	}
+
 	private final ScoreService scoreService = new ScoreService(this, new PriorityCalculator(), 15);
 	private ScheduledExecutorService scoreScheduler;
 	private final StationMetricsService stationMetricsService = new StationMetricsService();
@@ -827,8 +845,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		});
 
 		// Push sked to Win-Test via UDP if enabled
-		if (chatPreferences.isLogsynch_wintestNetworkSkedPushEnabled()
-				&& chatPreferences.isLogsynch_wintestNetworkListenerEnabled()) {
+		if (chatPreferences.isLogsynch_wintestNetworkListenerEnabled()) {
 			pushSkedToWinTest(sked);
 		}
 	}
@@ -847,16 +864,69 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 				WinTestSkedSender sender = new WinTestSkedSender(stationName, broadcastAddr, port, this);
 
-				// Get current frequency from QRG property (set by Win-Test STATUS or user)
-				double freqKHz = 144300.0; // fallback default
-				try {
-					String qrgStr = chatPreferences.getMYQRGFirstCat().get();
-					if (qrgStr != null && !qrgStr.isBlank()) {
-						// QRG is in display format like "144.300.00" – strip dots → "14430000" → / 100 → 144300.0 kHz
-						String cleaned = qrgStr.trim().replace(".", "");
-						freqKHz = Double.parseDouble(cleaned) / 100.0;
+				// Frequency resolution:
+				// Compare WHO sent a QRG most recently in the PM conversation:
+				//   - OM sent their QRG last  → use OM's Last Known QRG (ChatMember.frequency)
+				//   - WE sent our QRG last    → use our own Win-Test QRG (MYQRG)
+				// Fallback chain if no timestamps exist: OM's Last Known QRG → hardcoded default
+				double freqKHz = -1.0;
+				final long SKED_FREQ_MAX_AGE_MS = 60 * 60 * 1000L; // 60 minutes
+
+				ChatMember targetMember = resolveSkedTargetMember(sked.getTargetCallsign());
+
+				// Collect timestamps: when did the OM last mention their QRG? When did WE last send ours?
+				long omLastQRGTimestamp = 0L;
+				double omLastQRGMhz = 0.0;
+				if (targetMember != null && sked.getBand() != null) {
+					ChatMember.ActiveFrequencyInfo fi = targetMember.getKnownActiveBands().get(sked.getBand());
+					if (fi != null && fi.frequency > 0
+							&& (System.currentTimeMillis() - fi.timestampEpoch) <= SKED_FREQ_MAX_AGE_MS) {
+						omLastQRGTimestamp = fi.timestampEpoch;
+						omLastQRGMhz = fi.frequency;
 					}
-				} catch (NumberFormatException ignored) { }
+				}
+				long ourLastQRGTimestamp = getLastSentQRGTimestamp(sked.getTargetCallsign());
+
+				// Decision: who was more recent?
+				if (omLastQRGTimestamp > 0 && omLastQRGTimestamp >= ourLastQRGTimestamp) {
+					// OM mentioned their QRG MORE RECENTLY (or at same time) → use their QRG
+					freqKHz = omLastQRGMhz * 1000.0;
+					System.out.println("[ChatController] SKED freq: OM sent last → "
+							+ omLastQRGMhz + " MHz → " + freqKHz + " kHz");
+
+				} else if (ourLastQRGTimestamp > 0) {
+					// WE sent our QRG more recently → use our Win-Test QRG
+					try {
+						String qrgStr = chatPreferences.getMYQRGFirstCat().get();
+						if (qrgStr != null && !qrgStr.isBlank()) {
+							String cleaned = qrgStr.trim().replace(".", "");
+							double parsed = Double.parseDouble(cleaned) / 100.0;
+							if (parsed > 50000) {
+								freqKHz = parsed;
+								System.out.println("[ChatController] SKED freq: WE sent last → "
+										+ freqKHz + " kHz (raw: " + qrgStr + ")");
+							}
+						}
+					} catch (NumberFormatException ignored) { }
+				}
+
+				// Fallback A: OM's Last Known QRG from KST field (if no PM QRG exchange found at all)
+				if (freqKHz < 0 && targetMember != null) {
+					try {
+						String memberQrg = targetMember.getFrequency().get();
+						if (memberQrg != null && !memberQrg.isBlank()) {
+							double mhz = Double.parseDouble(memberQrg.trim());
+							freqKHz = mhz * 1000.0;
+							System.out.println("[ChatController] SKED freq: fallback Last Known QRG → "
+									+ mhz + " MHz → " + freqKHz + " kHz");
+						}
+					} catch (NumberFormatException ignored) { }
+				}
+
+				// Fallback B: hardcoded default
+				if (freqKHz < 0) {
+					freqKHz = 144300.0;
+				}
 
 				// Build notes string with target locator/azimuth info like reference: [JO02OB - 279°]
 				String targetLocator = resolveSkedTargetLocator(sked.getTargetCallsign());
@@ -881,6 +951,22 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 				e.printStackTrace();
 			}
 		}, "WinTestSkedPush").start();
+	}
+
+	private ChatMember resolveSkedTargetMember(String targetCallsignRaw) {
+		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
+			return null;
+		}
+		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
+		synchronized (getLst_chatMemberList()) {
+			for (ChatMember member : getLst_chatMemberList()) {
+				if (member == null || member.getCallSignRaw() == null) continue;
+				if (normalizeCallRaw(member.getCallSignRaw()).equals(normalizedTargetCall)) {
+					return member;
+				}
+			}
+		}
+		return null;
 	}
 
 	private String resolveSkedTargetLocator(String targetCallsignRaw) {

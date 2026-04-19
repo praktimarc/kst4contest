@@ -46,7 +46,17 @@ The latest version can be downloaded as an AppImage:
 
 **https://github.com/praktimarc/kst4contest/releases/latest**
 
-The filename has the format `praktiKST-v<version_number>-linux-x86_64.AppImage`.
+The filename has the format `KST4Contest-v<version_number>-linux-x86_64.AppImage`.
+
+### macOS
+
+> ⚠️ **Best-Effort Support:** macOS builds are provided as a convenience but are **not fully tested**. We build and release macOS binaries with every release, but we cannot test every scenario on macOS. If you encounter issues, please report them – we will do our best to address them, but cannot guarantee the same level of support as for Windows and Linux.
+
+The latest version can be downloaded as a DMG disk image (available for both Apple Silicon and Intel Macs):
+
+**https://github.com/praktimarc/kst4contest/releases/latest**
+
+The filename has the format `KST4Contest-v<version_number>-macos-<arch>.dmg`, where `<arch>` is `arm64` (Apple Silicon) or `x86_64` (Intel).
 
 
 ---
@@ -64,8 +74,19 @@ Settings are stored at `%USERPROFILE%\.praktikst\preferences.xml`.
 ### Linux
 1. Download the AppImage.
 2. Unzip the AppImage into a folder of your choice.
-3. Make the AppImage executable (in the terminal with `chmod +x praktiKST-v<version_number>-linux-x86_64.AppImage`)
+3. Make the AppImage executable (in the terminal with `chmod +x KST4Contest-v<version_number>-linux-x86_64.AppImage`)
 4. Run the AppImage.
+
+Settings are stored at `~/.praktikst/preferences.xml`.
+
+### macOS
+1. Download the DMG file for your architecture (Apple Silicon or Intel).
+2. Open the DMG file.
+3. Drag `KST4Contest.app` into your **Applications** folder.
+4. On first launch, macOS may show a warning because the app is not notarised. To open it:
+   - Right-click (or Control-click) on `KST4Contest.app` in Finder and choose **Open**.
+   - Alternatively, go to **System Settings → Privacy & Security** and click **Open Anyway**.
+5. Run KST4Contest from your Applications folder or Launchpad.
 
 Settings are stored at `~/.praktikst/preferences.xml`.
 
@@ -97,6 +118,12 @@ Currently as follows:
 1. Download the new AppImage
 2. Mark the new AppImage as executable
 3. (optional) Delete the old AppImage.
+
+#### macOS
+
+1. Download the new DMG file.
+2. Open the DMG.
+3. Drag the new `KST4Contest.app` into your **Applications** folder, replacing the old version.
 
 
 ---
