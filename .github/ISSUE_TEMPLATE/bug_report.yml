@@ -1,0 +1,119 @@
+name: Bug Report
+description: Report a problem with KST4Contest / Ein Problem mit KST4Contest melden
+title: "[BUG] "
+labels: ["bug"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **DE:** Bitte fülle alle Felder so vollständig wie möglich aus. Das hilft, den Fehler schneller zu finden.
+        **EN:** Please fill in all fields as completely as possible. This helps to find the bug faster.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description / Beschreibung
+      description: |
+        EN: A clear and concise description of the bug.
+        DE: Eine klare und präzise Beschreibung des Problems.
+      placeholder: "EN: When I click on ... / DE: Wenn ich auf ... klicke ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce / Schritte zum Reproduzieren
+      description: |
+        EN: Step-by-step instructions to reproduce the bug.
+        DE: Schritt-für-Schritt-Anleitung, um den Fehler zu reproduzieren.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour / Erwartetes Verhalten
+      description: |
+        EN: What did you expect to happen?
+        DE: Was hätte passieren sollen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour / Tatsächliches Verhalten
+      description: |
+        EN: What actually happened?
+        DE: Was ist stattdessen passiert?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log file content / Inhalt der Logdatei
+      description: |
+        **EN:** Please paste the content of the error log file here. It is written automatically and contains error messages only — no personal data.
+        **DE:** Bitte füge hier den Inhalt der Fehler-Logdatei ein. Sie wird automatisch geschrieben und enthält nur Fehlermeldungen — keine persönlichen Daten.
+
+        | OS | Path / Pfad |
+        |----|-------------|
+        | Linux / macOS | `~/.praktiKST/kst4contest-errors.log` |
+        | Windows | `C:\Users\<YourName>\.praktiKST\kst4contest-errors.log` |
+      placeholder: Paste log content here / Loginhalt hier einfügen
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: KST4Contest version / Version
+      description: EN: Found in the title bar or About dialog. / DE: Steht in der Titelleiste oder im About-Dialog.
+      placeholder: "e.g. 1.41.0"
+    validations:
+      required: true
+
+  - type: input
+    id: java
+    attributes:
+      label: Java version / Java-Version
+      description: "`java -version`"
+      placeholder: "e.g. 17.0.9"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system / Betriebssystem
+      options:
+        - Linux
+        - Windows
+        - macOS
+    validations:
+      required: true
+
+  - type: input
+    id: logging-software
+    attributes:
+      label: Logging software / Logprogramm
+      description: "EN: If applicable. / DE: Falls relevant."
+      placeholder: "e.g. UCXLog, N1MM+, WinTest, QARTest, DXLog.net"
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist / Checkliste
+      options:
+        - label: I have attached the log file / Ich habe die Logdatei angehängt
+          required: true
+        - label: I have checked that this issue has not been reported before / Ich habe geprüft, dass dieses Problem noch nicht gemeldet wurde
+          required: true

@@ -9,6 +9,8 @@ import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.TimerTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.collections.ObservableList;
 import kst4contest.locatorUtils.Location;
@@ -17,6 +19,7 @@ import kst4contest.model.ChatMember;
 
 public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 
+	private static final Logger LOGGER = Logger.getLogger(AirScoutPeriodicalAPReflectionInquirerTask.class.getName());
 	private ChatController client;
 
 	public AirScoutPeriodicalAPReflectionInquirerTask(ChatController client) {
@@ -55,7 +58,7 @@ public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
                 ownCallSign = this.client.getChatPreferences().getStn_loginCallSign();
             }
         } catch (Exception e) {
-            System.out.println("[ASPERIODICAL, Error]: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "[ASPERIODICAL] Error parsing callsign", e);
         }
         String myCallAndMyLocString = ownCallSign + "," + this.client.getChatPreferences().getStn_loginLocatorMainCat(); //bugfix, Airscout do not process 9A1W-2 but 9A1W like formatted calls
 
@@ -105,13 +108,13 @@ public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 					dsocket.send(packet);
 					dsocket.close();
 				} catch (UnknownHostException e1) {
-					e1.printStackTrace();
+					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] Unknown host", e1);
 				} catch (NoRouteToHostException e) {
-					e.printStackTrace();
+					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] No route to host", e);
 				} catch (SocketException e) {
-					e.printStackTrace();
+					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] Socket error", e);
 				} catch (IOException e) {
-					e.printStackTrace();
+					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] IO error sending query", e);
 				}
 				//			System.out.println("[ASUDPTask, info:] sent query " + queryStringToAirScout);
 
@@ -136,9 +139,9 @@ public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 			dsocket.send(packet);
 			dsocket.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			LOGGER.log(Level.SEVERE, "[ASPERIODICAL] IO error sending watchlist", e);
 		}
-		
+
 //		System.out.println("[ASUDPTask, info:] set watchlist: " + asWatchListStringSuffix);
 
 		
