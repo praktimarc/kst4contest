@@ -772,7 +772,7 @@ public class MessageBusManagementThread extends Thread {
 					dummy.setCallSign("ALL");
 					newMessageArrived.setReceiver(dummy);
 
-					this.client.getLst_globalChatMessageList().add(0, newMessageArrived); // sdtout to all message-List
+					this.client.addChatMessage(newMessageArrived); // sdtout to all message-List
 
 				} else {
 					//message is directed to another chatmember, process as such!
@@ -817,7 +817,7 @@ public class MessageBusManagementThread extends Thread {
 						if (newMessageArrived.getReceiver().getCallSign()
 								.equals(this.client.getChatPreferences().getStn_loginCallSign())) {
 
-							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
+							this.client.addChatMessage(newMessageArrived);
 
 							if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
 								this.client.getPlayAudioUtils().playNoiseLauncher('P');
@@ -960,7 +960,7 @@ public class MessageBusManagementThread extends Thread {
 							String originalMessage = newMessageArrived.getMessageText();
 							newMessageArrived
 									.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
-							this.client.getLst_globalChatMessageList().add(0,newMessageArrived);
+							this.client.addChatMessage(newMessageArrived);
 
 							// If our message contained a frequency (e.g. "QRG is: 144.375"), record that
 							// WE sent our QRG to this OM – used by SKED frequency resolution.
@@ -1031,7 +1031,7 @@ public class MessageBusManagementThread extends Thread {
 								newMessageArrived.getSender().setInAngleAndRange(false);
 							}
 
-							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
+							this.client.addChatMessage(newMessageArrived);
 //						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
@@ -1371,7 +1371,7 @@ public class MessageBusManagementThread extends Thread {
 					dummy.setCallSign("ALL");
 					newMessageArrived.setReceiver(dummy);
 
-					this.client.getLst_globalChatMessageList().add(0, newMessageArrived); // sdtout to all message-List
+					this.client.addChatMessage(newMessageArrived); // sdtout to all message-List
 
 				} else {
 					//message is directed to another chatmember, process as such!
@@ -1415,7 +1415,7 @@ public class MessageBusManagementThread extends Thread {
 						if (newMessageArrived.getReceiver().getCallSign()
 								.equals(this.client.getChatPreferences().getStn_loginCallSign())) {
 
-							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
+							this.client.addChatMessage(newMessageArrived);
 
 							System.out.println("Historic message directed to me: " + newMessageArrived.getReceiver().getCallSign() + ".");
 
@@ -1428,7 +1428,7 @@ public class MessageBusManagementThread extends Thread {
 							String originalMessage = newMessageArrived.getMessageText();
 							newMessageArrived
 									.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
-							this.client.getLst_globalChatMessageList().add(0,newMessageArrived);
+							this.client.addChatMessage(newMessageArrived);
 
 							// if you sent the message to another station, it will be sorted in to
 							// the "to me message list" with modified messagetext, added rxers callsign
@@ -1448,7 +1448,7 @@ public class MessageBusManagementThread extends Thread {
 								newMessageArrived.getSender().setInAngleAndRange(false);
 							}
 
-							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
+							this.client.addChatMessage(newMessageArrived);
 //						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
 						}
 					} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
@@ -1521,7 +1521,7 @@ public class MessageBusManagementThread extends Thread {
 
 				
 				for (int i = 0; i < 10; i++) {
-					client.getLst_globalChatMessageList().add(pwErrorMsg);
+					client.addChatMessage(pwErrorMsg);
 //					client.getLst_toMeMessageList().add(pwErrorMsg);
 //					client.getLst_toAllMessageList().add(pwErrorMsg);
 				}
