@@ -3,7 +3,12 @@ package kst4contest.view;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.util.*;
+import java.util.logging.FileHandler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -8504,7 +8509,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 	public static void main(String[] args) {
+		setupFileLogging();
 		launch(args);
+	}
+
+	private static void setupFileLogging() {
+		try {
+			String logDir = Path.of(System.getProperty("user.home"), ".praktiKST").toString();
+			new File(logDir).mkdirs();
+			FileHandler fileHandler = new FileHandler(logDir + "/kst4contest-errors.log", true);
+			fileHandler.setLevel(Level.SEVERE);
+			fileHandler.setFormatter(new SimpleFormatter());
+			Logger rootLogger = Logger.getLogger("");
+			rootLogger.addHandler(fileHandler);
+		} catch (IOException e) {
+			System.err.println("Could not set up file logging: " + e.getMessage());
+		}
 	}
 
     @Override

@@ -3,6 +3,8 @@ package kst4contest.controller;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import kst4contest.model.ChatMessage;
  
@@ -14,6 +16,7 @@ import kst4contest.model.ChatMessage;
  * @author www.codejava.net
  */
 public class ReadThread extends Thread {
+    private static final Logger LOGGER = Logger.getLogger(ReadThread.class.getName());
     private BufferedReader reader;
     private Socket socket;
     private ChatController client;
@@ -43,8 +46,7 @@ public class ReadThread extends Thread {
             reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
             
         } catch (IOException ex) {
-            System.out.println("Error getting input stream: " + ex.getMessage());
-            ex.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error getting input stream", ex);
         }
     }
  
@@ -82,15 +84,14 @@ public class ReadThread extends Thread {
               
             } 
             catch (Exception sexc) {
-            	System.out.println("[ReadThread, CRITICAL: ] Socket geschlossen: " + sexc.getMessage());
+            	LOGGER.log(Level.SEVERE, "[ReadThread] Socket closed unexpectedly", sexc);
             	try {
 					this.client.getSocket().close();
 					this.interrupt();
 					break;
-					
+
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					LOGGER.log(Level.SEVERE, "[ReadThread] Error closing socket", e);
 				}
 
             }

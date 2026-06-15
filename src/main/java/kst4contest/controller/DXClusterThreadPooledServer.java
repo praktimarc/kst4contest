@@ -10,9 +10,12 @@ import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DXClusterThreadPooledServer implements Runnable{
 
+    private static final Logger LOGGER = Logger.getLogger(DXClusterThreadPooledServer.class.getName());
     private List<Socket> clientSockets = Collections.synchronizedList(new ArrayList<>()); //list of all connected clients
 
     private ThreadStatusCallback callBackToController;
@@ -111,8 +114,7 @@ public class DXClusterThreadPooledServer implements Runnable{
                 System.out.println("-------------> ORIGINALEE VAL: " + aChatMember.getFrequency().getValue());
                 System.out.println("-------------> NORMALIZED VAL: " + Utils4KST.normalizeFrequencyString(aChatMember.getFrequency().getValue(), chatController.getChatPreferences().getNotify_optionalFrequencyPrefix()) + " ");
             } catch (Exception e) {
-                System.out.println("DXCThPooledServer: Error accessing value in chatmember object: " + e.getMessage());
-//                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "DXCThPooledServer: Error accessing value in chatmember object", e);
             }
 
             for (Socket socket : clientSockets) {
@@ -146,8 +148,7 @@ public class DXClusterThreadPooledServer implements Runnable{
                     callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
                 } catch (IOException e) {
-                    e.printStackTrace();
-                    System.out.println("[DXClusterSrvr, Error:] broadcasting DXC-message to clients went wrong!");
+                    LOGGER.log(Level.SEVERE, "[DXClusterSrvr] broadcasting DXC-message to clients went wrong", e);
                     return false;
                 }
             }
@@ -159,6 +160,7 @@ public class DXClusterThreadPooledServer implements Runnable{
 
 class DXClusterServerWorkerRunnable implements Runnable{
 
+    private static final Logger LOGGER = Logger.getLogger(DXClusterServerWorkerRunnable.class.getName());
     protected Socket clientSocket = null;
     protected String serverText = null;
     private ChatController client = null;
@@ -197,14 +199,13 @@ class DXClusterServerWorkerRunnable implements Runnable{
                             output.write(("\r\n").getBytes());
 
                         } catch (IOException e) {
-                            e.printStackTrace();
-                            System.out.println("[DXClusterSrvr, Error:] broadcasting DXC-message to clients went wrong!");
+                            LOGGER.log(Level.SEVERE, "[DXClusterSrvr] keep-alive broadcast to client failed", e);
                             dXCkeepAliveTimer.purge();
 
                             try {
                                 socket.close();
                             } catch (IOException ex) {
-                                ex.printStackTrace();
+                                LOGGER.log(Level.SEVERE, "[DXClusterSrvr] error closing client socket", ex);
                             }
                             finally {
                                 this.cancel();
@@ -224,7 +225,7 @@ class DXClusterServerWorkerRunnable implements Runnable{
             System.out.println("[DXClusterThreadPooledServer, Info:] New cluster client connected! "); //TODO: maybe integrate non blocking reader for client identification
 
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "[DXClusterSrvr] error in worker runnable", e);
         } finally {
             synchronized(dxClusterClientSocketsConnectedList) {
                 dxClusterClientSocketsConnectedList.remove(clientSocket); // Entferne den Client nach Verarbeitung

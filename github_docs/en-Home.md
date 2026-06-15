@@ -44,6 +44,17 @@ The ON4KST Chat is the de-facto standard for skeds on the 144 MHz and higher ban
 - **GitHub**: https://github.com/praktimarc/kst4contest
 - **Download**: https://github.com/praktimarc/kst4contest/releases/latest
 
+### Reporting a bug (creating an issue)
+
+When reporting a bug, please **always attach the log file**. KST4Contest automatically writes an error log (error messages only, no personal data):
+
+| Operating system | Log file location |
+|---|---|
+| Linux / macOS | `~/.praktiKST/kst4contest-errors.log` |
+| Windows | `C:\Users\<YourName>\.praktiKST\kst4contest-errors.log` |
+
+When opening an issue on GitHub, a template is provided that guides you through all relevant fields.
+
 ---
 
 ## Acknowledgements

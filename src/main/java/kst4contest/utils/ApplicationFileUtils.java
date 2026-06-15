@@ -7,11 +7,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class has utility methods to handle application files inside the home directory.
  */
 public class ApplicationFileUtils {
+
+    private static final Logger LOGGER = Logger.getLogger(ApplicationFileUtils.class.getName());
 
     /**
      * Gets the path of a file inside the home directory of the user.
@@ -61,8 +65,7 @@ public class ApplicationFileUtils {
 
             resourceStream.transferTo(fileOutputStream);
         } catch (IOException ex) {
-            System.err.println("Exception when copying Application file: " + ex.getMessage());
-            ex.printStackTrace(System.err);
+            LOGGER.log(Level.SEVERE, "Exception when copying Application file: " + ex.getMessage(), ex);
         }
     }
 

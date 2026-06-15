@@ -2,6 +2,8 @@ package kst4contest.controller;
 
 import java.io.*;
 import java.net.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import kst4contest.model.ChatMessage;
  
@@ -13,6 +15,7 @@ import kst4contest.model.ChatMessage;
  *	No need for it as it´s not longer a console application
  */
 public class InputReaderThread extends Thread {
+    private static final Logger LOGGER = Logger.getLogger(InputReaderThread.class.getName());
     private PrintWriter writer;
     private Socket socket;
     private ChatController client;
@@ -39,8 +42,7 @@ public class InputReaderThread extends Thread {
         	try {
         		sendThisMessage23001 = reader.readLine();
         	} catch (IOException e) {
-        		// TODO Auto-generated catch block
-        		e.printStackTrace();
+        		LOGGER.log(Level.SEVERE, "Error reading from stdin", e);
         	}
 
         	ownMSG.setMessageText("MSG|" + this.client.getChatCategoryMain().getCategoryNumber() + "|0|" + sendThisMessage23001 + "|0|");
@@ -53,8 +55,8 @@ public class InputReaderThread extends Thread {
         	try {
 				this.sleep(500);
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.log(Level.SEVERE, "InputReaderThread interrupted", e);
+				Thread.currentThread().interrupt();
 			}
         	
         }
