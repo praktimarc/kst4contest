@@ -42,11 +42,19 @@ Der Dateiname hat das Format `praktiKST-v<Versionsnummer>-windows-x64.zip `.
 
 ### Linux
 
-Die aktuelle Version kann als AppImage heruntergeladen werden:
+Mehrere Paketformate stehen auf der Releases-Seite zur Verfügung:
 
 **https://github.com/praktimarc/kst4contest/releases/latest**
 
-Der Dateiname hat das Format `KST4Contest-v<Versionsnummer>-linux-x86_64.AppImage`.
+| Format | Dateiname | Geeignet für |
+|---|---|---|
+| AppImage | `KST4Contest-v<Version>-linux-x86_64.AppImage` | Alle Distributionen |
+| Debian-Paket | `KST4Contest-v<Version>-debian-amd64.deb` | Debian, Ubuntu, Linux Mint, … |
+| RPM-Paket | `KST4Contest-v<Version>-fedora-x86_64.rpm` | Fedora, RHEL, openSUSE, … |
+| Arch-Paket | `KST4Contest-v<Version>-archlinux-x86_64.pkg.tar.zst` | Arch Linux, Manjaro, … |
+| Flatpak | `de.x08.KST4Contest.flatpakref` | Alle Distributionen mit Flatpak |
+
+> **Empfehlung für Linux:** Die Flatpak-Installation ist der einfachste Weg, immer aktuell zu bleiben – `flatpak update` erledigt alle zukünftigen Updates automatisch. Das Repository ist GPG-signiert.
 
 ### macOS
 
@@ -72,12 +80,47 @@ Der Dateiname hat das Format `KST4Contest-v<Versionsnummer>-macos-<Architektur>.
 Die Einstellungen werden unter `%USERPROFILE%\.praktikst\preferences.xml` gespeichert.
 
 ### Linux
-1. AppImage herunterladen.
-2. AppImage in gewünschten Ordner entpacken.
-3. AppImage ausführbar machen (geht im Terminal mit `chmod +x KST4Contest-v<Versionsnummer>-linux-x86_64.AppImage`)
-4. AppImage ausführen.
 
-Die Einstellungen werden unter `~/.praktikst/preferences.xml` gespeichert.
+Die Einstellungen werden immer unter `~/.praktikst/preferences.xml` gespeichert.
+
+#### AppImage
+
+1. AppImage herunterladen.
+2. Ausführbar machen: `chmod +x KST4Contest-v<Version>-linux-x86_64.AppImage`
+3. Starten.
+
+#### Debian / Ubuntu
+
+```bash
+sudo apt install ./KST4Contest-v<Version>-debian-amd64.deb
+```
+
+Oder die `.deb`-Datei im Dateimanager doppelklicken.
+
+#### Fedora / RHEL
+
+```bash
+sudo dnf install ./KST4Contest-v<Version>-fedora-x86_64.rpm
+```
+
+#### Arch Linux
+
+```bash
+sudo pacman -U KST4Contest-v<Version>-archlinux-x86_64.pkg.tar.zst
+```
+
+#### Flatpak
+
+Die Datei `de.x08.KST4Contest.flatpakref` aus dem [aktuellen Release](https://github.com/praktimarc/kst4contest/releases/latest) herunterladen und öffnen, oder:
+```bash
+flatpak install de.x08.KST4Contest.flatpakref
+```
+
+Oder den Remote manuell hinzufügen:
+```bash
+flatpak remote-add kst4contest https://praktimarc.github.io/kst4contest/
+flatpak install kst4contest de.x08.KST4Contest
+```
 
 ### macOS
 1. DMG-Datei für die eigene Architektur herunterladen (Apple Silicon oder Intel).
@@ -114,10 +157,11 @@ Die Einstellungsdatei (`preferences.xml`) bleibt erhalten, da sie im Benutzerord
 
 #### Linux
 
-Derzeit folgendermaßen:
-1. neues AppImage herunterladen
-2. neues AppImage ausführbar makieren
-3. (optional) altes AppImage löschen.
+- **AppImage**: Neues AppImage herunterladen, ausführbar machen (`chmod +x`), altes optional löschen.
+- **Debian/Ubuntu**: `sudo apt install ./KST4Contest-v<Version>-debian-amd64.deb`
+- **Fedora/RHEL**: `sudo dnf upgrade ./KST4Contest-v<Version>-fedora-x86_64.rpm`
+- **Arch Linux**: `sudo pacman -U KST4Contest-v<Version>-archlinux-x86_64.pkg.tar.zst`
+- **Flatpak (Repository)**: `flatpak update` – aktualisiert alle Flatpak-Apps einschließlich KST4Contest.
 
 #### macOS
 
