@@ -38,7 +38,24 @@ public class ApplicationConstants {
 
     public static final String AUTOANSWER_PREFIX = "[KST4C Automsg] ";   // hard-coded marker (user can't remove it)
 
+    /**
+     * UI message retention limits.
+     *
+     * The global chat message list is the backing list for several FilteredLists
+     * and TableViews. It must not grow without limit during long contest runs.
+     *
+     * The list is kept in newest-first order:
+     * index 0 = newest message
+     * last index = oldest message
+     */
+    public static final int CHAT_MESSAGE_STORE_MAX_SIZE = 30000;
+    public static final int CHAT_MESSAGE_STORE_TRIM_TO_SIZE = 25000;
 
+    /**
+     * DXCluster table retention limits.
+     */
+    public static final int CLUSTER_MESSAGE_STORE_MAX_SIZE = 10000;
+    public static final int CLUSTER_MESSAGE_STORE_TRIM_TO_SIZE = 8000;
 
     /**
      * generates a unique runtime id per session. Its used to feed the poison pill in order to kill only this one and
