@@ -370,10 +370,21 @@ public final class MapHtmlResources {
 
                             jsLog('Leaflet map initialized');
 
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                maxZoom: 18,
-                                attribution: '&copy; OpenStreetMap'
-                            }).addTo(map);
+                            const osmTileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19,
+                                attribution: '&copy; OpenStreetMap contributors'
+                            });
+
+                            osmTileLayer.on('tileload', function (event) {
+                                jsLog('OSM tile loaded');
+                            });
+
+                            osmTileLayer.on('tileerror', function (event) {
+                                const src = event && event.tile ? event.tile.src : 'unknown';
+                                jsError('OSM tile load failed: ' + src);
+                            });
+
+                            osmTileLayer.addTo(map);
 
                             map.createPane('beamPane');
                             map.getPane('beamPane').style.zIndex = 410;

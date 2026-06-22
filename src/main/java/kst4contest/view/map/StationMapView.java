@@ -627,6 +627,8 @@ public final class StationMapView {
             }
         });
 
+        webEngine.setUserAgent("KST4Contest (+https://hamradioonline.de)");
+
         webEngine.loadContent(MapHtmlResources.createStationMapHtml());
     }
 
