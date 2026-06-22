@@ -1,0 +1,1446 @@
+package kst4contest.view.map;
+
+import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Orientation;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.web.WebEngine;
+import javafx.scene.web.WebView;
+import javafx.stage.Stage;
+import netscape.javascript.JSObject;
+import kst4contest.ApplicationConstants;
+import kst4contest.locatorUtils.Location;
+import kst4contest.model.ChatPreferences;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.function.Consumer;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.ColumnConstraints;
+
+/**
+ * Standalone station map window.
+ *
+ * Responsibilities:
+ * - hosts the JavaFX WebView
+ * - renders stations, beam, connection line and Maidenhead grid
+ * - shows detail information for the selected callsign
+ * - exposes click callbacks to the application bridge
+ * - routes critical click/zoom interactions directly from JavaFX when the DOM listeners are unreliable
+ */
+public final class StationMapView {
+
+    private final PathProfileChart detailPathProfileChart = new PathProfileChart();
+    private final Label detailPathModeValue = new Label("-");
+
+    private final ChatPreferences chatPreferences;
+
+    private final Stage stage = new Stage();
+    private final WebView webView = new WebView();
+    private final WebEngine webEngine = webView.getEngine();
+
+    private Scene scene;
+    private BorderPane rootPane;
+    private SplitPane mainSplitPane;
+    private VBox detailPane;
+
+    private final Label statusLabel = new Label("Station map not initialized yet.");
+    private final Label detailCallsignValue = new Label("-");
+    private final Label detailLocatorValue = new Label("-");
+    private final Label detailQrbValue = new Label("-");
+    private final Label detailQtfValue = new Label("-");
+    private final Label detailBandsValue = new Label("-");
+    private final TextArea detailFrequenciesArea = new TextArea();
+    private final Label detailAirplanesValue = new Label("-");
+    private final Button triggerClusterSpotButton = new Button("Trigger cluster spot");
+
+    private final Label detailPathFromLocatorValue = new Label("-");
+    private final Label detailPathToLocatorValue = new Label("-");
+    private final Label detailPathDistanceValue = new Label("-");
+    private final Label detailPathBearingValue = new Label("-");
+    private final Label detailPathEndpointsValue = new Label("-");
+    private final Label detailPathStatusValue = new Label("No station selected.");
+
+    private String homeLocator6 = "";
+
+
+    private Consumer<String> onCallsignRawSelected;
+    private Consumer<String> onTriggerClusterSpot;
+
+    private boolean mapReady;
+    private boolean homeViewInitialized;
+
+    private List<MapCallsignRawSnapshot> lastSnapshots = List.of();
+    private MapCallsignRawSnapshot lastSelectedSnapshot;
+    private boolean filteredViewActive;
+
+    private double homeLatitudeDeg = Double.NaN;
+    private double homeLongitudeDeg = Double.NaN;
+    private double antennaAzimuthDeg;
+    private double beamWidthDeg;
+    private double maxQrbKm;
+
+    private double viewportSouthLat = Double.NaN;
+    private double viewportWestLon = Double.NaN;
+    private double viewportNorthLat = Double.NaN;
+    private double viewportEastLon = Double.NaN;
+    private int viewportZoom = 6;
+
+    private String detailCallsignRaw;
+
+    private PathAnalysisResult lastPathAnalysisResult = PathAnalysisResult.waitingForSelection("");
+
+    private VBox mapAndProfilePane;
+    private ScrollPane detailScrollPane;
+
+    private final Label detailPathLosValue = new Label("-");
+    private final Label detailPathWorstClearanceValue = new Label("-");
+
+    private final Label detailPathSamplesValue = new Label("-");
+
+    private final Label detailPathFrequencyValue = new Label("-");
+    private final Label detailPathRefractionValue = new Label("-");
+    private final Label detailPathHorizonValue = new Label("-");
+    private final Label detailPathTerrainHorizonValue = new Label("-");
+    private final Label detailPathFresnelValue = new Label("-");
+    private final Label detailPathWorstFresnelValue = new Label("-");
+
+    private final Label detailPathObstructionValue = new Label("-");
+
+    private final Label detailPathAssessmentValue = new Label("-");
+    private final Label detailPathMechanismsValue = new Label("-");
+
+    private final Label detailPathLinkBudgetValue = new Label("-");
+    private final Label detailPathRxPowerValue = new Label("-");
+    private final Label detailPathCwHintValue = new Label("-");
+
+
+    public StationMapView(ChatPreferences chatPreferences) {
+        this.chatPreferences = Objects.requireNonNull(chatPreferences, "chatPreferences");
+        initializeUi();
+        initializeWebView();
+    }
+
+    public void setPathAnalysisResult(PathAnalysisResult pathAnalysisResult) {
+        this.lastPathAnalysisResult = pathAnalysisResult == null
+                ? PathAnalysisResult.waitingForSelection(homeLocator6)
+                : pathAnalysisResult;
+
+        updatePathAnalysisPanel(this.lastPathAnalysisResult);
+
+        boolean loading = "Loading".equalsIgnoreCase(this.lastPathAnalysisResult.analysisMode());
+        detailPathStatusValue.setStyle(loading ? "-fx-font-style: italic;" : "");
+    }
+
+    public void setOnCallsignRawSelected(Consumer<String> onCallsignRawSelected) {
+        this.onCallsignRawSelected = onCallsignRawSelected;
+    }
+
+    public void setOnTriggerClusterSpot(Consumer<String> onTriggerClusterSpot) {
+        this.onTriggerClusterSpot = onTriggerClusterSpot;
+    }
+
+    public void showWindow() {
+
+        applyThemeFromPreferences();
+
+        if (!stage.isShowing()) {
+            stage.show();
+        }
+        stage.toFront();
+
+        Platform.runLater(() -> {
+            webView.requestFocus();
+            requestMapInvalidateSize();
+        });
+    }
+
+    public void hideWindow() {
+        stage.hide();
+    }
+
+    public boolean isShowing() {
+        return stage.isShowing();
+    }
+
+    public void applyThemeFromPreferences() {
+        boolean darkMode = chatPreferences.isGUI_darkModeActive();
+        applySceneTheme(darkMode);
+        applyMapThemeToWebView(darkMode);
+        detailPathProfileChart.setDarkMode(darkMode);
+    }
+
+    public void focusCallsignRaw(String callSignRaw) {
+        if (!mapReady || callSignRaw == null || callSignRaw.isBlank()) {
+            return;
+        }
+
+        executeMapScriptSafely(
+                "window.kstMapApi.focusCallsignRaw(" + toJsStringLiteral(callSignRaw.trim().toUpperCase(Locale.ROOT)) + ");"
+        );
+    }
+
+    public void refreshMap(List<MapCallsignRawSnapshot> snapshots,
+                           MapCallsignRawSnapshot selectedSnapshot,
+                           String ownLocator6,
+                           double antennaAzimuthDeg,
+                           double beamWidthDeg,
+                           double maxQrbKm,
+                           boolean filteredViewActive) {
+
+        this.lastSnapshots = snapshots == null ? List.of() : List.copyOf(snapshots);
+        this.lastSelectedSnapshot = selectedSnapshot;
+        this.antennaAzimuthDeg = antennaAzimuthDeg;
+        this.beamWidthDeg = beamWidthDeg;
+        this.maxQrbKm = maxQrbKm;
+        this.filteredViewActive = filteredViewActive;
+
+        this.homeLocator6 = normalizeLocator6(ownLocator6);
+        updateHomeLocationFromOwnLocator(this.homeLocator6);
+        updateStatusLabel();
+        updateDetailPanel(selectedSnapshot);
+
+        if (mapReady) {
+            renderAll();
+        }
+    }
+
+    private void initializeUi() {
+
+        stage.setTitle("Station Map");
+
+        detailFrequenciesArea.setEditable(false);
+        detailFrequenciesArea.setWrapText(true);
+        detailFrequenciesArea.setPrefRowCount(4);
+
+        detailPathEndpointsValue.setWrapText(true);
+        detailPathEndpointsValue.setMaxWidth(Double.MAX_VALUE);
+
+        detailPathStatusValue.setWrapText(true);
+        detailPathStatusValue.setMaxWidth(Double.MAX_VALUE);
+
+        detailPathAssessmentValue.setWrapText(true);
+        detailPathAssessmentValue.setMaxWidth(Double.MAX_VALUE);
+
+        detailPathMechanismsValue.setWrapText(true);
+        detailPathMechanismsValue.setMaxWidth(Double.MAX_VALUE);
+
+        triggerClusterSpotButton.setDisable(true);
+        triggerClusterSpotButton.setOnAction(event -> {
+            if (detailCallsignRaw != null && onTriggerClusterSpot != null) {
+                onTriggerClusterSpot.accept(detailCallsignRaw);
+            }
+        });
+
+        webView.setFocusTraversable(true);
+        webView.setPickOnBounds(true);
+
+        webView.addEventHandler(MouseEvent.MOUSE_PRESSED, event -> logWebViewMouseEvent("MOUSE_PRESSED", event));
+        webView.addEventHandler(MouseEvent.MOUSE_RELEASED, event -> logWebViewMouseEvent("MOUSE_RELEASED", event));
+        webView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> handleWebViewClick(event));
+
+        webView.addEventHandler(ScrollEvent.SCROLL, event -> {
+            System.out.println("[StationMap FX] SCROLL x=" + (int) event.getX()
+                    + " y=" + (int) event.getY()
+                    + " deltaY=" + event.getDeltaY());
+
+            InteractiveTarget target = inspectInteractiveTarget(event.getX(), event.getY());
+            System.out.println("[StationMap FX] inspect scroll -> " + target);
+
+            if (event.getDeltaY() > 0) {
+                executeMapScriptSafely("window.kstMapApi.zoomIn();");
+                requestViewportPullFromJs();
+            } else if (event.getDeltaY() < 0) {
+                executeMapScriptSafely("window.kstMapApi.zoomOut();");
+                requestViewportPullFromJs();
+            }
+
+            event.consume();
+
+            event.consume();
+        });
+
+        webView.widthProperty().addListener((obs, oldValue, newValue) -> requestMapInvalidateSize());
+        webView.heightProperty().addListener((obs, oldValue, newValue) -> requestMapInvalidateSize());
+
+        VBox profileSection = createProfileSection();
+
+        mapAndProfilePane = new VBox(6, webView, profileSection);
+        mapAndProfilePane.setPadding(new Insets(0));
+
+// Important: allow the SplitPane to shrink the map side.
+        mapAndProfilePane.setMinWidth(0);
+        mapAndProfilePane.setMinHeight(0);
+
+        webView.setMinWidth(0);
+        webView.setMinHeight(220);
+        webView.setPrefHeight(420);
+        VBox.setVgrow(webView, Priority.ALWAYS);
+
+        profileSection.setMinWidth(0);
+        profileSection.setMinHeight(210);
+        profileSection.setPrefHeight(260);
+        VBox.setVgrow(profileSection, Priority.NEVER);
+
+        detailPathProfileChart.widthProperty().unbind();
+        detailPathProfileChart.widthProperty().bind(
+                mapAndProfilePane.widthProperty().subtract(20)
+        );
+
+        detailPane = new VBox(10,
+                createSelectedStationSection(),
+                createPathAnalysisSection()
+        );
+        detailPane.setPadding(new Insets(10));
+
+        detailPane.setMinWidth(0);
+        detailPane.setPrefWidth(340);
+        detailPane.setMaxWidth(Double.MAX_VALUE);
+
+        detailScrollPane = new ScrollPane(detailPane);
+
+        detailScrollPane.setFitToWidth(true);
+        detailScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        detailScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        detailScrollPane.setMinWidth(300);
+        detailScrollPane.setPrefWidth(350);
+        detailScrollPane.setMaxWidth(Double.MAX_VALUE);
+
+        detailScrollPane.setFitToWidth(true);
+        detailScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        detailScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+
+        mainSplitPane = new SplitPane(mapAndProfilePane, detailScrollPane);
+        mainSplitPane.setDividerPositions(0.65);
+        SplitPane.setResizableWithParent(detailScrollPane, true);
+
+        rootPane = new BorderPane();
+        rootPane.setTop(statusLabel);
+        BorderPane.setMargin(statusLabel, new Insets(8));
+        rootPane.setCenter(mainSplitPane);
+
+        double[] size = chatPreferences.getGUIstationMapStageSceneSizeHW();
+
+        double initialWidth = resolveInitialStationMapWidth(size);
+        double initialHeight = resolveInitialStationMapHeight(size);
+
+        scene = new Scene(rootPane, initialWidth, initialHeight);
+
+        stage.setMinWidth(900);
+        stage.setMinHeight(650);
+
+        stage.setScene(scene);
+        applyThemeFromPreferences();
+        detailPathProfileChart.setOnProfilePointHovered(this::showProfileHoverPointOnMap);
+
+
+        double[] pos = chatPreferences.getGUIstationMapStagePositionXY();
+        if (pos.length >= 2 && !Double.isNaN(pos[0]) && !Double.isNaN(pos[1])) {
+            stage.setX(pos[0]);
+            stage.setY(pos[1]);
+        }
+
+        stage.widthProperty().addListener((obs, oldValue, newValue) ->
+                chatPreferences.getGUIstationMapStageSceneSizeHW()[0] = newValue.doubleValue());
+
+        stage.heightProperty().addListener((obs, oldValue, newValue) ->
+                chatPreferences.getGUIstationMapStageSceneSizeHW()[1] = newValue.doubleValue());
+
+        stage.xProperty().addListener((obs, oldValue, newValue) ->
+                chatPreferences.getGUIstationMapStagePositionXY()[0] = newValue.doubleValue());
+
+        stage.yProperty().addListener((obs, oldValue, newValue) ->
+                chatPreferences.getGUIstationMapStagePositionXY()[1] = newValue.doubleValue());
+
+        stage.setOnShown(event -> Platform.runLater(() -> {
+            webView.requestFocus();
+            requestMapInvalidateSize();
+        }));
+        detailPathProfileChart.setDarkMode(chatPreferences.isGUI_darkModeActive());
+
+        makePathValueLabel(detailPathModeValue);
+        makePathValueLabel(detailPathSamplesValue);
+        makePathValueLabel(detailPathFromLocatorValue);
+        makePathValueLabel(detailPathToLocatorValue);
+        makePathValueLabel(detailPathDistanceValue);
+        makePathValueLabel(detailPathBearingValue);
+        makePathValueLabel(detailPathEndpointsValue);
+        makePathValueLabel(detailPathFrequencyValue);
+        makePathValueLabel(detailPathRefractionValue);
+        makePathValueLabel(detailPathHorizonValue);
+        makePathValueLabel(detailPathTerrainHorizonValue);
+        makePathValueLabel(detailPathFresnelValue);
+        makePathValueLabel(detailPathWorstFresnelValue);
+        makePathValueLabel(detailPathLosValue);
+        makePathValueLabel(detailPathWorstClearanceValue);
+        makePathValueLabel(detailPathObstructionValue);
+        makePathValueLabel(detailPathAssessmentValue);
+        makePathValueLabel(detailPathMechanismsValue);
+        makePathValueLabel(detailPathLinkBudgetValue);
+        makePathValueLabel(detailPathRxPowerValue);
+        makePathValueLabel(detailPathCwHintValue);
+        makePathValueLabel(detailPathStatusValue);
+
+    }
+
+    private VBox createSelectedStationSection() {
+        GridPane detailGrid = new GridPane();
+        detailGrid.setHgap(8);
+        detailGrid.setVgap(6);
+
+        configureCompactGrid(detailGrid);
+
+        int row = 0;
+
+        detailGrid.add(new Label("Station:"), 0, row);
+        detailGrid.add(detailCallsignValue, 1, row++);
+
+        detailGrid.add(new Label("Locator:"), 0, row);
+        detailGrid.add(detailLocatorValue, 1, row++);
+
+        detailGrid.add(new Label("Path:"), 0, row);
+        Label compactPathValue = new Label();
+        compactPathValue.textProperty().bind(
+                detailQrbValue.textProperty()
+                        .concat(" / ")
+                        .concat(detailQtfValue.textProperty())
+        );
+        detailGrid.add(compactPathValue, 1, row++);
+
+        detailGrid.add(new Label("Bands:"), 0, row);
+        detailGrid.add(detailBandsValue, 1, row++);
+
+        // Frequencies are useful, but they consume vertical space. Keep them compact.
+        detailFrequenciesArea.setPrefRowCount(2);
+        detailGrid.add(new Label("QRG:"), 0, row);
+        detailGrid.add(detailFrequenciesArea, 1, row++);
+
+        return new VBox(8,
+                new Label("Selected station"),
+                new Separator(Orientation.HORIZONTAL),
+                detailGrid,
+                triggerClusterSpotButton
+        );
+    }
+
+    /**
+     * ensures that the labels remains visible
+     * @param gridPane
+     */
+    private void configureCompactGrid(GridPane gridPane) {
+        gridPane.getColumnConstraints().clear();
+
+        ColumnConstraints labelColumn = new ColumnConstraints();
+        labelColumn.setMinWidth(105);
+        labelColumn.setPrefWidth(115);
+        labelColumn.setMaxWidth(130);
+        labelColumn.setHgrow(Priority.NEVER);
+
+        ColumnConstraints valueColumn = new ColumnConstraints();
+        valueColumn.setMinWidth(180);
+        valueColumn.setHgrow(Priority.ALWAYS);
+
+        gridPane.getColumnConstraints().addAll(labelColumn, valueColumn);
+    }
+
+    private VBox createPathAnalysisSection() {
+        GridPane pathGrid = new GridPane();
+        pathGrid.setHgap(10);
+        pathGrid.setVgap(8);
+        configureCompactGrid(pathGrid);
+
+        int row = 0;
+        pathGrid.add(new Label("From locator:"), 0, row);
+        pathGrid.add(detailPathFromLocatorValue, 1, row++);
+
+        pathGrid.add(new Label("To locator:"), 0, row);
+        pathGrid.add(detailPathToLocatorValue, 1, row++);
+
+        Label distanceBearingValue = new Label();
+        distanceBearingValue.textProperty().bind(
+                detailPathDistanceValue.textProperty()
+                        .concat(" / ")
+                        .concat(detailPathBearingValue.textProperty())
+        );
+        distanceBearingValue.setWrapText(true);
+
+        pathGrid.add(new Label("Distance/QTF:"), 0, row);
+        pathGrid.add(distanceBearingValue, 1, row++);
+
+
+
+        pathGrid.add(new Label("Endpoints:"), 0, row);
+        pathGrid.add(detailPathEndpointsValue, 1, row++);
+
+
+        Label sourceValue = new Label();
+        sourceValue.textProperty().bind(
+                detailPathModeValue.textProperty()
+                        .concat(" / ")
+                        .concat(detailPathSamplesValue.textProperty())
+                        .concat(" samples")
+        );
+        sourceValue.setWrapText(true);
+
+        pathGrid.add(new Label("Source:"), 0, row);
+        pathGrid.add(sourceValue, 1, row++);
+
+        pathGrid.add(new Label("Frequency:"), 0, row);
+        pathGrid.add(detailPathFrequencyValue, 1, row++);
+
+        pathGrid.add(new Label("Refraction:"), 0, row);
+        pathGrid.add(detailPathRefractionValue, 1, row++);
+
+        pathGrid.add(new Label("Radio horizon:"), 0, row);
+        pathGrid.add(detailPathHorizonValue, 1, row++);
+
+        pathGrid.add(new Label("Terrain horizon:"), 0, row);
+        pathGrid.add(detailPathTerrainHorizonValue, 1, row++);
+
+        Label fresnelCombinedValue = new Label();
+        fresnelCombinedValue.textProperty().bind(
+                detailPathFresnelValue.textProperty()
+                        .concat(" / ")
+                        .concat(detailPathWorstFresnelValue.textProperty())
+        );
+        fresnelCombinedValue.setWrapText(true);
+
+        pathGrid.add(new Label("Fresnel:"), 0, row);
+        pathGrid.add(fresnelCombinedValue, 1, row++);
+
+        pathGrid.add(new Label("Obstruction:"), 0, row);
+        pathGrid.add(detailPathObstructionValue, 1, row++);
+
+
+        pathGrid.add(new Label("Assessment:"), 0, row);
+        pathGrid.add(detailPathAssessmentValue, 1, row++);
+
+        pathGrid.add(new Label("Link budget:"), 0, row);
+        pathGrid.add(detailPathLinkBudgetValue, 1, row++);
+
+        pathGrid.add(new Label("RX power:"), 0, row);
+        pathGrid.add(detailPathRxPowerValue, 1, row++);
+
+        pathGrid.add(new Label("CW hint:"), 0, row);
+        pathGrid.add(detailPathCwHintValue, 1, row++);
+
+        pathGrid.add(new Label("Mechanisms:"), 0, row);
+        pathGrid.add(detailPathMechanismsValue, 1, row++);
+
+        Label losClearanceValue = new Label();
+        losClearanceValue.textProperty().bind(
+                detailPathLosValue.textProperty()
+                        .concat(" / worst ")
+                        .concat(detailPathWorstClearanceValue.textProperty())
+        );
+        losClearanceValue.setWrapText(true);
+
+        pathGrid.add(new Label("LOS:"), 0, row);
+        pathGrid.add(losClearanceValue, 1, row++);
+
+        pathGrid.add(new Label("Status:"), 0, row);
+        pathGrid.add(detailPathStatusValue, 1, row++);
+
+        return new VBox(10,
+                new Label("Path / terrain analysis"),
+                new Separator(Orientation.HORIZONTAL),
+                pathGrid
+        );
+    }
+
+    private void requestViewportPullFromJs() {
+        if (!mapReady) {
+            return;
+        }
+
+        Platform.runLater(() ->
+                Platform.runLater(this::pullViewportFromJsAndRedrawGrid));
+    }
+
+    private void pullViewportFromJsAndRedrawGrid() {
+        if (!mapReady) {
+            return;
+        }
+
+        try {
+            Object result = webEngine.executeScript("window.kstMapApi.getViewportState();");
+            if (result == null) {
+                System.err.println("[StationMap FX] getViewportState returned null");
+                return;
+            }
+
+            String raw = result.toString();
+            if (raw.isBlank()) {
+                System.err.println("[StationMap FX] getViewportState returned blank");
+                return;
+            }
+
+            String[] parts = raw.split("\\|");
+            if (parts.length != 5) {
+                System.err.println("[StationMap FX] getViewportState unexpected format: " + raw);
+                return;
+            }
+
+            viewportSouthLat = Double.parseDouble(parts[0]);
+            viewportWestLon = Double.parseDouble(parts[1]);
+            viewportNorthLat = Double.parseDouble(parts[2]);
+            viewportEastLon = Double.parseDouble(parts[3]);
+            viewportZoom = (int) Math.round(Double.parseDouble(parts[4]));
+
+            System.out.println("[StationMap FX] pulled viewport south=" + viewportSouthLat
+                    + " west=" + viewportWestLon
+                    + " north=" + viewportNorthLat
+                    + " east=" + viewportEastLon
+                    + " zoom=" + viewportZoom);
+
+            renderGridIfViewportKnown();
+        } catch (Exception exception) {
+            System.err.println("[StationMap FX] pullViewportFromJsAndRedrawGrid failed: " + exception.getMessage());
+        }
+    }
+
+    private void initializeWebView() {
+        webView.setContextMenuEnabled(false);
+
+        webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
+                JSObject window = (JSObject) webEngine.executeScript("window");
+                window.setMember("javaMapBridge", new JavaMapBridge());
+
+                executeMapScriptSafely("window.kstMapApi.init();");
+
+                mapReady = true;
+                applyMapThemeToWebView(chatPreferences.isGUI_darkModeActive());
+                renderAll();
+                requestMapInvalidateSize();
+            }
+        });
+
+        webEngine.loadContent(MapHtmlResources.createStationMapHtml());
+    }
+
+    private void requestMapInvalidateSize() {
+        if (!mapReady) {
+            return;
+        }
+
+        Platform.runLater(() ->
+                Platform.runLater(() ->
+                        executeMapScriptSafely("window.kstMapApi.invalidateSize();")));
+    }
+
+    private void handleWebViewClick(MouseEvent event) {
+        logWebViewMouseEvent("MOUSE_CLICKED", event);
+
+        InteractiveTarget target = inspectInteractiveTarget(event.getX(), event.getY());
+        System.out.println("[StationMap FX] inspect click -> " + target);
+
+        switch (target.kind()) {
+            case STATION -> {
+                if (target.callSignRaw() != null && !target.callSignRaw().isBlank() && onCallsignRawSelected != null) {
+                    System.out.println("[StationMap FX] selecting station " + target.callSignRaw());
+                    onCallsignRawSelected.accept(target.callSignRaw());
+                    event.consume();
+                }
+            }
+            case ZOOM_IN -> {
+                System.out.println("[StationMap FX] zoom in click routed by JavaFX");
+                executeMapScriptSafely("window.kstMapApi.zoomIn();");
+                requestViewportPullFromJs();
+                event.consume();
+            }
+            case ZOOM_OUT -> {
+                System.out.println("[StationMap FX] zoom out click routed by JavaFX");
+                executeMapScriptSafely("window.kstMapApi.zoomOut();");
+                requestViewportPullFromJs();
+                event.consume();
+            }
+
+            case NONE -> {
+                // Let normal WebView processing continue.
+            }
+        }
+    }
+
+    private void logWebViewMouseEvent(String type, MouseEvent event) {
+        System.out.println("[StationMap FX] " + type
+                + " x=" + (int) event.getX()
+                + " y=" + (int) event.getY()
+                + " target=" + event.getTarget().getClass().getSimpleName()
+                + " button=" + event.getButton());
+
+        probeDomElementAt(event.getX(), event.getY());
+    }
+
+    private void probeDomElementAt(double x, double y) {
+        if (!mapReady) {
+            return;
+        }
+
+        String script = String.format(Locale.US, """
+                (function() {
+                    var el = document.elementFromPoint(%f, %f);
+                    if (!el) {
+                        return "null";
+                    }
+                    var cls = "";
+                    try {
+                        cls = el.className ? el.className.toString() : "";
+                    } catch (e) {
+                        cls = "[className-error]";
+                    }
+                    var id = el.id ? el.id.toString() : "";
+                    var text = el.textContent ? el.textContent.trim() : "";
+                    if (text.length > 80) {
+                        text = text.substring(0, 80);
+                    }
+                    return "tag=" + el.tagName + " class=" + cls + " id=" + id + " text=" + text;
+                })();
+                """, x, y);
+
+        try {
+            Object result = webEngine.executeScript(script);
+            System.out.println("[StationMap FX] elementFromPoint -> " + result);
+        } catch (Exception exception) {
+            System.err.println("[StationMap FX] elementFromPoint failed: " + exception.getMessage());
+        }
+    }
+
+    private InteractiveTarget inspectInteractiveTarget(double x, double y) {
+        if (!mapReady) {
+            return InteractiveTarget.none();
+        }
+
+        String script = String.format(Locale.US, """
+                window.kstMapApi.inspectPoint(%f, %f);
+                """, x, y);
+
+        try {
+            Object result = webEngine.executeScript(script);
+            if (result == null) {
+                return InteractiveTarget.none();
+            }
+
+            String raw = result.toString();
+
+            String[] parts = raw.split("\\|", 5);
+
+            String kind = parts.length > 0 ? parts[0] : "none";
+            String callSignRaw = parts.length > 1 ? parts[1] : "";
+            String tag = parts.length > 2 ? parts[2] : "";
+            String cssClass = parts.length > 3 ? parts[3] : "";
+            String text = parts.length > 4 ? parts[4] : "";
+
+            return switch (kind) {
+                case "station" -> new InteractiveTarget(InteractiveKind.STATION, callSignRaw, tag, cssClass, text);
+                case "zoomIn" -> new InteractiveTarget(InteractiveKind.ZOOM_IN, "", tag, cssClass, text);
+                case "zoomOut" -> new InteractiveTarget(InteractiveKind.ZOOM_OUT, "", tag, cssClass, text);
+                default -> new InteractiveTarget(InteractiveKind.NONE, "", tag, cssClass, text);
+            };
+        } catch (Exception exception) {
+            System.err.println("[StationMap FX] inspectInteractiveTarget failed: " + exception.getMessage());
+            return InteractiveTarget.none();
+        }
+    }
+
+    private void updateHomeLocationFromOwnLocator(String ownLocator6) {
+        String normalizedLocator = normalizeLocator6(ownLocator6);
+        if (normalizedLocator.isBlank()) {
+            homeLatitudeDeg = Double.NaN;
+            homeLongitudeDeg = Double.NaN;
+            return;
+        }
+
+        Location homeLocation = new Location(normalizedLocator);
+        homeLatitudeDeg = homeLocation.getLatitude().toDegrees();
+        homeLongitudeDeg = homeLocation.getLongitude().toDegrees();
+    }
+
+    private void updateStatusLabel() {
+        StringBuilder text = new StringBuilder();
+        text.append("Showing ").append(lastSnapshots.size()).append(" visible stations");
+
+        if (filteredViewActive) {
+            text.append(" | filtered view active");
+        }
+
+        statusLabel.setText(text.toString());
+    }
+
+    private void updateDetailPanel(MapCallsignRawSnapshot selectedSnapshot) {
+        if (selectedSnapshot == null) {
+            clearSelectedStationPanel();
+            clearPathAnalysisPanel();
+            return;
+        }
+
+        updateSelectedStationPanel(selectedSnapshot);
+
+        if (selectedSnapshot == null) {
+            updatePathAnalysisPanel(PathAnalysisResult.waitingForSelection(homeLocator6));
+        } else {
+            updatePathAnalysisPanel(lastPathAnalysisResult);
+        }
+
+    }
+
+    private void clearSelectedStationPanel() {
+        detailCallsignRaw = null;
+        detailCallsignValue.setText("-");
+        detailLocatorValue.setText("-");
+        detailQrbValue.setText("-");
+        detailQtfValue.setText("-");
+        detailBandsValue.setText("-");
+        detailFrequenciesArea.setText("-");
+        detailAirplanesValue.setText("-");
+        triggerClusterSpotButton.setDisable(true);
+    }
+
+    private void updateSelectedStationPanel(MapCallsignRawSnapshot selectedSnapshot) {
+        detailCallsignRaw = selectedSnapshot.callSignRaw();
+        detailCallsignValue.setText(selectedSnapshot.displayCallSign());
+        detailLocatorValue.setText(selectedSnapshot.locator6());
+        detailQrbValue.setText(String.format(Locale.US, "%.0f km", selectedSnapshot.qrbKm()));
+        detailQtfValue.setText(String.format(Locale.US, "%.0f°", selectedSnapshot.qtfDeg()));
+        detailBandsValue.setText(selectedSnapshot.bandSummary().isBlank() ? "-" : selectedSnapshot.bandSummary());
+        detailFrequenciesArea.setText(selectedSnapshot.detailFrequencyText());
+        detailAirplanesValue.setText(String.valueOf(selectedSnapshot.reachableAirplanes()));
+        triggerClusterSpotButton.setDisable(false);
+    }
+
+    private void clearPathAnalysisPanel() {
+        detailPathFromLocatorValue.setText(homeLocator6.isBlank() ? "-" : homeLocator6);
+        detailPathToLocatorValue.setText("-");
+        detailPathDistanceValue.setText("-");
+        detailPathBearingValue.setText("-");
+        detailPathEndpointsValue.setText("-");
+        detailPathStatusValue.setText("Select a station to prepare path and terrain analysis.");
+        detailPathModeValue.setText("-");
+        detailPathSamplesValue.setText("-");
+        detailPathLosValue.setText("-");
+        detailPathWorstClearanceValue.setText("-");
+
+
+        detailPathFrequencyValue.setText("-");
+        detailPathRefractionValue.setText("-");
+        detailPathHorizonValue.setText("-");
+        detailPathFresnelValue.setText("-");
+        detailPathWorstFresnelValue.setText("-");
+        detailPathTerrainHorizonValue.setText("-");
+        detailPathObstructionValue.setText("-");
+        detailPathAssessmentValue.setText("-");
+        detailPathMechanismsValue.setText("-");
+
+        detailPathLinkBudgetValue.setText("-");
+        detailPathRxPowerValue.setText("-");
+        detailPathCwHintValue.setText("-");
+
+        detailPathProfileChart.setObstructionSummary(PathObstructionSummary.empty());
+
+
+        detailPathProfileChart.setProfile(List.of(), Double.NaN);
+        detailPathProfileChart.setRadioPath(
+                Double.NaN,
+                Double.NaN,
+                Double.NaN
+        );
+        detailPathProfileChart.setHorizonSummary(PathHorizonSummary.empty());
+        applyPropagationAssessmentStyle(PathAnalysisResult.waitingForSelection(homeLocator6));
+    }
+
+    private void updatePathAnalysisPanel(PathAnalysisResult result) {
+
+        detailPathModeValue.setText(
+                result.analysisMode().isBlank() ? "-" : result.analysisMode()
+        );
+        detailPathSamplesValue.setText(String.valueOf(result.profilePoints().size()));
+        detailPathLosValue.setText(result.losText());
+        detailPathWorstClearanceValue.setText(result.worstClearanceText());
+
+
+        detailPathFrequencyValue.setText(result.analysisFrequencyText());
+        detailPathRefractionValue.setText(result.effectiveEarthRadiusText());
+        detailPathHorizonValue.setText(result.radioHorizonText());
+        detailPathTerrainHorizonValue.setText(result.terrainHorizonText());
+        detailPathFresnelValue.setText(result.fresnelText());
+        detailPathWorstFresnelValue.setText(result.worstFresnelClearanceText());
+        detailPathObstructionValue.setText(result.obstructionText());
+
+        detailPathAssessmentValue.setText(result.propagationAssessmentText());
+        detailPathMechanismsValue.setText(result.propagationMechanismsText());
+        applyPropagationAssessmentStyle(result);
+
+        detailPathFromLocatorValue.setText(result.fromLocator6().isBlank() ? "-" : result.fromLocator6());
+        detailPathToLocatorValue.setText(result.toLocator6().isBlank() ? "-" : result.toLocator6());
+        detailPathDistanceValue.setText(result.distanceText());
+        detailPathBearingValue.setText(result.bearingText());
+        detailPathEndpointsValue.setText(result.endpointSummaryText());
+        detailPathStatusValue.setText(result.statusText());
+        detailPathProfileChart.setProfile(result.profilePoints(), result.distanceKm());
+
+        detailPathLinkBudgetValue.setText(result.linkBudgetText());
+        detailPathRxPowerValue.setText(result.linkBudgetRxPowerText());
+        detailPathCwHintValue.setText(result.cwHintText());
+
+        detailPathProfileChart.setRadioPath(
+                result.homeAntennaHeightMeters(),
+                result.targetAntennaHeightMeters(),
+                result.analysisFrequencyMHz()
+        );
+        detailPathProfileChart.setHorizonSummary(result.horizonSummary());
+        detailPathProfileChart.setObstructionSummary(result.obstructionSummary());
+    }
+
+
+
+
+    private void renderAll() {
+        if (!mapReady) {
+            return;
+        }
+
+        if (!homeViewInitialized && Double.isFinite(homeLatitudeDeg) && Double.isFinite(homeLongitudeDeg)) {
+            executeMapScriptSafely(
+                    "window.kstMapApi.setHome(" + formatDouble(homeLatitudeDeg) + ", "
+                            + formatDouble(homeLongitudeDeg) + ", 6);"
+            );
+            homeViewInitialized = true;
+        }
+
+        renderStations();
+        renderBeam();
+        renderConnectionLine();
+        renderGridIfViewportKnown();
+
+        if (lastSelectedSnapshot != null) {
+            focusCallsignRaw(lastSelectedSnapshot.callSignRaw());
+        }
+    }
+
+    private void renderStations() {
+        executeMapScriptSafely(
+                "window.kstMapApi.setStations(" + toJsStringLiteral(toStationsJson(lastSnapshots)) + ");"
+        );
+    }
+
+    private void renderBeam() {
+        if (!Double.isFinite(homeLatitudeDeg)
+                || !Double.isFinite(homeLongitudeDeg)
+                || beamWidthDeg <= 0.0
+                || maxQrbKm <= 0.0) {
+
+            executeMapScriptSafely("window.kstMapApi.setBeam('null');");
+            return;
+        }
+
+        List<double[]> sectorPoints = buildBeamPolygon(homeLatitudeDeg, homeLongitudeDeg, antennaAzimuthDeg, beamWidthDeg, maxQrbKm);
+        executeMapScriptSafely(
+                "window.kstMapApi.setBeam(" + toJsStringLiteral(toPointArrayJson(sectorPoints)) + ");"
+        );
+    }
+
+    private void renderConnectionLine() {
+        if (lastSelectedSnapshot == null || !lastSelectedSnapshot.hasUsablePosition()
+                || !Double.isFinite(homeLatitudeDeg) || !Double.isFinite(homeLongitudeDeg)) {
+
+            executeMapScriptSafely("window.kstMapApi.setConnection('null');");
+            return;
+        }
+
+        List<double[]> points = List.of(
+                new double[]{homeLatitudeDeg, homeLongitudeDeg},
+                new double[]{lastSelectedSnapshot.latitudeDeg(), lastSelectedSnapshot.longitudeDeg()}
+        );
+
+        executeMapScriptSafely(
+                "window.kstMapApi.setConnection(" + toJsStringLiteral(toPointArrayJson(points)) + ");"
+        );
+    }
+
+    private void renderGridIfViewportKnown() {
+        if (!Double.isFinite(viewportSouthLat)
+                || !Double.isFinite(viewportWestLon)
+                || !Double.isFinite(viewportNorthLat)
+                || !Double.isFinite(viewportEastLon)) {
+            return;
+        }
+
+        double viewportWidthPx = Math.max(1.0, webView.getWidth());
+        double viewportHeightPx = Math.max(1.0, webView.getHeight());
+
+        MaidenheadGridRenderPlanner.GridRenderPlan renderPlan = MaidenheadGridRenderPlanner.createPlan(
+                viewportZoom,
+                viewportSouthLat,
+                viewportWestLon,
+                viewportNorthLat,
+                viewportEastLon,
+                viewportWidthPx,
+                viewportHeightPx
+        );
+
+        List<MaidenheadGridUtils.GridCell> visibleGridCells = MaidenheadGridUtils.buildVisibleCells(
+                viewportSouthLat,
+                viewportWestLon,
+                viewportNorthLat,
+                viewportEastLon,
+                renderPlan.precision()
+        );
+
+        System.out.println("[StationMap] renderGridIfViewportKnown zoom=" + viewportZoom
+                + " precision=" + renderPlan.precision().locatorLength()
+                + " labelStride=" + renderPlan.labelColumnStride() + "x" + renderPlan.labelRowStride()
+                + " cellPx=" + String.format(Locale.US, "%.1f/%.1f", renderPlan.estimatedCellWidthPx(), renderPlan.estimatedCellHeightPx())
+                + " cells=" + visibleGridCells.size());
+
+        executeMapScriptSafely(
+                "window.kstMapApi.setGrid(" + toJsStringLiteral(toGridJson(visibleGridCells, renderPlan)) + ");"
+        );
+    }
+
+    private List<double[]> buildBeamPolygon(double startLatDeg,
+                                            double startLonDeg,
+                                            double centerAzimuthDeg,
+                                            double beamWidthDeg,
+                                            double radiusKm) {
+
+        List<double[]> polygon = new ArrayList<>();
+        polygon.add(new double[]{startLatDeg, startLonDeg});
+
+        double startAzimuth = normalizeAngle(centerAzimuthDeg - beamWidthDeg / 2.0);
+
+        int segmentCount = Math.max(12, (int) Math.ceil(beamWidthDeg / 4.0));
+        double angleStep = beamWidthDeg / segmentCount;
+
+        for (int i = 0; i <= segmentCount; i++) {
+            double currentAzimuth = normalizeAngle(startAzimuth + i * angleStep);
+            polygon.add(calculateDestinationPoint(startLatDeg, startLonDeg, currentAzimuth, radiusKm));
+        }
+
+        polygon.add(new double[]{startLatDeg, startLonDeg});
+        return polygon;
+    }
+
+    private double[] calculateDestinationPoint(double startLatDeg,
+                                               double startLonDeg,
+                                               double bearingDeg,
+                                               double distanceKm) {
+
+        double earthRadiusKm = 6371.009;
+
+        double angularDistance = distanceKm / earthRadiusKm;
+        double bearingRad = Math.toRadians(bearingDeg);
+        double startLatRad = Math.toRadians(startLatDeg);
+        double startLonRad = Math.toRadians(startLonDeg);
+
+        double destinationLatRad = Math.asin(
+                Math.sin(startLatRad) * Math.cos(angularDistance)
+                        + Math.cos(startLatRad) * Math.sin(angularDistance) * Math.cos(bearingRad)
+        );
+
+        double destinationLonRad = startLonRad + Math.atan2(
+                Math.sin(bearingRad) * Math.sin(angularDistance) * Math.cos(startLatRad),
+                Math.cos(angularDistance) - Math.sin(startLatRad) * Math.sin(destinationLatRad)
+        );
+
+        double destinationLatDeg = Math.toDegrees(destinationLatRad);
+        double destinationLonDeg = normalizeLongitude(Math.toDegrees(destinationLonRad));
+
+        return new double[]{destinationLatDeg, destinationLonDeg};
+    }
+
+    private double normalizeAngle(double angleDeg) {
+        double normalized = angleDeg % 360.0;
+        return normalized < 0.0 ? normalized + 360.0 : normalized;
+    }
+
+    private double normalizeLongitude(double longitudeDeg) {
+        double normalized = longitudeDeg;
+        while (normalized < -180.0) {
+            normalized += 360.0;
+        }
+        while (normalized > 180.0) {
+            normalized -= 360.0;
+        }
+        return normalized;
+    }
+
+    private String normalizeLocator6(String locator) {
+        if (locator == null) {
+            return "";
+        }
+
+        String normalized = locator.trim().toUpperCase(Locale.ROOT);
+        if (normalized.length() >= 6) {
+            normalized = normalized.substring(0, 6);
+        }
+
+        return normalized.matches("^[A-R]{2}[0-9]{2}[A-X]{2}$") ? normalized : "";
+    }
+
+    private void executeMapScriptSafely(String script) {
+        try {
+            webEngine.executeScript(script);
+        } catch (Exception exception) {
+            System.err.println("[StationMap] executeScript failed: " + exception.getMessage());
+        }
+    }
+
+    private void applySceneTheme(boolean darkMode) {
+        if (scene == null) {
+            return;
+        }
+
+        scene.getStylesheets().clear();
+        scene.getStylesheets().add(darkMode
+                ? ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING
+                : ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+
+        if (darkMode) {
+            rootPane.setStyle("-fx-background-color: #2b3035;");
+            mainSplitPane.setStyle("-fx-background-color: #2b3035;");
+            detailPane.setStyle("-fx-background-color: #31373c; -fx-border-color: #4c565c; -fx-border-width: 0 0 0 1;");
+            statusLabel.setStyle("-fx-background-color: #373e43; -fx-text-fill: lightgray; -fx-padding: 8 10 8 10; -fx-background-radius: 4;");
+            detailFrequenciesArea.setStyle("-fx-control-inner-background: #444b50; -fx-text-fill: lightgray;");
+        } else {
+            rootPane.setStyle("-fx-background-color: #f2f2f2;");
+            mainSplitPane.setStyle("-fx-background-color: #f2f2f2;");
+            detailPane.setStyle("-fx-background-color: #f7f7f7; -fx-border-color: #d0d0d0; -fx-border-width: 0 0 0 1;");
+            statusLabel.setStyle("-fx-background-color: #f7f7f7; -fx-text-fill: #333333; -fx-padding: 8 10 8 10; -fx-background-radius: 4;");
+            detailFrequenciesArea.setStyle("");
+        }
+    }
+
+    private void applyMapThemeToWebView(boolean darkMode) {
+        if (!mapReady) {
+            return;
+        }
+
+        executeMapScriptSafely(
+                "window.kstMapApi.setTheme(" + toJsStringLiteral(darkMode ? "dark" : "light") + ");"
+        );
+    }
+
+    private void applyPropagationAssessmentStyle(PathAnalysisResult result) {
+        int severity = result == null ? 0 : result.propagationSeverityLevel();
+
+        String textColor = chatPreferences.isGUI_darkModeActive()
+                ? "#f0f0f0"
+                : "#202020";
+
+        String backgroundColor;
+        String borderColor;
+
+        switch (severity) {
+            case 1 -> {
+                backgroundColor = chatPreferences.isGUI_darkModeActive() ? "#1f4d2b" : "#d8f3dc";
+                borderColor = "#3aa655";
+            }
+            case 2 -> {
+                backgroundColor = chatPreferences.isGUI_darkModeActive() ? "#4a4420" : "#fff3bf";
+                borderColor = "#d4a017";
+            }
+            case 3 -> {
+                backgroundColor = chatPreferences.isGUI_darkModeActive() ? "#4d3520" : "#ffe0b2";
+                borderColor = "#e69138";
+            }
+            case 4 -> {
+                backgroundColor = chatPreferences.isGUI_darkModeActive() ? "#5a2b20" : "#ffc9a9";
+                borderColor = "#d96c2c";
+            }
+            case 5 -> {
+                backgroundColor = chatPreferences.isGUI_darkModeActive() ? "#5a2020" : "#ffcdd2";
+                borderColor = "#d63b3b";
+            }
+            default -> {
+                backgroundColor = chatPreferences.isGUI_darkModeActive() ? "#33383e" : "#eeeeee";
+                borderColor = chatPreferences.isGUI_darkModeActive() ? "#666f78" : "#cccccc";
+            }
+        }
+
+        detailPathAssessmentValue.setStyle(
+                "-fx-text-fill: " + textColor + ";"
+                        + "-fx-background-color: " + backgroundColor + ";"
+                        + "-fx-border-color: " + borderColor + ";"
+                        + "-fx-border-radius: 4;"
+                        + "-fx-background-radius: 4;"
+                        + "-fx-padding: 3 6 3 6;"
+        );
+    }
+
+    private String toStationsJson(List<MapCallsignRawSnapshot> snapshots) {
+        StringBuilder json = new StringBuilder("[");
+        boolean first = true;
+
+        for (MapCallsignRawSnapshot snapshot : snapshots) {
+            if (snapshot == null || !snapshot.hasUsablePosition()) {
+                continue;
+            }
+
+            if (!first) {
+                json.append(',');
+            }
+            first = false;
+
+            json.append('{')
+                    .append("\"callSignRaw\":").append(toJsonString(snapshot.callSignRaw())).append(',')
+                    .append("\"markerLabel\":").append(toJsonString(snapshot.markerLabel())).append(',')
+                    .append("\"latitudeDeg\":").append(formatDouble(snapshot.latitudeDeg())).append(',')
+                    .append("\"longitudeDeg\":").append(formatDouble(snapshot.longitudeDeg())).append(',')
+                    .append("\"warningToMyDirection\":").append(snapshot.warningToMyDirection()).append(',')
+                    .append("\"worked\":").append(snapshot.worked()).append(',')
+                    .append("\"selected\":").append(snapshot.selected())
+                    .append('}');
+        }
+
+        json.append(']');
+        return json.toString();
+    }
+
+    private String toGridJson(List<MaidenheadGridUtils.GridCell> cells,
+                              MaidenheadGridRenderPlanner.GridRenderPlan renderPlan) {
+        StringBuilder json = new StringBuilder("[");
+        boolean first = true;
+
+        for (MaidenheadGridUtils.GridCell cell : cells) {
+            if (!first) {
+                json.append(',');
+            }
+            first = false;
+
+            boolean showLabel = renderPlan.shouldShowLabel(cell);
+
+            json.append('{')
+                    .append("\"locatorLabel\":").append(toJsonString(cell.locatorLabel())).append(',')
+                    .append("\"southLat\":").append(formatDouble(cell.southLat())).append(',')
+                    .append("\"westLon\":").append(formatDouble(cell.westLon())).append(',')
+                    .append("\"northLat\":").append(formatDouble(cell.northLat())).append(',')
+                    .append("\"eastLon\":").append(formatDouble(cell.eastLon())).append(',')
+                    .append("\"showLabel\":").append(showLabel).append(',')
+                    .append("\"labelFontPx\":").append(formatDouble(renderPlan.labelFontSizePx()))
+                    .append('}');
+        }
+
+        json.append(']');
+        return json.toString();
+    }
+
+    private String toPointArrayJson(List<double[]> points) {
+        StringBuilder json = new StringBuilder("[");
+        boolean first = true;
+
+        for (double[] point : points) {
+            if (!first) {
+                json.append(',');
+            }
+            first = false;
+
+            json.append('{')
+                    .append("\"lat\":").append(formatDouble(point[0])).append(',')
+                    .append("\"lon\":").append(formatDouble(point[1]))
+                    .append('}');
+        }
+
+        json.append(']');
+        return json.toString();
+    }
+
+    private String formatDouble(double value) {
+        return String.format(Locale.US, "%.8f", value);
+    }
+
+    private String toJsStringLiteral(String raw) {
+        return "'" + escapeForJavaScript(raw) + "'";
+    }
+
+    private String toJsonString(String raw) {
+        return "\"" + escapeJson(raw) + "\"";
+    }
+
+    private String escapeJson(String raw) {
+        if (raw == null) {
+            return "";
+        }
+
+        return raw
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+    }
+
+    private String escapeForJavaScript(String raw) {
+        if (raw == null) {
+            return "";
+        }
+
+        return raw
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
+    }
+
+    public final class JavaMapBridge {
+
+        public void onMapReady() {
+            System.out.println("[StationMap JS] onMapReady");
+            mapReady = true;
+            renderAll();
+            requestMapInvalidateSize();
+        }
+
+        public void onViewportChanged(double southLat,
+                                      double westLon,
+                                      double northLat,
+                                      double eastLon,
+                                      double zoom) {
+
+            viewportSouthLat = southLat;
+            viewportWestLon = westLon;
+            viewportNorthLat = northLat;
+            viewportEastLon = eastLon;
+            viewportZoom = (int) Math.round(zoom);
+
+            System.out.println("[StationMap JS] onViewportChanged zoom=" + viewportZoom);
+
+            if (Platform.isFxApplicationThread()) {
+                renderGridIfViewportKnown();
+            } else {
+                Platform.runLater(StationMapView.this::renderGridIfViewportKnown);
+            }
+        }
+
+        public void onCallsignRawClicked(String callSignRaw) {
+            System.out.println("[StationMap JS] onCallsignRawClicked " + callSignRaw);
+            if (onCallsignRawSelected != null) {
+                onCallsignRawSelected.accept(callSignRaw);
+            }
+        }
+
+        public void onJsLog(String message) {
+            System.out.println("[StationMap JS] " + message);
+        }
+
+        public void onJsError(String message) {
+            System.err.println("[StationMap JS ERROR] " + message);
+        }
+    }
+
+    private enum InteractiveKind {
+        NONE,
+        STATION,
+        ZOOM_IN,
+        ZOOM_OUT
+    }
+
+    private record InteractiveTarget(
+            InteractiveKind kind,
+            String callSignRaw,
+            String tag,
+            String cssClass,
+            String text
+    ) {
+        static InteractiveTarget none() {
+            return new InteractiveTarget(InteractiveKind.NONE, "", "", "", "");
+        }
+    }
+
+    private VBox createProfileSection() {
+        Label titleLabel = new Label("Path profile / terrain analysis");
+        titleLabel.setStyle("-fx-font-weight: bold;");
+
+        detailPathProfileChart.setHeight(220);
+//        detailPathProfileChart.setMinHeight(180);
+//        detailPathProfileChart.setPrefHeight(220);
+
+        VBox chartBox = new VBox(4, titleLabel, detailPathProfileChart);
+        chartBox.setPadding(new Insets(4, 8, 8, 8));
+        chartBox.setMinHeight(200);
+        chartBox.setPrefHeight(250);
+
+//        detailPathProfileChart.widthProperty().bind(chartBox.widthProperty().subtract(20));
+
+        VBox.setVgrow(detailPathProfileChart, Priority.ALWAYS);
+
+        return chartBox;
+    }
+
+    private void makePathValueLabel(Label label) {
+        if (label == null) {
+            return;
+        }
+
+        label.setWrapText(true);
+        label.setMaxWidth(Double.MAX_VALUE);
+        GridPane.setHgrow(label, Priority.ALWAYS);
+    }
+
+    /**
+     * Callback to show the howered profile path points position at the map
+     * @param point
+     */
+    private void showProfileHoverPointOnMap(PathProfilePoint point) {
+        if (!mapReady) {
+            return;
+        }
+
+        if (point == null
+                || !Double.isFinite(point.latitudeDeg())
+                || !Double.isFinite(point.longitudeDeg())) {
+            executeMapScriptSafely("window.kstMapApi.setProfileHoverPoint(null);");
+            return;
+        }
+
+        String label = String.format(
+                Locale.US,
+                "%.1f km / %.0f m",
+                point.distanceKm(),
+                point.elevationMeters()
+        );
+
+        executeMapScriptSafely(
+                "window.kstMapApi.setProfileHoverPoint({"
+                        + "lat:" + formatDouble(point.latitudeDeg()) + ","
+                        + "lon:" + formatDouble(point.longitudeDeg()) + ","
+                        + "label:" + toJsStringLiteral(label)
+                        + "});"
+        );
+    }
+
+    private double resolveInitialStationMapWidth(double[] storedSize) {
+        if (storedSize == null || storedSize.length < 1 || !Double.isFinite(storedSize[0])) {
+            return 1024.0;
+        }
+
+        // Avoid restoring very large old test sizes after the layout changed.
+        if (storedSize[0] < 900.0 || storedSize[0] > 1600.0) {
+            return 1024.0;
+        }
+
+        return storedSize[0];
+    }
+
+    private double resolveInitialStationMapHeight(double[] storedSize) {
+        if (storedSize == null || storedSize.length < 2 || !Double.isFinite(storedSize[1])) {
+            return 768.0;
+        }
+
+        // Avoid restoring very large old test sizes after the layout changed.
+        if (storedSize[1] < 650.0 || storedSize[1] > 1100.0) {
+            return 768.0;
+        }
+
+        return storedSize[1];
+    }
+}

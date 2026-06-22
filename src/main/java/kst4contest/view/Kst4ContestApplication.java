@@ -62,11 +62,16 @@ import kst4contest.model.*;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import kst4contest.utils.ApplicationFileUtils;
+import kst4contest.view.map.StationMapBridge;
+import kst4contest.view.map.StationMapView;
+import kst4contest.view.map.OfflineDemImportService;
 
 
 public class Kst4ContestApplication extends Application implements StatusUpdateListener  {
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
 
+	private StationMapView stationMapView; //view class for the avl stn map
+	private StationMapBridge stationMapBridge; //bridge for mapping actions between map and view
 
 	private final Button btnBandUpgradeIndicator = new Button("BAND+");
 	private final Tooltip tipBandUpgradeIndicator = new Tooltip();
@@ -115,6 +120,73 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	VBox selectedCallSignFurtherInfoPane = new VBox();
 
 	ToggleButton[] btnQtfButtonsAvl = new ToggleButton[8];
+
+	private void ensureStationMapSupportInitialized() {
+		if (stationMapView != null && stationMapBridge != null) {
+			return;
+		}
+
+		stationMapView = new StationMapView(chatcontroller.getChatPreferences());
+		stationMapBridge = new StationMapBridge(
+				chatcontroller,
+				tbl_chatMember,
+				stationMapView,
+				this::focusChatMemberAndPrepareCq
+		);
+		stationMapBridge.install();
+	}
+
+	private void toggleStationMapWindow() {
+		ensureStationMapSupportInitialized();
+		stationMapBridge.toggleWindow();
+	}
+
+	private void showSelectedCallsignOnMap() {
+		ensureStationMapSupportInitialized();
+
+		if (selectedCallSignInfoStageChatMember != null) {
+			chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+		}
+
+		stationMapBridge.focusSelectedCallsign();
+	}
+
+	private void refreshStationMapIfVisible() {
+		if (stationMapBridge != null && stationMapView != null && stationMapView.isShowing()) {
+			stationMapBridge.requestImmediateRefresh();
+		}
+	}
+
+	/**
+	 * Resolves a reasonable initial directory for the DEM tile file chooser.
+	 *
+	 * <p>Preference order:
+	 * <ol>
+	 *     <li>configured DEM root directory if it already exists</li>
+	 *     <li>its parent directory if that exists</li>
+	 *     <li>user home directory</li>
+	 * </ol>
+	 *
+	 * @param configuredDemRootDirectory current DEM root directory text
+	 * @return usable initial directory or null
+	 */
+	private File resolveInitialDirectoryForDemImport(String configuredDemRootDirectory) {
+		if (configuredDemRootDirectory != null && !configuredDemRootDirectory.isBlank()) {
+			File configuredDirectory = new File(configuredDemRootDirectory.trim());
+
+			if (configuredDirectory.isDirectory()) {
+				return configuredDirectory;
+			}
+
+			File parentDirectory = configuredDirectory.getParentFile();
+			if (parentDirectory != null && parentDirectory.isDirectory()) {
+				return parentDirectory;
+			}
+		}
+
+		File userHomeDirectory = new File(System.getProperty("user.home"));
+		return userHomeDirectory.isDirectory() ? userHomeDirectory : null;
+	}
 
 	/**
 	 * helper DTO for planes and arriving time in minutes. Maybe
@@ -705,22 +777,20 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 		selectedCallSignShowAsPathBtn.setGraphic(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()));
 
+		Button selectedCallSignShowOnMapBtn = new Button("Show on map");
+		selectedCallSignShowOnMapBtn.setOnAction(new EventHandler<ActionEvent>() {
+			@Override
+			public void handle(ActionEvent actionEvent) {
+				showSelectedCallsignOnMap();
+			}
+		});
+
 
         Button selectedCallSignTurnAntBtn = new Button("Turn ant1 to " + selectedCallSignInfoStageChatMember.getCallSignRaw());
         selectedCallSignTurnAntBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-//                chatcontroller.airScout_SendAsShowPathPacket(selectedCallSignInfoStageChatMember);
-//                Alert a = new Alert(AlertType.INFORMATION);
-//
-//                a.setTitle("Not yet implemented!");
-//                a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER + ": This is a todo!");
-//                a.setContentText("Mach mal hinne!");
-//                a.show();
-//                chatcontroller.stopRotator(); //if it´s running, stop it firstly, then set the new value
-//                chatcontroller.stopRotator();
                 chatcontroller.rotateTo(selectedCallSignInfoStageChatMember.getQTFdirection());
-
 
                 //TODO: Hier muss was hin
             }
@@ -743,7 +813,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,1);
+//		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowAsPathBtn, 1,0,1,1);
+
+		HBox selectedCallSignPathAndMapButtons = new HBox(10, selectedCallSignShowAsPathBtn, selectedCallSignShowOnMapBtn);
+		selectedCallSignDownerSiteGridPane.add(selectedCallSignPathAndMapButtons, 1,0,1,1);
+
         selectedCallSignDownerSiteGridPane.add(selectedCallSignTurnAntBtn, 1,1,1,1);
 
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowQRZprofile, 1,2,1,1);
@@ -2278,6 +2352,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		applyQrgUiFormatting(qrgCol); //fills ending 0 to format the qrgs pretty
 
 
+//		TableColumn<ChatMessage, String> msgCol = new TableColumn<ChatMessage, String>("Message");
+//		msgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+//
+//			@Override
+//			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
+//				SimpleStringProperty msg = new SimpleStringProperty();
+//
+//				if (cellDataFeatures.getValue().getMessageText() != null) {
+//
+//					msg.setValue(cellDataFeatures.getValue().getMessageText());
+//				} else {
+//
+//					msg.setValue("");// TODO: Prevents a bug of not setting all values as a default
+//				}
+//				return msg;
+//			}
+//		});
+
 		TableColumn<ChatMessage, String> msgCol = new TableColumn<ChatMessage, String>("Message");
 		msgCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
 
@@ -2285,13 +2377,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
 				SimpleStringProperty msg = new SimpleStringProperty();
 
-				if (cellDataFeatures.getValue().getMessageText() != null) {
-
-					msg.setValue(cellDataFeatures.getValue().getMessageText());
+				if (cellDataFeatures.getValue() != null) {
+					msg.setValue(chatcontroller.formatChatMessageTextForDisplay(cellDataFeatures.getValue()));
 				} else {
-
-					msg.setValue("");// TODO: Prevents a bug of not setting all values as a default
+					msg.setValue("");
 				}
+
 				return msg;
 			}
 		});
@@ -3777,7 +3868,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
 
 				chatcontroller.getChatPreferences().setGUI_darkModeActive(true);
-
+				if (stationMapBridge != null) {
+					stationMapBridge.applyThemeFromPreferences(); //dark mode for the map
+				}
 			}
 		});
 
@@ -3796,10 +3889,32 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				clusterAndQSOMonScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
 				settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
 				chatcontroller.getChatPreferences().setGUI_darkModeActive(false);
+
+				if (stationMapBridge != null) {
+					stationMapBridge.applyThemeFromPreferences();
+				}
 			}
 		});
 
-		windowMenu.getItems().addAll(window1, window20, window30, window40);
+
+		MenuItem window50 = new MenuItem("Show / hide station map");
+		window50.setOnAction(new EventHandler<ActionEvent>() {
+			public void handle(ActionEvent event) {
+				toggleStationMapWindow();
+			}
+		});
+
+//		windowMenu.getItems().addAll(window1, window20, window30, window40, window50);
+
+		windowMenu.getItems().addAll(
+				window1,
+				window20,
+				new SeparatorMenuItem(),
+				window50,
+				new SeparatorMenuItem(),
+				window30,
+				window40
+		);
 
 		Menu helpMenu = new Menu("Info");
 
@@ -6518,8 +6633,35 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				System.out.println("[Main.java, Info]: Setted the beam: " + txtFldstn_antennaBeamWidthDeg.getText());
 				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_antennaBeamWidthDeg.getText()));
+				refreshStationMapIfVisible(); //updates the mapview
+
 			}
 		});
+
+		TextField txtFldstn_pathAnalysisOwnTxPowerWatts = createDoublePreferenceTextField(
+				this.chatcontroller.getChatPreferences().getStn_pathAnalysisOwnTxPowerWatts(),
+				"Own TX power in watts used for path link-budget estimates.",
+				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisOwnTxPowerWatts(value)
+		);
+
+		TextField txtFldstn_pathAnalysisOwnAntennaGainDbi = createDoublePreferenceTextField(
+				this.chatcontroller.getChatPreferences().getStn_pathAnalysisOwnAntennaGainDbi(),
+				"Own antenna gain in dBi used for path link-budget estimates. 12 dBd = 14.15 dBi.",
+				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisOwnAntennaGainDbi(value)
+		);
+
+		TextField txtFldstn_pathAnalysisDefaultTargetTxPowerWatts = createDoublePreferenceTextField(
+				this.chatcontroller.getChatPreferences().getStn_pathAnalysisDefaultTargetTxPowerWatts(),
+				"Assumed default DX station TX power in watts. Used when no station-specific data exists.",
+				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisDefaultTargetTxPowerWatts(value)
+		);
+
+		TextField txtFldstn_pathAnalysisDefaultTargetAntennaGainDbi = createDoublePreferenceTextField(
+				this.chatcontroller.getChatPreferences().getStn_pathAnalysisDefaultTargetAntennaGainDbi(),
+				"Assumed default DX antenna gain in dBi. 8-10 dBi is realistic for many 2m contest stations.",
+				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisDefaultTargetAntennaGainDbi(value)
+		);
+
 
 		TextField txtFldstn_maxQRBDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
 		txtFldstn_maxQRBDefault.setFocusTraversable(false);
@@ -6539,6 +6681,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				System.out.println("[Main.java, Info]: Setted the QRB: " + txtFldstn_maxQRBDefault.getText());
 				chatcontroller.getChatPreferences().setStn_maxQRBDefault(Double.parseDouble(txtFldstn_maxQRBDefault.getText()));
+				refreshStationMapIfVisible();
 			}
 		});
 
@@ -6566,6 +6709,144 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		});
 
+
+		TextField txtFldstn_pathAnalysisOwnAntennaHeightMeters =
+				new TextField(this.chatcontroller.getChatPreferences().getStn_pathAnalysisOwnAntennaHeightMeters() + "");
+		txtFldstn_pathAnalysisOwnAntennaHeightMeters.setFocusTraversable(false);
+		txtFldstn_pathAnalysisOwnAntennaHeightMeters.setTooltip(new Tooltip(
+				"Own antenna height above local ground in meters.\nThis value is used for path analysis."
+		));
+		txtFldstn_pathAnalysisOwnAntennaHeightMeters.textProperty().addListener(new ChangeListener<String>() {
+
+			@Override
+			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
+
+				if (newString.equals("")) {
+					txtFldstn_pathAnalysisOwnAntennaHeightMeters.setText("0");
+				}
+
+				if (!newString.matches("\\d*(\\.\\d*)?")) {
+					txtFldstn_pathAnalysisOwnAntennaHeightMeters.setText(newString.replaceAll("[^\\d.]", ""));
+					return;
+				}
+
+				try {
+					double value = Double.parseDouble(txtFldstn_pathAnalysisOwnAntennaHeightMeters.getText());
+					chatcontroller.getChatPreferences().setStn_pathAnalysisOwnAntennaHeightMeters(value);
+					refreshStationMapIfVisible();
+				} catch (NumberFormatException ignored) {
+				}
+			}
+		});
+
+		TextField txtFldstn_pathAnalysisDemRootDirectory =
+				new TextField(this.chatcontroller.getChatPreferences().getStn_pathAnalysisDemRootDirectory());
+		txtFldstn_pathAnalysisDemRootDirectory.setFocusTraversable(false);
+		txtFldstn_pathAnalysisDemRootDirectory.setTooltip(new Tooltip(
+				"Root directory that contains locally extracted Copernicus GLO-30 DEM tiles.\n" +
+						"The program scans this directory recursively for *_DEM.tif tiles."
+		));
+		txtFldstn_pathAnalysisDemRootDirectory.focusedProperty().addListener(new ChangeListener<Boolean>() {
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observableValue, Boolean oldValue, Boolean newValue) {
+				if (!newValue) {
+					chatcontroller.getChatPreferences().setStn_pathAnalysisDemRootDirectory(
+							txtFldstn_pathAnalysisDemRootDirectory.getText()
+					);
+					refreshStationMapIfVisible();
+				}
+			}
+		});
+
+		OfflineDemImportService offlineDemImportService = new OfflineDemImportService();
+
+		Button btnUseDefaultDemDirectory = new Button("Default");
+		btnUseDefaultDemDirectory.setFocusTraversable(false);
+		btnUseDefaultDemDirectory.setTooltip(new Tooltip(
+				"Creates and uses the default local Copernicus DEM directory below .praktiKST.\n" +
+						"This does not download tiles yet, it only prepares the folder."
+		));
+		btnUseDefaultDemDirectory.setOnAction(event -> {
+			OfflineDemImportService.ImportResult importResult =
+					offlineDemImportService.ensureDefaultCopernicusRootDirectory();
+
+			if (importResult.targetRootDirectory() != null) {
+				txtFldstn_pathAnalysisDemRootDirectory.setText(
+						importResult.targetRootDirectory().toAbsolutePath().toString()
+				);
+				chatcontroller.getChatPreferences().setStn_pathAnalysisDemRootDirectory(
+						txtFldstn_pathAnalysisDemRootDirectory.getText()
+				);
+				refreshStationMapIfVisible();
+			}
+
+			Alert alert = new Alert(importResult.success() ? AlertType.INFORMATION : AlertType.WARNING);
+			alert.setTitle("DEM directory");
+			alert.setHeaderText(importResult.success()
+					? "Local Copernicus DEM directory is ready"
+					: "DEM directory could not be prepared");
+			alert.setContentText(importResult.message());
+			alert.show();
+		});
+
+		Button btnImportDemTiles = new Button("Import tiles...");
+		btnImportDemTiles.setFocusTraversable(false);
+		btnImportDemTiles.setTooltip(new Tooltip(
+				"Copies manually selected Copernicus *_DEM.tif files into the configured DEM root directory.\n" +
+						"If no DEM root directory is configured yet, the default .praktiKST/dem/copernicus_glo30 directory is used."
+		));
+		btnImportDemTiles.setOnAction(event -> {
+			FileChooser fileChooser = new FileChooser();
+			fileChooser.setTitle("Import Copernicus GLO-30 DEM tiles");
+			fileChooser.getExtensionFilters().add(
+					new FileChooser.ExtensionFilter("GeoTIFF DEM tiles", "*.tif", "*.tiff")
+			);
+
+			File initialDirectory = resolveInitialDirectoryForDemImport(
+					txtFldstn_pathAnalysisDemRootDirectory.getText()
+			);
+			if (initialDirectory != null) {
+				fileChooser.setInitialDirectory(initialDirectory);
+			}
+
+			List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
+			if (selectedFiles == null || selectedFiles.isEmpty()) {
+				return;
+			}
+
+			OfflineDemImportService.ImportResult importResult =
+					offlineDemImportService.importTiles(
+							selectedFiles,
+							txtFldstn_pathAnalysisDemRootDirectory.getText()
+					);
+
+			if (importResult.targetRootDirectory() != null) {
+				txtFldstn_pathAnalysisDemRootDirectory.setText(
+						importResult.targetRootDirectory().toAbsolutePath().toString()
+				);
+				chatcontroller.getChatPreferences().setStn_pathAnalysisDemRootDirectory(
+						txtFldstn_pathAnalysisDemRootDirectory.getText()
+				);
+				refreshStationMapIfVisible();
+			}
+
+			Alert alert = new Alert(
+					importResult.success() && importResult.importedFileCount() > 0
+							? AlertType.INFORMATION
+							: AlertType.WARNING
+			);
+			alert.setTitle("DEM tile import");
+			alert.setHeaderText(
+					importResult.success() && importResult.importedFileCount() > 0
+							? "DEM tiles imported"
+							: "No DEM tiles were imported"
+			);
+			alert.setContentText(importResult.message());
+			alert.show();
+		});
+
+		HBox hbxDemDirectoryActions = new HBox(8.0, btnUseDefaultDemDirectory, btnImportDemTiles);
+
 		Label lbl_station_pstRotatorEnabled = new Label("Enable PSTRotator interface (auto QTF):");
 		CheckBox chkBx_station_pstRotatorEnabled = new CheckBox();
 		chkBx_station_pstRotatorEnabled.setSelected(chatcontroller.getChatPreferences().isStn_pstRotatorEnabled());
@@ -6589,12 +6870,36 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlStation.add(choiceBxChatChategory, 1, 4);
 		grdPnlStation.add(new Label("Antenna beamwidth:"), 0, 5);
 		grdPnlStation.add(txtFldstn_antennaBeamWidthDeg, 1, 5);
-		grdPnlStation.add(new Label("Default maximum QRB:"), 0, 6);
-		grdPnlStation.add(txtFldstn_maxQRBDefault, 1, 6);
-		grdPnlStation.add(new Label("Default filter QTF:"), 0, 7);
-		grdPnlStation.add(txtFldstn_qtfDefault, 1, 7);
-		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 8);
-		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 8);
+
+		grdPnlStation.add(new Label("Own antenna height AGL:"), 0, 8);
+		grdPnlStation.add(txtFldstn_pathAnalysisOwnAntennaHeightMeters, 1, 8);
+
+		grdPnlStation.add(new Label("DEM root directory:"), 0, 9);
+		grdPnlStation.add(txtFldstn_pathAnalysisDemRootDirectory, 1, 9);
+		grdPnlStation.add(hbxDemDirectoryActions, 2, 7, 2, 1);
+
+		grdPnlStation.add(new Label("Default maximum QRB:"), 0, 10);
+		grdPnlStation.add(txtFldstn_maxQRBDefault, 1, 10);
+
+		grdPnlStation.add(new Label("Default filter QTF:"), 0, 11);
+		grdPnlStation.add(txtFldstn_qtfDefault, 1, 11);
+
+		grdPnlStation.add(new Label("Own TX power W:"), 2, 5);
+		grdPnlStation.add(txtFldstn_pathAnalysisOwnTxPowerWatts, 3, 5);
+
+		grdPnlStation.add(new Label("Own ant. gain dBi:"), 0, 6);
+		grdPnlStation.add(txtFldstn_pathAnalysisOwnAntennaGainDbi, 1, 6);
+
+		grdPnlStation.add(new Label("DX OM TX power W:"), 2, 6);
+		grdPnlStation.add(txtFldstn_pathAnalysisDefaultTargetTxPowerWatts, 3, 6);
+
+		grdPnlStation.add(new Label("DX OM ant. gain dBi:"), 0, 7);
+		grdPnlStation.add(txtFldstn_pathAnalysisDefaultTargetAntennaGainDbi, 1, 7);
+
+		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 10);
+		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 10);
+
+
 
 		VBox vbxStation = new VBox();
 		vbxStation.setPadding(new Insets(10, 10, 10, 10));
@@ -6745,6 +7050,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //		vbxStation.getChildren().add(settings_chkbx_QRV3400);
 //		vbxStation.getChildren().add(settings_chkbx_QRV5600);
 //		vbxStation.getChildren().add(settings_chkbx_QRV10G);
+
+
+
 
 		/*************************************************************************************
 		 * Log synch settings Tab
@@ -8786,6 +9094,49 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return null;
 	}
 
+	/**
+	 * Helper for creating station double preferences textfields
+	 * @param initialValue
+	 * @param tooltipText
+	 * @param valueConsumer
+	 * @return
+	 */
+	private TextField createDoublePreferenceTextField(double initialValue,
+	                                                  String tooltipText,
+	                                                  java.util.function.DoubleConsumer valueConsumer) {
+		TextField textField = new TextField(String.valueOf(initialValue));
+		textField.setFocusTraversable(false);
+		textField.setTooltip(new Tooltip(tooltipText));
+
+		textField.focusedProperty().addListener((observable, oldValue, focused) -> {
+			if (!focused) {
+				try {
+					String normalizedText = textField.getText().trim().replace(",", ".");
+					double parsedValue = Double.parseDouble(normalizedText);
+					valueConsumer.accept(parsedValue);
+					textField.setText(String.valueOf(parsedValue));
+					refreshStationMapIfVisible();
+				} catch (NumberFormatException exception) {
+					textField.setText(String.valueOf(initialValue));
+				}
+			}
+		});
+
+		textField.setOnAction(event -> {
+			try {
+				String normalizedText = textField.getText().trim().replace(",", ".");
+				double parsedValue = Double.parseDouble(normalizedText);
+				valueConsumer.accept(parsedValue);
+				textField.setText(String.valueOf(parsedValue));
+				refreshStationMapIfVisible();
+			} catch (NumberFormatException exception) {
+				textField.setText(String.valueOf(initialValue));
+			}
+		});
+
+		return textField;
+	}
+
 }
 
 /**
@@ -8820,6 +9171,7 @@ class ActionButtonTableCell<S, T> extends TableCell<S, T> {
 			setGraphic(actionButton);
 		}
 	}
+
 }
 
 /**
@@ -8855,8 +9207,6 @@ class CheckBoxTableCell<S, T> extends TableCell<S, T> {
 			setGraphic(actionCheckBox);
 		}
 	}
-
-
 
 
 

@@ -173,6 +173,23 @@ public class ChatPreferences {
 	double stn_maxQRBDefault = 900;
 	double stn_qtfDefault = 135;
 
+	double stn_pathAnalysisOwnAntennaHeightMeters = 10.0;
+	double stn_pathAnalysisDefaultTargetAntennaHeightMeters = 10.0;
+	String stn_pathAnalysisDemRootDirectory = "";
+	String stn_pathAnalysisDemDatasetId = "copernicus_glo_30";
+	double stn_pathAnalysisOwnTxPowerWatts = 750.0;
+	double stn_pathAnalysisOwnAntennaGainDbi = 8.0;
+	double stn_pathAnalysisDefaultTargetTxPowerWatts = 100.0;
+	double stn_pathAnalysisDefaultTargetAntennaGainDbi = 8.0;
+
+	double stn_pathAnalysisVhfFeederLossPerStationDb = 2.0;
+	double stn_pathAnalysisFeederLossIncreaseDbPer200MHz = 2.0;
+	double stn_pathAnalysisMaxEstimatedFeederLossPerStationDb = 20.0;
+
+	double stn_pathAnalysisRequiredSsbSignalDbm = -126.0;
+	double stn_pathAnalysisRequiredCwSignalDbm = -132.0;
+	double stn_pathAnalysisContestMarginDb = 6.0;
+
 	ChatCategory loginChatCategoryMain = new ChatCategory(2);
 	ChatCategory loginChatCategorySecond = new ChatCategory(3);
 	boolean loginToSecondChatEnabled;
@@ -309,6 +326,9 @@ public class ChatPreferences {
 	boolean guiOptions_defaultFilterPmToOther;
 	boolean guiOptions_defaultFilterPublicMsgs;
 
+	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
+	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
+
 
 	/*********************************************************************************
 	 *
@@ -369,6 +389,42 @@ public class ChatPreferences {
 
 	public void setMYQRGFirstCat(String MYQRGFirstCat) {
 		this.MYQRGFirstCat.set(MYQRGFirstCat);
+	}
+
+	public double getStn_pathAnalysisOwnAntennaHeightMeters() {
+		return stn_pathAnalysisOwnAntennaHeightMeters;
+	}
+
+	public void setStn_pathAnalysisOwnAntennaHeightMeters(double stn_pathAnalysisOwnAntennaHeightMeters) {
+		this.stn_pathAnalysisOwnAntennaHeightMeters = Math.max(0.0, stn_pathAnalysisOwnAntennaHeightMeters);
+	}
+
+	public double getStn_pathAnalysisDefaultTargetAntennaHeightMeters() {
+		return stn_pathAnalysisDefaultTargetAntennaHeightMeters;
+	}
+
+	public void setStn_pathAnalysisDefaultTargetAntennaHeightMeters(double stn_pathAnalysisDefaultTargetAntennaHeightMeters) {
+		this.stn_pathAnalysisDefaultTargetAntennaHeightMeters = Math.max(0.0, stn_pathAnalysisDefaultTargetAntennaHeightMeters);
+	}
+
+	public String getStn_pathAnalysisDemRootDirectory() {
+		return stn_pathAnalysisDemRootDirectory;
+	}
+
+	public void setStn_pathAnalysisDemRootDirectory(String stn_pathAnalysisDemRootDirectory) {
+		this.stn_pathAnalysisDemRootDirectory = stn_pathAnalysisDemRootDirectory == null
+				? ""
+				: stn_pathAnalysisDemRootDirectory.trim();
+	}
+
+	public String getStn_pathAnalysisDemDatasetId() {
+		return stn_pathAnalysisDemDatasetId;
+	}
+
+	public void setStn_pathAnalysisDemDatasetId(String stn_pathAnalysisDemDatasetId) {
+		this.stn_pathAnalysisDemDatasetId = (stn_pathAnalysisDemDatasetId == null || stn_pathAnalysisDemDatasetId.isBlank())
+				? "copernicus_glo_30"
+				: stn_pathAnalysisDemDatasetId.trim().toLowerCase();
 	}
 
 	public String getStn_loginNameSecondCat() {
@@ -545,6 +601,22 @@ public class ChatPreferences {
 
 	public void setLoginToSecondChatEnabled(boolean loginToSecondChatEnabled) {
 		this.loginToSecondChatEnabled = loginToSecondChatEnabled;
+	}
+
+	public double[] getGUIstationMapStageSceneSizeHW() {
+		return GUIstationMapStageSceneSizeHW;
+	}
+
+	public void setGUIstationMapStageSceneSizeHW(double[] GUIstationMapStageSceneSizeHW) {
+		this.GUIstationMapStageSceneSizeHW = GUIstationMapStageSceneSizeHW;
+	}
+
+	public double[] getGUIstationMapStagePositionXY() {
+		return GUIstationMapStagePositionXY;
+	}
+
+	public void setGUIstationMapStagePositionXY(double[] GUIstationMapStagePositionXY) {
+		this.GUIstationMapStagePositionXY = GUIstationMapStagePositionXY;
 	}
 
 	public boolean isGuiOptions_defaultFilterNothing() {
@@ -1245,6 +1317,63 @@ public class ChatPreferences {
 			stn_qtfDefault.setTextContent(this.stn_qtfDefault+"");
 			station.appendChild(stn_qtfDefault);
 
+			Element stn_pathAnalysisOwnAntennaHeightMeters = doc.createElement("stn_pathAnalysisOwnAntennaHeightMeters");
+			stn_pathAnalysisOwnAntennaHeightMeters.setTextContent(this.stn_pathAnalysisOwnAntennaHeightMeters + "");
+			station.appendChild(stn_pathAnalysisOwnAntennaHeightMeters);
+
+			Element stn_pathAnalysisDefaultTargetAntennaHeightMeters = doc.createElement("stn_pathAnalysisDefaultTargetAntennaHeightMeters");
+			stn_pathAnalysisDefaultTargetAntennaHeightMeters.setTextContent(this.stn_pathAnalysisDefaultTargetAntennaHeightMeters + "");
+			station.appendChild(stn_pathAnalysisDefaultTargetAntennaHeightMeters);
+
+			Element stn_pathAnalysisDemRootDirectory = doc.createElement("stn_pathAnalysisDemRootDirectory");
+			stn_pathAnalysisDemRootDirectory.setTextContent(this.stn_pathAnalysisDemRootDirectory);
+			station.appendChild(stn_pathAnalysisDemRootDirectory);
+
+			Element stn_pathAnalysisDemDatasetId = doc.createElement("stn_pathAnalysisDemDatasetId");
+			stn_pathAnalysisDemDatasetId.setTextContent(this.stn_pathAnalysisDemDatasetId);
+			station.appendChild(stn_pathAnalysisDemDatasetId);
+			Element stn_pathAnalysisOwnTxPowerWatts = doc.createElement("stn_pathAnalysisOwnTxPowerWatts");
+			stn_pathAnalysisOwnTxPowerWatts.setTextContent(this.stn_pathAnalysisOwnTxPowerWatts + "");
+			station.appendChild(stn_pathAnalysisOwnTxPowerWatts);
+
+			Element stn_pathAnalysisOwnAntennaGainDbi = doc.createElement("stn_pathAnalysisOwnAntennaGainDbi");
+			stn_pathAnalysisOwnAntennaGainDbi.setTextContent(this.stn_pathAnalysisOwnAntennaGainDbi + "");
+			station.appendChild(stn_pathAnalysisOwnAntennaGainDbi);
+
+			Element stn_pathAnalysisDefaultTargetTxPowerWatts = doc.createElement("stn_pathAnalysisDefaultTargetTxPowerWatts");
+			stn_pathAnalysisDefaultTargetTxPowerWatts.setTextContent(this.stn_pathAnalysisDefaultTargetTxPowerWatts + "");
+			station.appendChild(stn_pathAnalysisDefaultTargetTxPowerWatts);
+
+			Element stn_pathAnalysisDefaultTargetAntennaGainDbi = doc.createElement("stn_pathAnalysisDefaultTargetAntennaGainDbi");
+			stn_pathAnalysisDefaultTargetAntennaGainDbi.setTextContent(this.stn_pathAnalysisDefaultTargetAntennaGainDbi + "");
+			station.appendChild(stn_pathAnalysisDefaultTargetAntennaGainDbi);
+
+			Element stn_pathAnalysisVhfFeederLossPerStationDb = doc.createElement("stn_pathAnalysisVhfFeederLossPerStationDb");
+			stn_pathAnalysisVhfFeederLossPerStationDb.setTextContent(this.stn_pathAnalysisVhfFeederLossPerStationDb + "");
+			station.appendChild(stn_pathAnalysisVhfFeederLossPerStationDb);
+
+			Element stn_pathAnalysisFeederLossIncreaseDbPer200MHz = doc.createElement("stn_pathAnalysisFeederLossIncreaseDbPer200MHz");
+			stn_pathAnalysisFeederLossIncreaseDbPer200MHz.setTextContent(this.stn_pathAnalysisFeederLossIncreaseDbPer200MHz + "");
+			station.appendChild(stn_pathAnalysisFeederLossIncreaseDbPer200MHz);
+
+			Element stn_pathAnalysisMaxEstimatedFeederLossPerStationDb = doc.createElement("stn_pathAnalysisMaxEstimatedFeederLossPerStationDb");
+			stn_pathAnalysisMaxEstimatedFeederLossPerStationDb.setTextContent(this.stn_pathAnalysisMaxEstimatedFeederLossPerStationDb + "");
+			station.appendChild(stn_pathAnalysisMaxEstimatedFeederLossPerStationDb);
+
+			Element stn_pathAnalysisRequiredSsbSignalDbm = doc.createElement("stn_pathAnalysisRequiredSsbSignalDbm");
+			stn_pathAnalysisRequiredSsbSignalDbm.setTextContent(this.stn_pathAnalysisRequiredSsbSignalDbm + "");
+			station.appendChild(stn_pathAnalysisRequiredSsbSignalDbm);
+
+			Element stn_pathAnalysisRequiredCwSignalDbm = doc.createElement("stn_pathAnalysisRequiredCwSignalDbm");
+			stn_pathAnalysisRequiredCwSignalDbm.setTextContent(this.stn_pathAnalysisRequiredCwSignalDbm + "");
+			station.appendChild(stn_pathAnalysisRequiredCwSignalDbm);
+
+			Element stn_pathAnalysisContestMarginDb = doc.createElement("stn_pathAnalysisContestMarginDb");
+			stn_pathAnalysisContestMarginDb.setTextContent(this.stn_pathAnalysisContestMarginDb + "");
+			station.appendChild(stn_pathAnalysisContestMarginDb);
+
+
+
 			Element stn_bandActive144 = doc.createElement("stn_bandActive144");
 			stn_bandActive144.setTextContent(this.stn_bandActive144+"");
 			station.appendChild(stn_bandActive144);
@@ -1740,6 +1869,18 @@ public class ChatPreferences {
 			GUIpnl_directedMSGWin_dividerpositionDefault.setTextContent(doubleArrayToCSVString(getGUIpnl_directedMSGWin_dividerpositionDefault()));
 			guiOptions.appendChild(GUIpnl_directedMSGWin_dividerpositionDefault);
 
+			Element GUIstationMapStageSceneSizeHW = doc.createElement("GUIstationMapStageSceneSizeHW");
+			GUIstationMapStageSceneSizeHW.setTextContent(
+					this.getGUIstationMapStageSceneSizeHW()[0] + ";" + this.getGUIstationMapStageSceneSizeHW()[1]
+			);
+			guiOptions.appendChild(GUIstationMapStageSceneSizeHW);
+
+			Element GUIstationMapStagePositionXY = doc.createElement("GUIstationMapStagePositionXY");
+			GUIstationMapStagePositionXY.setTextContent(
+					this.getGUIstationMapStagePositionXY()[0] + ";" + this.getGUIstationMapStagePositionXY()[1]
+			);
+			guiOptions.appendChild(GUIstationMapStagePositionXY);
+
 			/****************************************************************************************
 			 ****************************** now write this XML! *************************************
 			 ****************************************************************************************/
@@ -1855,6 +1996,90 @@ public class ChatPreferences {
 				stn_antennaBeamWidthDeg = getDouble(stationEl, stn_antennaBeamWidthDeg, "stn_antennaBeamWidthDeg");
 				stn_maxQRBDefault = getDouble(stationEl, stn_maxQRBDefault, "stn_maxQRBDefault");
 				stn_qtfDefault = getDouble(stationEl, stn_qtfDefault, "stn_qtfDefault");
+
+				stn_pathAnalysisOwnAntennaHeightMeters = getDouble(
+						stationEl,
+						stn_pathAnalysisOwnAntennaHeightMeters,
+						"stn_pathAnalysisOwnAntennaHeightMeters"
+				);
+
+				stn_pathAnalysisDefaultTargetAntennaHeightMeters = getDouble(
+						stationEl,
+						stn_pathAnalysisDefaultTargetAntennaHeightMeters,
+						"stn_pathAnalysisDefaultTargetAntennaHeightMeters"
+				);
+
+				stn_pathAnalysisDemRootDirectory = getText(
+						stationEl,
+						stn_pathAnalysisDemRootDirectory,
+						"stn_pathAnalysisDemRootDirectory"
+				);
+
+				stn_pathAnalysisDemDatasetId = getText(
+						stationEl,
+						stn_pathAnalysisDemDatasetId,
+						"stn_pathAnalysisDemDatasetId"
+				);
+
+				stn_pathAnalysisOwnTxPowerWatts = getDouble(
+						stationEl,
+						stn_pathAnalysisOwnTxPowerWatts,
+						"stn_pathAnalysisOwnTxPowerWatts"
+				);
+
+				stn_pathAnalysisOwnAntennaGainDbi = getDouble(
+						stationEl,
+						stn_pathAnalysisOwnAntennaGainDbi,
+						"stn_pathAnalysisOwnAntennaGainDbi"
+				);
+
+				stn_pathAnalysisDefaultTargetTxPowerWatts = getDouble(
+						stationEl,
+						stn_pathAnalysisDefaultTargetTxPowerWatts,
+						"stn_pathAnalysisDefaultTargetTxPowerWatts"
+				);
+
+				stn_pathAnalysisDefaultTargetAntennaGainDbi = getDouble(
+						stationEl,
+						stn_pathAnalysisDefaultTargetAntennaGainDbi,
+						"stn_pathAnalysisDefaultTargetAntennaGainDbi"
+				);
+
+				stn_pathAnalysisVhfFeederLossPerStationDb = getDouble(
+						stationEl,
+						stn_pathAnalysisVhfFeederLossPerStationDb,
+						"stn_pathAnalysisVhfFeederLossPerStationDb"
+				);
+
+				stn_pathAnalysisFeederLossIncreaseDbPer200MHz = getDouble(
+						stationEl,
+						stn_pathAnalysisFeederLossIncreaseDbPer200MHz,
+						"stn_pathAnalysisFeederLossIncreaseDbPer200MHz"
+				);
+
+				stn_pathAnalysisMaxEstimatedFeederLossPerStationDb = getDouble(
+						stationEl,
+						stn_pathAnalysisMaxEstimatedFeederLossPerStationDb,
+						"stn_pathAnalysisMaxEstimatedFeederLossPerStationDb"
+				);
+
+				stn_pathAnalysisRequiredSsbSignalDbm = getDouble(
+						stationEl,
+						stn_pathAnalysisRequiredSsbSignalDbm,
+						"stn_pathAnalysisRequiredSsbSignalDbm"
+				);
+
+				stn_pathAnalysisRequiredCwSignalDbm = getDouble(
+						stationEl,
+						stn_pathAnalysisRequiredCwSignalDbm,
+						"stn_pathAnalysisRequiredCwSignalDbm"
+				);
+
+				stn_pathAnalysisContestMarginDb = getDouble(
+						stationEl,
+						stn_pathAnalysisContestMarginDb,
+						"stn_pathAnalysisContestMarginDb"
+				);
 
 				// Band activity flags (introduced later; if missing -> keep defaults)
 				stn_bandActive144 = getBoolean(stationEl, stn_bandActive144, "stn_bandActive144");
@@ -2264,6 +2489,16 @@ public class ChatPreferences {
 						parseSemicolonDoublesInto(getText(element, null, "GUIstage_updateStage_SceneSizeHW"), this.getGUIstage_updateStage_SceneSizeHW());
 						parseSemicolonDoublesInto(getText(element, null, "GUIsettingsStageSceneSizeHW"), this.getGUIsettingsStageSceneSizeHW());
 
+						parseSemicolonDoublesInto(
+								getText(element, null, "GUIstationMapStageSceneSizeHW"),
+								this.getGUIstationMapStageSceneSizeHW()
+						);
+
+						parseSemicolonDoublesInto(
+								getText(element, null, "GUIstationMapStagePositionXY"),
+								this.getGUIstationMapStagePositionXY()
+						);
+
 						// Splitpane divider positions
 						String s1 = getText(element, null, "GUIselectedCallSignSplitPane_dividerposition");
 						if (s1 != null) {
@@ -2660,6 +2895,100 @@ public class ChatPreferences {
 		}
 	}
 
+	public double getStn_pathAnalysisOwnTxPowerWatts() {
+		return stn_pathAnalysisOwnTxPowerWatts;
+	}
+
+	public void setStn_pathAnalysisOwnTxPowerWatts(double stn_pathAnalysisOwnTxPowerWatts) {
+		this.stn_pathAnalysisOwnTxPowerWatts = stn_pathAnalysisOwnTxPowerWatts;
+	}
+
+	public double getStn_pathAnalysisOwnAntennaGainDbi() {
+		return stn_pathAnalysisOwnAntennaGainDbi;
+	}
+
+	public void setStn_pathAnalysisOwnAntennaGainDbi(double stn_pathAnalysisOwnAntennaGainDbi) {
+		this.stn_pathAnalysisOwnAntennaGainDbi = stn_pathAnalysisOwnAntennaGainDbi;
+	}
+
+	public double getStn_pathAnalysisDefaultTargetTxPowerWatts() {
+		return stn_pathAnalysisDefaultTargetTxPowerWatts;
+	}
+
+	public void setStn_pathAnalysisDefaultTargetTxPowerWatts(double stn_pathAnalysisDefaultTargetTxPowerWatts) {
+		this.stn_pathAnalysisDefaultTargetTxPowerWatts = stn_pathAnalysisDefaultTargetTxPowerWatts;
+	}
+
+	public double getStn_pathAnalysisDefaultTargetAntennaGainDbi() {
+		return stn_pathAnalysisDefaultTargetAntennaGainDbi;
+	}
+
+	public void setStn_pathAnalysisDefaultTargetAntennaGainDbi(double stn_pathAnalysisDefaultTargetAntennaGainDbi) {
+		this.stn_pathAnalysisDefaultTargetAntennaGainDbi = stn_pathAnalysisDefaultTargetAntennaGainDbi;
+	}
+
+	public double getStn_pathAnalysisVhfFeederLossPerStationDb() {
+		return stn_pathAnalysisVhfFeederLossPerStationDb;
+	}
+
+	public void setStn_pathAnalysisVhfFeederLossPerStationDb(double stn_pathAnalysisVhfFeederLossPerStationDb) {
+		this.stn_pathAnalysisVhfFeederLossPerStationDb = stn_pathAnalysisVhfFeederLossPerStationDb;
+	}
+
+	public double getStn_pathAnalysisFeederLossIncreaseDbPer200MHz() {
+		return stn_pathAnalysisFeederLossIncreaseDbPer200MHz;
+	}
+
+	public void setStn_pathAnalysisFeederLossIncreaseDbPer200MHz(double stn_pathAnalysisFeederLossIncreaseDbPer200MHz) {
+		this.stn_pathAnalysisFeederLossIncreaseDbPer200MHz = stn_pathAnalysisFeederLossIncreaseDbPer200MHz;
+	}
+
+	public double getStn_pathAnalysisMaxEstimatedFeederLossPerStationDb() {
+		return stn_pathAnalysisMaxEstimatedFeederLossPerStationDb;
+	}
+
+	public void setStn_pathAnalysisMaxEstimatedFeederLossPerStationDb(double stn_pathAnalysisMaxEstimatedFeederLossPerStationDb) {
+		this.stn_pathAnalysisMaxEstimatedFeederLossPerStationDb = stn_pathAnalysisMaxEstimatedFeederLossPerStationDb;
+	}
+
+	public double getStn_pathAnalysisRequiredSsbSignalDbm() {
+		return stn_pathAnalysisRequiredSsbSignalDbm;
+	}
+
+	public void setStn_pathAnalysisRequiredSsbSignalDbm(double stn_pathAnalysisRequiredSsbSignalDbm) {
+		this.stn_pathAnalysisRequiredSsbSignalDbm = stn_pathAnalysisRequiredSsbSignalDbm;
+	}
+
+	public double getStn_pathAnalysisRequiredCwSignalDbm() {
+		return stn_pathAnalysisRequiredCwSignalDbm;
+	}
+
+	public void setStn_pathAnalysisRequiredCwSignalDbm(double stn_pathAnalysisRequiredCwSignalDbm) {
+		this.stn_pathAnalysisRequiredCwSignalDbm = stn_pathAnalysisRequiredCwSignalDbm;
+	}
+
+	public double getStn_pathAnalysisContestMarginDb() {
+		return stn_pathAnalysisContestMarginDb;
+	}
+
+	public void setStn_pathAnalysisContestMarginDb(double stn_pathAnalysisContestMarginDb) {
+		this.stn_pathAnalysisContestMarginDb = stn_pathAnalysisContestMarginDb;
+	}
+
+	public kst4contest.view.map.PathLinkBudgetSettings buildPathLinkBudgetSettings() {
+		return new kst4contest.view.map.PathLinkBudgetSettings(
+				stn_pathAnalysisOwnTxPowerWatts,
+				stn_pathAnalysisOwnAntennaGainDbi,
+				stn_pathAnalysisDefaultTargetTxPowerWatts,
+				stn_pathAnalysisDefaultTargetAntennaGainDbi,
+				stn_pathAnalysisVhfFeederLossPerStationDb,
+				stn_pathAnalysisFeederLossIncreaseDbPer200MHz,
+				stn_pathAnalysisMaxEstimatedFeederLossPerStationDb,
+				stn_pathAnalysisRequiredSsbSignalDbm,
+				stn_pathAnalysisRequiredCwSignalDbm,
+				stn_pathAnalysisContestMarginDb
+		);
+	}
 }
 
 

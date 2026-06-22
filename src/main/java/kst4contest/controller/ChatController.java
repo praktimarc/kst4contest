@@ -23,7 +23,6 @@ import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.*;
 import kst4contest.test.MockKstServer;
-import kst4contest.utils.BoundedDequeObservableList;
 import kst4contest.utils.PlayAudioUtils;
 import kst4contest.view.Kst4ContestApplication;
 
@@ -32,6 +31,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+
+
 
 /**
  * 
@@ -1094,8 +1095,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	// ******All abstract types below here are used by the messageprocessor!
 	// ***************
 
-	private static final int MAX_CHAT_MESSAGES = 10000;
-	private final BoundedDequeObservableList<ChatMessage> lst_globalChatMessageList = new BoundedDequeObservableList<>(MAX_CHAT_MESSAGES); //All chatmessages will be put in there, later create filtered message lists
+	private ObservableList<ChatMessage> lst_globalChatMessageList = FXCollections.observableArrayList(); //All chatmessages will be put in there, later create filtered message lists
 //	private ObservableList<ChatMessage> lst_toAllMessageList = FXCollections.observableArrayList(); // directed to all
 																									// (beacon)
 	private FilteredList<ChatMessage> lst_toAllMessageList = new FilteredList<>(lst_globalChatMessageList); // directed to all
@@ -1128,6 +1128,27 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private SortedList<ChatMember> lst_chatMemberSortedFilteredList = new SortedList<ChatMember>(lst_chatMemberListFiltered);
 	private ObservableList<Predicate<ChatMember>> lst_chatMemberListFilterPredicates = FXCollections.observableArrayList();
 	private ObservableList<ClusterMessage> lst_clusterMemberList = FXCollections.observableArrayList();
+
+
+	/*
+	 * Message table update buffers.
+	 *
+	 * Do not write directly to lst_globalChatMessageList from worker threads.
+	 * Use publishChatMessage(...) instead.
+	 *
+	 * The actual ObservableList mutation is batched and executed on the JavaFX
+	 * application thread. The visible list order remains newest-first.
+	 */
+	private final Object pendingChatMessagesLock = new Object();
+	private final List<ChatMessage> pendingChatMessages = new ArrayList<>();
+	private boolean chatMessageFlushScheduled = false;
+
+	/*
+	 * Same idea for DXCluster messages.
+	 */
+	private final Object pendingClusterMessagesLock = new Object();
+	private final List<ClusterMessage> pendingClusterMessages = new ArrayList<>();
+	private boolean clusterMessageFlushScheduled = false;
 
 	private ObservableList<ChatMember> lst_DBBasedWkdCallSignList = FXCollections.observableArrayList();
 
@@ -1240,14 +1261,152 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		this.lst_selectedCallSignInfofilteredMessageList = lst_selectedCallSignInfofilteredMessageList;
 	}
 
-	public void addChatMessage(ChatMessage message) {
-		lst_globalChatMessageList.addFirst(message);
-	}
-
 	public ObservableList<ChatMessage> getLst_globalChatMessageList() {
 		return lst_globalChatMessageList;
 	}
 
+	/**
+	 * Adds a chat message to the UI message store.
+	 *
+	 * Important:
+	 * - This method may be called from worker threads.
+	 * - The ObservableList is modified only on the JavaFX application thread.
+	 * - The backing list remains newest-first.
+	 * - Old messages are trimmed to avoid unlimited memory growth.
+	 */
+	public void publishChatMessage(ChatMessage message) {
+		if (message == null) {
+			return;
+		}
+
+		synchronized (pendingChatMessagesLock) {
+			pendingChatMessages.add(message);
+
+			if (chatMessageFlushScheduled) {
+				return;
+			}
+
+			chatMessageFlushScheduled = true;
+		}
+
+		Platform.runLater(this::flushPendingChatMessagesToUi);
+	}
+
+	private void flushPendingChatMessagesToUi() {
+		List<ChatMessage> batch;
+
+		synchronized (pendingChatMessagesLock) {
+			batch = new ArrayList<>(pendingChatMessages);
+			pendingChatMessages.clear();
+			chatMessageFlushScheduled = false;
+		}
+
+		if (batch.isEmpty()) {
+			return;
+		}
+
+		/*
+		 * pendingChatMessages is collected in arrival order:
+		 * old -> new
+		 *
+		 * lst_globalChatMessageList must stay newest-first:
+		 * new -> old
+		 */
+		Collections.reverse(batch);
+
+		lst_globalChatMessageList.addAll(0, batch);
+
+		trimGlobalChatMessageListIfNeeded();
+	}
+
+	private void trimGlobalChatMessageListIfNeeded() {
+		int maxSize = ApplicationConstants.CHAT_MESSAGE_STORE_MAX_SIZE;
+		int trimToSize = ApplicationConstants.CHAT_MESSAGE_STORE_TRIM_TO_SIZE;
+
+		if (maxSize <= 0 || trimToSize <= 0 || trimToSize >= maxSize) {
+			return;
+		}
+
+		int currentSize = lst_globalChatMessageList.size();
+
+		if (currentSize <= maxSize) {
+			return;
+		}
+
+		/*
+		 * List order is newest-first.
+		 * Therefore old messages are at the end of the list.
+		 */
+		lst_globalChatMessageList.remove(trimToSize, currentSize);
+	}
+
+	/**
+	 * Adds a DXCluster message to the UI cluster message store.
+	 *
+	 * Same policy as for chat messages:
+	 * - batched UI update
+	 * - JavaFX thread only for ObservableList mutation
+	 * - newest-first visible order
+	 * - bounded list size
+	 */
+	public void publishClusterMessage(ClusterMessage message) {
+		if (message == null) {
+			return;
+		}
+
+		synchronized (pendingClusterMessagesLock) {
+			pendingClusterMessages.add(message);
+
+			if (clusterMessageFlushScheduled) {
+				return;
+			}
+
+			clusterMessageFlushScheduled = true;
+		}
+
+		Platform.runLater(this::flushPendingClusterMessagesToUi);
+	}
+
+	private void flushPendingClusterMessagesToUi() {
+		List<ClusterMessage> batch;
+
+		synchronized (pendingClusterMessagesLock) {
+			batch = new ArrayList<>(pendingClusterMessages);
+			pendingClusterMessages.clear();
+			clusterMessageFlushScheduled = false;
+		}
+
+		if (batch.isEmpty()) {
+			return;
+		}
+
+		Collections.reverse(batch);
+
+		lst_clusterMemberList.addAll(0, batch);
+
+		trimClusterMessageListIfNeeded();
+	}
+
+	private void trimClusterMessageListIfNeeded() {
+		int maxSize = ApplicationConstants.CLUSTER_MESSAGE_STORE_MAX_SIZE;
+		int trimToSize = ApplicationConstants.CLUSTER_MESSAGE_STORE_TRIM_TO_SIZE;
+
+		if (maxSize <= 0 || trimToSize <= 0 || trimToSize >= maxSize) {
+			return;
+		}
+
+		int currentSize = lst_clusterMemberList.size();
+
+		if (currentSize <= maxSize) {
+			return;
+		}
+
+		lst_clusterMemberList.remove(trimToSize, currentSize);
+	}
+
+	public void setLst_globalChatMessageList(ObservableList<ChatMessage> lst_globalChatMessageList) {
+		this.lst_globalChatMessageList = lst_globalChatMessageList;
+	}
 
 	public String getHostname() {
 		return hostname;
@@ -1482,6 +1641,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
     }
 
+
     private void initLst_toMeMessageList() {
 //        ObservableList<String> sniffedList = chatPreferences.getLstNotify_QSOSniffer_sniffedCallSignList();
 
@@ -1498,14 +1658,18 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
             // --- NEUE LOGIK: Sniffer Liste prüfen ---
             // Wenn Absender ODER Empfänger in der Beobachtungsliste stehen -> Anzeigen
-            if ((lstNotify_QSOSniffer_sniffedCallSignList.contains(senderCall) ||
-                    lstNotify_QSOSniffer_sniffedCallSignList.contains(receiverCall)) &&
-                    (!receiverCall.equals(this.getChatPreferences().getStn_loginCallSignRaw()))) {
+//            if ((lstNotify_QSOSniffer_sniffedCallSignList.contains(senderCall) ||
+//                    lstNotify_QSOSniffer_sniffedCallSignList.contains(receiverCall)) &&
+//                    (!receiverCall.equals(this.getChatPreferences().getStn_loginCallSignRaw()))) {
+//
+//                msgText = ("Sniffed: " + "(" + senderCall + " > ") + receiverCall +") " + msgText;
+//                chatMessage.setMessageText(msgText);
+//                return true;
+//            }
 
-                msgText = ("Sniffed: " + "(" + senderCall + " > ") + receiverCall +") " + msgText;
-                chatMessage.setMessageText(msgText);
-                return true;
-            }
+			if (isSniffedMessage(chatMessage)) {
+				return true;
+			}
 
             // --- BESTEHENDE LOGIK ---
 
@@ -2387,5 +2551,70 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		double beamWidth = getChatPreferences().getStn_antennaBeamWidthDeg();
 
 		return DirectionUtils.isAngleInRange(targetAz, myAz, beamWidth);
+	}
+
+	/**
+	 * decides if a message in the in-queue is directed to me or if its directed to another station and sniffed
+	 * @param chatMessage
+	 * @return
+	 */
+	public boolean isSniffedMessage(ChatMessage chatMessage) {
+		if (chatMessage == null || chatMessage.getSender() == null || chatMessage.getReceiver() == null) {
+			return false;
+		}
+
+		String senderCall = chatMessage.getSender().getCallSign();
+		String receiverCall = chatMessage.getReceiver().getCallSign();
+
+		if (senderCall == null || receiverCall == null) {
+			return false;
+		}
+
+		if (lstNotify_QSOSniffer_sniffedCallSignList == null || lstNotify_QSOSniffer_sniffedCallSignList.isEmpty()) {
+			return false;
+		}
+
+		boolean observedCall =
+				lstNotify_QSOSniffer_sniffedCallSignList.contains(senderCall)
+						|| lstNotify_QSOSniffer_sniffedCallSignList.contains(receiverCall);
+
+		if (!observedCall) {
+			return false;
+		}
+
+		String myCall = getChatPreferences() != null ? getChatPreferences().getStn_loginCallSign() : null;
+		String myRawCall = getChatPreferences() != null ? getChatPreferences().getStn_loginCallSignRaw() : null;
+
+		/*
+		 * Sniffed messages should appear in the private table only if they are not
+		 * already direct messages to my own callsign.
+		 */
+		return !receiverCall.equals(myCall) && !receiverCall.equals(myRawCall);
+	}
+
+	/**
+	 * changes the chatmessage if it had been a sniffed one and not directed to me. Only for marking.
+	 * @param chatMessage
+	 * @return
+	 */
+	public String formatChatMessageTextForDisplay(ChatMessage chatMessage) {
+		if (chatMessage == null) {
+			return "";
+		}
+
+		String msgText = chatMessage.getMessageText();
+
+		if (msgText == null) {
+			msgText = "";
+		}
+
+		if (!isSniffedMessage(chatMessage)) {
+			return msgText;
+		}
+
+		String senderCall = chatMessage.getSender() != null ? chatMessage.getSender().getCallSign() : "";
+		String receiverCall = chatMessage.getReceiver() != null ? chatMessage.getReceiver().getCallSign() : "";
+
+		return "Sniffed: (" + senderCall + " > " + receiverCall + ") " + msgText;
 	}
 }
