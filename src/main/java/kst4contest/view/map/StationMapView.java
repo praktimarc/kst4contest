@@ -1093,6 +1093,7 @@ public final class StationMapView {
             webEngine.executeScript(script);
         } catch (Exception exception) {
             System.err.println("[StationMap] executeScript failed: " + exception.getMessage());
+            exception.printStackTrace();
         }
     }
 
