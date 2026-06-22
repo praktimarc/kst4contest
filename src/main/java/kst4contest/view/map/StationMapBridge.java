@@ -6,6 +6,7 @@ import javafx.collections.ListChangeListener;
 import javafx.scene.control.TableView;
 import javafx.util.Duration;
 import kst4contest.controller.ChatController;
+import kst4contest.locatorUtils.Location;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatPreferences;
 
@@ -14,12 +15,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-
-import kst4contest.model.Band;
-import java.util.function.Predicate;
 
 /**
  * Synchronizes the application state with the station map window.
@@ -32,7 +32,7 @@ import java.util.function.Predicate;
  */
 public final class StationMapBridge {
 
-
+    private final ExecutorService pathAnalysisExecutor = Executors.newSingleThreadExecutor(new PathAnalysisThreadFactory());
     private final AtomicLong pathAnalysisGeneration = new AtomicLong(0);
 
     private final ChatController chatController;
@@ -45,7 +45,8 @@ public final class StationMapBridge {
 
 
     private final MapCallsignRawSnapshotBuilder snapshotBuilder = new MapCallsignRawSnapshotBuilder();
-
+//    private final OfflineDemManager offlineDemManager = new OfflineDemManager();
+    private final PathAnalysisService pathAnalysisService;
 
     private String lastPathAnalysisRequestSignature = "";
 
@@ -63,7 +64,9 @@ public final class StationMapBridge {
 
         this.refreshCoalescer.setOnFinished(event -> refreshNow());
 
-
+        this.pathAnalysisService = new GeometryOnlyPathAnalysisService(
+                new OpenMeteoTerrainProfileProvider()
+        );
     }
 
     public void install() {
@@ -80,10 +83,6 @@ public final class StationMapBridge {
 
         chatController.getChatPreferences().getActualQTF().addListener(
                 (obs, oldValue, newValue) -> scheduleRefresh()
-        );
-
-        chatController.getLst_chatMemberListFilterPredicates().addListener(
-                (ListChangeListener<Predicate<ChatMember>>) change -> requestImmediateRefresh()
         );
 
         requestImmediateRefresh();
@@ -171,17 +170,6 @@ public final class StationMapBridge {
         requestPathAnalysisAsync(preferences.getStn_loginLocatorMainCat(), selectedSnapshot);
     }
 
-    /**
-     * Requests the selected station path analysis through the central reachability
-     * service.
-     *
-     * <p>The map no longer owns a separate PathAnalysisService. This ensures that
-     * the map detail panel, the Tropo table column and the station filters all use
-     * exactly the same path/link-budget calculation.</p>
-     *
-     * @param ownLocator6 own locator from preferences
-     * @param selectedSnapshot selected map marker snapshot
-     */
     private void requestPathAnalysisAsync(String ownLocator6, MapCallsignRawSnapshot selectedSnapshot) {
         String normalizedOwnLocator6 = normalizeLocator6(ownLocator6);
 
@@ -214,28 +202,20 @@ public final class StationMapBridge {
                 PathAnalysisResult.loading(normalizedOwnLocator6, normalizedTargetLocator6, targetCallsignRaw)
         );
 
-        ChatMember selectedMember = resolveBestChatMember(targetCallsignRaw);
+        pathAnalysisExecutor.submit(() -> {
+            PathAnalysisResult result = buildPathAnalysisResult(normalizedOwnLocator6, selectedSnapshot);
 
-        chatController.getReachabilityService().requestPathAnalysisForMap(
-                selectedMember,
-                selectedSnapshot,
-                result -> {
-                    if (generation != pathAnalysisGeneration.get()) {
-                        return;
-                    }
-                    stationMapView.setPathAnalysisResult(result);
+            Platform.runLater(() -> {
+                if (generation != pathAnalysisGeneration.get()) {
+                    return;
                 }
-        );
+                stationMapView.setPathAnalysisResult(result);
+            });
+        });
     }
 
-    /**
-     * Invalidates pending map callbacks.
-     *
-     * <p>The actual calculation executor is owned by ReachabilityService now, so
-     * this bridge no longer shuts down any path-analysis thread directly.</p>
-     */
     public void dispose() {
-        pathAnalysisGeneration.incrementAndGet();
+        pathAnalysisExecutor.shutdownNow();
     }
 
     private void handleMapCallsignSelection(String callSignRaw) {
@@ -306,6 +286,43 @@ public final class StationMapBridge {
         return callSignRaw.trim().toUpperCase(Locale.ROOT);
     }
 
+    private PathAnalysisResult buildPathAnalysisResult(String ownLocator6, MapCallsignRawSnapshot selectedSnapshot) {
+        String normalizedOwnLocator6 = normalizeLocator6(ownLocator6);
+
+        if (selectedSnapshot == null) {
+            return PathAnalysisResult.waitingForSelection(normalizedOwnLocator6);
+        }
+
+        String normalizedTargetLocator6 = normalizeLocator6(selectedSnapshot.locator6());
+
+        if (normalizedOwnLocator6.length() != 6) {
+            return PathAnalysisResult.waitingForValidHomeLocator(normalizedOwnLocator6, normalizedTargetLocator6);
+        }
+
+        if (!selectedSnapshot.hasUsablePosition()) {
+            return PathAnalysisResult.waitingForValidTarget(normalizedOwnLocator6, normalizedTargetLocator6);
+        }
+
+        Location homeLocation = new Location(normalizedOwnLocator6);
+        double analysisFrequencyMHz = resolveAnalysisFrequencyMHz(selectedSnapshot);
+
+        PathAnalysisRequest request = new PathAnalysisRequest(
+                normalizedOwnLocator6,
+                homeLocation.getLatitude().toDegrees(),
+                homeLocation.getLongitude().toDegrees(),
+                selectedSnapshot.callSignRaw(),
+                normalizedTargetLocator6,
+                selectedSnapshot.latitudeDeg(),
+                selectedSnapshot.longitudeDeg(),
+                analysisFrequencyMHz,
+                chatController.getChatPreferences().getStn_pathAnalysisOwnAntennaHeightMeters(),
+                chatController.getChatPreferences().getStn_pathAnalysisDefaultTargetAntennaHeightMeters(),
+                PathGeometryUtils.DEFAULT_EFFECTIVE_EARTH_RADIUS_FACTOR,
+                chatController.getChatPreferences().buildPathLinkBudgetSettings()
+        );
+
+        return pathAnalysisService.analyze(request);
+    }
 
     private double resolveAnalysisFrequencyMHz(MapCallsignRawSnapshot selectedSnapshot) {
         if (selectedSnapshot == null) {
@@ -359,5 +376,12 @@ public final class StationMapBridge {
         return locator.trim().toUpperCase(Locale.ROOT);
     }
 
-
+    private static final class PathAnalysisThreadFactory implements ThreadFactory {
+        @Override
+        public Thread newThread(Runnable runnable) {
+            Thread thread = new Thread(runnable, "station-map-path-analysis");
+            thread.setDaemon(true);
+            return thread;
+        }
+    }
 }
