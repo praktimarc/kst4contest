@@ -32,7 +32,7 @@ public final class MapHtmlResources {
         }
     }
 
-    public static String createStationMapHtml() {
+    public static String createStationMapHtml(int tileProxyPort) {
         String leafletCss = readRequiredResource("/web/leaflet/leaflet.css");
         String leafletJs = readRequiredResource("/web/leaflet/leaflet.js");
 
@@ -217,6 +217,7 @@ public final class MapHtmlResources {
                 <script>
                 """ + leafletJs + """
                 </script>
+                <script>window._kstTileProxyPort=__TILE_PROXY_PORT__;</script>
 
                 <script>
                 
@@ -370,21 +371,13 @@ public final class MapHtmlResources {
 
                             jsLog('Leaflet map initialized');
 
-                            const osmTileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                maxZoom: 19,
-                                attribution: '&copy; OpenStreetMap contributors'
-                            });
-
-                            osmTileLayer.on('tileload', function (event) {
-                                jsLog('OSM tile loaded');
-                            });
-
-                            osmTileLayer.on('tileerror', function (event) {
-                                const src = event && event.tile ? event.tile.src : 'unknown';
-                                jsError('OSM tile load failed: ' + src);
-                            });
-
-                            osmTileLayer.addTo(map);
+                            L.tileLayer(
+                                'http://127.0.0.1:' + window._kstTileProxyPort + '/tiles/{s}/{z}/{x}/{y}.png',
+                                {
+                                    maxZoom: 18,
+                                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                }
+                            ).addTo(map);
 
                             map.createPane('beamPane');
                             map.getPane('beamPane').style.zIndex = 410;
@@ -717,6 +710,6 @@ public final class MapHtmlResources {
                 </script>
                 </body>
                 </html>
-                """;
+                """.replace("__TILE_PROXY_PORT__", String.valueOf(tileProxyPort));
     }
 }

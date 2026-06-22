@@ -437,6 +437,8 @@
                                 <addmodule>javafx.fxml</addmodule>
                                 <addmodule>javafx.web</addmodule>
                                 <addmodule>java.sql</addmodule>
+                                <addmodule>java.net.http</addmodule>
+                                <addmodule>jdk.crypto.ec</addmodule>
                             </addmodules>
                             <mainclass>${main.class}</mainclass>
                             <input>${project.build.directory}/modules</input>
