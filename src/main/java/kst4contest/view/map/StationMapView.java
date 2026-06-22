@@ -18,6 +18,7 @@ import kst4contest.ApplicationConstants;
 import kst4contest.locatorUtils.Location;
 import kst4contest.model.ChatPreferences;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -48,6 +49,7 @@ public final class StationMapView {
     private final Stage stage = new Stage();
     private final WebView webView = new WebView();
     private final WebEngine webEngine = webView.getEngine();
+    private TileProxyServer tileProxyServer;
 
     private Scene scene;
     private BorderPane rootPane;
@@ -127,6 +129,11 @@ public final class StationMapView {
 
     public StationMapView(ChatPreferences chatPreferences) {
         this.chatPreferences = Objects.requireNonNull(chatPreferences, "chatPreferences");
+        try {
+            tileProxyServer = new TileProxyServer();
+        } catch (IOException e) {
+            System.err.println("[StationMap] tile proxy failed to start: " + e.getMessage());
+        }
         initializeUi();
         initializeWebView();
     }
@@ -627,7 +634,8 @@ public final class StationMapView {
             }
         });
 
-        webEngine.loadContent(MapHtmlResources.createStationMapHtml());
+        int proxyPort = tileProxyServer != null ? tileProxyServer.getPort() : 0;
+        webEngine.loadContent(MapHtmlResources.createStationMapHtml(proxyPort));
     }
 
     private void requestMapInvalidateSize() {
@@ -1093,6 +1101,7 @@ public final class StationMapView {
             webEngine.executeScript(script);
         } catch (Exception exception) {
             System.err.println("[StationMap] executeScript failed: " + exception.getMessage());
+            exception.printStackTrace();
         }
     }
 

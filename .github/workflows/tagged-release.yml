@@ -46,7 +46,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          jpackage --type app-image --name praktiKST --input target/dist-libs --main-jar app.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql --dest dist
+          jpackage --type app-image --name praktiKST --input target/dist-libs --main-jar app.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec --dest dist
 
       - name: Create Windows ZIP
         shell: pwsh
@@ -94,7 +94,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
             --dest dist
 
       - name: Create AppDir metadata
@@ -172,7 +172,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
             --dest dist
           DEB="$(ls dist/*.deb | head -n 1)"
           if [ -z "$DEB" ]; then
@@ -223,7 +223,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
             --dest dist
           RPM="$(ls dist/*.rpm | head -n 1)"
           if [ -z "$RPM" ]; then
@@ -274,7 +274,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
             --dest dist
 
       - name: Build Arch Linux package artifact
@@ -362,7 +362,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
             --dest target/flatpak-src
 
       - name: Create Flatpak manifest
@@ -477,7 +477,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql \
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
             --dest dist
 
         env:

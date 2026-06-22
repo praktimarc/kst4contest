@@ -1,5 +1,10 @@
 package kst4contest.view.map;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
+
 /**
  * HTML host for the JavaFX WebView map.
  *
@@ -16,7 +21,21 @@ public final class MapHtmlResources {
     private MapHtmlResources() {
     }
 
-    public static String createStationMapHtml() {
+    private static String readRequiredResource(String resourcePath) {
+        try (InputStream inputStream = MapHtmlResources.class.getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new IllegalStateException("Missing map resource: " + resourcePath);
+            }
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new UncheckedIOException("Could not read map resource: " + resourcePath, exception);
+        }
+    }
+
+    public static String createStationMapHtml(int tileProxyPort) {
+        String leafletCss = readRequiredResource("/web/leaflet/leaflet.css");
+        String leafletJs = readRequiredResource("/web/leaflet/leaflet.js");
+
         return """
                 <!DOCTYPE html>
                 <html lang="en">
@@ -24,10 +43,9 @@ public final class MapHtmlResources {
                     <meta charset="UTF-8">
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>KST4Contest Station Map</title>
-                    <link rel="stylesheet"
-                          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-                          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-                          crossorigin="">
+                    <style>
+                """ + leafletCss + """
+                    </style>
                     <style>
                         :root {
                             --map-background: #ede9df;
@@ -196,9 +214,10 @@ public final class MapHtmlResources {
                 <body class="kst-theme-light">
                 <div id="map"></div>
 
-                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-                        crossorigin=""></script>
+                <script>
+                """ + leafletJs + """
+                </script>
+                <script>window._kstTileProxyPort=__TILE_PROXY_PORT__;</script>
 
                 <script>
                 
@@ -336,7 +355,12 @@ public final class MapHtmlResources {
 
                         function init() {
                             if (map) {
-                                return;
+                                return true;
+                            }
+
+                            if (typeof L === 'undefined') {
+                                jsError('Leaflet is not loaded. Station map cannot initialize.');
+                                return false;
                             }
 
                             applyThemeClass();
@@ -347,10 +371,13 @@ public final class MapHtmlResources {
 
                             jsLog('Leaflet map initialized');
 
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                maxZoom: 18,
-                                attribution: '&copy; OpenStreetMap'
-                            }).addTo(map);
+                            L.tileLayer(
+                                'http://127.0.0.1:' + window._kstTileProxyPort + '/tiles/{s}/{z}/{x}/{y}.png',
+                                {
+                                    maxZoom: 18,
+                                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                                }
+                            ).addTo(map);
 
                             map.createPane('beamPane');
                             map.getPane('beamPane').style.zIndex = 410;
@@ -385,6 +412,7 @@ public final class MapHtmlResources {
 
                             notifyMapReady();
                             notifyViewport();
+                            return true;
                         }
 
                         function invalidateSize() {
@@ -468,13 +496,17 @@ public final class MapHtmlResources {
                         }
 
                         function setHome(lat, lon, zoom) {
-                            init();
+                            if (!init()) {
+                                return;
+                            }
                             jsLog('setHome lat=' + lat + ' lon=' + lon + ' zoom=' + zoom);
                             map.setView([lat, lon], zoom);
                         }
 
                         function setStations(stationsJson) {
-                            init();
+                            if (!init()) {
+                                return;
+                            }
 
                             stationLayer.clearLayers();
                             markersByCallsignRaw = {};
@@ -503,7 +535,9 @@ public final class MapHtmlResources {
                         }
 
                         function setBeam(beamJson) {
-                            init();
+                            if (!init()) {
+                                return;
+                            }
                             beamLayer.clearLayers();
 
                             if (!beamJson || beamJson === 'null') {
@@ -530,7 +564,9 @@ public final class MapHtmlResources {
                         }
 
                         function setConnection(connectionJson) {
-                            init();
+                            if (!init()) {
+                                return;
+                            }
                             connectionLayer.clearLayers();
 
                             if (!connectionJson || connectionJson === 'null') {
@@ -555,7 +591,9 @@ public final class MapHtmlResources {
                         }
                         
                         function setProfileHoverPoint(point) {
-                            init();
+                            if (!init()) {
+                                return;
+                            }
                 
                             if (profileHoverMarker) {
                                 map.removeLayer(profileHoverMarker);
@@ -584,7 +622,9 @@ public final class MapHtmlResources {
                         }
 
                         function setGrid(gridJson) {
-                            init();
+                            if (!init()) {
+                                return;
+                            }
                             gridLayer.clearLayers();
 
                             const cells = JSON.parse(gridJson);
@@ -670,6 +710,6 @@ public final class MapHtmlResources {
                 </script>
                 </body>
                 </html>
-                """;
+                """.replace("__TILE_PROXY_PORT__", String.valueOf(tileProxyPort));
     }
 }

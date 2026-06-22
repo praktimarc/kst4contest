@@ -8,6 +8,7 @@ module praktiKST {
     requires jdk.jsobject;
     requires java.net.http;
     requires java.desktop;
+	requires jdk.crypto.ec;
     exports kst4contest.controller.interfaces;
     exports kst4contest.controller;
 	exports kst4contest.locatorUtils;
