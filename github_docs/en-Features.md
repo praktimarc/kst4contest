@@ -233,3 +233,39 @@ File-based log evaluation using regex. Details: [Log Synchronisation](Log-Sync#m
 ## Cluster & QSO of Others
 
 A separate window showing the QSO flow between other stations. Particularly interesting during quieter night-time hours of a contest. This window can be minimised when not needed. Future plan: filtering to stations in your selected QTF.
+
+---
+
+## Station Map (from v1.41)
+
+An interactive OpenStreetMap-based map showing the geographic position of all active chat members.
+
+**Features:**
+
+- Station markers with callsign labels, coloured by activity and sked state
+- Antenna **beam cone** visualisation for the own station
+- **Connection line** to the currently selected station
+- **Maidenhead grid** overlay (QRA locator grid)
+- **Path profile chart**: Terrain elevation cross-section between own station and the selected station, including Fresnel zone analysis and obstruction/horizon detection
+- Multiple terrain data sources: **Copernicus GLO-30** (high-resolution DEM), **Open-Meteo API**, synthetic fallback, and **offline DEM import** for air-gapped use
+- Aircraft scatter path analysis integrated with the terrain data
+
+The map works in packaged environments (AppImage, Flatpak) without internet access to external CDNs: map tiles are fetched via a local tile proxy, and the Leaflet.js library is bundled inside the application.
+
+---
+
+## Optimised Message Handling / 30,000 Message Limit (from v1.41)
+
+The internal chat and message tables are capped at **30,000 entries**. Older messages are automatically discarded when the limit is reached. This keeps memory usage and rendering performance stable during multi-day contest operations.
+
+---
+
+## Screen-Aware Window Sizing (from v1.41)
+
+On startup, KST4Contest calculates a screen-aware size for the main window:
+
+- The stored window size from the previous session is used – but **never larger than the current screen**.
+- If KST4Contest was last used on a larger monitor, the window is automatically scaled down to fit the current display without clipping.
+- The UI layout is more **compact and responsive on smaller screens**, showing the same information in less space.
+
+This prevents unusable oversized windows when switching between machines or monitors.
