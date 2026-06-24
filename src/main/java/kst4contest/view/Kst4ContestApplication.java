@@ -61,6 +61,8 @@ import kst4contest.model.*;
 
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
+import javafx.stage.Screen;
+
 import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.view.map.StationMapView;
@@ -777,13 +779,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 		selectedCallSignShowAsPathBtn.setGraphic(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()));
 
-		Button selectedCallSignShowOnMapBtn = new Button("Show on map");
+		Button selectedCallSignShowOnMapBtn = new Button("🧭 Show on map");
 		selectedCallSignShowOnMapBtn.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent actionEvent) {
 				showSelectedCallsignOnMap();
 			}
 		});
+		selectedCallSignShowOnMapBtn.setTooltip(new Tooltip("Show the selected station on the map"));
 
 
         Button selectedCallSignTurnAntBtn = new Button("Turn ant1 to " + selectedCallSignInfoStageChatMember.getCallSignRaw());
@@ -824,10 +827,43 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		selectedCallSignDownerSiteGridPane.add(selectedCallSignShowQRZCqprofile, 1,3,1,1);
 
 
+		/*
+		 * The old GridPane layout above is intentionally left in place because it
+		 * creates all controls, bindings and event handlers in the established order.
+		 * From here on we only change the presentation: clear the temporary GridPane
+		 * and reassemble the same controls in a compact VBox/FlowPane layout.
+		 */
+		selectedCallSignDownerSiteGridPane.getChildren().clear();
 
+		VBox selectedCallSignCompactControlsPane = initSelectedCallSignCompactControlsPane(
+				selectedCallSignInfoStageChatMember,
+				selectedCallSignChatCategoryLabelDesc,
+				selectedCallSignInfoLblQTFInfo,
+				selectedCallSignInfoLblQRBInfo,
+				lblDetectedRxBands,
+				priorityRow,
+				skedRow,
+				selectedCallSignPathAndMapButtons,
+				selectedCallSignTurnAntBtn,
+				selectedCallSignShowQRZprofile,
+				selectedCallSignShowQRZCqprofile,
+				furtherInfoPnl_chkbx_notQRV144,
+				furtherInfoPnl_chkbx_notQRV432,
+				furtherInfoPnl_chkbx_notQRV23,
+				furtherInfoPnl_chkbx_notQRV13,
+				furtherInfoPnl_chkbx_notQRV9,
+				furtherInfoPnl_chkbx_notQRV6,
+				furtherInfoPnl_chkbx_notQRV3,
+				furtherInfoPnl_chkbx_notQRVall
+		);
 
 		selectedCallSignSplitPane.getItems().add(initFurtherInfoAbtCallsignMSGTable);
-		selectedCallSignSplitPane.getItems().add(selectedCallSignDownerSiteGridPane);
+		selectedCallSignSplitPane.getItems().add(selectedCallSignCompactControlsPane);
+
+
+
+//		selectedCallSignSplitPane.getItems().add(initFurtherInfoAbtCallsignMSGTable);
+//		selectedCallSignSplitPane.getItems().add(selectedCallSignDownerSiteGridPane);
 
 		//first initialize how much divider positions we need...
 //		chatcontroller.getChatPreferences().setGUIselectedCallSignSplitPane_dividerposition(new double[selectedCallSignSplitPane.getDividers().size()]);
@@ -2060,6 +2096,166 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 
+
+	/**
+	 * Reassembles the selected-station controls into a compact, balanced layout.
+	 *
+	 * The selected-station message table stays immediately visible above this pane.
+	 * This pane only contains the summary and controls below it:
+	 * - compact station summary
+	 * - action buttons such as Show path / Show on map / Turn antenna / lookups
+	 * - score and sked controls
+	 * - not-QRV tags
+	 *
+	 * Existing controls are passed in instead of recreated so all existing event
+	 * handlers, bindings and comments in generateFurtherInfoAbtSelectedCallsignBP(...)
+	 * remain intact.
+	 */
+	private VBox initSelectedCallSignCompactControlsPane(
+			ChatMember selectedCallSignInfoStageChatMember,
+			Label selectedCallSignChatCategoryLabelDesc,
+			Label selectedCallSignInfoLblQTFInfo,
+			Label selectedCallSignInfoLblQRBInfo,
+			Label lblDetectedRxBands,
+			HBox priorityRow,
+			HBox skedRow,
+			HBox selectedCallSignPathAndMapButtons,
+			Button selectedCallSignTurnAntBtn,
+			Button selectedCallSignShowQRZprofile,
+			Button selectedCallSignShowQRZCqprofile,
+			CheckBox furtherInfoPnl_chkbx_notQRV144,
+			CheckBox furtherInfoPnl_chkbx_notQRV432,
+			CheckBox furtherInfoPnl_chkbx_notQRV23,
+			CheckBox furtherInfoPnl_chkbx_notQRV13,
+			CheckBox furtherInfoPnl_chkbx_notQRV9,
+			CheckBox furtherInfoPnl_chkbx_notQRV6,
+			CheckBox furtherInfoPnl_chkbx_notQRV3,
+			CheckBox furtherInfoPnl_chkbx_notQRVall
+	) {
+
+		for (CheckBox cb : Arrays.asList(
+				furtherInfoPnl_chkbx_notQRV144,
+				furtherInfoPnl_chkbx_notQRV432,
+				furtherInfoPnl_chkbx_notQRV23,
+				furtherInfoPnl_chkbx_notQRV13,
+				furtherInfoPnl_chkbx_notQRV9,
+				furtherInfoPnl_chkbx_notQRV6,
+				furtherInfoPnl_chkbx_notQRV3,
+				furtherInfoPnl_chkbx_notQRVall
+		)) {
+			// Hidden band controls should not reserve space in the compact FlowPane.
+			cb.managedProperty().bind(cb.visibleProperty());
+		}
+
+		FlowPane stationSummaryFlow = new FlowPane();
+		stationSummaryFlow.setHgap(8);
+		stationSummaryFlow.setVgap(2);
+		stationSummaryFlow.setAlignment(Pos.CENTER_LEFT);
+		stationSummaryFlow.setStyle("-fx-padding: 3; -fx-border-color: lightgrey; -fx-border-width: 1;");
+
+		stationSummaryFlow.getChildren().addAll(
+				selectedCallSignChatCategoryLabelDesc,
+				new Label("|"),
+				selectedCallSignInfoLblQTFInfo,
+				selectedCallSignInfoLblQRBInfo,
+				new Label("Last activity: " + new Utils4KST().time_convertEpochToReadable(
+						selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch() + "")),
+				new Label("("
+						+ Utils4KST.time_getSecondsBetweenEpochAndNow(
+						selectedCallSignInfoStageChatMember.getActivityTimeLastInEpoch() + "") / 60 % 60
+						+ " min ago)"),
+				lblDetectedRxBands
+		);
+
+		FlowPane actionFlow = new FlowPane();
+		actionFlow.setHgap(5);
+		actionFlow.setVgap(3);
+		actionFlow.setAlignment(Pos.CENTER_LEFT);
+		actionFlow.setStyle("-fx-padding: 3; -fx-border-color: lightgrey; -fx-border-width: 1;");
+		actionFlow.getChildren().addAll(
+				selectedCallSignPathAndMapButtons,
+				selectedCallSignTurnAntBtn,
+				selectedCallSignShowQRZprofile,
+				selectedCallSignShowQRZCqprofile
+		);
+
+		FlowPane scoreAndSkedFlow = new FlowPane();
+		scoreAndSkedFlow.setHgap(5);
+		scoreAndSkedFlow.setVgap(3);
+		scoreAndSkedFlow.setAlignment(Pos.CENTER_LEFT);
+		scoreAndSkedFlow.setStyle("-fx-padding: 3; -fx-border-color: lightgrey; -fx-border-width: 1;");
+		scoreAndSkedFlow.getChildren().addAll(priorityRow, skedRow);
+
+		FlowPane notQrvFlow = new FlowPane();
+		notQrvFlow.setHgap(5);
+		notQrvFlow.setVgap(2);
+		notQrvFlow.setAlignment(Pos.CENTER_LEFT);
+		notQrvFlow.setStyle("-fx-padding: 3; -fx-border-color: lightgrey; -fx-border-width: 1;");
+		notQrvFlow.getChildren().addAll(
+				new Label("Not QRV:"),
+				furtherInfoPnl_chkbx_notQRV144,
+				furtherInfoPnl_chkbx_notQRV432,
+				furtherInfoPnl_chkbx_notQRV23,
+				furtherInfoPnl_chkbx_notQRV13,
+				furtherInfoPnl_chkbx_notQRV9,
+				furtherInfoPnl_chkbx_notQRV6,
+				furtherInfoPnl_chkbx_notQRV3,
+				furtherInfoPnl_chkbx_notQRVall
+		);
+
+		VBox selectedCallSignCompactControlsPane = new VBox(4);
+		selectedCallSignCompactControlsPane.setStyle("-fx-padding: 3;");
+		selectedCallSignCompactControlsPane.getChildren().addAll(
+				stationSummaryFlow,
+				actionFlow,
+				scoreAndSkedFlow,
+				notQrvFlow
+		);
+
+		return selectedCallSignCompactControlsPane;
+	}
+
+	/**
+	 * Builds the lower global-message area.
+	 *
+	 * This TabPane is intentionally independent from the selected ChatMember.
+	 * It contains global message streams only:
+	 * - public/CQ messages
+	 * - DXCluster messages
+	 * - messages between other stations ("QSO of the other")
+	 *
+	 * The already initialized public-message table is passed in so its existing
+	 * context menu and selection handling remain unchanged.
+	 *
+	 * DXCluster and QSO-of-the-other get their own TableViews on the same backing
+	 * lists. This is important because the existing separate "Cluster & QSO of the other"
+	 * window can keep using its own TableViews at the same time.
+	 */
+	private TabPane initBottomGlobalMessageTabPane(TableView<ChatMessage> tbl_generalMessageTable) {
+
+		TabPane bottomMessageTabs = new TabPane();
+		bottomMessageTabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+		bottomMessageTabs.setTabMinHeight(22);
+		bottomMessageTabs.setTabMaxHeight(24);
+
+		Tab publicMessagesTab = new Tab("Public messages");
+		publicMessagesTab.setTooltip(new Tooltip("Public/CQ messages from the chat."));
+		publicMessagesTab.setContent(tbl_generalMessageTable);
+
+		Tab dxClusterMessagesTab = new Tab("DXCluster messages");
+		dxClusterMessagesTab.setTooltip(new Tooltip("DXCluster spots."));
+		dxClusterMessagesTab.setContent(initDXClusterTable());
+
+		Tab qsoOfTheOtherTab = new Tab("QSO of the other");
+		qsoOfTheOtherTab.setTooltip(new Tooltip("Messages between other stations. This view is not tied to the selected ChatMember."));
+		qsoOfTheOtherTab.setContent(initChatToOtherMSGTable());
+
+		bottomMessageTabs.getTabs().addAll(publicMessagesTab, dxClusterMessagesTab, qsoOfTheOtherTab);
+		bottomMessageTabs.getSelectionModel().select(publicMessagesTab);
+
+		return bottomMessageTabs;
+	}
+
 	/**
 	 * initializes the tableview in which the cq- and beacon-texts are shown
 	 * 
@@ -3001,13 +3197,223 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	} // TODO: Textsnippets table
 
 
+//	private BorderPane initTopPriorityListPane(TableView<ChatMember> tbl_chatMember, TextField txt_chatMessageUserInput) {
+//
+//		BorderPane pane = new BorderPane();
+//		pane.setStyle("-fx-padding: 3;");
+//
+//		Label header = new Label("Top priority candidates");
+//		header.getStyleClass().add("label");
+//
+//		ListView<kst4contest.controller.ScoreService.TopCandidate> listView = new ListView<>();
+//		listView.setItems(chatcontroller.getScoreService().getTopCandidatesFx());
+//
+//		listView.setCellFactory(lv -> new ListCell<>() {
+//			@Override
+//			protected void updateItem(kst4contest.controller.ScoreService.TopCandidate item, boolean empty) {
+//				super.updateItem(item, empty);
+//				if (empty || item == null) {
+//					setText(null);
+//					return;
+//				}
+//				// Keep it compact; score is mainly evaluated in FurtherInfo
+//				setText(item.getDisplayCallSign() + "  |  score " + String.format(java.util.Locale.US, "%.0f", item.getScore()));
+//			}
+//		});
+//
+//		listView.setOnMouseClicked(evt -> {
+//			if (evt.getClickCount() < 1) return;
+//			kst4contest.controller.ScoreService.TopCandidate c = listView.getSelectionModel().getSelectedItem();
+//			if (c == null) return;
+//
+//			ChatMember resolved = resolveChatMemberForTopCandidate(c);
+//			if (resolved == null) return;
+//
+//			// Try to select in table (reuses existing selection logic)
+//			if (tbl_chatMember.getItems().contains(resolved)) {
+//				tbl_chatMember.getSelectionModel().select(resolved);
+//				tbl_chatMember.scrollTo(resolved);
+//			} else {
+//				// Fallback: if filtered out, still show FurtherInfo + prepare /cq
+//				selectedCallSignInfoStageChatMember = resolved;
+//				chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+//
+//				selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
+//				txt_chatMessageUserInput.clear();
+//				txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
+//				txt_chatMessageUserInput.requestFocus();
+//				txt_chatMessageUserInput.selectEnd();
+//
+//				// Keep ScoreService selection in sync
+//				chatcontroller.getScoreService().setSelectedChatMember(resolved);
+//			}
+//		});
+//
+//		pane.setTop(header);
+//		pane.setCenter(listView);
+//		return pane;
+//	}
+
+	/**
+	 * Builds the compact priority candidate area for the right side of the main UI.
+	 *
+	 * The former implementation showed the complete priority list permanently.
+	 * That used a lot of vertical space although normally only the first one or two
+	 * candidates are relevant during live operation.
+	 *
+	 * New behaviour:
+	 * - show only Top 1 and Top 2 directly in the main window
+	 * - click Top 1/Top 2 to select that candidate immediately
+	 * - use "more" to open the full priority list in a separate window
+	 */
 	private BorderPane initTopPriorityListPane(TableView<ChatMember> tbl_chatMember, TextField txt_chatMessageUserInput) {
 
 		BorderPane pane = new BorderPane();
-		pane.setStyle("-fx-padding: 3;");
+		pane.setStyle("-fx-padding: 3; -fx-border-color: lightgrey; -fx-border-width: 1;");
 
-		Label header = new Label("Top priority candidates");
-		header.getStyleClass().add("label");
+		Label header = new Label("Priority:");
+		header.setMinWidth(48);
+
+		Button top1Button = new Button("1 -");
+		Button top2Button = new Button("2 -");
+		Button moreButton = new Button("more");
+
+		top1Button.setMaxWidth(Double.MAX_VALUE);
+		top2Button.setMaxWidth(Double.MAX_VALUE);
+
+		HBox.setHgrow(top1Button, Priority.ALWAYS);
+		HBox.setHgrow(top2Button, Priority.ALWAYS);
+
+		HBox row = new HBox(4, header, top1Button, top2Button, moreButton);
+		row.setAlignment(Pos.CENTER_LEFT);
+
+		Runnable refreshButtons = () -> {
+			ObservableList<kst4contest.controller.ScoreService.TopCandidate> items =
+					chatcontroller.getScoreService().getTopCandidatesFx();
+
+			updateTopCandidateButton(top1Button, items, 0);
+			updateTopCandidateButton(top2Button, items, 1);
+		};
+
+		chatcontroller.getScoreService().getTopCandidatesFx().addListener(
+				(ListChangeListener<kst4contest.controller.ScoreService.TopCandidate>) change -> refreshButtons.run()
+		);
+
+		refreshButtons.run();
+
+		top1Button.setOnAction(e -> selectTopCandidateAt(0, tbl_chatMember, txt_chatMessageUserInput));
+		top2Button.setOnAction(e -> selectTopCandidateAt(1, tbl_chatMember, txt_chatMessageUserInput));
+		moreButton.setOnAction(e -> showTopPriorityCandidatesWindow(tbl_chatMember, txt_chatMessageUserInput));
+
+		pane.setCenter(row);
+		pane.setMinHeight(38);
+		pane.setPrefHeight(42);
+		pane.setMaxHeight(58);
+		SplitPane.setResizableWithParent(pane, Boolean.FALSE);
+
+		return pane;
+	}
+
+	/**
+	 * Updates one of the compact priority buttons from the current TopCandidate list.
+	 * Disabled buttons indicate that not enough candidates are currently available.
+	 */
+	private void updateTopCandidateButton(
+			Button button,
+			ObservableList<kst4contest.controller.ScoreService.TopCandidate> items,
+			int index
+	) {
+		if (items == null || items.size() <= index || items.get(index) == null) {
+			button.setText((index + 1) + " -");
+			button.setDisable(true);
+			button.setTooltip(null);
+			return;
+		}
+
+		kst4contest.controller.ScoreService.TopCandidate candidate = items.get(index);
+
+		button.setText(String.format(
+				java.util.Locale.US,
+				"%d %s %.0f",
+				index + 1,
+				candidate.getDisplayCallSign(),
+				candidate.getScore()
+		));
+		button.setDisable(false);
+		button.setTooltip(new Tooltip("Select " + candidate.getDisplayCallSign() + " from priority candidates"));
+	}
+
+	/**
+	 * Selects the TopCandidate at the given index, if available.
+	 */
+	private void selectTopCandidateAt(
+			int index,
+			TableView<ChatMember> tbl_chatMember,
+			TextField txt_chatMessageUserInput
+	) {
+		ObservableList<kst4contest.controller.ScoreService.TopCandidate> items =
+				chatcontroller.getScoreService().getTopCandidatesFx();
+
+		if (items == null || items.size() <= index) {
+			return;
+		}
+
+		selectTopCandidate(items.get(index), tbl_chatMember, txt_chatMessageUserInput);
+	}
+
+	/**
+	 * Resolves and selects a priority candidate.
+	 *
+	 * If the station is currently visible in the member table, selecting it there is
+	 * preferred because the existing table-selection listener then keeps the rest of
+	 * the UI in sync. If the station is filtered out, we still show FurtherInfo and
+	 * prepare the /cq text so the priority list remains useful with active filters.
+	 */
+	private void selectTopCandidate(
+			kst4contest.controller.ScoreService.TopCandidate candidate,
+			TableView<ChatMember> tbl_chatMember,
+			TextField txt_chatMessageUserInput
+	) {
+		if (candidate == null) {
+			return;
+		}
+
+		ChatMember resolved = resolveChatMemberForTopCandidate(candidate);
+
+		if (resolved == null) {
+			return;
+		}
+
+		if (tbl_chatMember.getItems().contains(resolved)) {
+			tbl_chatMember.getSelectionModel().select(resolved);
+			tbl_chatMember.scrollTo(resolved);
+		} else {
+			selectedCallSignInfoStageChatMember = resolved;
+			chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+
+			selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
+			txt_chatMessageUserInput.clear();
+			txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
+			txt_chatMessageUserInput.requestFocus();
+			txt_chatMessageUserInput.selectEnd();
+		}
+
+		// Keep ScoreService selection in sync even if the visible table selection path was used.
+		chatcontroller.getScoreService().setSelectedChatMember(resolved);
+	}
+
+	/**
+	 * Opens the complete priority candidate list in a separate window.
+	 *
+	 * This keeps the main UI compact while still making the full list available when
+	 * the operator wants to inspect more than the first two candidates.
+	 */
+	private void showTopPriorityCandidatesWindow(
+			TableView<ChatMember> tbl_chatMember,
+			TextField txt_chatMessageUserInput
+	) {
+		Stage stage = new Stage();
+		stage.setTitle("Top priority candidates");
 
 		ListView<kst4contest.controller.ScoreService.TopCandidate> listView = new ListView<>();
 		listView.setItems(chatcontroller.getScoreService().getTopCandidatesFx());
@@ -3016,47 +3422,43 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			@Override
 			protected void updateItem(kst4contest.controller.ScoreService.TopCandidate item, boolean empty) {
 				super.updateItem(item, empty);
+
 				if (empty || item == null) {
 					setText(null);
 					return;
 				}
-				// Keep it compact; score is mainly evaluated in FurtherInfo
-				setText(item.getDisplayCallSign() + "  |  score " + String.format(java.util.Locale.US, "%.0f", item.getScore()));
+
+				setText(item.getDisplayCallSign()
+						+ "  |  score "
+						+ String.format(java.util.Locale.US, "%.0f", item.getScore()));
 			}
 		});
 
 		listView.setOnMouseClicked(evt -> {
-			if (evt.getClickCount() < 1) return;
-			kst4contest.controller.ScoreService.TopCandidate c = listView.getSelectionModel().getSelectedItem();
-			if (c == null) return;
-
-			ChatMember resolved = resolveChatMemberForTopCandidate(c);
-			if (resolved == null) return;
-
-			// Try to select in table (reuses existing selection logic)
-			if (tbl_chatMember.getItems().contains(resolved)) {
-				tbl_chatMember.getSelectionModel().select(resolved);
-				tbl_chatMember.scrollTo(resolved);
-			} else {
-				// Fallback: if filtered out, still show FurtherInfo + prepare /cq
-				selectedCallSignInfoStageChatMember = resolved;
-				chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
-
-				selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
-				txt_chatMessageUserInput.clear();
-				txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
-				txt_chatMessageUserInput.requestFocus();
-				txt_chatMessageUserInput.selectEnd();
-
-				// Keep ScoreService selection in sync
-				chatcontroller.getScoreService().setSelectedChatMember(resolved);
+			if (evt.getClickCount() < 2) {
+				return;
 			}
+
+			kst4contest.controller.ScoreService.TopCandidate selected =
+					listView.getSelectionModel().getSelectedItem();
+
+			if (selected == null) {
+				return;
+			}
+
+			selectTopCandidate(selected, tbl_chatMember, txt_chatMessageUserInput);
+			stage.close();
 		});
 
-		pane.setTop(header);
-		pane.setCenter(listView);
-		return pane;
+		BorderPane root = new BorderPane();
+		root.setStyle("-fx-padding: 5;");
+		root.setCenter(listView);
+		root.setBottom(new Label("Double-click a candidate to select it."));
+
+		stage.setScene(new Scene(root, 360, 500));
+		stage.show();
 	}
+
 
 	private ChatMember resolveChatMemberForTopCandidate(kst4contest.controller.ScoreService.TopCandidate c) {
 
@@ -4672,6 +5074,74 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	}
 
+
+	/**
+	 * Calculates a screen-aware startup size for the main chat window.
+	 *
+	 * Preferences store the main scene size as:
+	 * - index 0 = height
+	 * - index 1 = width
+	 *
+	 * The stored size is used unchanged as long as it fits into the currently
+	 * available primary screen area. If the application was last used on a larger
+	 * monitor and is now started on a smaller screen, the size is reduced so the
+	 * main window remains usable immediately after startup.
+	 *
+	 * Screen.getVisualBounds() is used instead of Screen.getBounds() because the
+	 * visual bounds exclude task bars, docks and similar OS UI areas.
+	 *
+	 * The returned array keeps the same H/W order as ChatPreferences:
+	 * - index 0 = corrected height
+	 * - index 1 = corrected width
+	 */
+	private double[] getScreenAwareMainSceneSizeHW(double[] storedSceneSizeHW) {
+
+		final double fallbackHeight = 768.0;
+		final double fallbackWidth = 1234.0;
+
+		/*
+		 * Leave a little room for the native window decoration and screen edges.
+		 * JavaFX Scene size does not include the full native Stage decoration.
+		 */
+		final double screenMargin = 40.0;
+
+		double storedHeight = fallbackHeight;
+		double storedWidth = fallbackWidth;
+
+		if (storedSceneSizeHW != null && storedSceneSizeHW.length >= 2) {
+			if (Double.isFinite(storedSceneSizeHW[0]) && storedSceneSizeHW[0] > 0) {
+				storedHeight = storedSceneSizeHW[0];
+			}
+
+			if (Double.isFinite(storedSceneSizeHW[1]) && storedSceneSizeHW[1] > 0) {
+				storedWidth = storedSceneSizeHW[1];
+			}
+		}
+
+		Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
+
+		double availableWidth = Math.max(1.0, visualBounds.getWidth() - screenMargin);
+		double availableHeight = Math.max(1.0, visualBounds.getHeight() - screenMargin);
+
+		double correctedWidth = Math.min(storedWidth, availableWidth);
+		double correctedHeight = Math.min(storedHeight, availableHeight);
+
+		if (correctedWidth != storedWidth || correctedHeight != storedHeight) {
+			System.out.println("[Main.java, Info]: Main window startup size reduced to fit current screen. "
+					+ "storedWidth=" + storedWidth
+					+ ", storedHeight=" + storedHeight
+					+ ", availableWidth=" + availableWidth
+					+ ", availableHeight=" + availableHeight
+					+ ", correctedWidth=" + correctedWidth
+					+ ", correctedHeight=" + correctedHeight);
+		}
+
+		return new double[] {
+				correctedHeight,
+				correctedWidth
+		};
+	}
+
 	@Override
 	public void start(Stage primaryStage) throws InterruptedException, IOException, URISyntaxException {
 
@@ -4818,8 +5288,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			BorderPane bPaneChatWindow = new BorderPane();
 
-			scn_ChatwindowMainScene = new Scene(bPaneChatWindow, chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[1], chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[0]);
+			/*
+			 * Restore the main window size from preferences, but never start larger than
+			 * the currently available screen area. This avoids unusable oversized windows
+			 * when KST4Contest was last used on a larger monitor.
+			 */
+			double[] screenAwareMainSceneSizeHW = getScreenAwareMainSceneSizeHW(
+					chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()
+			);
+
+			scn_ChatwindowMainScene = new Scene(
+					bPaneChatWindow,
+					screenAwareMainSceneSizeHW[1],
+					screenAwareMainSceneSizeHW[0]
+			);
+
 			scn_ChatwindowMainScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+
+
 
 			//add listeners for size changes to restore after startup
 			scn_ChatwindowMainScene.widthProperty().addListener(new ChangeListener<Number>() {
@@ -5413,8 +5899,19 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 
-			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets,pnl_inputAndSendButtons, textInputFlowPane,
-					tbl_generalMessageTable);
+//			messageSectionSplitpane.getItems().addAll(privateMessageTable, flwPane_textSnippets,pnl_inputAndSendButtons, textInputFlowPane,
+//					tbl_generalMessageTable);
+
+			TabPane bottomGlobalMessageTabPane = initBottomGlobalMessageTabPane(tbl_generalMessageTable);
+
+			messageSectionSplitpane.getItems().addAll(
+					privateMessageTable,
+					flwPane_textSnippets,
+					pnl_inputAndSendButtons,
+					textInputFlowPane,
+					bottomGlobalMessageTabPane
+			);
+
 			messageSectionSplitpane.setDividerPositions(chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition());
 
 			//first initialize how much divider positions we need...
@@ -6194,6 +6691,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			primaryStage.setScene(scn_ChatwindowMainScene);
 
+			/*
+			 * Safety net after the Scene has been attached to the Stage.
+			 * Some platforms add native window decoration after setScene(...), so this
+			 * second check prevents the Stage from extending beyond the visible screen.
+			 */
+			ensureStageFitsPrimaryScreen(primaryStage);
+
 			primaryStage.show();
 
 		} catch (Exception e) {
@@ -6876,7 +7380,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		grdPnlStation.add(new Label("DEM root directory:"), 0, 9);
 		grdPnlStation.add(txtFldstn_pathAnalysisDemRootDirectory, 1, 9);
-		grdPnlStation.add(hbxDemDirectoryActions, 2, 7, 2, 1);
+		grdPnlStation.add(hbxDemDirectoryActions, 2, 9, 2, 1);
 
 		grdPnlStation.add(new Label("Default maximum QRB:"), 0, 10);
 		grdPnlStation.add(txtFldstn_maxQRBDefault, 1, 10);
@@ -6896,8 +7400,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlStation.add(new Label("DX OM ant. gain dBi:"), 0, 7);
 		grdPnlStation.add(txtFldstn_pathAnalysisDefaultTargetAntennaGainDbi, 1, 7);
 
-		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 10);
-		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 10);
+		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 12);
+		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 12);
 
 
 
@@ -9137,6 +9641,67 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return textField;
 	}
 
+	/**
+	 * Ensures that the native Stage itself fits into the primary screen's visible
+	 * area.
+	 *
+	 * This is a second safety net in addition to getScreenAwareMainSceneSizeHW(...).
+	 * The first method corrects the JavaFX Scene size. This method corrects the
+	 * actual Stage position and size, including platform-specific window behaviour.
+	 */
+	private void ensureStageFitsPrimaryScreen(Stage stage) {
+		if (stage == null) {
+			return;
+		}
+
+		Rectangle2D visualBounds = Screen.getPrimary().getVisualBounds();
+
+		double correctedX = stage.getX();
+		double correctedY = stage.getY();
+		double correctedWidth = stage.getWidth();
+		double correctedHeight = stage.getHeight();
+
+		if (!Double.isFinite(correctedWidth) || correctedWidth <= 0) {
+			correctedWidth = visualBounds.getWidth();
+		}
+
+		if (!Double.isFinite(correctedHeight) || correctedHeight <= 0) {
+			correctedHeight = visualBounds.getHeight();
+		}
+
+		correctedWidth = Math.min(correctedWidth, visualBounds.getWidth());
+		correctedHeight = Math.min(correctedHeight, visualBounds.getHeight());
+
+		if (!Double.isFinite(correctedX)) {
+			correctedX = visualBounds.getMinX();
+		}
+
+		if (!Double.isFinite(correctedY)) {
+			correctedY = visualBounds.getMinY();
+		}
+
+		if (correctedX < visualBounds.getMinX()) {
+			correctedX = visualBounds.getMinX();
+		}
+
+		if (correctedY < visualBounds.getMinY()) {
+			correctedY = visualBounds.getMinY();
+		}
+
+		if (correctedX + correctedWidth > visualBounds.getMaxX()) {
+			correctedX = visualBounds.getMaxX() - correctedWidth;
+		}
+
+		if (correctedY + correctedHeight > visualBounds.getMaxY()) {
+			correctedY = visualBounds.getMaxY() - correctedHeight;
+		}
+
+		stage.setX(correctedX);
+		stage.setY(correctedY);
+		stage.setWidth(correctedWidth);
+		stage.setHeight(correctedHeight);
+	}
+
 }
 
 /**
@@ -9172,7 +9737,10 @@ class ActionButtonTableCell<S, T> extends TableCell<S, T> {
 		}
 	}
 
+
 }
+
+
 
 /**
  * This cell type is used to declare buttons which can be placed in the tableview
