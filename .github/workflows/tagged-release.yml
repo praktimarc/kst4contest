@@ -619,6 +619,18 @@ jobs:
           rsync -a ../flatpak-ostree-repo/ ./
           # Regenerate summary with all branches (not just the one just built)
           flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" .
+          # Generate .flatpakrepo with embedded GPG key so users can do remote-add without errors
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
+          cat > kst4contest.flatpakrepo << EOF
+          [Flatpak Repo]
+          Title=KST4Contest
+          Url=${PAGES_URL}
+          Homepage=https://github.com/${GITHUB_REPOSITORY}
+          Comment=KST4Contest – ON4KST Chat Client for VHF/UHF contests
+          GPGKey=${GPG_KEY_B64}
+          EOF
           git add -A
           if git diff --cached --quiet; then
             echo "No changes to commit"

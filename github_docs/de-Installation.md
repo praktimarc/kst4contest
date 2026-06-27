@@ -116,11 +116,46 @@ Die Datei `de.x08.KST4Contest.flatpakref` aus dem [aktuellen Release](https://gi
 flatpak install de.x08.KST4Contest.flatpakref
 ```
 
-Oder den Remote manuell hinzufügen:
+Oder den Remote manuell hinzufügen (empfohlen für Nightly/Beta-Zugriff):
 ```bash
-flatpak remote-add kst4contest https://praktimarc.github.io/kst4contest/
+flatpak remote-add --if-not-exists kst4contest https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
 flatpak install kst4contest de.x08.KST4Contest
 ```
+
+#### Flatpak-Kanäle (nightly / beta / stable)
+
+Das Flatpak-Repository enthält drei Kanäle, die alle im selben Remote liegen:
+
+| Kanal | Inhalt | Wird gebaut bei |
+|---|---|---|
+| `stable` | Aktuelle stabile Version | Jedem normalen Release-Tag |
+| `beta` | Vorab-Version | Tags mit `beta-` Präfix |
+| `nightly` | Entwicklungsstand (main-Branch) | Täglich / jedem Push auf main |
+
+Remote einmalig hinzufügen, dann den gewünschten Kanal installieren:
+
+```bash
+flatpak remote-add --if-not-exists kst4contest https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
+
+# Stable (Standard)
+flatpak install kst4contest de.x08.KST4Contest
+
+# Beta
+flatpak install kst4contest de.x08.KST4Contest//beta
+
+# Nightly
+flatpak install kst4contest de.x08.KST4Contest//nightly
+```
+
+> **Hinweis:** Flatpak erlaubt nur eine installierte Version pro App-ID gleichzeitig. Um den Kanal zu wechseln, zuerst die aktuelle Version deinstallieren:
+> ```bash
+> flatpak uninstall de.x08.KST4Contest
+> flatpak install kst4contest de.x08.KST4Contest//nightly
+> ```
+
+Updates erfolgen wie gewohnt mit `flatpak update`.
+
+Die `flatpakref`-Dateien für Beta und Stable liegen jeweils im entsprechenden [GitHub-Release](https://github.com/praktimarc/kst4contest/releases). Das Nightly-`flatpakref` (`de.x08.KST4Contest.nightly.flatpakref`) ist als Artifact im [GitHub Actions](https://github.com/praktimarc/kst4contest/actions)-Tab verfügbar (wird 14 Tage aufbewahrt) – der Remote-Weg oben ist für Nightly daher meist einfacher.
 
 ### macOS
 1. DMG-Datei für die eigene Architektur herunterladen (Apple Silicon oder Intel).

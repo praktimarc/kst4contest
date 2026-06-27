@@ -116,11 +116,46 @@ Download `de.x08.KST4Contest.flatpakref` from the [latest release](https://githu
 flatpak install de.x08.KST4Contest.flatpakref
 ```
 
-Or add the remote manually:
+Or add the remote manually (recommended for nightly/beta access):
 ```bash
-flatpak remote-add kst4contest https://praktimarc.github.io/kst4contest/
+flatpak remote-add --if-not-exists kst4contest https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
 flatpak install kst4contest de.x08.KST4Contest
 ```
+
+#### Flatpak Channels (nightly / beta / stable)
+
+The Flatpak repository provides three channels, all served from the same remote:
+
+| Channel | Content | Built on |
+|---|---|---|
+| `stable` | Current stable version | Every normal release tag |
+| `beta` | Pre-release version | Tags prefixed with `beta-` |
+| `nightly` | Development build (main branch) | Every push to main / daily |
+
+Add the remote once, then install the channel you want:
+
+```bash
+flatpak remote-add --if-not-exists kst4contest https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
+
+# Stable (default)
+flatpak install kst4contest de.x08.KST4Contest
+
+# Beta
+flatpak install kst4contest de.x08.KST4Contest//beta
+
+# Nightly
+flatpak install kst4contest de.x08.KST4Contest//nightly
+```
+
+> **Note:** Flatpak only allows one installed version per App-ID at a time. To switch channels, uninstall the current version first:
+> ```bash
+> flatpak uninstall de.x08.KST4Contest
+> flatpak install kst4contest de.x08.KST4Contest//nightly
+> ```
+
+Updates work as usual with `flatpak update`.
+
+The `flatpakref` files for beta and stable are attached to their respective [GitHub Releases](https://github.com/praktimarc/kst4contest/releases). The nightly `flatpakref` (`de.x08.KST4Contest.nightly.flatpakref`) is available as an artifact on the [GitHub Actions](https://github.com/praktimarc/kst4contest/actions) tab (kept for 14 days) — for nightly builds, the manual remote approach above is usually more convenient.
 
 ### macOS
 1. Download the DMG file for your architecture (Apple Silicon or Intel).
