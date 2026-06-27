@@ -348,78 +348,56 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						Band workedBand = helper_resolveBandFromLoggerBand(band);
 
 						switch (band) {
-						case "144": {
+						case "144":
+						case "2m": //minos contest logger
+						{
 							workedCall.setWorked144(true);
 							break;
 						}
 
-						case "432": {
-							workedCall.setWorked432(true);
-							break;
-						}
+						case "432":
+						case "70cm":
+							{
+								workedCall.setWorked432(true);
+								break;
+							}
 
-						case "1240": {
+						case "1240": //ucxlog style
+						case "1296": //used for n1mm / Dxlog
+						case "23cm": //minos contest logger
+						{
 							workedCall.setWorked1240(true);
 							break;
 						}
 
-						case "2300": {
+						case "2300":
+						case "13cm":
+							{
 							workedCall.setWorked2300(true);
 							break;
 						}
 
-						case "3400": {
+						case "3400":
+						case "9cm":
+						{
 							workedCall.setWorked3400(true);
 							break;
 						}
 
-						case "5600": {
+						case "5600":
+						case "6cm":
+						{
 							workedCall.setWorked5600(true);
 							break;
 						}
 
-						case "10G": {
+						case "10G":
+						case "3cm":
+						{
 							workedCall.setWorked10G(true);
                             break;
 						}
 
-						/**
-						 * cases hotfix for MINOS logger, which tells band like "2m", not "144"
-						 */
-						case "2m": {
-							workedCall.setWorked144(true);
-							break;
-						}
-
-						case "70cm": {
-							workedCall.setWorked432(true);
-							break;
-						}
-
-						case "23cm": {
-							workedCall.setWorked1240(true);
-							break;
-						}
-
-						case "13cm": {
-							workedCall.setWorked2300(true);
-							break;
-						}
-
-						case "9cm": {
-							workedCall.setWorked3400(true);
-							break;
-						}
-
-						case "6cm": {
-							workedCall.setWorked5600(true);
-							break;
-						}
-
-							case "3cm": {
-								workedCall.setWorked10G(true);
-								break;
-							}
 
 							default:
 								System.out.println("[ReadUDPFromUCX, Error:] unexpected band value: \"" + band + "\"");
