@@ -327,8 +327,7 @@ public class MessageBusManagementThread extends Thread {
 				// 1. Store in the new Map (for future context/history)
 
 				sender.addKnownFrequency(finalDetectedBand, finalDetectedFrequency);
-				// No automatic full terrain analysis here.
-				// The frequency is stored for later map/manual reachability requests.
+				client.getReachabilityService().ensureTropoMarginCalculated(sender, finalDetectedBand);
 
 				//propagate known frequency to all instances of the same callsign (callRaw may exist multiple times)
 				try {
@@ -337,9 +336,7 @@ public class MessageBusManagementThread extends Thread {
 						ChatMember cm = client.getLst_chatMemberList().get(idx);
 						if (cm != null && cm != sender) {
 							cm.addKnownFrequency(finalDetectedBand, finalDetectedFrequency);
-							// No automatic full terrain analysis here.
-							// Avoids exhausting the online terrain API when many stations mention QRGs.
-						}
+							client.getReachabilityService().ensureTropoMarginCalculated(cm, finalDetectedBand);						}
 					}
 				} catch (Exception e) {
 					System.out.println("[SmartParser, warning]: failed to propagate known frequency across duplicates: " + e.getMessage());
@@ -591,8 +588,7 @@ public class MessageBusManagementThread extends Thread {
 
 				if (!client.getChatPreferences().getStn_loginCallSign().equals(newMember.getCallSign())) {
 					this.client.getLst_chatMemberList().add(newMember); //the own call will not be in the list
-//					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
-					// Reachability is calculated on demand only: map click, selected station, or manual request.
+					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
 				}
 
 
@@ -638,7 +634,7 @@ public class MessageBusManagementThread extends Thread {
 					newMember = this.client.getDbHandler().fetchChatMemberWkdDataForOnlyOneCallsignFromDB(newMember);
 
 					this.client.getLst_chatMemberList().add(newMember);
-//					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
+					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
 
 					this.client.getDbHandler().storeChatMember(newMember);
 				}

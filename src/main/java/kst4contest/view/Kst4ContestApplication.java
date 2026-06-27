@@ -71,6 +71,8 @@ import kst4contest.view.map.OfflineDemImportService;
 
 public class Kst4ContestApplication extends Application implements StatusUpdateListener  {
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
+	// Null means Auto: use the lowest session band, or category fallback.
+	private Band selectedReachabilityBandOverride = null;
 
 	private StationMapView stationMapView; //view class for the avl stn map
 	private StationMapBridge stationMapBridge; //bridge for mapping actions between map and view
@@ -1387,6 +1389,29 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 */
 
 
+		TableColumn<ChatMember, String> tropoCol = new TableColumn<ChatMember, String>("Tropo");
+		tropoCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
+				ChatMember member = cellDataFeatures.getValue();
+				Band selectedBand = resolveReachabilityBandForUi(member);
+				chatcontroller.getReachabilityService().ensureTropoMarginCalculated(member, selectedBand);
+				return new SimpleStringProperty(member.formatTropoSsbMarginForBand(selectedBand));
+			}
+		});
+		tropoCol.setComparator((left, right) -> Double.compare(parseTableDouble(left), parseTableDouble(right)));
+		tropoCol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(13));
+
+		TableColumn<ChatMember, String> priorityScoreCol = new TableColumn<ChatMember, String>("Score");
+		priorityScoreCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
+			@Override
+			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
+				return new SimpleStringProperty(formatPriorityScore(cellDataFeatures.getValue()));
+			}
+		});
+		priorityScoreCol.setComparator((left, right) -> Double.compare(parseTableDouble(left), parseTableDouble(right)));
+		priorityScoreCol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(18));
+
 		TableColumn<ChatMember, String> lastActCol = new TableColumn<ChatMember, String>("Act");
 		lastActCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
@@ -1689,7 +1714,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 
-		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qrBCol, qtfCol, qrgCol, lastActCol, airScoutCol, workedCol, notQRVCol, chatCategoryCol);
+//		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qrBCol, qtfCol, qrgCol, lastActCol, airScoutCol, workedCol, notQRVCol, chatCategoryCol);
+
+		tbl_chatMemberTable.getColumns().addAll(callSignCol, nameCol, qraCol, qrBCol, qtfCol, qrgCol, tropoCol, priorityScoreCol, lastActCol, airScoutCol, workedCol, notQRVCol, chatCategoryCol);
+
 
 //		tbl_chatMemberTable.setItems(chatcontroller.getLst_chatMemberListFiltered());
 
@@ -6061,6 +6089,84 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			TextField chatMemberTableFilterMaxQrbTF = new TextField(chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
 			chatMemberTableFilterMaxQrbTF.setFocusTraversable(false);
+
+
+			ToggleButton btnTglNewLocator = new ToggleButton("New locator");
+			Predicate<ChatMember> newLocatorPredicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+					return chatcontroller.isNewLocatorOnAnyEnabledBand(chatMember);
+				}
+			};
+			btnTglNewLocator.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglNewLocator.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(newLocatorPredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(newLocatorPredicate);
+					}
+				}
+			});
+			btnTglNewLocator.setTooltip(new Tooltip("Show only stations whose gross locator is still new on at least one active own band"));
+
+			ToggleButton btnTglReachableTropo = new ToggleButton("Tropo >=0dB");
+			Predicate<ChatMember> reachableTropoPredicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+					return isReachableViaTropoFilterMatch(chatMember);
+				}
+			};
+			btnTglReachableTropo.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglReachableTropo.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(reachableTropoPredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(reachableTropoPredicate);
+					}
+				}
+			});
+			btnTglReachableTropo.setTooltip(new Tooltip("Show stations with non-negative SSB tropo margin. Pending/failed calculations stay visible."));
+
+			ToggleButton btnTglNewBands = new ToggleButton("New bands");
+			Predicate<ChatMember> newBandsPredicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+					return isNewBandOpportunity(chatMember);
+				}
+			};
+			btnTglNewBands.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglNewBands.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(newBandsPredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(newBandsPredicate);
+					}
+				}
+			});
+			btnTglNewBands.setTooltip(new Tooltip("Show stations that are QRV on a known active band that has not been worked yet"));
+
+			ToggleButton btnTglAsNext5Min = new ToggleButton("AS next 5m");
+			Predicate<ChatMember> asNext5MinPredicate = new Predicate<ChatMember>() {
+				@Override
+				public boolean test(ChatMember chatMember) {
+					return hasAsWindowInNextMinutes(chatMember, 5);
+				}
+			};
+			btnTglAsNext5Min.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					if (btnTglAsNext5Min.isSelected()) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(asNext5MinPredicate);
+					} else {
+						chatcontroller.getLst_chatMemberListFilterPredicates().remove(asNext5MinPredicate);
+					}
+				}
+			});
+			btnTglAsNext5Min.setTooltip(new Tooltip("Show stations with any AirScout window now or within the next 5 minutes"));
+
 			ToggleButton tglBtnQRBEnable = new ToggleButton("Show only QRB [km] <= ");
 			tglBtnQRBEnable.selectedProperty().addListener(new ChangeListener<Boolean>() {
 				Predicate<ChatMember> maxQrbPredicate = new Predicate<ChatMember>() {
@@ -6337,6 +6443,29 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			HBox chatMemberTableFilterWorkedBandFiltersHbx = new HBox();
 
+
+			ComboBox<String> cmbReachabilityBand = new ComboBox<>();
+			cmbReachabilityBand.getItems().add("Auto");
+			for (Band band : chatcontroller.getReachabilityService().getEnabledStationBands()) {
+				cmbReachabilityBand.getItems().add(band.getDisplayLabel());
+			}
+			cmbReachabilityBand.getSelectionModel().select("Auto");
+			cmbReachabilityBand.setTooltip(new Tooltip("Reachability band for Tropo column/filter. Auto uses the station's lowest session band."));
+			cmbReachabilityBand.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					selectedReachabilityBandOverride = parseReachabilityBandSelection(cmbReachabilityBand.getValue());
+					for (ChatMember member : chatcontroller.getLst_chatMemberList()) {
+						Band bandToCalculate = resolveReachabilityBandForUi(member);
+						chatcontroller.getReachabilityService().ensureTropoMarginCalculated(member, bandToCalculate);
+					}
+					chatcontroller.fireUserListUpdate("Reachability band changed");
+				}
+			});
+
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Reachability:"));
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(cmbReachabilityBand);
+
 			ToggleButton btnTglwkd = new ToggleButton("wkd");
 
 			Predicate<ChatMember> wkdPredicate = new Predicate<ChatMember>() {
@@ -6601,6 +6730,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					"-fx-border-insets: 1;" +
 					"-fx-border-radius: 1;" +
 					"-fx-border-color: lightgrey;");
+
+
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().addAll(
+					btnTglNewLocator,
+					btnTglReachableTropo,
+					btnTglNewBands,
+					btnTglAsNext5Min
+			);
 
 //			chatMemberTableFilterWorkedBandFilters
 
@@ -7895,8 +8032,15 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		// Unconditionally add listener to manually sync the textfield input to the button 
 		// (this listener also fires correctly when the value is updated by the binding)
+//		txt_ownqrgMainCategory.textProperty().addListener((observable, oldValue, newValue) -> {
+//			MYQRGButton.textProperty().set(newValue);
+//		});
 		txt_ownqrgMainCategory.textProperty().addListener((observable, oldValue, newValue) -> {
-			MYQRGButton.textProperty().set(newValue);
+			if (Platform.isFxApplicationThread()) {
+				MYQRGButton.textProperty().set(newValue);
+			} else {
+				Platform.runLater(() -> MYQRGButton.textProperty().set(newValue));
+			}
 		});
 
 		// That's the default behaviour of the myqrg textfield
@@ -9700,6 +9844,164 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		stage.setY(correctedY);
 		stage.setWidth(correctedWidth);
 		stage.setHeight(correctedHeight);
+	}
+
+	/**
+	 * Resolves the currently selected UI reachability band. Null override means Auto.
+	 *
+	 * @param member station row
+	 * @return manually selected band or automatic band
+	 */
+	private Band resolveReachabilityBandForUi(ChatMember member) {
+		if (selectedReachabilityBandOverride != null) {
+			return selectedReachabilityBandOverride;
+		}
+		return chatcontroller.getReachabilityService().resolveAutoBand(member);
+	}
+
+	/**
+	 * Parses the reachability ComboBox selection.
+	 *
+	 * @param selectedLabel selected UI text
+	 * @return selected band, or null for Auto
+	 */
+	private Band parseReachabilityBandSelection(String selectedLabel) {
+		if (selectedLabel == null || selectedLabel.isBlank() || "Auto".equalsIgnoreCase(selectedLabel)) {
+			return null;
+		}
+
+		for (Band band : Band.values()) {
+			if (selectedLabel.equalsIgnoreCase(band.getDisplayLabel())) {
+				return band;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Formats the projected priority score for the station table.
+	 *
+	 * @param member station row
+	 * @return score text
+	 */
+	private String formatPriorityScore(ChatMember member) {
+		if (member == null || !Double.isFinite(member.getCurrentPriorityScore())) {
+			return "-";
+		}
+		return String.format(Locale.US, "%.0f", member.getCurrentPriorityScore());
+	}
+
+	/**
+	 * Parses a numeric table value for custom score sorting.
+	 *
+	 * @param value table text
+	 * @return parsed value or negative infinity for missing values
+	 */
+	private double parseTableDouble(String value) {
+		if (value == null || value.isBlank() || value.equals("-") || value.startsWith("- @")) {
+			return Double.NEGATIVE_INFINITY;
+		}
+
+		String normalized = value.replace(",", ".").replace("+", "").trim();
+		int firstSpace = normalized.indexOf(' ');
+		if (firstSpace > 0) {
+			normalized = normalized.substring(0, firstSpace);
+		}
+
+		try {
+			return Double.parseDouble(normalized);
+		} catch (NumberFormatException ignored) {
+			return Double.NEGATIVE_INFINITY;
+		}
+	}
+
+	/**
+	 * Predicate helper for the tropo filter. Pending or failed calculations remain
+	 * visible as requested; only finite negative margins are hidden.
+	 *
+	 * @param member station row
+	 * @return true if station should remain visible under the tropo filter
+	 */
+	private boolean isReachableViaTropoFilterMatch(ChatMember member) {
+		if (member == null || chatcontroller.getReachabilityService() == null) {
+			return true;
+		}
+
+		Band selectedBand = resolveReachabilityBandForUi(member);
+		chatcontroller.getReachabilityService().ensureTropoMarginCalculated(member, selectedBand);
+
+		OptionalDouble marginDb = member.getTropoSsbMarginDb(selectedBand);
+		if (marginDb.isEmpty() || !Double.isFinite(marginDb.getAsDouble())) {
+			return true;
+		}
+
+		return marginDb.getAsDouble() >= 0.0;
+	}
+
+	/**
+	 * Returns true when a station has any AirScout window now or within maxMinutes.
+	 *
+	 * @param member station row
+	 * @param maxMinutes look-ahead window
+	 * @return true if any AS window is available
+	 */
+	private boolean hasAsWindowInNextMinutes(ChatMember member, int maxMinutes) {
+		if (member == null || member.getAirPlaneReflectInfo() == null
+				|| member.getAirPlaneReflectInfo().getRisingAirplanes() == null) {
+			return false;
+		}
+
+		return member.getAirPlaneReflectInfo().getRisingAirplanes().stream()
+				.filter(Objects::nonNull)
+				.anyMatch(airPlane -> airPlane.getArrivingDurationMinutes() >= 0
+						&& airPlane.getArrivingDurationMinutes() <= maxMinutes);
+	}
+
+	/**
+	 * Returns true when the station is known to be QRV on at least one enabled own band
+	 * that has not been worked yet.
+	 *
+	 * @param member station row
+	 * @return true if there is a new-band opportunity
+	 */
+	private boolean isNewBandOpportunity(ChatMember member) {
+		if (member == null || chatcontroller.getReachabilityService() == null
+				|| member.getKnownActiveBands() == null || member.getKnownActiveBands().isEmpty()) {
+			return false;
+		}
+
+		EnumSet<Band> enabledBands = chatcontroller.getReachabilityService().getEnabledStationBands();
+		for (Band band : member.getKnownActiveBands().keySet()) {
+			if (band != null && enabledBands.contains(band) && !isWorkedOnBand(member, band)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Maps the existing per-band worked flags to the Band enum.
+	 *
+	 * @param member station row
+	 * @param band band to inspect
+	 * @return true if worked on that band
+	 */
+	private boolean isWorkedOnBand(ChatMember member, Band band) {
+		if (member == null || band == null) {
+			return false;
+		}
+
+		switch (band) {
+			case B_144: return member.isWorked144();
+			case B_432: return member.isWorked432();
+			case B_1296: return member.isWorked1240();
+			case B_2320: return member.isWorked2300();
+			case B_3400: return member.isWorked3400();
+			case B_5760: return member.isWorked5600();
+			case B_10G: return member.isWorked10G();
+			case B_24G: return member.isWorked24G();
+			default: return false;
+		}
 	}
 
 }
