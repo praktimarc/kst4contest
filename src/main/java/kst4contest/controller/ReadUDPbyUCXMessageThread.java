@@ -22,6 +22,9 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import kst4contest.model.ChatMember;
+import kst4contest.model.Band;
+
+import javafx.application.Platform;
 
 /**
  * This thread is responsible for reading server's input and printing it to the
@@ -63,7 +66,111 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			System.out.println("UCXUDPRDR: catched error " + e.getMessage());
 		}
 	}
-	
+
+	/**
+	 * Strips binary logger framing bytes before the XML payload. Some UCXLog packets
+	 * contain transport bytes before the XML declaration.
+	 *
+	 * @param rawPacket raw UDP payload
+	 * @return cleaned XML string or trimmed original text
+	 */
+	private String helper_extractXmlPayload(String rawPacket) {
+		if (rawPacket == null) {
+			return "";
+		}
+
+		int xmlStart = rawPacket.indexOf("<?xml");
+		if (xmlStart < 0) {
+			xmlStart = rawPacket.indexOf("<contactinfo");
+		}
+		if (xmlStart < 0) {
+			xmlStart = rawPacket.indexOf("<RadioInfo");
+		}
+
+		return xmlStart >= 0
+				? rawPacket.substring(xmlStart).trim()
+				: rawPacket.trim();
+	}
+
+	/**
+	 * Reads an optional XML child node.
+	 *
+	 * @param element parent element
+	 * @param tagName tag to read
+	 * @return trimmed value or empty string
+	 */
+	private String helper_getOptionalElementText(Element element, String tagName) {
+		if (element == null || tagName == null) {
+			return "";
+		}
+
+		NodeList nodeList = element.getElementsByTagName(tagName);
+		if (nodeList == null || nodeList.getLength() == 0 || nodeList.item(0) == null) {
+			return "";
+		}
+
+		String textContent = nodeList.item(0).getTextContent();
+		return textContent == null ? "" : textContent.trim();
+	}
+
+	/**
+	 * Resolves the QSO locator from UCXLog contactinfo. gridsquare is preferred,
+	 * rcvnr is used as fallback for exchanges such as 001JO41HK.
+	 *
+	 * @param element contactinfo XML element
+	 * @return normalized six-character locator or null
+	 */
+	private String helper_resolveLocatorFromContactInfo(Element element) {
+		String gridSquare = WorkedGrossFieldCache.extractLocator6(helper_getOptionalElementText(element, "gridsquare"));
+		if (gridSquare != null) {
+			return gridSquare;
+		}
+
+		return WorkedGrossFieldCache.extractLocator6(helper_getOptionalElementText(element, "rcvnr"));
+	}
+
+	/**
+	 * Resolves the project Band enum from logger band values.
+	 *
+	 * @param band logger band text
+	 * @return matching Band or null
+	 */
+	private Band helper_resolveBandFromLoggerBand(String band) {
+		if (band == null) {
+			return null;
+		}
+
+		switch (band.trim()) {
+			case "144":
+			case "2m":
+				return Band.B_144;
+			case "432":
+			case "70cm":
+				return Band.B_432;
+			case "1240":
+			case "1296":
+			case "23cm":
+				return Band.B_1296;
+			case "2300":
+			case "2320":
+			case "13cm":
+				return Band.B_2320;
+			case "3400":
+			case "9cm":
+				return Band.B_3400;
+			case "5600":
+			case "5760":
+			case "6cm":
+				return Band.B_5760;
+			case "10G":
+			case "10368":
+			case "3cm":
+				return Band.B_10G;
+			default:
+				return null;
+		}
+	}
+
 	public void run() {
 
         System.out.println("ReadUDPByUCXLogThread: started Thread for UCXLog getUDP");
@@ -177,7 +284,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 		File logUDPMessageToThisFile;
 
-		String udpMsg = udpPacketToProcess;
+		String udpMsg = helper_extractXmlPayload(udpPacketToProcess);
 
 		ChatMember modifyThat = null;
 
@@ -221,10 +328,9 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						Element element = (Element) node;
 
 						String call = element.getElementsByTagName("call").item(0).getTextContent();
-//						call = call.toLowerCase();
-						String band = element.getElementsByTagName("band").item(0).getTextContent();
-
-						String points = element.getElementsByTagName("points").item(0).getTextContent();
+						String band = helper_getOptionalElementText(element, "band");
+						String gridSquare = helper_resolveLocatorFromContactInfo(element);
+						String points = helper_getOptionalElementText(element, "points");
 
 						System.out.println("[Readudp, info ]: received Current Element :" + node.getNodeName()
 								+ "call: " + call + " / " + band + " ----> " + points + " POINTS");
@@ -234,6 +340,12 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						ChatMember workedCall = new ChatMember();
 						workedCall.setCallSign(call);
 						workedCall.setWorked(true);
+
+						if (gridSquare != null) {
+							workedCall.setQra(gridSquare);
+						}
+
+						Band workedBand = helper_resolveBandFromLoggerBand(band);
 
 						switch (band) {
 						case "144": {
@@ -304,14 +416,14 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 							break;
 						}
 
-						case "3cm": {
-							workedCall.setWorked10G(true);
+							case "3cm": {
+								workedCall.setWorked10G(true);
+								break;
+							}
 
-						}
-
-						default:
-							System.out.println("[ReadUDPFromUCX, Error:] unexpected band value: \"" + band + "\"");
-							break;
+							default:
+								System.out.println("[ReadUDPFromUCX, Error:] unexpected band value: \"" + band + "\"");
+								break;
 						}
 
 //						if (!client.getMap_ucxLogInfoWorkedCalls().containsKey("call")) {
@@ -452,14 +564,22 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 							 */
 						}
 
+						if (workedBand != null && gridSquare != null) {
+							this.client.registerWorkedGrossField(workedBand, gridSquare, workedCall, "UCXLOG");
+						}
+
 						boolean isInChat = this.client.getDbHandler().updateWkdInfoOnChatMember(workedCall);
 						// This will update the worked info on a worked chatmember. DBHandler will
 						// check, if an entry at the db had been modified. If not, then the worked
 						// station had not been stored. DBHandler will store the information then.
 						if (!isInChat) {
-							
+
 							workedCall.setName("unknown");
-							workedCall.setQra("unknown");
+
+							if (workedCall.getQra() == null || workedCall.getQra().isBlank()) {
+								workedCall.setQra("unknown");
+							}
+
 							workedCall.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
 							this.client.getDbHandler().storeChatMember(workedCall);
 						}
@@ -550,8 +670,13 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //						System.out.println("Radio Mode: " + mode);
 //						System.out.println("[ReadUDPFromUCX, Info:] Setted QRG pref to: \"" + qrg + "\"" );
 
-						this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
-						
+//						this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
+
+						final String finalFormattedQRG = formattedQRG;
+						helper_runOnFxThread(() ->
+								this.client.getChatPreferences().getMYQRGFirstCat().set(finalFormattedQRG)
+						);
+
 //						System.out.println("[ReadUDPbyUCXTh: ] Radioinfo processed: " + formattedQRG);
 					}
 				}
@@ -604,6 +729,28 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		this.socket.close();
 
 		return true;
+
+	}
+
+	/**
+	 * Runs UI-bound changes on the JavaFX application thread.
+	 *
+	 * <p>UCXLog UDP packets are processed in a background thread. Some preference
+	 * properties are bound to JavaFX controls, so setting them directly from this
+	 * thread can crash JavaFX with "Not on FX application thread".</p>
+	 *
+	 * @param runnable UI-bound update
+	 */
+	private void helper_runOnFxThread(Runnable runnable) {
+		if (runnable == null) {
+			return;
+		}
+
+		if (Platform.isFxApplicationThread()) {
+			runnable.run();
+		} else {
+			Platform.runLater(runnable);
+		}
 	}
 
 }

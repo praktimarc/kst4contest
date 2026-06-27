@@ -327,6 +327,7 @@ public class MessageBusManagementThread extends Thread {
 				// 1. Store in the new Map (for future context/history)
 
 				sender.addKnownFrequency(finalDetectedBand, finalDetectedFrequency);
+				client.getReachabilityService().ensureTropoMarginCalculated(sender, finalDetectedBand);
 
 				//propagate known frequency to all instances of the same callsign (callRaw may exist multiple times)
 				try {
@@ -335,7 +336,7 @@ public class MessageBusManagementThread extends Thread {
 						ChatMember cm = client.getLst_chatMemberList().get(idx);
 						if (cm != null && cm != sender) {
 							cm.addKnownFrequency(finalDetectedBand, finalDetectedFrequency);
-						}
+							client.getReachabilityService().ensureTropoMarginCalculated(cm, finalDetectedBand);						}
 					}
 				} catch (Exception e) {
 					System.out.println("[SmartParser, warning]: failed to propagate known frequency across duplicates: " + e.getMessage());
@@ -587,6 +588,7 @@ public class MessageBusManagementThread extends Thread {
 
 				if (!client.getChatPreferences().getStn_loginCallSign().equals(newMember.getCallSign())) {
 					this.client.getLst_chatMemberList().add(newMember); //the own call will not be in the list
+					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
 				}
 
 
@@ -632,6 +634,7 @@ public class MessageBusManagementThread extends Thread {
 					newMember = this.client.getDbHandler().fetchChatMemberWkdDataForOnlyOneCallsignFromDB(newMember);
 
 					this.client.getLst_chatMemberList().add(newMember);
+					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
 
 					this.client.getDbHandler().storeChatMember(newMember);
 				}
@@ -1754,190 +1757,6 @@ public class MessageBusManagementThread extends Thread {
 					break;// TODO Change at may24, avoid uncloadability. Check if this could lead to further errors on instable link!
 	//				client.getMessageRXBus().clear();
 				}
-			{
-//				System.out.println("MessagebusmgtThread: Readthread is interrupted! Queue will be resetted");
-//				this.interrupt();
-//				client.getMessageRXBus().clear();
-			} 
-
-//			if (client.getMessageRXBus().peek() == null) {
-//
-//				Timer doNothingTimer = new Timer();
-//				doNothingTimer.schedule(new TimerTask() {
-//
-//					@Override
-//					public void run() {
-//
-//						//do nothing
-//
-//					}
-//				}, 100);// TODO: Temporary
-//			}
-//
-//
-//			if (client.getMessageRXBus().peek() == null && client.getMessageTXBus().peek() == null) {
-//
-//				if (this.client.isDisconnectionPerformedByUser()) {
-//					break;//TODO: what if it´s not the finally closage but a band channel change?
-//				}
-//				// do nothing
-////				try {
-////					this.sleep(20);
-////				} catch (InterruptedException e) {
-////					// TODO Auto-generated catch block
-////					e.printStackTrace();
-////				} catch (Exception e2) {
-////					// TODO Auto-generated catch block
-////					e2.printStackTrace();
-////				}
-//			}
-//			else
-			{
-
-//				messageLine = messageTextRaw.getMessageText();
-//
-//				/***********************************************
-//				 * CASE RX
-//				 ***********************************************/
-//
-////				if (client.getMessageRXBus().peek() != null) {
-//
-////					try {
-////						messageTextRaw = client.getMessageRXBus().take();
-////
-//////						System.out.println("MSBGBUS: rxed: " + messageTextRaw);
-////					} catch (InterruptedException e) {
-////						// TODO Auto-generated catch block
-////						e.printStackTrace();
-////					}
-//
-//					if (messageTextRaw.getMessageText() == null) {
-//						System.out.println("[MSGBUSMGT:] ERROR! got NULL message! BYE!");
-////					this.interrupt();
-////					break;
-//					}
-//
-//					messageLine = messageTextRaw.getMessageText();
-//
-////					try {
-////						bufwrtrRawMSGOut.write(messageLine + "\n");
-////						bufwrtrRawMSGOut.flush();
-////
-////					} catch (IOException e) {
-////						// TODO Auto-generated catch block
-////						e.printStackTrace();
-////					}
-//
-//					System.out.println(messageTextRaw.getMessageText() + " <- RXed"); // Stdout at
-//					// Console#######################################################TODO:Wichtig
-//
-//					try {
-//						processRXMessage23001(messageTextRaw);
-//					} catch (IOException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					} catch (SQLException e) {
-//						// TODO Auto-generated catch block
-//						e.printStackTrace();
-//					}
-
-//				} //end peek != null
-
-				/**************************************************************
-				 * End of case RX
-				 **************************************************************/
-
-				/**************************************************************
-				 * Start of case TX
-				 **************************************************************/
-
-//				if (client.getMessageTXBus().peek() != null) {
-//					/***********************************************
-//					 * CASE TX
-//					 ***********************************************/
-//
-//					if (this.isServerready()) {
-//						// then send the line
-//
-//						try {
-//							messageTextRaw = client.getMessageTXBus().take();
-////						this.setServerready(false); // after tx always wait for an answer prompt //23000
-//							this.setServerready(true);
-//
-//						} catch (InterruptedException e) {
-//							// TODO Auto-generated catch block
-//							e.printStackTrace();
-//						}
-//
-//						messageLine = messageTextRaw.getMessageText();
-//
-//						if (messageTextRaw.isMessageDirectedToServer()) {
-//							/**
-//							 * We have to check if we only commands the server (keepalive) or want do talk
-//							 * to the community
-//							 */
-//
-//							try {
-//								client.getWriteThread().tx(messageTextRaw);
-//								System.out.println("BUS: tx: " + messageTextRaw.getMessageText());
-//
-//							} catch (InterruptedException e) {
-//								// TODO Auto-generated catch block
-//								e.printStackTrace();
-//							}
-//
-//							//////////////////////// bgfx ab here//////////////////////////////
-////						try {
-////							bufwrtrRawMSGOut.write(messageLine + "\r");
-//////							bw.write(messageLine + "\n");//kst4contest.test 4 23001
-////							bufwrtrRawMSGOut.flush();
-////
-////						} catch (IOException e) {
-////							// TODO Auto-generated catch block
-////							e.printStackTrace();
-////						}
-//							///////////////////////////////////////////////////////////////////
-//						} else {
-//
-//							ChatMessage ownMSG = new ChatMessage();
-//
-////						ownMSG.setMessageText(
-////								"MSG|" + this.client.getCategory().getCategoryNumber() + "|0|" + messageLine + "|0|");
-//
-//							ownMSG.setMessageText(
-//									"MSG|" + this.client.getChatPreferences().getLoginChatCategory().getCategoryNumber()
-//											+ "|0|" + messageLine + "|0|");
-//
-//							try {
-//								client.getWriteThread().tx(ownMSG);
-//								System.out.println("BUS: tx: " + ownMSG.getMessageText());
-//
-//							} catch (InterruptedException e) {
-//								// TODO Auto-generated catch block
-//								e.printStackTrace();
-//							}
-//						}
-//
-//						if (messageTextRaw.equals("/QUIT")) {
-//							try {
-//								this.client.getReadThread().terminateConnection();
-//								this.client.getReadThread().interrupt();
-//								this.client.getWriteThread().terminateConnection();
-//								this.client.getWriteThread().interrupt();
-//								this.interrupt();
-//
-//							} catch (IOException e) {
-//								// TODO Auto-generated catch block
-//								e.printStackTrace();
-//							}
-//						}
-//
-//					} else {
-////					System.out.println("msgbus no elements yet");
-//					}
-//				} //end tx.peek != null
-			}
-
 			
 		} // while true end
 		System.out.println("Msgbusmgt: interrupt");

@@ -182,6 +182,7 @@ public final class ScoreService {
 
         // 4) Publish to UI in ONE batched runLater
         Platform.runLater(() -> {
+            applyScoreSnapshotToChatMembers(snap);
             topCandidatesFx.setAll(snap.getTopCandidates());
             updateSelectedScoreFromSnapshot(snap);
             uiPulse.set(uiPulse.get() + 1);
@@ -236,6 +237,31 @@ public final class ScoreService {
         }
 
         return representative;
+    }
+    /**
+     * Projects the immutable score snapshot back into ChatMember display fields so
+     * the normal station table can sort/filter by score without knowing the score
+     * calculation internals.
+     *
+     * @param snap latest score snapshot
+     */
+    private void applyScoreSnapshotToChatMembers(ScoreSnapshot snap) {
+        if (snap == null) {
+            return;
+        }
+
+        Map<String, Double> scoreByCallSignRaw = snap.getScoreByCallSignRaw();
+
+        for (ChatMember member : controller.snapshotChatMembers()) {
+            if (member == null || member.getCallSignRaw() == null) {
+                continue;
+            }
+
+            Double score = scoreByCallSignRaw.get(normalizeCallRaw(member.getCallSignRaw()));
+            member.setCurrentPriorityScore(score == null ? 0.0 : score);
+        }
+
+        controller.fireUserListUpdate("Priority scores projected to ChatMember");
     }
 
     private void updateSelectedScoreFromSnapshot(ScoreSnapshot snap) {
