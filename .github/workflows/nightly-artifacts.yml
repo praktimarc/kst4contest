@@ -12,7 +12,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -453,18 +453,91 @@ jobs:
                   path: flatpak-src/KST4Contest
           EOF
 
-      - name: Build Flatpak bundle
+      - name: Import Flatpak signing key
+        run: |
+          echo "${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          FLATPAK_GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+          echo "FLATPAK_GPG_KEY_ID=$FLATPAK_GPG_KEY_ID" >> "$GITHUB_ENV"
+
+      - name: Build Flatpak repo (nightly)
         run: |
           flatpak-builder --force-clean target/flatpak-build target/de.x08.KST4Contest.yml
-          flatpak build-export target/flatpak-repo target/flatpak-build
-          flatpak build-bundle target/flatpak-repo "dist/${ASSET_BASENAME}-linux-x86_64.flatpak" de.x08.KST4Contest
+          flatpak build-export --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo target/flatpak-build nightly
+          flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo
 
-      - name: Upload Flatpak artifact
+      - name: Create flatpakref (nightly)
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
+          cat > "dist/de.x08.KST4Contest.nightly.flatpakref" << EOF
+          [Flatpak Ref]
+          Name=de.x08.KST4Contest
+          Branch=nightly
+          Title=KST4Contest (Nightly) – ON4KST Chat Client
+          Url=${PAGES_URL}
+          RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo
+          GPGKey=${GPG_KEY_B64}
+          IsRuntime=false
+          EOF
+
+      - name: Upload flatpakref
         uses: actions/upload-artifact@v4.3.4
         with:
-          name: linux-flatpak
-          path: dist/KST4Contest-*-linux-x86_64.flatpak
-          retention-days: 14
+          name: flatpakref
+          path: dist/de.x08.KST4Contest.nightly.flatpakref
+
+      - name: Upload Flatpak OSTree repo
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: flatpak-ostree-repo
+          path: target/flatpak-repo/
+
+  publish-flatpak-repo:
+    name: Publish Flatpak OSTree Repo (nightly)
+    runs-on: ubuntu-latest
+    needs: build-flatpak
+
+    steps:
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends flatpak
+
+      - name: Import Flatpak signing key
+        run: |
+          echo "${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "FLATPAK_GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')" >> "$GITHUB_ENV"
+
+      - name: Download OSTree repo artifact
+        uses: actions/download-artifact@v4.1.3
+        with:
+          name: flatpak-ostree-repo
+          path: flatpak-ostree-repo/
+
+      - name: Checkout existing flatpak-repo branch
+        uses: actions/checkout@v4.1.7
+        with:
+          ref: flatpak-repo
+          path: existing-flatpak-repo
+
+      - name: Merge nightly build into flatpak-repo
+        run: |
+          cd existing-flatpak-repo
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          # Copy the new OSTree build into the repo
+          rsync -a ../flatpak-ostree-repo/ ./
+          # Regenerate summary with all branches
+          flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" .
+          # Stage all changes (new/updated refs, summary, objects in OSTree)
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Nightly flatpak: $(echo ${{ github.sha }} | cut -c1-7)"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:flatpak-repo
+          fi
 
   build-macos-dmg:
     name: Build macOS DMG (${{ matrix.os }})
