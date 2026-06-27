@@ -2367,3 +2367,6 @@ OZ7KJ;Skive Club;JO46ML;StringProperty [value: 144.225]; wkd true; wkd144 true; 
 SM7VUK;Bengt;JO66LI;StringProperty [value: 144.304]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
 OZ1HDF;Ken;JO55UN;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
 DO5SA;unknown;unknown;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+9A2HM;unknown;unknown;StringProperty [value: null]; wkd true; wkd144 false; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+9A2HM;null;null;StringProperty [value: null]; wkd true; wkd144 false; wkd432true; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+9A2HM;null;null;StringProperty [value: null]; wkd true; wkd144 false; wkd432false; wkd1240false; wkd2300true; wkd3400false; wkd5600false; wkd10Gfalse ; null
