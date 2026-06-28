@@ -30,6 +30,35 @@ public enum Band {
     }
 
     /**
+     * Returns the lower edge used as practical analysis frequency when only the band
+     * is known. This keeps the batch reachability calculation deterministic.
+     *
+     * @return frequency in MHz
+     */
+    public double getDefaultAnalysisFrequencyMHz() {
+        return minFreq;
+    }
+
+    /**
+     * Returns a compact label for table display and filter controls.
+     *
+     * @return human readable band label
+     */
+    public String getDisplayLabel() {
+        switch (this) {
+            case B_144: return "144";
+            case B_432: return "432";
+            case B_1296: return "1296";
+            case B_2320: return "2320";
+            case B_3400: return "3400";
+            case B_5760: return "5760";
+            case B_10G: return "10G";
+            case B_24G: return "24G";
+            default: return prefix;
+        }
+    }
+
+    /**
      * Checks if a specific frequency falls within this band's limits.
      */
     public boolean isPlausible(double freq) {

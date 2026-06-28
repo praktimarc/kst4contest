@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import javafx.application.Platform;
 import kst4contest.ApplicationConstants;
+import kst4contest.model.Band;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ThreadStateMessage;
 import kst4contest.view.GuiUtils;
@@ -286,6 +287,72 @@ public class ReadUDPByWintestThread extends Thread {
 //        socket.send(new DatagramPacket(bytes, bytes.length, broadcast, 9871));
 //    }
 
+
+    /**
+     * Resolves the project Band enum from Win-Test band IDs.
+     *
+     * <p>Only bands that exist in the current Band enum are returned. 50/70 MHz are
+     * still represented as worked flags in ChatMember, but they are not part of the
+     * current Reachability/New-Locator band enum.</p>
+     *
+     * @param bandId Win-Test band id from ADDQSO
+     * @return matching Band or null
+     */
+    private Band helper_resolveBandFromWinTestBandId(String bandId) {
+        if (bandId == null) {
+            return null;
+        }
+
+        switch (bandId.trim()) {
+            case "12": return Band.B_144;
+            case "14": return Band.B_432;
+            case "16": return Band.B_1296;
+            case "17": return Band.B_2320;
+            case "18": return Band.B_3400;
+            case "19": return Band.B_5760;
+            case "20": return Band.B_10G;
+            case "21": return Band.B_24G;
+            default: return null;
+        }
+    }
+
+    /**
+     * Extracts the locator from a Win-Test ADDQSO packet.
+     *
+     * <p>Current parser model based on the existing split-by-quotes code:
+     * <ul>
+     *     <li>{@code split("\"")[7]}  = callsign</li>
+     *     <li>{@code split("\"")[11]} = received exchange, e.g. 599001</li>
+     *     <li>{@code split("\"")[13]} = locator, e.g. JO51UM</li>
+     * </ul>
+     *
+     * <p>If the dedicated locator field is empty, the exchange is used as fallback.</p>
+     *
+     * @param msg raw ADDQSO message
+     * @return normalized six-character locator or null
+     */
+    private String helper_resolveLocatorFromWinTestAddQso(String msg) {
+        if (msg == null) {
+            return null;
+        }
+
+        String[] quotedParts = msg.split("\"");
+
+        if (quotedParts.length > 13) {
+            String locator = WorkedGrossFieldCache.extractLocator6(quotedParts[13]);
+            if (locator != null) {
+                return locator;
+            }
+        }
+
+        if (quotedParts.length > 11) {
+            return WorkedGrossFieldCache.extractLocator6(quotedParts[11]);
+        }
+
+        return null;
+    }
+
+
     /**
      * Catches add-qso messages of wintest if a new qso gets into the log<br/>
      *
@@ -310,16 +377,22 @@ public class ReadUDPByWintestThread extends Thread {
 //            receivedQsos.put(qsoNumber, msg);
 //            lastKnownQso = Math.max(lastKnownQso, qsoNumber);
             String callSignCatched = msg.split("\"") [7];
+            String locatorFromLogger = helper_resolveLocatorFromWinTestAddQso(msg);
 
             ChatMember workedCall = new ChatMember();
             workedCall.setCallSign(callSignCatched);
             workedCall.setWorked(true); //its worked at this place, for sure!
+
+            if (locatorFromLogger != null) {
+                workedCall.setQra(locatorFromLogger);
+            }
 
             ArrayList<Integer> markTheseChattersAsWorked = client.checkListForChatMemberIndexesByCallSign(workedCall);
 
             String bandId;
             bandId = msg.split("\"")[6].split(" ")[4].trim();
 
+            Band workedBand = helper_resolveBandFromWinTestBandId(bandId);
             switch (bandId) {
                 case "10" -> workedCall.setWorked50(true);
                 case "11" -> workedCall.setWorked70(true);
@@ -336,6 +409,10 @@ public class ReadUDPByWintestThread extends Thread {
                 default -> System.out.println("[WinTestUDPRcvr: warning] Unbekannte Band-ID: " + bandId);
             }
 
+            if (workedBand != null && locatorFromLogger != null) {
+                this.client.registerWorkedGrossField(workedBand, locatorFromLogger, workedCall, "WINTEST");
+            }
+
             if (!markTheseChattersAsWorked.isEmpty()) {
                 //Worked call is part of the current chatmember list
 
@@ -344,6 +421,13 @@ public class ReadUDPByWintestThread extends Thread {
                     modifyThat = client.getLst_chatMemberList().get(index);
 
                     modifyThat.setWorked(true); //worked its for sure
+
+                    if (locatorFromLogger != null
+                            && (modifyThat.getQra() == null
+                            || modifyThat.getQra().isBlank()
+                            || "unknown".equalsIgnoreCase(modifyThat.getQra()))) {
+                        modifyThat.setQra(locatorFromLogger);
+                    }
 
                     if (workedCall.isWorked50()) {
                         modifyThat.setWorked50(true);
@@ -398,7 +482,11 @@ public class ReadUDPByWintestThread extends Thread {
             if (!isInChat) {
 
                 workedCall.setName("unknown");
-                workedCall.setQra("unknown");
+
+                if (workedCall.getQra() == null || workedCall.getQra().isBlank()) {
+                    workedCall.setQra("unknown");
+                }
+
                 workedCall.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
                 this.client.getDbHandler().storeChatMember(workedCall);
             }

@@ -15,5 +15,6 @@ module praktiKST {
 	exports kst4contest.model;
 	exports kst4contest.view;
 
+
 	opens kst4contest.view.map to javafx.web;
 }

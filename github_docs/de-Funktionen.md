@@ -235,3 +235,39 @@ Dateibasierte Log-Auswertung per Regex. Details: [Log-Synchronisation](Log-Synch
 Ein separates Fenster zeigt den QSO-Fluss zwischen anderen Stationen. Besonders interessant in ruhigeren Nacht-Stunden während des Contests, wenn weniger Verkehr herrscht.
 
 Dieses Fenster kann miniaturisiert werden, wenn es nicht benötigt wird. Zukünftig geplant: Filterung auf Stationen im ausgewählten QTF.
+
+---
+
+## Stationskarte (ab v1.41)
+
+Eine interaktive OpenStreetMap-Karte zeigt die geografische Position aller aktiven Chatmember.
+
+**Funktionen:**
+
+- Stationsmarker mit Rufzeichen-Labels, farblich nach Aktivität und Sked-Status
+- **Antennen-Kegel** für die eigene Station
+- **Verbindungslinie** zur aktuell ausgewählten Station
+- **Maidenhead-Raster** (QRA-Locator-Gitter als Overlay)
+- **Wegprofil-Diagramm**: Geländehöhen-Querschnitt zwischen eigener und ausgewählter Station, inklusive Fresnel-Zonen-Analyse und Horizonterkennung
+- Mehrere Terrainquellen: **Copernicus GLO-30** (hochauflösendes DEM), **Open-Meteo API**, synthetischer Fallback und **Offline-DEM-Import** für den Betrieb ohne Internetverbindung
+- Aircraft-Scatter-Weganalyse verknüpft mit den Geländedaten
+
+Die Karte funktioniert in gepackten Umgebungen (AppImage, Flatpak) ohne Zugriff auf externe CDNs: Die Kartenkacheln werden über einen lokalen Tile-Proxy abgerufen, die Leaflet.js-Bibliothek ist in der Anwendung eingebettet.
+
+---
+
+## Optimierte Nachrichtenverarbeitung / 30.000-Nachrichten-Limit (ab v1.41)
+
+Die internen Chat- und Nachrichtentabellen sind auf **30.000 Einträge** begrenzt. Ältere Nachrichten werden automatisch verworfen, sobald das Limit erreicht wird. Damit bleiben Speicherverbrauch und Darstellungsperformance auch bei mehrtägigen Contest-Betrieb stabil.
+
+---
+
+## Bildschirmgerechte Fenstergröße (ab v1.41)
+
+Beim Programmstart berechnet KST4Contest eine bildschirmgerechte Startgröße für das Hauptfenster:
+
+- Die gespeicherte Fenstergröße aus der letzten Session wird verwendet – aber **niemals größer als der aktuelle Bildschirm**.
+- Wenn KST4Contest zuletzt auf einem größeren Monitor betrieben wurde, wird das Fenster automatisch auf die aktuelle Anzeige verkleinert.
+- Das UI-Layout ist **kompakter und reaktionsfähiger auf kleineren Bildschirmen**.
+
+Damit werden unbrauchbare, abgeschnittene Fenster beim Wechsel zwischen Geräten oder Monitoren verhindert.

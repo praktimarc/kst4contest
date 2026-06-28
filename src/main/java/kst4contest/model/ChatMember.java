@@ -10,8 +10,11 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import java.util.OptionalDouble;
 
 public class ChatMember {
+
+
 
 
 	long lastFlagsChangeEpochMs; // timestamp of the last worked/not-QRV flag change in the internal DB
@@ -73,6 +76,10 @@ public class ChatMember {
 
 	// Stores the last known frequency per band (Context History)
 	private final Map<Band, ActiveFrequencyInfo> knownActiveBands = new ConcurrentHashMap<>();
+
+	// Stores the calculated bidirectional SSB tropo margin per band.
+	// Values are calculated by the reachability backend and used only for UI sorting/filtering.
+	private final Map<Band, Double> tropoSsbMarginDbByBand = new ConcurrentHashMap<>();
 
 
 	// --- INNER CLASS FOR QRG HISTORY ---
@@ -618,6 +625,108 @@ public class ChatMember {
 	 */
 	public Map<Band, ActiveFrequencyInfo> getKnownActiveBands() {
 		return knownActiveBands;
+	}
+
+	/**
+	 * Stores the calculated bidirectional SSB tropo margin for one band.
+	 *
+	 * <p>The value is deliberately stored in ChatMember because the station table
+	 * can then sort and filter directly without triggering a new RF calculation.
+	 * The actual calculation stays outside ChatMember.</p>
+	 *
+	 * @param band band for which the margin was calculated
+	 * @param marginDb bidirectional SSB margin in dB; NaN marks an attempted but failed analysis
+	 */
+	public void setTropoSsbMarginDb(Band band, double marginDb) {
+		if (band == null) {
+			return;
+		}
+
+		this.tropoSsbMarginDbByBand.put(band, marginDb);
+	}
+
+	/**
+	 * Returns true if a tropo analysis result already exists for the given band.
+	 *
+	 * <p>A stored NaN also counts as an existing result because it means the analysis
+	 * was attempted and failed. This prevents endless retry loops when a terrain
+	 * provider is temporarily unavailable.</p>
+	 *
+	 * @param band band to check
+	 * @return true if a value or NaN marker is stored
+	 */
+	public boolean hasTropoSsbMarginDb(Band band) {
+		return band != null && this.tropoSsbMarginDbByBand.containsKey(band);
+	}
+
+
+
+	/**
+	 * Returns true only when a finite, usable tropo SSB margin is stored for the band.
+	 *
+	 * <p>This is intentionally different from {@link #hasTropoSsbMarginDb(Band)}:
+	 * a stored NaN means that an analysis was attempted but did not produce a usable
+	 * link budget. Such failed values should not permanently block later retries.</p>
+	 *
+	 * @param band band to check
+	 * @return true if a finite SSB margin exists
+	 */
+	public boolean hasFiniteTropoSsbMarginDb(Band band) {
+		if (band == null || !this.tropoSsbMarginDbByBand.containsKey(band)) {
+			return false;
+		}
+
+		Double storedValue = this.tropoSsbMarginDbByBand.get(band);
+		return storedValue != null && Double.isFinite(storedValue);
+	}
+
+	/**
+	 * Reads the calculated tropo SSB margin for one band.
+	 *
+	 * @param band band to read
+	 * @return OptionalDouble with the stored value, or empty if no calculation exists yet
+	 */
+	public OptionalDouble getTropoSsbMarginDb(Band band) {
+		if (band == null || !this.tropoSsbMarginDbByBand.containsKey(band)) {
+			return OptionalDouble.empty();
+		}
+
+		Double storedValue = this.tropoSsbMarginDbByBand.get(band);
+		if (storedValue == null) {
+			return OptionalDouble.empty();
+		}
+
+		return OptionalDouble.of(storedValue);
+	}
+
+
+	/**
+	 * Formats the calculated tropo margin for direct table display.
+	 *
+	 * <p>The method distinguishes three states:
+	 * <ul>
+	 *     <li>{@code ... @144}: analysis has not run yet</li>
+	 *     <li>{@code ? @144}: analysis ran, but no usable link budget was produced</li>
+	 *     <li>{@code +8.4 dB @144}: finite SSB margin exists</li>
+	 * </ul>
+	 *
+	 * @param band selected/auto-resolved reachability band
+	 * @return display text such as "+8.4 dB @144", "? @144" or "... @144"
+	 */
+	public String formatTropoSsbMarginForBand(Band band) {
+		String bandLabel = band == null ? "?" : band.getDisplayLabel();
+
+		if (band == null || !this.tropoSsbMarginDbByBand.containsKey(band)) {
+			return "... @" + bandLabel;
+		}
+
+		Double storedValue = this.tropoSsbMarginDbByBand.get(band);
+
+		if (storedValue == null || !Double.isFinite(storedValue)) {
+			return "? @" + bandLabel;
+		}
+
+		return String.format(Locale.US, "%+.1f dB @%s", storedValue, bandLabel);
 	}
 
 

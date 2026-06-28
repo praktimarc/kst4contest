@@ -14,6 +14,12 @@ import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMember;
 import kst4contest.utils.ApplicationFileUtils;
 
+import java.util.EnumMap;
+import java.util.HashSet;
+import java.util.Set;
+
+import kst4contest.model.Band;
+
 public class DBController {
 
 	/**
@@ -37,7 +43,7 @@ public class DBController {
 	 * marker. The marker is stored in SQLite PRAGMA user_version so the expensive
 	 * normalization rebuild is executed only once per database file.
 	 */
-	private static final int CURRENT_DATABASE_SCHEMA_VERSION = 13;
+	private static final int CURRENT_DATABASE_SCHEMA_VERSION = 14;
 
 	/**
 	 * Minimum interval between two expiration cleanup runs. This avoids repeated full
@@ -136,6 +142,7 @@ public class DBController {
 	 */
 	private synchronized void ensureChatMemberTableCompatibility() {
 		createChatMemberTableIfRequired();
+		createWorkedGrossFieldTableIfRequired();
 		versionUpdateOfDBCheckAndChangeV11ToV12();
 		versionUpdateOfDBCheckAndChangeV12ToV13();
 
@@ -240,6 +247,30 @@ public class DBController {
 		}
 	}
 
+	/**
+	 * Creates the persistent gross-field table used by the new-locator filter.
+	 * The primary key is band + gross field because the filter only needs to know
+	 * whether a large locator square has already been worked on a band.
+	 */
+	private synchronized void createWorkedGrossFieldTableIfRequired() {
+
+		String createTableSql =
+				"CREATE TABLE IF NOT EXISTS WorkedGrossField ("
+						+ "band TEXT NOT NULL, "
+						+ "grossField TEXT NOT NULL, "
+						+ "locator TEXT, "
+						+ "callsign TEXT, "
+						+ "source TEXT, "
+						+ "lastWorkedEpochMs INTEGER NOT NULL, "
+						+ "PRIMARY KEY (band, grossField)"
+						+ ");";
+
+		try (Statement statement = connection.createStatement()) {
+			statement.executeUpdate(createTableSql);
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not create WorkedGrossField table", e);
+		}
+	}
 	/**
 	 * Updates old v1.1 databases to the v1.2 schema by adding the not-QRV fields if
 	 * they are missing.
@@ -477,7 +508,15 @@ public class DBController {
 		} catch (SQLException e) {
 			throw new RuntimeException("[DBH, ERROR:] Could not reset expired worked data", e);
 		}
-	}
+
+		try (PreparedStatement deleteGrossFieldsStatement = connection.prepareStatement(
+				"DELETE FROM WorkedGrossField WHERE lastWorkedEpochMs > 0 AND lastWorkedEpochMs < ?;")) {
+			deleteGrossFieldsStatement.setLong(1, expirationThresholdEpochMs);
+			deleteGrossFieldsStatement.executeUpdate();
+		} catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 	/**
 	 * Stores a chatmember with its metadata in the database. The unique key is always
@@ -612,8 +651,14 @@ public class DBController {
 						+ "lastFlagsChangeEpochMs = 0;";
 
 		try (Statement statement = connection.createStatement()) {
-			return statement.executeUpdate(resetAllWorkedDataSql);
+//			return statement.executeUpdate(resetAllWorkedDataSql);
+			int affectedRows = statement.executeUpdate(resetAllWorkedDataSql);
+			statement.executeUpdate("DELETE FROM WorkedGrossField;");
+			return affectedRows;
+
+
 		} catch (SQLException e) {
+
 			System.err.println("[DBH, ERROR:] Couldn't reset the worked data");
 			e.printStackTrace();
 			return -1;
@@ -641,12 +686,27 @@ public class DBController {
 			return false;
 		}
 
+//		String updateWorkedSql =
+//				"UPDATE ChatMember SET worked = 1, " + workedBandColumnName + " = 1, lastFlagsChangeEpochMs = ? WHERE callsign = ?;";
+
 		String updateWorkedSql =
-				"UPDATE ChatMember SET worked = 1, " + workedBandColumnName + " = 1, lastFlagsChangeEpochMs = ? WHERE callsign = ?;";
+				"UPDATE ChatMember SET worked = 1, "
+						+ workedBandColumnName
+						+ " = 1, "
+						+ "qra = CASE WHEN ? IS NOT NULL AND TRIM(?) <> '' AND LOWER(TRIM(?)) <> 'unknown' THEN ? ELSE qra END, "
+						+ "lastFlagsChangeEpochMs = ? WHERE callsign = ?;";
 
 		try (PreparedStatement preparedStatement = connection.prepareStatement(updateWorkedSql)) {
-			preparedStatement.setLong(1, System.currentTimeMillis());
-			preparedStatement.setString(2, chatMemberToStore.getCallSignRaw());
+//			preparedStatement.setLong(1, System.currentTimeMillis());
+//			preparedStatement.setString(2, chatMemberToStore.getCallSignRaw());
+
+			String qra = chatMemberToStore.getQra();
+			preparedStatement.setString(1, qra);
+			preparedStatement.setString(2, qra);
+			preparedStatement.setString(3, qra);
+			preparedStatement.setString(4, qra);
+			preparedStatement.setLong(5, System.currentTimeMillis());
+			preparedStatement.setString(6, chatMemberToStore.getCallSignRaw());
 
 			int affectedRows = preparedStatement.executeUpdate();
 			return affectedRows > 0;
@@ -954,5 +1014,80 @@ public class DBController {
 
 		// dbc.storeChatMember(dummy);
 		// dbc.updateWkdInfoOnChatMember(dummy);
+	}
+
+	/**
+	 * Inserts or updates a worked gross field for the new-locator filter.
+	 *
+	 * @param band worked band
+	 * @param locator6 six-character Maidenhead locator
+	 * @param callsignRaw normalized raw callsign or null
+	 * @param source source identifier such as UCXLOG or WINTEST
+	 */
+	public synchronized void upsertWorkedGrossField(Band band, String locator6, String callsignRaw, String source) {
+
+		String grossField = WorkedGrossFieldCache.extractGrossField(locator6);
+		String normalizedLocator6 = WorkedGrossFieldCache.extractLocator6(locator6);
+
+		if (band == null || grossField == null) {
+			return;
+		}
+
+		String upsertSql =
+				"INSERT INTO WorkedGrossField (band, grossField, locator, callsign, source, lastWorkedEpochMs) "
+						+ "VALUES (?, ?, ?, ?, ?, ?) "
+						+ "ON CONFLICT(band, grossField) DO UPDATE SET "
+						+ "locator = COALESCE(excluded.locator, WorkedGrossField.locator), "
+						+ "callsign = COALESCE(excluded.callsign, WorkedGrossField.callsign), "
+						+ "source = excluded.source, "
+						+ "lastWorkedEpochMs = excluded.lastWorkedEpochMs;";
+
+		try (PreparedStatement preparedStatement = connection.prepareStatement(upsertSql)) {
+			preparedStatement.setString(1, band.name());
+			preparedStatement.setString(2, grossField);
+			preparedStatement.setString(3, normalizedLocator6);
+			preparedStatement.setString(4, callsignRaw);
+			preparedStatement.setString(5, source == null ? "UNKNOWN" : source);
+			preparedStatement.setLong(6, System.currentTimeMillis());
+			preparedStatement.executeUpdate();
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not upsert worked gross field", e);
+		}
+	}
+
+	/**
+	 * Loads all non-expired worked gross fields from the database.
+	 *
+	 * @return map of band to worked gross fields
+	 */
+	public synchronized Map<Band, Set<String>> fetchWorkedGrossFieldsFromDB() {
+
+		resetExpiredWorkedDataIfRequired();
+
+		Map<Band, Set<String>> result = new EnumMap<>(Band.class);
+
+		try (Statement statement = connection.createStatement();
+		     ResultSet resultSet = statement.executeQuery("SELECT band, grossField FROM WorkedGrossField ORDER BY band, grossField;")) {
+
+			while (resultSet.next()) {
+				Band band;
+				try {
+					band = Band.valueOf(resultSet.getString("band"));
+				} catch (Exception ignored) {
+					continue;
+				}
+
+				String grossField = WorkedGrossFieldCache.extractGrossField(resultSet.getString("grossField"));
+				if (grossField == null) {
+					continue;
+				}
+
+				result.computeIfAbsent(band, ignored -> new HashSet<>()).add(grossField);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not fetch worked gross fields", e);
+		}
+
+		return result;
 	}
 }

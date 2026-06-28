@@ -8,6 +8,18 @@ Version history of KST4Contest / PraktiKST.
 
 For the latest changelog, please refer to GitHub. The previous changelog is below.
 
+## v1.41
+**Station Map, Performance, Responsive UI**
+
+**New:**
+- **Station Map**: Interactive OpenStreetMap-based map showing the geographic position of all active chat members. Includes station markers, antenna beam cone, connection line to the selected station, Maidenhead grid overlay, and a path profile chart with terrain elevation analysis (Fresnel zones, horizon detection). Terrain data from Copernicus GLO-30, Open-Meteo API, or offline DEM import. Aircraft scatter path analysis integrated. Works in AppImage and Flatpak without external CDN access (local tile proxy, bundled Leaflet.js).
+
+**Changed:**
+- **Message table limit raised to 30,000**: Chat and message tables are capped at 30,000 entries. Older messages are automatically discarded, keeping performance stable during multi-day contest operations.
+- **Screen-aware window sizing**: On startup, the main window is sized to fit the current screen. If KST4Contest was last used on a larger monitor, the window is automatically scaled down. The UI layout is more compact and responsive on smaller screens.
+
+---
+
 ## v1.40 (2026-02-16)
 **Major Feature Release: Score System, AP Timeline, Win-Test, PSTRotator**
 

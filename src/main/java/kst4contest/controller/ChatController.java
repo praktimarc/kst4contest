@@ -1077,6 +1077,10 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 	private DBController dbHandler;
 
+	private ReachabilityService reachabilityService;
+	private final WorkedGrossFieldCache workedGrossFieldCache = new WorkedGrossFieldCache();
+
+
 	private Socket socket;
 	private ServerSocket cluster_telnetServerSocket; // socket that accepts telnet client connects (cluster client)
 //	private ServerSocketChannel cluster_telnetServerSocketChannel;
@@ -1201,12 +1205,26 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 
-    public void fireUserListUpdate(String reason) {
-        if (statusListener != null) {
-            // Da UI Updates im JavaFX Thread passieren müssen, hier oder im Listener Platform.runLater nutzen
-            statusListener.onUserListUpdated(reason);
-        }
-    }
+	/**
+	 * Notifies the UI that station-list derived values have changed.
+	 *
+	 * <p>This method may be called from parser threads, UDP listener threads and
+	 * reachability worker threads. Therefore the listener is always invoked on the
+	 * JavaFX application thread.</p>
+	 *
+	 * @param reason short debug reason for the UI log
+	 */
+	public void fireUserListUpdate(String reason) {
+		if (statusListener == null) {
+			return;
+		}
+
+		if (Platform.isFxApplicationThread()) {
+			statusListener.onUserListUpdated(reason);
+		} else {
+			Platform.runLater(() -> statusListener.onUserListUpdated(reason));
+		}
+	}
 
 //	/**
 //	 * checks if the callsign-String of a given chatmember instance and a given list
@@ -1624,6 +1642,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		});
 
 		dbHandler = new DBController();
+		reachabilityService = new ReachabilityService(this);
+		rebuildWorkedGrossFieldCacheFromDatabase();
 
 //		chatPreferences = new ChatPreferences();
 //		chatPreferences.readPreferencesFromXmlFile(); // set the praktikst Prefs by file or default if file is corrupted
@@ -2090,6 +2110,103 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 	}
 
+
+	/**
+	 * Returns the background reachability service used by the station table.
+	 *
+	 * @return reachability service
+	 */
+	public ReachabilityService getReachabilityService() {
+		return reachabilityService;
+	}
+
+	/**
+	 * Returns the runtime gross-field cache used by the new-locator filter.
+	 *
+	 * @return worked gross-field cache
+	 */
+	public WorkedGrossFieldCache getWorkedGrossFieldCache() {
+		return workedGrossFieldCache;
+	}
+
+	/**
+	 * Rebuilds the gross-field cache from persistent SQLite data and enriches it with
+	 * legacy ChatMember worked/qra rows where possible.
+	 */
+	public void rebuildWorkedGrossFieldCacheFromDatabase() {
+		if (dbHandler == null) {
+			return;
+		}
+
+		try {
+			workedGrossFieldCache.rebuildFromDatabaseSnapshot(dbHandler.fetchWorkedGrossFieldsFromDB());
+			workedGrossFieldCache.addWorkedBandsFromStoredChatMembers(dbHandler.fetchChatMemberWkdDataFromDB().values());
+		} catch (Exception exception) {
+			System.out.println("[ChatController, warning]: could not rebuild worked gross-field cache: "
+					+ exception.getMessage());
+		}
+	}
+
+	/**
+	 * Persists and caches one worked gross field after a logger QSO packet.
+	 *
+	 * @param band worked band
+	 * @param locator6 six-character Maidenhead locator
+	 * @param workedCall worked station
+	 * @param source logger/source name
+	 */
+	public void registerWorkedGrossField(Band band, String locator6, ChatMember workedCall, String source) {
+		if (band == null || locator6 == null) {
+			return;
+		}
+
+		String normalizedLocator6 = WorkedGrossFieldCache.extractLocator6(locator6);
+		if (normalizedLocator6 == null) {
+			return;
+		}
+
+		String callSignRaw = workedCall == null ? null : workedCall.getCallSignRaw();
+
+		try {
+			dbHandler.upsertWorkedGrossField(band, normalizedLocator6, callSignRaw, source);
+		} catch (Exception exception) {
+			System.out.println("[ChatController, warning]: could not persist worked gross field: "
+					+ exception.getMessage());
+		}
+
+		workedGrossFieldCache.addWorked(band, normalizedLocator6);
+		fireUserListUpdate("Worked gross field updated");
+	}
+
+	/**
+	 * Returns true when the member's gross field is not worked on at least one enabled
+	 * station band. This is the predicate behind the "new locator" filter.
+	 *
+	 * @param member member to inspect
+	 * @return true if the station is still a new locator on any enabled band
+	 */
+	public boolean isNewLocatorOnAnyEnabledBand(ChatMember member) {
+		if (member == null || member.getQra() == null) {
+			return false;
+		}
+
+		EnumSet<Band> enabledBands = reachabilityService == null
+				? getMyEnabledBandsFromPrefs(chatPreferences)
+				: reachabilityService.getEnabledStationBands();
+
+		if (enabledBands.isEmpty()) {
+			return false;
+		}
+
+		for (Band band : enabledBands) {
+			if (!workedGrossFieldCache.isGrossFieldWorked(band, member.getQra())) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	public long getCurrentEpochTime() {
 
 		OffsetDateTime currentTimeInUtc = OffsetDateTime.now(ZoneOffset.UTC);
@@ -2367,6 +2484,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			e.printStackTrace();
 			return;
 		}
+
+		rebuildWorkedGrossFieldCacheFromDatabase();
 
 		HashMap<String, ChatMember> finalWorkedDataFromDatabase = workedDataFromDatabase;
 
