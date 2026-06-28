@@ -659,6 +659,27 @@ public class ChatMember {
 		return band != null && this.tropoSsbMarginDbByBand.containsKey(band);
 	}
 
+
+
+	/**
+	 * Returns true only when a finite, usable tropo SSB margin is stored for the band.
+	 *
+	 * <p>This is intentionally different from {@link #hasTropoSsbMarginDb(Band)}:
+	 * a stored NaN means that an analysis was attempted but did not produce a usable
+	 * link budget. Such failed values should not permanently block later retries.</p>
+	 *
+	 * @param band band to check
+	 * @return true if a finite SSB margin exists
+	 */
+	public boolean hasFiniteTropoSsbMarginDb(Band band) {
+		if (band == null || !this.tropoSsbMarginDbByBand.containsKey(band)) {
+			return false;
+		}
+
+		Double storedValue = this.tropoSsbMarginDbByBand.get(band);
+		return storedValue != null && Double.isFinite(storedValue);
+	}
+
 	/**
 	 * Reads the calculated tropo SSB margin for one band.
 	 *
@@ -678,21 +699,34 @@ public class ChatMember {
 		return OptionalDouble.of(storedValue);
 	}
 
+
 	/**
 	 * Formats the calculated tropo margin for direct table display.
 	 *
+	 * <p>The method distinguishes three states:
+	 * <ul>
+	 *     <li>{@code ... @144}: analysis has not run yet</li>
+	 *     <li>{@code ? @144}: analysis ran, but no usable link budget was produced</li>
+	 *     <li>{@code +8.4 dB @144}: finite SSB margin exists</li>
+	 * </ul>
+	 *
 	 * @param band selected/auto-resolved reachability band
-	 * @return display text such as "+8.4 dB @144" or "- @144"
+	 * @return display text such as "+8.4 dB @144", "? @144" or "... @144"
 	 */
 	public String formatTropoSsbMarginForBand(Band band) {
 		String bandLabel = band == null ? "?" : band.getDisplayLabel();
-		OptionalDouble marginDb = getTropoSsbMarginDb(band);
 
-		if (marginDb.isEmpty() || !Double.isFinite(marginDb.getAsDouble())) {
-			return "- @" + bandLabel;
+		if (band == null || !this.tropoSsbMarginDbByBand.containsKey(band)) {
+			return "... @" + bandLabel;
 		}
 
-		return String.format(Locale.US, "%+.1f dB @%s", marginDb.getAsDouble(), bandLabel);
+		Double storedValue = this.tropoSsbMarginDbByBand.get(band);
+
+		if (storedValue == null || !Double.isFinite(storedValue)) {
+			return "? @" + bandLabel;
+		}
+
+		return String.format(Locale.US, "%+.1f dB @%s", storedValue, bandLabel);
 	}
 
 

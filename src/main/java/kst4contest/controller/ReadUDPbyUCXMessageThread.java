@@ -404,10 +404,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 								break;
 						}
 
-//						if (!client.getMap_ucxLogInfoWorkedCalls().containsKey("call")) {
-//							client.getMap_ucxLogInfoWorkedCalls().put(call, workedCall);
-
-//						} else 
 						{
 							/**
 							 * That means, the station is worked already but maybe at another band. So we

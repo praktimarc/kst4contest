@@ -72,6 +72,10 @@ import kst4contest.view.map.OfflineDemImportService;
 public class Kst4ContestApplication extends Application implements StatusUpdateListener  {
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
 	// Null means Auto: use the lowest session band, or category fallback.
+
+	private PauseTransition userListRefreshCoalescer;
+	private String pendingUserListUpdateReason = "";
+
 	private Band selectedReachabilityBandOverride = null;
 
 	private StationMapView stationMapView; //view class for the avl stn map
@@ -955,7 +959,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 									return true;
 								} else return false;
 							} catch (NullPointerException SenderNull) {
-								System.out.println("KST4ContestApp, <<<catched error>>>: Sender/receiver of the message is unknown, categorizing is impossible: " + SenderNull.getMessage());
+//								System.out.println("KST4ContestApp, <<<catched error>>>: Sender/receiver of the message is unknown, categorizing is impossible: " + SenderNull.getMessage());
 
 								return false;
 							}
@@ -1040,7 +1044,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					} else return false;
 
 				} catch (Exception exception) {
-					System.out.println("KST4ContestApplication <<<catched ERROR>>>>: cant get sender infos due to sender is not known yet" + exception.getMessage());
+//					System.out.println("KST4ContestApplication <<<catched ERROR>>>>: cant get sender infos due to sender is not known yet" + exception.getMessage());
 				 return false;
 				}
 			}
@@ -1055,6 +1059,31 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return selectedCallSignInfoBorderPane;
 
 	}
+
+
+	/**
+	 * Applies the currently selected station filters to the ChatMember FilteredList.
+	 *
+	 * <p>This replaces the old predicate-property binding. The old binding worked
+	 * for normal filter changes, but it became unstable when we tried to force a
+	 * refresh by adding/removing a dummy predicate. Calling this method simply
+	 * rebuilds the combined predicate and sets it directly on the FilteredList.</p>
+	 */
+	private void applyChatMemberFilterPredicates() {
+		if (chatcontroller == null
+				|| chatcontroller.getLst_chatMemberListFiltered() == null
+				|| chatcontroller.getLst_chatMemberListFilterPredicates() == null) {
+			return;
+		}
+
+		Predicate<ChatMember> combinedPredicate =
+				chatcontroller.getLst_chatMemberListFilterPredicates()
+						.stream()
+						.reduce(chatMember -> true, Predicate::and);
+
+		chatcontroller.getLst_chatMemberListFiltered().setPredicate(combinedPredicate);
+	}
+
 
 	/**
 	 * Helper method for furtherinfoPane
@@ -6391,8 +6420,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					"-fx-border-color: lightgrey;");
 
 
-			chatcontroller.getLst_chatMemberListFiltered().predicateProperty().bind(Bindings.createObjectBinding(() -> chatcontroller.getLst_chatMemberListFilterPredicates().stream().reduce(x -> true, Predicate::and), chatcontroller.getLst_chatMemberListFilterPredicates()));
+//			chatcontroller.getLst_chatMemberListFiltered().predicateProperty().bind(Bindings.createObjectBinding(() -> chatcontroller.getLst_chatMemberListFilterPredicates().stream().reduce(x -> true, Predicate::and), chatcontroller.getLst_chatMemberListFilterPredicates()));
 
+			applyChatMemberFilterPredicates();
+
+			chatcontroller.getLst_chatMemberListFilterPredicates().addListener(
+					(ListChangeListener<Predicate<ChatMember>>) change -> applyChatMemberFilterPredicates()
+			);
 
 			TextField chatMemberTableFilterTextField = new TextField("Find...");
 			chatMemberTableFilterTextField.setFocusTraversable(false);
@@ -6434,7 +6468,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						chatcontroller.getLst_chatMemberListFilterPredicates().remove(searchTextPredicate);
 					}
 					else {
-						chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
+						if (!chatcontroller.getLst_chatMemberListFilterPredicates().contains(searchTextPredicate)) {
+							chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
+						}
 					}
 
 					System.out.println("KST4CApp " + chatMemberTableFilterTextField.textProperty().getValue().equals("") + " / " + !chatMemberTableFilterTextField.focusedProperty().getValue());
@@ -6442,6 +6478,33 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			});
 
 			HBox chatMemberTableFilterWorkedBandFiltersHbx = new HBox();
+
+
+			Button btnCalculateSelectedTropo = new Button("Calc selected");
+
+			/**
+			 * Calculates full terrain/path reachability only for the currently selected
+			 * station. This is intentionally operator-triggered to avoid API-limit problems.
+			 */
+			btnCalculateSelectedTropo.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent event) {
+					ChatMember selectedMember = tbl_chatMember.getSelectionModel().getSelectedItem();
+
+					if (selectedMember == null && chatcontroller.getScoreService() != null) {
+						selectedMember = chatcontroller.getScoreService().getSelectedChatMember();
+					}
+
+					if (selectedMember == null) {
+						return;
+					}
+
+					Band selectedBand = resolveReachabilityBandForUi(selectedMember);
+					chatcontroller.getReachabilityService().calculateSelectedStationOnDemand(selectedMember, selectedBand);
+				}
+			});
+
+			btnCalculateSelectedTropo.setTooltip(new Tooltip("Calculate full Tropo/path analysis for the selected station only"));
 
 
 			ComboBox<String> cmbReachabilityBand = new ComboBox<>();
@@ -6455,16 +6518,26 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				@Override
 				public void handle(ActionEvent event) {
 					selectedReachabilityBandOverride = parseReachabilityBandSelection(cmbReachabilityBand.getValue());
-					for (ChatMember member : chatcontroller.getLst_chatMemberList()) {
-						Band bandToCalculate = resolveReachabilityBandForUi(member);
-						chatcontroller.getReachabilityService().ensureTropoMarginCalculated(member, bandToCalculate);
-					}
+
+					// Changing the display band must not start batch terrain analysis.
+					// Existing cached values are shown; new values are calculated on map click
+					// or via the explicit "Calc selected" button.
 					chatcontroller.fireUserListUpdate("Reachability band changed");
 				}
 			});
 
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Reachability:"));
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(cmbReachabilityBand);
+			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnCalculateSelectedTropo);
+
+			/**
+			 * In order to work the filters needs the proper band settings, which should be worked
+			 */
+			if (chatcontroller.getReachabilityService().getEnabledStationBands().isEmpty()) {
+				Label bandSetupWarning = new Label("Please enable at least one active station band for New Locator/New Band filters.");
+				bandSetupWarning.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
+				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(bandSetupWarning);
+			}
 
 			ToggleButton btnTglwkd = new ToggleButton("wkd");
 
@@ -9499,16 +9572,43 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
     }
 
-    @Override
-    public void onUserListUpdated(String reason) {
-        Platform.runLater(() -> {
 
-//            tbl_chatMember.sort();
-            tbl_chatMember.refresh();
+	/**
+	 * Forces the station FilteredList to evaluate all active predicates again.
+	 *
+	 * <p>Several filters depend on mutable ChatMember fields, for example worked
+	 * flags, AirScout windows or calculated Tropo values. Updating such fields does
+	 * not necessarily create a JavaFX list-change event. Therefore we explicitly
+	 * re-apply the combined predicate instead of adding/removing a dummy predicate.
+	 * The dummy-predicate trick can corrupt SortedList mapping in JavaFX.</p>
+	 */
+	private void forceChatMemberFilterRefresh() {
+		applyChatMemberFilterPredicates();
+	}
 
-            System.out.println("KST4Capp, UI Update Trigger: " + reason);
-        });
-    }
+	@Override
+	public void onUserListUpdated(String reason) {
+		Platform.runLater(() -> {
+			pendingUserListUpdateReason = reason;
+
+			if (userListRefreshCoalescer == null) {
+				userListRefreshCoalescer = new PauseTransition(Duration.millis(300));
+				userListRefreshCoalescer.setOnFinished(event -> {
+					forceChatMemberFilterRefresh();
+
+					if (tbl_chatMember != null) {
+						tbl_chatMember.refresh();
+					}
+
+					refreshStationMapIfVisible();
+
+					System.out.println("KST4Capp, UI Update Trigger: " + pendingUserListUpdateReason);
+				});
+			}
+
+			userListRefreshCoalescer.playFromStart();
+		});
+	}
 
 
 //	public class MaidenheadLocatorMapPane extends Pane {
