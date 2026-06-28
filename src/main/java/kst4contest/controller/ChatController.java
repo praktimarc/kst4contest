@@ -1205,12 +1205,26 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 
-    public void fireUserListUpdate(String reason) {
-        if (statusListener != null) {
-            // Da UI Updates im JavaFX Thread passieren müssen, hier oder im Listener Platform.runLater nutzen
-            statusListener.onUserListUpdated(reason);
-        }
-    }
+	/**
+	 * Notifies the UI that station-list derived values have changed.
+	 *
+	 * <p>This method may be called from parser threads, UDP listener threads and
+	 * reachability worker threads. Therefore the listener is always invoked on the
+	 * JavaFX application thread.</p>
+	 *
+	 * @param reason short debug reason for the UI log
+	 */
+	public void fireUserListUpdate(String reason) {
+		if (statusListener == null) {
+			return;
+		}
+
+		if (Platform.isFxApplicationThread()) {
+			statusListener.onUserListUpdated(reason);
+		} else {
+			Platform.runLater(() -> statusListener.onUserListUpdated(reason));
+		}
+	}
 
 //	/**
 //	 * checks if the callsign-String of a given chatmember instance and a given list
@@ -2470,6 +2484,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			e.printStackTrace();
 			return;
 		}
+
+		rebuildWorkedGrossFieldCacheFromDatabase();
 
 		HashMap<String, ChatMember> finalWorkedDataFromDatabase = workedDataFromDatabase;
 
