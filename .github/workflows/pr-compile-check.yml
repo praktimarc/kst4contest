@@ -11,18 +11,18 @@ env:
 
 jobs:
   compile:
-    name: Compile (Java 17)
+    name: Compile (Java 21)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
