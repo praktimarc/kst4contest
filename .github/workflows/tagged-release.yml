@@ -173,6 +173,7 @@ jobs:
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
+            --linux-deb-depends "libgstreamer1.0-0,libgstreamer-plugins-base1.0-0,gstreamer1.0-plugins-good" \
             --dest dist
           DEB="$(ls dist/*.deb | head -n 1)"
           if [ -z "$DEB" ]; then
@@ -224,6 +225,7 @@ jobs:
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
+            --linux-rpm-requires "gstreamer1,gstreamer1-plugins-base,gstreamer1-plugins-good" \
             --dest dist
           RPM="$(ls dist/*.rpm | head -n 1)"
           if [ -z "$RPM" ]; then
@@ -317,6 +319,8 @@ jobs:
           arch = ${ARCH}
           license = custom
           depend = java-runtime
+          depend = gst-plugins-base
+          depend = gst-plugins-good
           EOF
           tar --zstd -cf "dist/KST4Contest-${{ github.ref_name }}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
 

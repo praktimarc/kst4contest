@@ -436,6 +436,7 @@
                                 <addmodule>javafx.graphics</addmodule>
                                 <addmodule>javafx.fxml</addmodule>
                                 <addmodule>javafx.web</addmodule>
+                                <addmodule>javafx.media</addmodule>
                                 <addmodule>java.sql</addmodule>
                                 <addmodule>java.net.http</addmodule>
                                 <addmodule>jdk.crypto.ec</addmodule>
