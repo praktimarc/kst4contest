@@ -431,6 +431,7 @@ jobs:
             - --share=network
             - --share=ipc
             - --device=dri
+            - --filesystem=~/.praktiKST
           modules:
             - name: kst4contest
               buildsystem: simple
