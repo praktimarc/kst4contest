@@ -6,6 +6,7 @@ module praktiKST {
 	requires java.sql;
     requires javafx.media;
     requires jdk.jsobject;
+    requires jlayer;
     requires java.net.http;
     requires java.desktop;
 	requires jdk.crypto.ec;

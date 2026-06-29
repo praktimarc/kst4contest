@@ -93,6 +93,13 @@
             <version>${javafx.version}</version>
         </dependency>
 
+        <!-- JLayer: pure-Java MP3 decoder, used instead of JavaFX Media for Flatpak audio compatibility -->
+        <dependency>
+            <groupId>javazoom</groupId>
+            <artifactId>jlayer</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+
         <!-- SQLite -->
         <dependency>
             <groupId>org.xerial</groupId>
