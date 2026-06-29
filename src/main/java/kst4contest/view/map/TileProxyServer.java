@@ -19,8 +19,10 @@ import java.util.concurrent.Executors;
  */
 final class TileProxyServer {
 
-    private static final int CACHE_MAX = 512;
+    private static final int CACHE_MAX = 2048;
     private static final String USER_AGENT = "kst4contest/1.0 amateur-radio-contest-tool";
+    private static final int TILE_PROXY_THREADS = 12;
+    private static final int TILE_PROXY_BACKLOG = 128;
 
     private final ServerSocket serverSocket;
     private final ExecutorService executor;
@@ -39,9 +41,9 @@ final class TileProxyServer {
             }
         });
 
-        this.serverSocket = new ServerSocket(0, 16, InetAddress.getByName("127.0.0.1"));
+        this.serverSocket = new ServerSocket(0, TILE_PROXY_BACKLOG, InetAddress.getByName("127.0.0.1"));
 
-        this.executor = Executors.newFixedThreadPool(4, r -> {
+        this.executor = Executors.newFixedThreadPool(TILE_PROXY_THREADS, r -> {
             Thread t = new Thread(r, "tile-proxy");
             t.setDaemon(true);
             return t;
@@ -132,6 +134,7 @@ final class TileProxyServer {
                     + "Content-Type: image/png\r\n"
                     + "Content-Length: " + tileData.length + "\r\n"
                     + "Cache-Control: max-age=86400\r\n"
+                    + "Access-Control-Allow-Origin: *\r\n"
                     + "Connection: close\r\n"
                     + "\r\n";
             out.write(header.getBytes());

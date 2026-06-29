@@ -215,6 +215,11 @@ public final class MapHtmlResources {
                 <div id="map"></div>
 
                 <script>
+                    // JavaFX 21 WebView can render Leaflet's CSS translate3d tile positioning incorrectly.
+                    // Disable Leaflet 3D transforms before leaflet.js is loaded to keep tile rendering stable.
+                    window.L_DISABLE_3D = true;
+                </script>
+                <script>
                 """ + leafletJs + """
                 </script>
                 <script>window._kstTileProxyPort=__TILE_PROXY_PORT__;</script>
@@ -366,18 +371,31 @@ public final class MapHtmlResources {
                             applyThemeClass();
 
                             map = L.map('map', {
-                                zoomControl: true
+                                zoomControl: true,
+                                zoomAnimation: false,
+                                fadeAnimation: false,
+                                markerZoomAnimation: false,
+                                inertia: false
                             }).setView([51.0, 10.0], 6);
 
                             jsLog('Leaflet map initialized');
 
-                            L.tileLayer(
+                            const tileLayer = L.tileLayer(
                                 'http://127.0.0.1:' + window._kstTileProxyPort + '/tiles/{s}/{z}/{x}/{y}.png',
                                 {
                                     maxZoom: 18,
+                                    updateWhenZooming: false,
+                                    keepBuffer: 4,
                                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                                 }
-                            ).addTo(map);
+                            );
+
+                            tileLayer.on('tileerror', function (event) {
+                                const source = event && event.tile ? event.tile.src : 'unknown';
+                                jsError('OSM tile load failed: ' + source);
+                            });
+
+                            tileLayer.addTo(map);
 
                             map.createPane('beamPane');
                             map.getPane('beamPane').style.zIndex = 410;
@@ -416,22 +434,47 @@ public final class MapHtmlResources {
                         }
 
                         function invalidateSize() {
-                             if (!map) {
-                                 return;
-                             }
-                
-                             jsLog('invalidateSize');
-                
-                             map.invalidateSize(false);
-                
-                             if (invalidateNotifyTimer) {
-                                 window.clearTimeout(invalidateNotifyTimer);
-                             }
-                
-                             invalidateNotifyTimer = window.setTimeout(function () {
-                                 notifyViewport();
-                             }, 120);
-                         }
+                            if (!map) {
+                                return;
+                            }
+
+                            const mapElement = document.getElementById('map');
+                            const domWidth = mapElement ? mapElement.clientWidth : -1;
+                            const domHeight = mapElement ? mapElement.clientHeight : -1;
+
+                            jsLog('invalidateSize dom=' + domWidth + 'x' + domHeight
+                                    + ' leafletBefore=' + map.getSize().x + 'x' + map.getSize().y);
+
+                            window.requestAnimationFrame(function () {
+                                map.invalidateSize({
+                                    animate: false,
+                                    pan: false,
+                                    debounceMoveend: true
+                                });
+
+                                window.setTimeout(function () {
+                                    map.invalidateSize({
+                                        animate: false,
+                                        pan: false,
+                                        debounceMoveend: true
+                                    });
+
+                                    jsLog('invalidateSize leafletAfter=' + map.getSize().x + 'x' + map.getSize().y);
+
+                                    if (invalidateNotifyTimer) {
+                                        window.clearTimeout(invalidateNotifyTimer);
+                                    }
+
+                                    invalidateNotifyTimer = window.setTimeout(function () {
+                                        notifyViewport();
+                                    }, 120);
+                                }, 80);
+                            });
+                        }
+
+                        function resize() {
+                            invalidateSize();
+                        }
 
                         function zoomIn() {
                             if (!map) {
@@ -693,6 +736,7 @@ public final class MapHtmlResources {
                         return {
                               init: init,
                               invalidateSize: invalidateSize,
+                              resize: resize,
                               zoomIn: zoomIn,
                               zoomOut: zoomOut,
                               inspectPoint: inspectPoint,

@@ -49,6 +49,17 @@ public final class StationMapView {
     private final Stage stage = new Stage();
     private final WebView webView = new WebView();
     private final WebEngine webEngine = webView.getEngine();
+
+    /**
+     * Keep a strong Java reference to the bridge object.
+     *
+     * JavaFX WebView/JSObject does not guarantee that a Java object passed through
+     * window.setMember(...) remains strongly reachable from the Java side. Newer
+     * JavaFX/WebKit/GC combinations can otherwise lose callbacks after a while.
+     */
+    private final JavaMapBridge javaMapBridge = new JavaMapBridge();
+
+
     private TileProxyServer tileProxyServer;
 
     private Scene scene;
@@ -85,6 +96,22 @@ public final class StationMapView {
     private List<MapCallsignRawSnapshot> lastSnapshots = List.of();
     private MapCallsignRawSnapshot lastSelectedSnapshot;
     private boolean filteredViewActive;
+    /**
+     * Last JSON payloads sent into Leaflet. Used to avoid clearing/recreating
+     * layers every score/table refresh. Rebuilding DOM markers every few seconds
+     * is visible as flicker in JavaFX 21 WebView.
+     */
+    private String lastRenderedStationsJson = "";
+    private String lastRenderedBeamJson = "";
+    private String lastRenderedConnectionJson = "";
+    private String lastRenderedGridJson = "";
+
+    /**
+     * Prevent periodic refreshes from panning the map back to the selected station.
+     * Explicit calls to focusCallsignRaw(...) still pan immediately.
+     */
+    private String lastAutoFocusedCallsignRaw = "";
+
 
     private double homeLatitudeDeg = Double.NaN;
     private double homeLongitudeDeg = Double.NaN;
@@ -192,8 +219,11 @@ public final class StationMapView {
             return;
         }
 
+        String normalizedCallsignRaw = callSignRaw.trim().toUpperCase(Locale.ROOT);
+        lastAutoFocusedCallsignRaw = normalizedCallsignRaw;
+
         executeMapScriptSafely(
-                "window.kstMapApi.focusCallsignRaw(" + toJsStringLiteral(callSignRaw.trim().toUpperCase(Locale.ROOT)) + ");"
+                "window.kstMapApi.focusCallsignRaw(" + toJsStringLiteral(normalizedCallsignRaw) + ");"
         );
     }
 
@@ -292,6 +322,8 @@ public final class StationMapView {
         webView.setMinWidth(0);
         webView.setMinHeight(220);
         webView.setPrefHeight(420);
+        webView.setMaxWidth(Double.MAX_VALUE);
+        webView.setMaxHeight(Double.MAX_VALUE);
         VBox.setVgrow(webView, Priority.ALWAYS);
 
         profileSection.setMinWidth(0);
@@ -623,7 +655,7 @@ public final class StationMapView {
         webEngine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
             if (newState == javafx.concurrent.Worker.State.SUCCEEDED) {
                 JSObject window = (JSObject) webEngine.executeScript("window");
-                window.setMember("javaMapBridge", new JavaMapBridge());
+                window.setMember("javaMapBridge", javaMapBridge);
 
                 executeMapScriptSafely("window.kstMapApi.init();");
 
@@ -643,10 +675,12 @@ public final class StationMapView {
             return;
         }
 
-        Platform.runLater(() ->
-                Platform.runLater(() ->
-                        executeMapScriptSafely("window.kstMapApi.invalidateSize();")));
+        Platform.runLater(() -> Platform.runLater(() ->
+                executeMapScriptSafely("window.kstMapApi.resize();")
+        ));
     }
+
+
 
     private void handleWebViewClick(MouseEvent event) {
         logWebViewMouseEvent("MOUSE_CLICKED", event);
@@ -910,9 +944,6 @@ public final class StationMapView {
         detailPathProfileChart.setObstructionSummary(result.obstructionSummary());
     }
 
-
-
-
     private void renderAll() {
         if (!mapReady) {
             return;
@@ -930,49 +961,78 @@ public final class StationMapView {
         renderBeam();
         renderConnectionLine();
         renderGridIfViewportKnown();
+        focusSelectedStationOnlyWhenSelectionChanged();
+    }
 
-        if (lastSelectedSnapshot != null) {
-            focusCallsignRaw(lastSelectedSnapshot.callSignRaw());
+    private void focusSelectedStationOnlyWhenSelectionChanged() {
+        if (lastSelectedSnapshot == null || lastSelectedSnapshot.callSignRaw() == null) {
+            lastAutoFocusedCallsignRaw = "";
+            return;
         }
+
+        String selectedCallsignRaw = lastSelectedSnapshot.callSignRaw().trim().toUpperCase(Locale.ROOT);
+        if (selectedCallsignRaw.isBlank() || selectedCallsignRaw.equals(lastAutoFocusedCallsignRaw)) {
+            return;
+        }
+
+        focusCallsignRaw(selectedCallsignRaw);
     }
 
     private void renderStations() {
+        String stationsJson = toStationsJson(lastSnapshots);
+        if (stationsJson.equals(lastRenderedStationsJson)) {
+            return;
+        }
+
+        lastRenderedStationsJson = stationsJson;
+
         executeMapScriptSafely(
-                "window.kstMapApi.setStations(" + toJsStringLiteral(toStationsJson(lastSnapshots)) + ");"
+                "window.kstMapApi.setStations(" + toJsStringLiteral(stationsJson) + ");"
         );
     }
 
     private void renderBeam() {
-        if (!Double.isFinite(homeLatitudeDeg)
-                || !Double.isFinite(homeLongitudeDeg)
-                || beamWidthDeg <= 0.0
-                || maxQrbKm <= 0.0) {
+        String beamJson = "null";
 
-            executeMapScriptSafely("window.kstMapApi.setBeam('null');");
-            return;
+        if (Double.isFinite(homeLatitudeDeg)
+                && Double.isFinite(homeLongitudeDeg)
+                && beamWidthDeg > 0.0
+                && maxQrbKm > 0.0) {
+
+            List<double[]> sectorPoints = buildBeamPolygon(homeLatitudeDeg, homeLongitudeDeg, antennaAzimuthDeg, beamWidthDeg, maxQrbKm);
+            beamJson = toPointArrayJson(sectorPoints);
         }
 
-        List<double[]> sectorPoints = buildBeamPolygon(homeLatitudeDeg, homeLongitudeDeg, antennaAzimuthDeg, beamWidthDeg, maxQrbKm);
+        if (beamJson.equals(lastRenderedBeamJson)) {
+            return;
+        }
+        lastRenderedBeamJson = beamJson;
+
         executeMapScriptSafely(
-                "window.kstMapApi.setBeam(" + toJsStringLiteral(toPointArrayJson(sectorPoints)) + ");"
+                "window.kstMapApi.setBeam(" + toJsStringLiteral(beamJson) + ");"
         );
     }
 
     private void renderConnectionLine() {
-        if (lastSelectedSnapshot == null || !lastSelectedSnapshot.hasUsablePosition()
-                || !Double.isFinite(homeLatitudeDeg) || !Double.isFinite(homeLongitudeDeg)) {
+        String connectionJson = "null";
 
-            executeMapScriptSafely("window.kstMapApi.setConnection('null');");
-            return;
+        if (lastSelectedSnapshot != null && lastSelectedSnapshot.hasUsablePosition()
+                && Double.isFinite(homeLatitudeDeg) && Double.isFinite(homeLongitudeDeg)) {
+
+            List<double[]> points = List.of(
+                    new double[]{homeLatitudeDeg, homeLongitudeDeg},
+                    new double[]{lastSelectedSnapshot.latitudeDeg(), lastSelectedSnapshot.longitudeDeg()}
+            );
+            connectionJson = toPointArrayJson(points);
         }
 
-        List<double[]> points = List.of(
-                new double[]{homeLatitudeDeg, homeLongitudeDeg},
-                new double[]{lastSelectedSnapshot.latitudeDeg(), lastSelectedSnapshot.longitudeDeg()}
-        );
+        if (connectionJson.equals(lastRenderedConnectionJson)) {
+            return;
+        }
+        lastRenderedConnectionJson = connectionJson;
 
         executeMapScriptSafely(
-                "window.kstMapApi.setConnection(" + toJsStringLiteral(toPointArrayJson(points)) + ");"
+                "window.kstMapApi.setConnection(" + toJsStringLiteral(connectionJson) + ");"
         );
     }
 
@@ -1011,10 +1071,18 @@ public final class StationMapView {
                 + " cellPx=" + String.format(Locale.US, "%.1f/%.1f", renderPlan.estimatedCellWidthPx(), renderPlan.estimatedCellHeightPx())
                 + " cells=" + visibleGridCells.size());
 
+        String gridJson = toGridJson(visibleGridCells, renderPlan);
+        if (gridJson.equals(lastRenderedGridJson)) {
+            return;
+        }
+        lastRenderedGridJson = gridJson;
+
         executeMapScriptSafely(
-                "window.kstMapApi.setGrid(" + toJsStringLiteral(toGridJson(visibleGridCells, renderPlan)) + ");"
+                "window.kstMapApi.setGrid(" + toJsStringLiteral(gridJson) + ");"
         );
     }
+
+
 
     private List<double[]> buildBeamPolygon(double startLatDeg,
                                             double startLonDeg,
