@@ -348,23 +348,42 @@ jobs:
           if [ -f "$PKGROOT/usr/lib/KST4Contest/lib/KST4Contest.png" ]; then
             cp "$PKGROOT/usr/lib/KST4Contest/lib/KST4Contest.png" "$PKGROOT/usr/share/icons/hicolor/256x256/apps/KST4Contest.png"
           fi
-          INSTALLED_SIZE=$(du -sk "$PKGROOT" | cut -f1)
+          INSTALLED_SIZE=$(du -sb "$PKGROOT" | cut -f1)
+          BUILDDATE=$(date +%s)
+          WORKFLOW_SHA256=$(sha256sum "$GITHUB_WORKSPACE/.github/workflows/nightly-artifacts.yml" | awk '{print $1}')
           cat > "$PKGROOT/.PKGINFO" << EOF
-          pkgname = kst4contest
-          pkgbase = kst4contest
-          pkgver = ${PKGVER}-1
-          pkgdesc = KST4Contest amateur radio contest logger
-          url = https://github.com/${{ github.repository }}
-          builddate = $(date +%s)
-          packager = GitHub Actions
-          size = ${INSTALLED_SIZE}
-          arch = ${ARCH}
-          license = custom
-          depend = java-runtime
-          depend = gst-plugins-base
-          depend = gst-plugins-good
-          EOF
-          tar --zstd -cf "dist/${ASSET_BASENAME}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
+pkgname = kst4contest
+pkgbase = kst4contest
+xdata = pkgtype=pkg
+pkgver = ${PKGVER}-1
+pkgdesc = KST4Contest amateur radio contest logger
+url = https://github.com/${{ github.repository }}
+builddate = ${BUILDDATE}
+packager = GitHub Actions
+size = ${INSTALLED_SIZE}
+arch = ${ARCH}
+license = custom
+depend = java-runtime
+depend = gst-plugins-base
+depend = gst-plugins-good
+EOF
+          cat > "$PKGROOT/.BUILDINFO" << EOF
+format = 2
+pkgname = kst4contest
+pkgbase = kst4contest
+pkgver = ${PKGVER}-1
+pkgarch = ${ARCH}
+pkgbuild_sha256sum = ${WORKFLOW_SHA256}
+packager = GitHub Actions
+builddate = ${BUILDDATE}
+builddir = /build
+startdir = /build
+buildtool = makepkg
+buildtoolver = 7.0.0-1-x86_64
+buildenv = !distcc !color !ccache check !sign
+options = !strip docs libtool staticlibs emptydirs zipman purge !debug !lto
+EOF
+          tar --zstd --transform 's|^\./||' -cf "dist/${ASSET_BASENAME}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
 
       - name: Upload Arch Linux artifact
         uses: actions/upload-artifact@v4.3.4
@@ -437,11 +456,13 @@ jobs:
             - --share=ipc
             - --device=dri
             - --filesystem=~/.praktiKST
+            - --env=ALSA_CONFIG_PATH=/app/share/alsa/asound.conf
           modules:
             - name: kst4contest
               buildsystem: simple
               build-commands:
-                - install -d /app/lib/KST4Contest /app/bin /app/share/applications
+                - install -d /app/lib/KST4Contest /app/bin /app/share/applications /app/share/alsa
+                - printf '@include /usr/share/alsa/alsa.conf\npcm.!default { type pulse }\nctl.!default { type pulse }\n' > /app/share/alsa/asound.conf
                 - cp -a . /app/lib/KST4Contest/
                 - printf '#!/bin/sh\nexec /app/lib/KST4Contest/bin/KST4Contest "$@"\n' > /app/bin/KST4Contest
                 - chmod 755 /app/bin/KST4Contest

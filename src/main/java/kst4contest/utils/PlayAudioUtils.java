@@ -115,6 +115,10 @@ public class PlayAudioUtils {
 
     private Queue<Media> musicList = new LinkedList<Media>();
     private MediaPlayer mediaPlayer ;
+    /** Set once when JavaFX media cannot create a player (e.g. no reachable audio
+     *  output in a sandbox/headless session). Prevents repeated failures from
+     *  killing the calling thread and spamming the log. */
+    private boolean audioUnavailable = false;
 
     /**
      * Plays notification sounds out of the windws 95 box by given action character<br/>
@@ -462,23 +466,33 @@ public class PlayAudioUtils {
     private void playMusic() {
 
 //		System.out.println("Kst4ContestApplication.playMusic");
-        if(musicList.peek() == null)
+        if(audioUnavailable || musicList.peek() == null)
         {
+            musicList.clear();
             return;
         }
-        mediaPlayer = new MediaPlayer(musicList.poll());
-        mediaPlayer.setRate(1.0);
+        try {
+            mediaPlayer = new MediaPlayer(musicList.poll());
+            mediaPlayer.setRate(1.0);
 
-        mediaPlayer.setOnReady(() -> {
-            mediaPlayer.play();
-            mediaPlayer.setOnEndOfMedia(() -> {
+            mediaPlayer.setOnReady(() -> {
+                mediaPlayer.play();
+                mediaPlayer.setOnEndOfMedia(() -> {
 //				mediaPlayer.dispose();
-                playMusic();
-                if (musicList.isEmpty()) {
+                    playMusic();
+                    if (musicList.isEmpty()) {
 //					mediaPlayer.dispose();
-                }
+                    }
+                });
             });
-        });
+        } catch (Throwable t) {
+            // JavaFX could not create the player (typically: no usable audio output,
+            // e.g. missing audio socket in a Flatpak sandbox or no ALSA->Pulse bridge).
+            // Never let this kill the caller (the messageBusManagementThread).
+            audioUnavailable = true;
+            musicList.clear();
+            System.out.println("[KST4ContestApp, warning, audio playback disabled (could not create media player): " + t + "]");
+        }
 
     }
 }
