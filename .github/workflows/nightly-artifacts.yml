@@ -351,38 +351,38 @@ jobs:
           INSTALLED_SIZE=$(du -sb "$PKGROOT" | cut -f1)
           BUILDDATE=$(date +%s)
           WORKFLOW_SHA256=$(sha256sum "$GITHUB_WORKSPACE/.github/workflows/nightly-artifacts.yml" | awk '{print $1}')
-          cat > "$PKGROOT/.PKGINFO" << EOF
-pkgname = kst4contest
-pkgbase = kst4contest
-xdata = pkgtype=pkg
-pkgver = ${PKGVER}-1
-pkgdesc = KST4Contest amateur radio contest logger
-url = https://github.com/${{ github.repository }}
-builddate = ${BUILDDATE}
-packager = GitHub Actions
-size = ${INSTALLED_SIZE}
-arch = ${ARCH}
-license = custom
-depend = java-runtime
-depend = gst-plugins-base
-depend = gst-plugins-good
-EOF
-          cat > "$PKGROOT/.BUILDINFO" << EOF
-format = 2
-pkgname = kst4contest
-pkgbase = kst4contest
-pkgver = ${PKGVER}-1
-pkgarch = ${ARCH}
-pkgbuild_sha256sum = ${WORKFLOW_SHA256}
-packager = GitHub Actions
-builddate = ${BUILDDATE}
-builddir = /build
-startdir = /build
-buildtool = makepkg
-buildtoolver = 7.0.0-1-x86_64
-buildenv = !distcc !color !ccache check !sign
-options = !strip docs libtool staticlibs emptydirs zipman purge !debug !lto
-EOF
+          {
+            echo "pkgname = kst4contest"
+            echo "pkgbase = kst4contest"
+            echo "xdata = pkgtype=pkg"
+            echo "pkgver = ${PKGVER}-1"
+            echo "pkgdesc = KST4Contest amateur radio contest logger"
+            echo "url = https://github.com/${{ github.repository }}"
+            echo "builddate = ${BUILDDATE}"
+            echo "packager = GitHub Actions"
+            echo "size = ${INSTALLED_SIZE}"
+            echo "arch = ${ARCH}"
+            echo "license = custom"
+            echo "depend = java-runtime"
+            echo "depend = gst-plugins-base"
+            echo "depend = gst-plugins-good"
+          } > "$PKGROOT/.PKGINFO"
+          {
+            echo "format = 2"
+            echo "pkgname = kst4contest"
+            echo "pkgbase = kst4contest"
+            echo "pkgver = ${PKGVER}-1"
+            echo "pkgarch = ${ARCH}"
+            echo "pkgbuild_sha256sum = ${WORKFLOW_SHA256}"
+            echo "packager = GitHub Actions"
+            echo "builddate = ${BUILDDATE}"
+            echo "builddir = /build"
+            echo "startdir = /build"
+            echo "buildtool = makepkg"
+            echo "buildtoolver = 7.0.0-1-x86_64"
+            echo "buildenv = !distcc !color !ccache check !sign"
+            echo "options = !strip docs libtool staticlibs emptydirs zipman purge !debug !lto"
+          } > "$PKGROOT/.BUILDINFO"
           tar --zstd --transform 's|^\./||' -cf "dist/${ASSET_BASENAME}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
 
       - name: Upload Arch Linux artifact
