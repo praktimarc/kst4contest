@@ -12,7 +12,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
@@ -199,6 +199,7 @@ jobs:
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
+            --linux-package-deps "libgstreamer1.0-0,libgstreamer-plugins-base1.0-0,gstreamer1.0-plugins-good" \
             --dest dist
           DEB="$(ls dist/*.deb | head -n 1)"
           if [ -z "$DEB" ]; then
@@ -257,6 +258,7 @@ jobs:
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
             --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
+            --linux-package-deps "gstreamer1,gstreamer1-plugins-base,gstreamer1-plugins-good" \
             --dest dist
           RPM="$(ls dist/*.rpm | head -n 1)"
           if [ -z "$RPM" ]; then
@@ -346,21 +348,42 @@ jobs:
           if [ -f "$PKGROOT/usr/lib/KST4Contest/lib/KST4Contest.png" ]; then
             cp "$PKGROOT/usr/lib/KST4Contest/lib/KST4Contest.png" "$PKGROOT/usr/share/icons/hicolor/256x256/apps/KST4Contest.png"
           fi
-          INSTALLED_SIZE=$(du -sk "$PKGROOT" | cut -f1)
-          cat > "$PKGROOT/.PKGINFO" << EOF
-          pkgname = kst4contest
-          pkgbase = kst4contest
-          pkgver = ${PKGVER}-1
-          pkgdesc = KST4Contest amateur radio contest logger
-          url = https://github.com/${{ github.repository }}
-          builddate = $(date +%s)
-          packager = GitHub Actions
-          size = ${INSTALLED_SIZE}
-          arch = ${ARCH}
-          license = custom
-          depend = java-runtime
-          EOF
-          tar --zstd -cf "dist/${ASSET_BASENAME}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
+          INSTALLED_SIZE=$(du -sb "$PKGROOT" | cut -f1)
+          BUILDDATE=$(date +%s)
+          WORKFLOW_SHA256=$(sha256sum "$GITHUB_WORKSPACE/.github/workflows/nightly-artifacts.yml" | awk '{print $1}')
+          {
+            echo "pkgname = kst4contest"
+            echo "pkgbase = kst4contest"
+            echo "xdata = pkgtype=pkg"
+            echo "pkgver = ${PKGVER}-1"
+            echo "pkgdesc = KST4Contest amateur radio contest logger"
+            echo "url = https://github.com/${{ github.repository }}"
+            echo "builddate = ${BUILDDATE}"
+            echo "packager = GitHub Actions"
+            echo "size = ${INSTALLED_SIZE}"
+            echo "arch = ${ARCH}"
+            echo "license = custom"
+            echo "depend = java-runtime"
+            echo "depend = gst-plugins-base"
+            echo "depend = gst-plugins-good"
+          } > "$PKGROOT/.PKGINFO"
+          {
+            echo "format = 2"
+            echo "pkgname = kst4contest"
+            echo "pkgbase = kst4contest"
+            echo "pkgver = ${PKGVER}-1"
+            echo "pkgarch = ${ARCH}"
+            echo "pkgbuild_sha256sum = ${WORKFLOW_SHA256}"
+            echo "packager = GitHub Actions"
+            echo "builddate = ${BUILDDATE}"
+            echo "builddir = /build"
+            echo "startdir = /build"
+            echo "buildtool = makepkg"
+            echo "buildtoolver = 7.0.0-1-x86_64"
+            echo "buildenv = !distcc !color !ccache check !sign"
+            echo "options = !strip docs libtool staticlibs emptydirs zipman purge !debug !lto"
+          } > "$PKGROOT/.BUILDINFO"
+          tar --zstd --transform 's|^\./||' -cf "dist/${ASSET_BASENAME}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
 
       - name: Upload Arch Linux artifact
         uses: actions/upload-artifact@v4.3.4
@@ -428,14 +451,18 @@ jobs:
           finish-args:
             - --socket=wayland
             - --socket=x11
+            - --socket=pulseaudio
             - --share=network
             - --share=ipc
             - --device=dri
+            - --filesystem=~/.praktiKST
+            - --env=ALSA_CONFIG_PATH=/app/share/alsa/asound.conf
           modules:
             - name: kst4contest
               buildsystem: simple
               build-commands:
-                - install -d /app/lib/KST4Contest /app/bin /app/share/applications
+                - install -d /app/lib/KST4Contest /app/bin /app/share/applications /app/share/alsa
+                - printf '@include /usr/share/alsa/alsa.conf\npcm.!default { type pulse }\nctl.!default { type pulse }\n' > /app/share/alsa/asound.conf
                 - cp -a . /app/lib/KST4Contest/
                 - printf '#!/bin/sh\nexec /app/lib/KST4Contest/bin/KST4Contest "$@"\n' > /app/bin/KST4Contest
                 - chmod 755 /app/bin/KST4Contest
@@ -453,18 +480,103 @@ jobs:
                   path: flatpak-src/KST4Contest
           EOF
 
-      - name: Build Flatpak bundle
+      - name: Import Flatpak signing key
+        run: |
+          echo "${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          FLATPAK_GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+          echo "FLATPAK_GPG_KEY_ID=$FLATPAK_GPG_KEY_ID" >> "$GITHUB_ENV"
+
+      - name: Build Flatpak repo (nightly)
         run: |
           flatpak-builder --force-clean target/flatpak-build target/de.x08.KST4Contest.yml
-          flatpak build-export target/flatpak-repo target/flatpak-build
-          flatpak build-bundle target/flatpak-repo "dist/${ASSET_BASENAME}-linux-x86_64.flatpak" de.x08.KST4Contest
+          flatpak build-export --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo target/flatpak-build nightly
+          flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo
 
-      - name: Upload Flatpak artifact
+      - name: Create flatpakref (nightly)
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
+          cat > "dist/de.x08.KST4Contest.nightly.flatpakref" << EOF
+          [Flatpak Ref]
+          Name=de.x08.KST4Contest
+          Branch=nightly
+          Title=KST4Contest (Nightly) – ON4KST Chat Client
+          Url=${PAGES_URL}
+          RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo
+          GPGKey=${GPG_KEY_B64}
+          IsRuntime=false
+          EOF
+
+      - name: Upload flatpakref
         uses: actions/upload-artifact@v4.3.4
         with:
-          name: linux-flatpak
-          path: dist/KST4Contest-*-linux-x86_64.flatpak
-          retention-days: 14
+          name: flatpakref
+          path: dist/de.x08.KST4Contest.nightly.flatpakref
+
+      - name: Upload Flatpak OSTree repo
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: flatpak-ostree-repo
+          path: target/flatpak-repo/
+
+  publish-flatpak-repo:
+    name: Publish Flatpak OSTree Repo (nightly)
+    runs-on: ubuntu-latest
+    needs: build-flatpak
+
+    steps:
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends flatpak
+
+      - name: Import Flatpak signing key
+        run: |
+          echo "${{ secrets.FLATPAK_GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "FLATPAK_GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')" >> "$GITHUB_ENV"
+
+      - name: Download OSTree repo artifact
+        uses: actions/download-artifact@v4.1.3
+        with:
+          name: flatpak-ostree-repo
+          path: flatpak-ostree-repo/
+
+      - name: Checkout existing flatpak-repo branch
+        uses: actions/checkout@v4.1.7
+        with:
+          ref: flatpak-repo
+          path: existing-flatpak-repo
+
+      - name: Merge nightly build into flatpak-repo
+        run: |
+          cd existing-flatpak-repo
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          # Copy the new OSTree build into the repo
+          rsync -a ../flatpak-ostree-repo/ ./
+          # Regenerate summary with all branches
+          flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" .
+          # Generate .flatpakrepo with embedded GPG key so users can do remote-add without errors
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
+          cat > kst4contest.flatpakrepo << EOF
+          [Flatpak Repo]
+          Title=KST4Contest
+          Url=${PAGES_URL}
+          Homepage=https://github.com/${GITHUB_REPOSITORY}
+          Comment=KST4Contest – ON4KST Chat Client for VHF/UHF contests
+          GPGKey=${GPG_KEY_B64}
+          EOF
+          # Stage all changes (new/updated refs, summary, objects in OSTree)
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Nightly flatpak: $(echo ${{ github.sha }} | cut -c1-7)"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:flatpak-repo
+          fi
 
   build-macos-dmg:
     name: Build macOS DMG (${{ matrix.os }})
