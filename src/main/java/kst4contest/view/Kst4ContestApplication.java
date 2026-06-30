@@ -67,11 +67,16 @@ import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
+import kst4contest.controller.WorkedGrossFieldCache;
 
 
 public class Kst4ContestApplication extends Application implements StatusUpdateListener  {
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
 	// Null means Auto: use the lowest session band, or category fallback.
+
+	// Enables optional color highlighting of the QRA/grid cell.
+// The status text itself remains visible independently of this flag.
+	private boolean gridSquareHighlightEnabled = false;
 
 	private PauseTransition userListRefreshCoalescer;
 	private String pendingUserListUpdateReason = "";
@@ -1260,6 +1265,75 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
+		/**
+		 * Optionally highlights already worked grid squares in the QRA column.
+		 *
+		 * <p>The default table design is preserved as much as possible:
+		 * <ul>
+		 *     <li>If grid coloring is disabled, the cell uses the standard JavaFX style.</li>
+		 *     <li>If the grid is not worked yet, the cell also uses the standard style.</li>
+		 *     <li>Only already worked grids get a subtle background color.</li>
+		 *     <li>Selected rows keep the normal table selection style.</li>
+		 * </ul>
+		 *
+		 * <p>No font weight is changed here. The compact worked/grid status such as
+		 * {@code xo} is emphasized only in the worked-any column.</p>
+		 */
+		qraCol.setCellFactory(column -> new TableCell<ChatMember, String>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+
+				if (empty || item == null) {
+					setText(null);
+					setTooltip(null);
+					setStyle("");
+					return;
+				}
+
+				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
+				boolean gridWorked = member != null
+						&& chatcontroller != null
+						&& chatcontroller.isGridSquareWorkedAny(member);
+
+				String grossField = WorkedGrossFieldCache.extractGrossField(item);
+
+				setText(item);
+				setTooltip(new Tooltip(
+						"Grid status: "
+								+ (grossField == null ? "unknown" : grossField)
+								+ "\nGrid worked any: "
+								+ (gridWorked ? "yes" : "no")
+				));
+
+				/*
+				 * Important:
+				 * Do not style the cell unless the Grid color button is active AND the
+				 * grid has already been worked. This keeps normal/new grids visually
+				 * identical to the standard table design.
+				 */
+				if (!gridSquareHighlightEnabled || !gridWorked) {
+					setStyle("");
+					return;
+				}
+
+				/*
+				 * Preserve normal selection appearance. A selected row should look like a
+				 * selected row, not like a custom-colored QRA cell.
+				 */
+				if (isSelected() || (getTableRow() != null && getTableRow().isSelected())) {
+					setStyle("");
+					return;
+				}
+
+				/*
+				 * Already worked grid:
+				 * Use a subtle background derived from the current theme. No bold text.
+				 */
+				setStyle("-fx-background-color: derive(-fx-control-inner-background, -18%);");
+			}
+		});
+
 		TableColumn<ChatMember, String> qrBCol = new TableColumn<ChatMember, String>("QRB");
 		qrBCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
@@ -1484,18 +1558,59 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					@Override
 					public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-						SimpleStringProperty wkd = new SimpleStringProperty();
-
-						if (cellDataFeatures.getValue().isWorked()) {
-							wkd.setValue("X");
-						} else {
-							wkd.setValue("");
-						}
-
-						return wkd;
+						return new SimpleStringProperty(formatWorkedAnyGridStatus(cellDataFeatures.getValue()));
 					}
 				});
 		wkdAny_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(14));
+
+		/**
+		 * Shows the compact worked/grid status and explains it by tooltip.
+		 */
+		wkdAny_subcol.setCellFactory(column -> new TableCell<ChatMember, String>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+
+				if (empty) {
+					setText(null);
+					setTooltip(null);
+					setStyle("");
+					return;
+				}
+
+				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
+
+				setText(item);
+				setTooltip(new Tooltip(buildWorkedAnyGridStatusTooltip(member)));
+				setAlignment(Pos.CENTER);
+				setStyle("-fx-font-weight: bold;");
+			}
+		});
+
+		/**
+		 * Shows the compact worked/grid status and explains it by tooltip.
+		 */
+		wkdAny_subcol.setCellFactory(column -> new TableCell<ChatMember, String>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+
+				if (empty) {
+					setText(null);
+					setTooltip(null);
+					setStyle("");
+					return;
+				}
+
+				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
+
+				setText(item);
+				setTooltip(new Tooltip(buildWorkedAnyGridStatusTooltip(member)));
+				setAlignment(Pos.CENTER);
+				setStyle("-fx-font-weight: bold;");
+			}
+		});
+
 
 		TableColumn<ChatMember, String> vhfCol_subcol = new TableColumn<ChatMember, String>("144");
 		vhfCol_subcol
@@ -5487,29 +5602,79 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					ChatMessage sendMe = new ChatMessage();
 
-					/**
-					 * testing bugfix
+					/*
+					 * Resolve the selected station safely.
+					 *
+					 * Normal case:
+					 * - selectedCallSignInfoStageChatMember is set by clicking/selecting a station.
+					 *
+					 * Fallbacks:
+					 * - current table selection
+					 * - ScoreService selected member
+					 *
+					 * If no station is selected at all, the message is sent to the main category.
 					 */
+					ChatMember effectiveSelectedMember = selectedCallSignInfoStageChatMember;
 
-					ChatCategory sendMeInThisCat;
-					String categoryNumber = selectedCallSignInfoStageChatMember.getChatCategory().getCategoryNumber() +"";
-
-					if (categoryNumber.equals(chatcontroller.getChatCategoryMain().getCategoryNumber() + "")) {
-						sendMeInThisCat = chatcontroller.getChatCategoryMain();
-
-					} else if (categoryNumber.equals(chatcontroller.getChatCategorySecondChat().getCategoryNumber() + "")) {
-						sendMeInThisCat = chatcontroller.getChatCategorySecondChat();
-
-					} else {
-						sendMeInThisCat = chatcontroller.getChatCategoryMain(); //Chatcategory default decision
+					if (effectiveSelectedMember == null
+							&& tbl_chatMember != null
+							&& tbl_chatMember.getSelectionModel() != null) {
+						effectiveSelectedMember = tbl_chatMember.getSelectionModel().getSelectedItem();
 					}
 
-					System.out.println("<<<<<<<<<<<<<<<<<<<<< detected Category for sending message is " + sendMeInThisCat + " // selected member: " + selectedCallSignInfoStageChatMember.getChatCategory() + " evt " + event.isConsumed() );
-					/**
-					 * end testing bugfix
-					 */
+					if (effectiveSelectedMember == null
+							&& chatcontroller != null
+							&& chatcontroller.getScoreService() != null) {
+						effectiveSelectedMember = chatcontroller.getScoreService().getSelectedChatMember();
+					}
 
-					sendMe.setChatCategory(sendMeInThisCat); //new in 1.26, answer in channel of the selected member
+					/*
+					 * Default decision:
+					 * If no station is selected, use the main category.
+					 */
+					ChatCategory sendMeInThisCat = chatcontroller.getChatCategoryMain();
+
+					/*
+					 * If a station is selected and its category matches one of our active chat
+					 * categories, send in that category. This keeps the old behaviour, but avoids
+					 * NullPointerExceptions when no station has been selected yet.
+					 */
+					if (effectiveSelectedMember != null && effectiveSelectedMember.getChatCategory() != null) {
+
+						String categoryNumber = effectiveSelectedMember.getChatCategory().getCategoryNumber() + "";
+
+						if (chatcontroller.getChatCategoryMain() != null
+								&& categoryNumber.equals(chatcontroller.getChatCategoryMain().getCategoryNumber() + "")) {
+
+							sendMeInThisCat = chatcontroller.getChatCategoryMain();
+
+						} else if (chatcontroller.getChatCategorySecondChat() != null
+								&& categoryNumber.equals(chatcontroller.getChatCategorySecondChat().getCategoryNumber() + "")) {
+
+							sendMeInThisCat = chatcontroller.getChatCategorySecondChat();
+
+						} else {
+							sendMeInThisCat = chatcontroller.getChatCategoryMain(); // Chatcategory default decision
+						}
+					}
+
+					String selectedMemberDebugText;
+					if (effectiveSelectedMember == null) {
+						selectedMemberDebugText = "none, using main category";
+					} else {
+						selectedMemberDebugText = effectiveSelectedMember.getCallSignRaw()
+								+ " / "
+								+ effectiveSelectedMember.getChatCategory();
+					}
+
+					System.out.println("<<<<<<<<<<<<<<<<<<<<< detected Category for sending message is "
+							+ sendMeInThisCat
+							+ " // selected member: "
+							+ selectedMemberDebugText
+							+ " evt "
+							+ event.isConsumed());
+
+					sendMe.setChatCategory(sendMeInThisCat); // new in 1.26, answer in channel of the selected member if available
 					sendMe.setMessageText(txt_chatMessageUserInput.getText());
 
 					// If operator sends "/cq CALL ..." => arm pending ping metrics for reply-time / no-reply tracking
@@ -5518,11 +5683,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					sendMe.setMessageDirectedToServer(false);
 
-					chatcontroller.getMessageTXBus().add(sendMe); //move the message to the tx queue
+					chatcontroller.getMessageTXBus().add(sendMe); // move the message to the tx queue
 
 					txt_chatMessageUserInput.clear();
-
-
 				}
 			});
 
@@ -6120,13 +6283,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			chatMemberTableFilterMaxQrbTF.setFocusTraversable(false);
 
 
-			ToggleButton btnTglNewLocator = new ToggleButton("New locator");
+			ToggleButton btnTglNewLocator = new ToggleButton("Only new grids");
 			Predicate<ChatMember> newLocatorPredicate = new Predicate<ChatMember>() {
 				@Override
 				public boolean test(ChatMember chatMember) {
-					return chatcontroller.isNewLocatorOnAnyEnabledBand(chatMember);
+					return chatcontroller.isNewGridSquare(chatMember);
 				}
 			};
+
 			btnTglNewLocator.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent actionEvent) {
@@ -6137,7 +6301,26 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					}
 				}
 			});
-			btnTglNewLocator.setTooltip(new Tooltip("Show only stations whose gross locator is still new on at least one active own band"));
+			btnTglNewLocator.setTooltip(new Tooltip("Show only stations whose 4-character grid square has not been worked on any band yet"));
+
+
+			ToggleButton btnTglGridColor = new ToggleButton("Grid color");
+
+			/**
+			 * Enables optional QRA-cell coloring for grid status.
+			 *
+			 * <p>This does not filter the list. It only colors the locator field:
+			 * worked grid = darker, new grid = brighter.</p>
+			 */
+			btnTglGridColor.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
+				public void handle(ActionEvent actionEvent) {
+					gridSquareHighlightEnabled = btnTglGridColor.isSelected();
+					tbl_chatMember.refresh();
+				}
+			});
+
+			btnTglGridColor.setTooltip(new Tooltip("Color the QRA field by grid status without filtering the station list"));
 
 			ToggleButton btnTglReachableTropo = new ToggleButton("Tropo >=0dB");
 			Predicate<ChatMember> reachableTropoPredicate = new Predicate<ChatMember>() {
@@ -6807,6 +6990,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().addAll(
 					btnTglNewLocator,
+					btnTglGridColor,
 					btnTglReachableTropo,
 					btnTglNewBands,
 					btnTglAsNext5Min
@@ -9426,6 +9610,75 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return sb.toString();
 	}
 
+
+	/**
+	 * Formats the global worked/grid status for the worked-any column.
+	 *
+	 * <p>Status characters follow the user feedback:
+	 * <ul>
+	 *     <li>empty = call not worked, grid not worked</li>
+	 *     <li>x = call worked</li>
+	 *     <li>o = grid worked, call not worked</li>
+	 *     <li>xo = call and grid worked</li>
+	 * </ul>
+	 *
+	 * <p>The call status is based on {@link ChatMember#isWorked()}, i.e. worked-any.
+	 * The grid status is based on the four-character grid square worked on any band.</p>
+	 *
+	 * @param member station row
+	 * @return compact status text
+	 */
+	private String formatWorkedAnyGridStatus(ChatMember member) {
+		if (member == null) {
+			return "";
+		}
+
+		boolean callWorked = member.isWorked();
+		boolean gridWorked = chatcontroller != null && chatcontroller.isGridSquareWorkedAny(member);
+
+		if (callWorked && gridWorked) {
+			return "xo";
+		}
+
+		if (callWorked) {
+			return "x";
+		}
+
+		if (gridWorked) {
+			return "o";
+		}
+
+		return "";
+	}
+
+	/**
+	 * Builds a tooltip for the worked-any/grid-status cell.
+	 *
+	 * @param member station row
+	 * @return tooltip text
+	 */
+	private String buildWorkedAnyGridStatusTooltip(ChatMember member) {
+		if (member == null) {
+			return "empty = call not worked, grid not worked\n"
+					+ "x = call worked\n"
+					+ "o = grid worked\n"
+					+ "xo = call and grid worked";
+		}
+
+		String grossField = WorkedGrossFieldCache.extractGrossField(member.getQra());
+		String gridText = grossField == null ? "unknown grid" : "grid " + grossField;
+
+		return "Worked status:\n"
+				+ "empty = call not worked, grid not worked\n"
+				+ "x = call worked\n"
+				+ "o = grid worked\n"
+				+ "xo = call and grid worked\n\n"
+				+ "This station:\n"
+				+ "Call worked: " + (member.isWorked() ? "yes" : "no") + "\n"
+				+ "Grid worked: " + (chatcontroller != null && chatcontroller.isGridSquareWorkedAny(member) ? "yes" : "no")
+				+ " (" + gridText + ")";
+	}
+
 //	/**
 //	 *
 //	 * resets the style of the not selected direction buttons
@@ -9704,6 +9957,72 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //			return direction;
 //		}
 //	}
+
+
+	/**
+	 * Returns the best currently selected ChatMember for actions that depend on a
+	 * selected station.
+	 *
+	 * <p>The normal source is selectedCallSignInfoStageChatMember. As a fallback,
+	 * the current table selection and the ScoreService selection are checked. If
+	 * nothing is selected yet, null is returned. This is valid and must be handled
+	 * by the caller.</p>
+	 *
+	 * @return selected ChatMember or null if no station is selected
+	 */
+	private ChatMember getEffectiveSelectedChatMember() {
+		if (selectedCallSignInfoStageChatMember != null) {
+			return selectedCallSignInfoStageChatMember;
+		}
+
+		if (tbl_chatMember != null
+				&& tbl_chatMember.getSelectionModel() != null
+				&& tbl_chatMember.getSelectionModel().getSelectedItem() != null) {
+			return tbl_chatMember.getSelectionModel().getSelectedItem();
+		}
+
+		if (chatcontroller != null
+				&& chatcontroller.getScoreService() != null
+				&& chatcontroller.getScoreService().getSelectedChatMember() != null) {
+			return chatcontroller.getScoreService().getSelectedChatMember();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Resolves the chat category for an outgoing operator message.
+	 *
+	 * <p>If a station is selected, the message is sent in the category of that
+	 * station. If no station is selected yet, the message is sent in the main chat
+	 * category. This prevents NullPointerExceptions when the operator writes to the
+	 * chat immediately after joining.</p>
+	 *
+	 * @param selectedMember selected station, may be null
+	 * @return category for the outgoing message, normally main or second category
+	 */
+	private ChatCategory resolveOutgoingChatCategory(ChatMember selectedMember) {
+		ChatCategory mainCategory = chatcontroller.getChatCategoryMain();
+		ChatCategory secondCategory = chatcontroller.getChatCategorySecondChat();
+
+		if (selectedMember == null || selectedMember.getChatCategory() == null) {
+			return mainCategory;
+		}
+
+		String categoryNumber = selectedMember.getChatCategory().getCategoryNumber() + "";
+
+		if (mainCategory != null
+				&& categoryNumber.equals(mainCategory.getCategoryNumber() + "")) {
+			return mainCategory;
+		}
+
+		if (secondCategory != null
+				&& categoryNumber.equals(secondCategory.getCategoryNumber() + "")) {
+			return secondCategory;
+		}
+
+		return mainCategory;
+	}
 
 
 	/**
