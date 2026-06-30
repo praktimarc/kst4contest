@@ -22,11 +22,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install WiX Toolset
         shell: pwsh
@@ -70,11 +70,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
@@ -143,11 +143,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install packaging dependencies
         run: |
@@ -194,11 +194,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install packaging dependencies
         run: |
@@ -245,11 +245,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install packaging dependencies
         run: |
@@ -334,11 +334,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
@@ -453,11 +453,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw

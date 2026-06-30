@@ -34,11 +34,11 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "SHORT_SHA=$shortSha"
           Add-Content -Path $env:GITHUB_ENV -Value "ASSET_BASENAME=praktiKST-$version-$shortSha"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install WiX Toolset
         shell: pwsh
@@ -89,11 +89,11 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
@@ -169,11 +169,11 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install packaging dependencies
         run: |
@@ -227,11 +227,11 @@ jobs:
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install packaging dependencies
         run: |
@@ -287,11 +287,11 @@ jobs:
           echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Install packaging dependencies
         run: |
@@ -385,11 +385,11 @@ jobs:
           echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
@@ -487,11 +487,11 @@ jobs:
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
           echo "ARCH=$ARCH" >> "$GITHUB_ENV"
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
