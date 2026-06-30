@@ -2179,32 +2179,39 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 	/**
-	 * Returns true when the member's gross field is not worked on at least one enabled
-	 * station band. This is the predicate behind the "new locator" filter.
+	 * Returns true when the member's four-character grid square has already been
+	 * worked on any band.
+	 *
+	 * <p>This method intentionally ignores the currently enabled own bands. The grid
+	 * status in the user list is meant to be a simple and robust any-band indicator.</p>
 	 *
 	 * @param member member to inspect
-	 * @return true if the station is still a new locator on any enabled band
+	 * @return true if the gross grid square was worked on any band
 	 */
-	public boolean isNewLocatorOnAnyEnabledBand(ChatMember member) {
+	public boolean isGridSquareWorkedAny(ChatMember member) {
 		if (member == null || member.getQra() == null) {
 			return false;
 		}
 
-		EnumSet<Band> enabledBands = reachabilityService == null
-				? getMyEnabledBandsFromPrefs(chatPreferences)
-				: reachabilityService.getEnabledStationBands();
+		return workedGrossFieldCache.isGrossFieldWorkedAny(member.getQra());
+	}
 
-		if (enabledBands.isEmpty()) {
+	/**
+	 * Returns true when the member's four-character grid square has not been worked
+	 * on any band yet.
+	 *
+	 * <p>This is the predicate behind the optional "Only new grids" filter. It no
+	 * longer depends on active station band settings.</p>
+	 *
+	 * @param member member to inspect
+	 * @return true if the gross grid square is still new
+	 */
+	public boolean isNewGridSquare(ChatMember member) {
+		if (member == null || member.getQra() == null) {
 			return false;
 		}
 
-		for (Band band : enabledBands) {
-			if (!workedGrossFieldCache.isGrossFieldWorked(band, member.getQra())) {
-				return true;
-			}
-		}
-
-		return false;
+		return !workedGrossFieldCache.isGrossFieldWorkedAny(member.getQra());
 	}
 
 	public long getCurrentEpochTime() {

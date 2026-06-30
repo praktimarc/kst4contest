@@ -120,6 +120,31 @@ public final class WorkedGrossFieldCache {
     }
 
     /**
+     * Checks whether a locator gross field has already been worked on any band.
+     *
+     * <p>The UI grid status and the "Only new grids" filter use this any-band logic.
+     * This avoids user errors caused by wrong active-band settings and fits single
+     * band contests such as NAC better.</p>
+     *
+     * @param locatorOrGrossField six-character locator or four-character gross field
+     * @return true if the gross field exists in the cache on any band
+     */
+    public synchronized boolean isGrossFieldWorkedAny(String locatorOrGrossField) {
+        String grossField = extractGrossField(locatorOrGrossField);
+        if (grossField == null) {
+            return false;
+        }
+
+        for (Set<String> workedGrossFields : workedGrossFieldsByBand.values()) {
+            if (workedGrossFields != null && workedGrossFields.contains(grossField)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Tries to normalize a locator. Accepts a plain six-character locator or extracts
      * one from exchange strings such as "001JO41HK".
      *

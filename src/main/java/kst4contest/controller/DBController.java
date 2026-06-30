@@ -682,8 +682,7 @@ public class DBController {
 		String workedBandColumnName = helper_resolveWorkedBandColumnName(chatMemberToStore);
 
 		if (workedBandColumnName == null) {
-			System.out.println("[DBCtrl, Error]: unknown at which band the qso had been!");
-			return false;
+			return helper_updateWorkedAnyOnChatMember(chatMemberToStore);
 		}
 
 //		String updateWorkedSql =
@@ -716,6 +715,47 @@ public class DBController {
 			throw e;
 		}
 	}
+
+	/**
+	 * Updates only the global worked-any flag of a stored chatmember row.
+	 *
+	 * <p>This is used when an external logger confirms that a station was worked,
+	 * but the software cannot reliably map the QSO to one of the persisted band
+	 * columns. The UI status "x" is based on this global worked flag, so this method
+	 * makes no-band or unsupported-band log entries persistent as worked-any.</p>
+	 *
+	 * @param chatMemberToStore chatmember that contains the worked call and optional locator
+	 * @return true if an existing database row was updated
+	 * @throws SQLException if the database write fails
+	 */
+	private synchronized boolean helper_updateWorkedAnyOnChatMember(ChatMember chatMemberToStore) throws SQLException {
+
+		if (chatMemberToStore == null
+				|| chatMemberToStore.getCallSignRaw() == null
+				|| chatMemberToStore.getCallSignRaw().isBlank()) {
+			return false;
+		}
+
+		String updateWorkedAnySql =
+				"UPDATE ChatMember SET worked = 1, "
+						+ "qra = CASE WHEN ? IS NOT NULL AND TRIM(?) <> '' AND LOWER(TRIM(?)) <> 'unknown' THEN ? ELSE qra END, "
+						+ "lastFlagsChangeEpochMs = ? WHERE callsign = ?;";
+
+		try (PreparedStatement preparedStatement = connection.prepareStatement(updateWorkedAnySql)) {
+			String qra = chatMemberToStore.getQra();
+
+			preparedStatement.setString(1, qra);
+			preparedStatement.setString(2, qra);
+			preparedStatement.setString(3, qra);
+			preparedStatement.setString(4, qra);
+			preparedStatement.setLong(5, System.currentTimeMillis());
+			preparedStatement.setString(6, chatMemberToStore.getCallSignRaw());
+
+			int affectedRows = preparedStatement.executeUpdate();
+			return affectedRows > 0;
+		}
+	}
+
 
 	/**
 	 * Updates all not-QRV flags for a chatmember row. The method uses the normalized
