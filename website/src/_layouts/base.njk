@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title or "KST4Contest" }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="{{ description or 'KST4Contest is a contest-optimized ON4KST chat client for VHF, UHF and SHF ham radio contests.' }}">
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    {{ content | safe }}
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>
