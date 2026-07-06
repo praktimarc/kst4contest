@@ -2,21 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Priority Score for ON4KST Contest Operation</title>
+  <title>{{ feature.title }} | KST4Contest</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="KST4Contest uses priority candidates and scoring to help VHF, UHF and SHF contest operators identify promising stations faster.">
+  <meta name="description" content="{{ feature.summary }}">
 
   <link rel="canonical" href="https://kst4contest.hamradioonline.de/features/priority-score/">
 
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Priority Score for ON4KST Contest Operation">
-  <meta property="og:description" content="KST4Contest uses priority candidates and scoring to help VHF, UHF and SHF contest operators identify promising stations faster.">
+  <meta property="og:title" content="{{ feature.title }} | KST4Contest">
+  <meta property="og:description" content="{{ feature.summary }}">
   <meta property="og:url" content="https://kst4contest.hamradioonline.de/features/priority-score/">
   <meta property="og:site_name" content="KST4Contest">
 
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Priority Score for ON4KST Contest Operation">
-  <meta name="twitter:description" content="KST4Contest uses priority candidates and scoring to help VHF, UHF and SHF contest operators identify promising stations faster.">
+  <meta name="twitter:title" content="{{ feature.title }} | KST4Contest">
+  <meta name="twitter:description" content="{{ feature.summary }}">
 
   <link rel="stylesheet" href="/assets/css/main.css">
 </head>
@@ -37,33 +37,78 @@
   <main>
     
 <section class="hero">
-  <h1>Priority Score for contest-focused ON4KST operation.</h1>
-  <p>
-    KST4Contest helps operators focus on the most promising stations instead of scanning
-    busy chat traffic manually.
-  </p>
+  <p class="eyebrow">Contest Workflow</p>
+  <h1>Priority Score System</h1>
+  <p>Find the most promising stations faster using contest-aware candidate scoring.</p>
 </section>
 
 <section class="section">
   <div class="card">
+    <div class="feature-icon large">🎯</div>
+
     <h2>Why it matters</h2>
+    <p>KST4Contest ranks stations by contest-relevant signals such as activity, direction, sked context, bands, frequencies and operator workflow.</p>
+
+    <h2>Built for contest operation</h2>
     <p>
-      During VHF, UHF and microwave contests, relevant stations can disappear quickly in active
-      ON4KST chat traffic. The priority candidate system helps highlight stations that are likely
-      worth attention based on contest-relevant signals.
+      This feature is designed for real VHF, UHF and SHF contest workflows,
+      where speed, awareness and correct operator decisions matter.
     </p>
 
-    <h2>Contest-oriented signals</h2>
-    <p>
-      Candidate priority can take information such as activity, bands, QTF direction,
-      sked-related messages, known frequencies and workflow context into account.
-    </p>
-
-    <h2>Different from generic chat clients</h2>
-    <p>
-      KST4Contest is not only an ON4KST chat viewer. It is designed to support operator decisions
-      during contest operation.
-    </p>
+    
+      <h2>Related features</h2>
+      <div class="actions">
+        
+          
+            
+          
+            
+              <a class="button secondary" href="/features/airscout/">AirScout Integration</a>
+            
+          
+            
+          
+            
+          
+            
+          
+            
+          
+        
+          
+            
+          
+            
+          
+            
+          
+            
+              <a class="button secondary" href="/features/sked-reminder/">Sked Reminder</a>
+            
+          
+            
+          
+            
+          
+        
+          
+            
+          
+            
+          
+            
+              <a class="button secondary" href="/features/timeline/">Timeline View</a>
+            
+          
+            
+          
+            
+          
+            
+          
+        
+      </div>
+    
   </div>
 </section>
   </main>

@@ -16,18 +16,6 @@
     <loc>https://kst4contest.hamradioonline.de/features/</loc>
   </url>
   <url>
-    <loc>https://kst4contest.hamradioonline.de/features/priority-score/</loc>
-  </url>
-  <url>
-    <loc>https://kst4contest.hamradioonline.de/features/airscout/</loc>
-  </url>
-  <url>
-    <loc>https://kst4contest.hamradioonline.de/features/sked-reminder/</loc>
-  </url>
-  <url>
-    <loc>https://kst4contest.hamradioonline.de/features/log-sync/</loc>
-  </url>
-  <url>
     <loc>https://kst4contest.hamradioonline.de/screenshots/</loc>
   </url>
   <url>
@@ -41,5 +29,8 @@
   </url>
   <url>
     <loc>https://kst4contest.hamradioonline.de/manual/de/airscout-integration/</loc>
+  </url>
+  <url>
+    <loc>https://kst4contest.hamradioonline.de/features/priority-score/</loc>
   </url>
 </urlset>

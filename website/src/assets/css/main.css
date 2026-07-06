@@ -148,3 +148,20 @@ nav a:hover {
     padding: 10px;
     text-align: left;
 }
+
+.eyebrow {
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.feature-icon {
+    font-size: 2rem;
+    margin-bottom: 14px;
+}
+
+.feature-icon.large {
+    font-size: 3.5rem;
+}

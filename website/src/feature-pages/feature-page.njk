@@ -1,0 +1,44 @@
+---
+pagination:
+  data: features
+  size: 1
+  alias: feature
+permalink: "/features/{{ feature.slug }}/"
+layout: base.njk
+title: "{{ feature.title }} | KST4Contest"
+description: "{{ feature.summary }}"
+---
+
+<section class="hero">
+  <p class="eyebrow">{{ feature.category }}</p>
+  <h1>{{ feature.title }}</h1>
+  <p>{{ feature.summary }}</p>
+</section>
+
+<section class="section">
+  <div class="card">
+    <div class="feature-icon large">{{ feature.icon }}</div>
+
+    <h2>Why it matters</h2>
+    <p>{{ feature.description }}</p>
+
+    <h2>Built for contest operation</h2>
+    <p>
+      This feature is designed for real VHF, UHF and SHF contest workflows,
+      where speed, awareness and correct operator decisions matter.
+    </p>
+
+    {% if feature.related and feature.related.length %}
+      <h2>Related features</h2>
+      <div class="actions">
+        {% for slug in feature.related %}
+          {% for related in features %}
+            {% if related.slug == slug %}
+              <a class="button secondary" href="/features/{{ related.slug }}/">{{ related.title }}</a>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
