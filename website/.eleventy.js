@@ -27,6 +27,11 @@ function rewriteManualLinks(content, lang) {
 }
 
 module.exports = function (eleventyConfig) {
+
+    eleventyConfig.addFilter("whereTag", function(collection, tag) {
+        return collection.filter(item => item.data.tags && item.data.tags.includes(tag));
+    });
+
     eleventyConfig.addPassthroughCopy({ "src/assets": "assets" });
 
     const md = markdownIt({

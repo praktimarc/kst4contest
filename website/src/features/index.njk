@@ -15,13 +15,13 @@ description: Contest-optimized ON4KST features for VHF, UHF and SHF operation.
 
 <section class="section">
   <div class="grid">
-    {% for feature in features %}
+    {% for feature in collections.features %}
       <article class="card feature-card">
-        <div class="feature-icon">{{ feature.icon }}</div>
-        <p class="eyebrow">{{ feature.category }}</p>
-        <h3><a href="/features/{{ feature.slug }}/">{{ feature.title }}</a></h3>
-        <p>{{ feature.summary }}</p>
-        <a href="/features/{{ feature.slug }}/">Learn more →</a>
+        <div class="feature-icon">{{ feature.data.icon }}</div>
+        <p class="eyebrow">{{ feature.data.category }}</p>
+        <h3><a href="{{ feature.url }}">{{ feature.data.title }}</a></h3>
+        <p>{{ feature.data.summary }}</p>
+        <a href="{{ feature.url }}">Learn more →</a>
       </article>
     {% endfor %}
   </div>

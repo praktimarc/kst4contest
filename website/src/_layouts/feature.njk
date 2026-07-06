@@ -1,0 +1,39 @@
+---
+layout: base.njk
+---
+
+<section class="hero">
+  <p class="badge">{{ category }} · since {{ since }}</p>
+  <h1>{{ title }}</h1>
+  <p class="lead">{{ summary }}</p>
+</section>
+
+<section class="section narrow">
+  <article class="card content-card">
+    <div class="feature-icon large">{{ icon }}</div>
+
+    {{ content | safe }}
+
+    {% if tagsList %}
+      <h2>Keywords</h2>
+      <div class="tag-list">
+        {% for tag in tagsList %}
+          <span>{{ tag }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if related %}
+      <h2>Related features</h2>
+      <div class="actions">
+        {% for slug in related %}
+          {% for item in collections.features %}
+            {% if item.fileSlug == slug %}
+              <a class="button secondary" href="{{ item.url }}">{{ item.data.title }}</a>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </article>
+</section>
