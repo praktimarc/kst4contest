@@ -8,6 +8,7 @@ eleventyExcludeFromCollections: true
   {%- if page.url and not page.data.eleventyExcludeFromCollections %}
   <url>
     <loc>https://kst4contest.hamradioonline.de{{ page.url }}</loc>
+    <lastmod>{{ page.date | dateToIso }}</lastmod>
   </url>
   {%- endif %}
 {%- endfor %}

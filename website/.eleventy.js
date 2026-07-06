@@ -28,6 +28,10 @@ function rewriteManualLinks(content, lang) {
 
 module.exports = function (eleventyConfig) {
 
+    eleventyConfig.addFilter("dateToIso", function (dateObj) {
+        return new Date(dateObj).toISOString().split("T")[0];
+    });
+
     eleventyConfig.addFilter("dateToRfc822", function (dateObj) {
         return new Date(dateObj).toUTCString();
     });
