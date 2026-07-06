@@ -64,6 +64,8 @@ import javafx.scene.shape.Polygon;
 import javafx.stage.Screen;
 
 import kst4contest.utils.ApplicationFileUtils;
+import kst4contest.view.map.MapCallsignRawSnapshot;
+import kst4contest.view.map.MapCallsignRawSnapshotBuilder;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
@@ -93,6 +95,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private final Button btnSkedWarnIndicator = new Button("SKED");
 	private final Tooltip tipSkedWarnIndicator = new Tooltip();
 	private Timeline skedWarnBlinkTimeline;
+
+	private final MapCallsignRawSnapshotBuilder mainViewBandMarkerSnapshotBuilder = new MapCallsignRawSnapshotBuilder();
 
 
 	// Timeline: show at most N priority markers per minute bucket (minute 0/1 often has many planes)
@@ -382,6 +386,45 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		}
 
 		return sb.toString();
+	}
+
+	private boolean isSelectedBandOfferForMainView(ChatMember chatMember) {
+		if (chatMember == null
+				|| chatcontroller == null
+				|| chatcontroller.getReachabilityService() == null
+				|| chatMember.getCallSignRaw() == null
+				|| chatMember.getCallSignRaw().isBlank()) {
+			return false;
+		}
+
+		EnumSet<Band> enabledBands = chatcontroller.getReachabilityService().getEnabledStationBands();
+		if (enabledBands == null || enabledBands.isEmpty()) {
+			return false;
+		}
+
+		List<ChatMember> variants = new ArrayList<>();
+		synchronized (chatcontroller.getLst_chatMemberList()) {
+			for (ChatMember variant : chatcontroller.getLst_chatMemberList()) {
+				if (variant == null || variant.getCallSignRaw() == null) {
+					continue;
+				}
+				if (variant.getCallSignRaw().equalsIgnoreCase(chatMember.getCallSignRaw())) {
+					variants.add(variant);
+				}
+			}
+		}
+
+		if (variants.isEmpty()) {
+			variants = List.of(chatMember);
+		}
+
+		List<MapCallsignRawSnapshot> snapshots = mainViewBandMarkerSnapshotBuilder.buildSnapshots(
+				variants,
+				null,
+				enabledBands
+		);
+
+		return snapshots.stream().anyMatch(MapCallsignRawSnapshot::offersSelectedBand);
 	}
 
 	private String bandToHumanLabel(kst4contest.model.Band b) {
@@ -1135,14 +1178,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
 				SimpleStringProperty callsgn = new SimpleStringProperty();
 
-				if (cellDataFeatures.getValue().getState() == 1) {
-					callsgn.setValue("(" + cellDataFeatures.getValue().getCallSign() + ")"); //away user
-				} else {
+				ChatMember member = cellDataFeatures.getValue();
+				String baseCallsign;
 
-					callsgn.setValue(cellDataFeatures.getValue().getCallSign());
+				if (member.getState() == 1) {
+					baseCallsign = "(" + member.getCallSign() + ")"; //away user
+				} else {
+					baseCallsign = member.getCallSign();
 				}
 
-//				System.out.println(cellDataFeatures.getValue().getCallSign() + " / " + cellDataFeatures.getValue().getState()+ " <<<<<<<<<<<<<<<<<< state ");
+				if (isSelectedBandOfferForMainView(member)) {
+					baseCallsign += " ★";
+				}
+
+				callsgn.setValue(baseCallsign);
+
+//				System.out.println(member.getCallSign() + " / " + member.getState()+ " <<<<<<<<<<<<<<<<<< state ");
 
 				return callsgn;
 			}
