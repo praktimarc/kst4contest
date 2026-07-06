@@ -37,3 +37,22 @@ layout: base.njk
     {% endif %}
   </article>
 </section>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "{{ title }}",
+  "description": "{{ summary }}",
+  "about": "KST4Contest",
+  "url": "https://kst4contest.hamradioonline.de{{ page.url }}",
+  "author": {
+    "@type": "Person",
+    "name": "Praktimarc"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "KST4Contest"
+  }
+}
+</script>
