@@ -7,6 +7,7 @@ module.exports = [
         format: "ZIP x64",
         icon: "🪟",
         recommended: true,
+        note: "Best choice for most Windows users.",
         url: `${base}/praktiKST-${latestTag}-windows-x64.zip`
     },
     {
@@ -14,6 +15,7 @@ module.exports = [
         format: "AppImage x86_64",
         icon: "🐧",
         recommended: true,
+        note: "Portable Linux build without package installation.",
         url: `${base}/KST4Contest-${latestTag}-linux-x86_64.AppImage`
     },
     {
@@ -21,6 +23,7 @@ module.exports = [
         format: "DEB amd64",
         icon: "📦",
         recommended: false,
+        note: "Native package for Debian and Ubuntu based systems.",
         url: `${base}/KST4Contest-${latestTag}-debian-amd64.deb`
     },
     {
@@ -28,6 +31,7 @@ module.exports = [
         format: "RPM x86_64",
         icon: "📦",
         recommended: false,
+        note: "Native package for Fedora/RPM based systems.",
         url: `${base}/KST4Contest-${latestTag}-fedora-x86_64.rpm`
     },
     {
@@ -35,6 +39,7 @@ module.exports = [
         format: "pkg.tar.zst",
         icon: "📦",
         recommended: false,
+        note: "Package build for Arch Linux users.",
         url: `${base}/KST4Contest-${latestTag}-archlinux-x86_64.pkg.tar.zst`
     },
     {
@@ -42,6 +47,7 @@ module.exports = [
         format: "DMG arm64",
         icon: "🍎",
         recommended: false,
+        note: "For Apple Silicon Macs.",
         url: `${base}/KST4Contest-${latestTag}-macos-arm64.dmg`
     },
     {
@@ -49,6 +55,7 @@ module.exports = [
         format: "DMG x86_64",
         icon: "🍎",
         recommended: false,
+        note: "For Intel-based Macs.",
         url: `${base}/KST4Contest-${latestTag}-macos-x86_64.dmg`
     },
     {
@@ -56,6 +63,7 @@ module.exports = [
         format: "PDF",
         icon: "📘",
         recommended: false,
+        note: "English PDF manual.",
         url: `${base}/KST4Contest-${latestTag}-manual-en.pdf`
     },
     {
@@ -63,6 +71,7 @@ module.exports = [
         format: "PDF",
         icon: "📘",
         recommended: false,
+        note: "German PDF manual.",
         url: `${base}/KST4Contest-${latestTag}-manual-de.pdf`
     }
 ];

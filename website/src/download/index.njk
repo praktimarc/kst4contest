@@ -8,25 +8,51 @@ description: Download KST4Contest releases for Windows, Linux and macOS.
   <p class="badge">Download</p>
   <h1>Get KST4Contest</h1>
   <p class="lead">
-    Official builds are published through GitHub Releases for Windows, Linux and macOS.
+    Choose the package for your operating system. Official builds are published through GitHub Releases.
   </p>
 
   <div class="actions">
-    <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Latest release</a>
+    <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Latest release on GitHub</a>
     <a class="button secondary" href="https://github.com/praktimarc/kst4contest/releases">All releases</a>
   </div>
 </section>
 
 <section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Recommended downloads</p>
+    <h2>Pick your platform</h2>
+  </div>
+
   <div class="grid">
     {% for item in downloads %}
       <article class="card download-card">
         <div class="feature-icon">{{ item.icon }}</div>
-        {% if item.recommended %}<p class="badge">Recommended</p>{% endif %}
+
+        {% if item.recommended %}
+          <p class="badge">Recommended</p>
+        {% endif %}
+
         <h3>{{ item.os }}</h3>
-        <p>{{ item.format }}</p>
-        <a href="{{ item.url }}">Open download →</a>
+        <p><strong>{{ item.format }}</strong></p>
+        <p>{{ item.note }}</p>
+
+        <a class="button secondary" href="{{ item.url }}">Download →</a>
       </article>
     {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="cta-panel">
+    <p class="eyebrow">Not sure?</p>
+    <h2>Which file should I use?</h2>
+    <p>
+      Windows users usually want the ZIP package. Linux users can start with the AppImage,
+      or install a native DEB/RPM package if preferred. The PDF manuals are attached to the same GitHub release.
+    </p>
+    <div class="actions">
+      <a class="button" href="/manual/en/installation/">Installation guide</a>
+      <a class="button secondary" href="/faq/">FAQ</a>
+    </div>
   </div>
 </section>
