@@ -11,9 +11,13 @@ description: English user manual for KST4Contest.
 
 <section class="section">
   <div class="grid">
-    <div class="card"><h3>Installation</h3><p><a href="https://github.com/praktimarc/kst4contest/wiki/en-Installation">Open installation guide</a></p></div>
-    <div class="card"><h3>Configuration</h3><p><a href="https://github.com/praktimarc/kst4contest/wiki/en-Configuration">Open configuration guide</a></p></div>
-    <div class="card"><h3>Features</h3><p><a href="https://github.com/praktimarc/kst4contest/wiki/en-Features">Open feature documentation</a></p></div>
-    <div class="card"><h3>AirScout Integration</h3><p><a href="https://github.com/praktimarc/kst4contest/wiki/en-AirScout-Integration">Open AirScout guide</a></p></div>
+    {% for manual in collections.manualPages %}
+      {% if manual.lang == "en" %}
+        <div class="card">
+          <h3><a href="/manual/en/{{ manual.slug }}/">{{ manual.title }}</a></h3>
+          <p>Open the {{ manual.title }} manual page.</p>
+        </div>
+      {% endif %}
+    {% endfor %}
   </div>
 </section>

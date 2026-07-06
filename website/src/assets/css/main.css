@@ -114,3 +114,37 @@ nav a:hover {
     padding: 40px 7vw;
     color: var(--muted);
 }
+
+.manual-content {
+    max-width: 980px;
+}
+
+.manual-content h1,
+.manual-content h2,
+.manual-content h3 {
+    line-height: 1.2;
+}
+
+.manual-content pre {
+    overflow-x: auto;
+    padding: 16px;
+    border-radius: 14px;
+    background: #020617;
+}
+
+.manual-content code {
+    color: #bae6fd;
+}
+
+.manual-content table {
+    width: 100%;
+    border-collapse: collapse;
+    overflow-x: auto;
+}
+
+.manual-content th,
+.manual-content td {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    padding: 10px;
+    text-align: left;
+}

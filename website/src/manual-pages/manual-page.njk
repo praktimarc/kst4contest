@@ -1,0 +1,18 @@
+---
+pagination:
+  data: collections.manualPages
+  size: 1
+  alias: manual
+permalink: "/manual/{{ manual.lang }}/{{ manual.slug }}/"
+layout: base.njk
+title: "{{ manual.title }} | KST4Contest Manual"
+description: "KST4Contest manual page: {{ manual.title }}"
+---
+
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/{{ manual.lang }}/">← Back to manual overview</a></p>
+    <h1>{{ manual.title }}</h1>
+    {{ manual.content | markdown | safe }}
+  </div>
+</section>
