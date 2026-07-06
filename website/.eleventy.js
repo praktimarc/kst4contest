@@ -28,6 +28,10 @@ function rewriteManualLinks(content, lang) {
 
 module.exports = function (eleventyConfig) {
 
+    eleventyConfig.addFilter("dateToRfc822", function (dateObj) {
+        return new Date(dateObj).toUTCString();
+    });
+
     eleventyConfig.addFilter("readableDate", function (dateObj) {
         return new Intl.DateTimeFormat("en", {
             year: "numeric",

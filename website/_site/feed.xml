@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>KST4Contest News</title>
+    <link>https://kst4contest.hamradioonline.de/</link>
+    <description>News and release updates for KST4Contest.</description>
+    <language>en</language>
+
+    
+    <item>
+      <title>KST4Contest Website Launch</title>
+      <link>https://kst4contest.hamradioonline.de/news/2026-07-website-launch/</link>
+      <guid>https://kst4contest.hamradioonline.de/news/2026-07-website-launch/</guid>
+      <pubDate>Tue, 07 Jul 2026 00:00:00 GMT</pubDate>
+      <description>The new KST4Contest website is being built as a static, SEO-friendly product portal with GitHub-based documentation.</description>
+    </item>
+    
+  </channel>
+</rss>

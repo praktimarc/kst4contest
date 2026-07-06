@@ -1,0 +1,23 @@
+---
+permalink: /feed.xml
+eleventyExcludeFromCollections: true
+---
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>KST4Contest News</title>
+    <link>https://kst4contest.hamradioonline.de/</link>
+    <description>News and release updates for KST4Contest.</description>
+    <language>en</language>
+
+    {% for post in collections.news | reverse %}
+    <item>
+      <title>{{ post.data.title }}</title>
+      <link>https://kst4contest.hamradioonline.de{{ post.url }}</link>
+      <guid>https://kst4contest.hamradioonline.de{{ post.url }}</guid>
+      <pubDate>{{ post.date | dateToRfc822 }}</pubDate>
+      <description>{{ post.data.summary }}</description>
+    </item>
+    {% endfor %}
+  </channel>
+</rss>
