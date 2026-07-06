@@ -525,3 +525,23 @@ a:hover {
         transition: all 180ms ease;
     }
 }
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 2fr repeat(3, 1fr);
+    gap: 24px;
+}
+
+.footer-grid strong {
+    color: white;
+}
+
+.footer-grid p {
+    margin: 8px 0;
+}
+
+@media (max-width: 800px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+    }
+}

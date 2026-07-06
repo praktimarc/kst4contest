@@ -5,5 +5,6 @@ module.exports = [
     { title: "Download", url: "/download/" },
     { title: "Manual", url: "/manual/" },
     { title: "News", url: "/news/" },
+    { title: "About", url: "/about/" },
     { title: "FAQ", url: "/faq/" }
 ];
