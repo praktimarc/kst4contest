@@ -26,12 +26,15 @@ description: KST4Contest is a modern ON4KST chat client built for VHF, UHF and S
       <span></span><span></span><span></span>
       <strong>KST4Contest workflow</strong>
     </div>
+
     <div class="mock-grid">
-      {% for feature in features | slice(0, 6) %}
-        <div class="mini-card">
-          <strong>{{ feature.data.icon }} {{ feature.data.title }}</strong>
-          <small>{{ feature.data.summary }}</small>
-        </div>
+      {% for feature in collections.features %}
+        {% if loop.index <= 6 %}
+          <div class="mini-card">
+            <strong>{{ feature.data.icon }} {{ feature.data.title }}</strong>
+            <small>{{ feature.data.summary }}</small>
+          </div>
+        {% endif %}
       {% endfor %}
     </div>
   </div>
@@ -41,7 +44,9 @@ description: KST4Contest is a modern ON4KST chat client built for VHF, UHF and S
   <div class="section-heading">
     <p class="eyebrow">Powerful features</p>
     <h2>Everything you need for contest success</h2>
-    <p>Every feature is designed to reduce operator workload and improve decision speed during real contest operation.</p>
+    <p>
+      Every feature is designed to reduce operator workload and improve decision speed during real contest operation.
+    </p>
   </div>
 
   <div class="grid">
