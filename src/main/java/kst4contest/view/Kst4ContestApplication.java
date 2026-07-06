@@ -1187,10 +1187,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					baseCallsign = member.getCallSign();
 				}
 
-				if (isSelectedBandOfferForMainView(member)) {
-					baseCallsign += " ★";
-				}
-
 				callsgn.setValue(baseCallsign);
 
 //				System.out.println(member.getCallSign() + " / " + member.getState()+ " <<<<<<<<<<<<<<<<<< state ");
@@ -1609,7 +1605,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					@Override
 					public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-						return new SimpleStringProperty(formatWorkedAnyGridStatus(cellDataFeatures.getValue()));
+						return new SimpleStringProperty(formatWorkedAnyGridStatusForMainView(cellDataFeatures.getValue()));
 					}
 				});
 		wkdAny_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(14));
@@ -9689,6 +9685,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		if (callWorked && gridWorked) {
 			return "xo";
+		}
+
+		private String formatWorkedAnyGridStatusForMainView(ChatMember member) {
+			String baseStatus = formatWorkedAnyGridStatus(member);
+			if (member != null && !member.isWorked() && isSelectedBandOfferForMainView(member)) {
+				return baseStatus + " ★";
+			}
+			return baseStatus;
 		}
 
 		if (callWorked) {
