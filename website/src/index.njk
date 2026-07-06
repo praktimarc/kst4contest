@@ -28,7 +28,7 @@ description: KST4Contest is a modern ON4KST chat client built for VHF, UHF and S
     </div>
 
     <div class="mock-grid">
-      {% for feature in collections.features %}
+      {% for feature in collections.sortedFeatures %}
         {% if loop.index <= 6 %}
           <div class="mini-card">
             <strong>{{ feature.data.icon }} {{ feature.data.title }}</strong>

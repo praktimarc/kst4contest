@@ -28,6 +28,20 @@ function rewriteManualLinks(content, lang) {
 
 module.exports = function (eleventyConfig) {
 
+    eleventyConfig.addCollection("sortedFeatures", function (collectionApi) {
+        return collectionApi.getFilteredByTag("features").sort((a, b) => {
+            return (a.data.order || 999) - (b.data.order || 999);
+        });
+    });
+
+    eleventyConfig.addCollection("featuredFeatures", function (collectionApi) {
+        return collectionApi.getFilteredByTag("features")
+            .filter(item => item.data.featured)
+            .sort((a, b) => {
+                return (a.data.order || 999) - (b.data.order || 999);
+            });
+    });
+
     eleventyConfig.addFilter("whereTag", function(collection, tag) {
         return collection.filter(item => item.data.tags && item.data.tags.includes(tag));
     });

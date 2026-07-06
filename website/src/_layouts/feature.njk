@@ -27,7 +27,7 @@ layout: base.njk
       <h2>Related features</h2>
       <div class="actions">
         {% for slug in related %}
-          {% for item in collections.features %}
+          {% for item in collections.sortedFeatures %}
             {% if item.fileSlug == slug %}
               <a class="button secondary" href="{{ item.url }}">{{ item.data.title }}</a>
             {% endif %}
