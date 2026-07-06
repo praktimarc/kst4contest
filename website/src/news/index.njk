@@ -2,21 +2,26 @@
 layout: base.njk
 title: KST4Contest News
 description: News, release updates and development notes for KST4Contest.
+eleventyExcludeFromCollections: true
 ---
 
 <section class="hero">
-  <h1>News</h1>
-  <p>
-    Release notes, development updates and contest workflow improvements.
+  <p class="badge">News</p>
+  <h1>Development updates and release notes.</h1>
+  <p class="lead">
+    Updates about KST4Contest releases, website improvements and contest workflow development.
   </p>
 </section>
 
 <section class="section">
-  <div class="card">
-    <h2>Website launch</h2>
-    <p>
-      The new KST4Contest website is being built as a static, SEO-friendly product site
-      with GitHub-based documentation and automated deployment.
-    </p>
+  <div class="grid">
+    {% for post in collections.news | reverse %}
+      <article class="card">
+        <p class="eyebrow">{{ post.date | readableDate }}</p>
+        <h3><a href="{{ post.url }}">{{ post.data.title }}</a></h3>
+        <p>{{ post.data.summary }}</p>
+        <a href="{{ post.url }}">Read more →</a>
+      </article>
+    {% endfor %}
   </div>
 </section>

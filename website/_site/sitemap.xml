@@ -19,9 +19,6 @@
     <loc>https://kst4contest.hamradioonline.de/screenshots/</loc>
   </url>
   <url>
-    <loc>https://kst4contest.hamradioonline.de/news/</loc>
-  </url>
-  <url>
     <loc>https://kst4contest.hamradioonline.de/faq/</loc>
   </url>
   <url>
@@ -53,5 +50,8 @@
   </url>
   <url>
     <loc>https://kst4contest.hamradioonline.de/features/macros/</loc>
+  </url>
+  <url>
+    <loc>https://kst4contest.hamradioonline.de/news/2026-07-website-launch/</loc>
   </url>
 </urlset>

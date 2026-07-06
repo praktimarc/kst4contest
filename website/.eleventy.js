@@ -28,6 +28,14 @@ function rewriteManualLinks(content, lang) {
 
 module.exports = function (eleventyConfig) {
 
+    eleventyConfig.addFilter("readableDate", function (dateObj) {
+        return new Intl.DateTimeFormat("en", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        }).format(dateObj);
+    });
+
     eleventyConfig.addCollection("sortedFeatures", function (collectionApi) {
         return collectionApi.getFilteredByTag("features").sort((a, b) => {
             return (a.data.order || 999) - (b.data.order || 999);

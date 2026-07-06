@@ -1,0 +1,15 @@
+---
+layout: base.njk
+---
+
+<section class="hero">
+  <p class="badge">News · {{ date | readableDate }}</p>
+  <h1>{{ title }}</h1>
+  <p class="lead">{{ summary }}</p>
+</section>
+
+<section class="section narrow">
+  <article class="card content-card">
+    {{ content | safe }}
+  </article>
+</section>
