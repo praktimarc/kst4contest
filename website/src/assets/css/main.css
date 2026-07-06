@@ -48,7 +48,11 @@ body {
             linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
     background-size: 54px 54px;
-    mask-image: radial-gradient(circle at center, black, transparent 72%);
+    -webkit-mask-image:
+            radial-gradient(circle at center, black, transparent 72%);
+
+    mask-image:
+            radial-gradient(circle at center, black, transparent 72%);
 }
 
 a {
@@ -70,6 +74,7 @@ a:hover {
     align-items: center;
     padding: 18px 6vw;
     background: rgba(5, 8, 22, 0.76);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--border);
 }
@@ -158,6 +163,20 @@ a:hover {
     color: var(--muted);
     font-size: 1.18rem;
     max-width: 850px;
+}
+.hero::before {
+    content:"";
+    position:absolute;
+    inset:-200px;
+
+    background:
+            radial-gradient(circle,
+            rgba(56,189,248,.18),
+            transparent 65%);
+
+    filter:blur(120px);
+
+    pointer-events:none;
 }
 
 .badge,
