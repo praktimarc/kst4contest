@@ -5,6 +5,19 @@
   <title>{{ title or "KST4Contest" }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="{{ description or 'KST4Contest is a contest-optimized ON4KST chat client for VHF, UHF and SHF ham radio contests.' }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de{{ page.url }}">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ title or 'KST4Contest' }}">
+  <meta property="og:description" content="{{ description or 'Contest-optimized ON4KST chat client for VHF, UHF and SHF ham radio contests.' }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de{{ page.url }}">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ title or 'KST4Contest' }}">
+  <meta name="twitter:description" content="{{ description or 'Contest-optimized ON4KST chat client for VHF, UHF and SHF ham radio contests.' }}">
+
   <link rel="stylesheet" href="/assets/css/main.css">
 </head>
 <body>
