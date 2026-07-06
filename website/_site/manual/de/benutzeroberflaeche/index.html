@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ manual.title }} | KST4Contest Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de/manual/de/benutzeroberflaeche/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta property="og:description" content="KST4Contest manual page: {{ manual.title }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de/manual/de/benutzeroberflaeche/">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+      <a href="/faq/">FAQ</a>
+    </nav>
+  </header>
+
+  <main>
+    
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/de/">← Back to manual overview</a></p>
+    <h1>Benutzeroberflaeche</h1>
+    <h1 id="benutzeroberfl%C3%A4che" tabindex="-1"><a class="header-anchor" href="#benutzeroberfl%C3%A4che">Benutzeroberfläche</a></h1>
+<blockquote>
+<p>🇬🇧 <a href="en-User-Interface">English version</a> | 🇩🇪 Du liest gerade die deutsche Version</p>
+</blockquote>
+<h2 id="verbinden-mit-dem-chat" tabindex="-1"><a class="header-anchor" href="#verbinden-mit-dem-chat">Verbinden mit dem Chat</a></h2>
+<ol>
+<li>Im Einstellungsfenster eine <strong>Chat-Kategorie</strong> auswählen (z. B. 144 MHz VHF, 432 MHz UHF, …).</li>
+<li><strong>Connect</strong>-Button klicken.</li>
+<li>Warten bis die Verbindung aufgebaut ist.</li>
+</ol>
+<blockquote>
+<p>Trennen und Neu-Verbinden ist nur über das Einstellungsfenster möglich. Es empfiehlt sich daher, das Einstellungsfenster geöffnet zu lassen.</p>
+</blockquote>
+<hr>
+<h2 id="hauptfenster-%C3%BCberblick" tabindex="-1"><a class="header-anchor" href="#hauptfenster-%C3%BCberblick">Hauptfenster-Überblick</a></h2>
+<p>Das Hauptfenster besteht aus mehreren Bereichen:</p>
+<h3 id="pm-fenster-(oben-links)" tabindex="-1"><a class="header-anchor" href="#pm-fenster-(oben-links)">PM-Fenster (oben links)</a></h3>
+<p>Zeigt alle empfangenen <strong>Privatnachrichten</strong> sowie abgefangene öffentliche Nachrichten, die das eigene Rufzeichen enthalten. Neue Nachrichten erscheinen in <strong>Rot</strong> und faden alle 30 Sekunden über Gelb bis Weiß ab.</p>
+<h3 id="benutzerliste-(chat-members)" tabindex="-1"><a class="header-anchor" href="#benutzerliste-(chat-members)">Benutzerliste (Chat Members)</a></h3>
+<p>Die zentrale Tabelle aller aktuell aktiven Chat-Nutzer. Spalten (je nach Konfiguration):</p>
+<table>
+<thead>
+<tr>
+<th>Spalte</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Call</td>
+<td>Rufzeichen der Station</td>
+</tr>
+<tr>
+<td>Name</td>
+<td>Name aus dem Chat-Namenfeld</td>
+</tr>
+<tr>
+<td>Loc</td>
+<td>Maidenhead-Locator</td>
+</tr>
+<tr>
+<td>QRB</td>
+<td>Entfernung in km</td>
+</tr>
+<tr>
+<td>QTF</td>
+<td>Richtung in Grad</td>
+</tr>
+<tr>
+<td>QRG</td>
+<td>Automatisch erkannte Frequenz</td>
+</tr>
+<tr>
+<td>AP</td>
+<td>AirScout-Flugzeugdaten (wenn aktiv)</td>
+</tr>
+<tr>
+<td>Band-Farben</td>
+<td>Worked/NOT-QRV-Status pro Band</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Sortierung</strong>: Klick auf Spaltenköpfe. QRB-Sortierung arbeitet numerisch (ab v1.22 korrigiert).</p>
+<h3 id="sendfeld" tabindex="-1"><a class="header-anchor" href="#sendfeld">Sendfeld</a></h3>
+<p>Texteingabe für ausgehende Nachrichten. Nach Klick auf ein Rufzeichen in der Benutzerliste erhält das Sendfeld automatisch den Fokus – sofort tippen ohne Doppelklick (ab v1.22).</p>
+<h3 id="myqrg-feld" tabindex="-1"><a class="header-anchor" href="#myqrg-feld">MYQRG-Feld</a></h3>
+<p>Rechts neben dem Sendbutton. Zeigt die aktuelle eigene QRG an, kann auch manuell eingetragen werden.</p>
+<h3 id="myqtf-feld-(f%C3%BCr-v1.3)" tabindex="-1"><a class="header-anchor" href="#myqtf-feld-(f%C3%BCr-v1.3)">MYQTF-Feld <em>(für v1.3)</em></a></h3>
+<p>Eingabefeld für die aktuelle Antennenrichtung. Wird für die geplante <code>MYQTF</code>-Variable verwendet.</p>
+<hr>
+<h2 id="filter" tabindex="-1"><a class="header-anchor" href="#filter">Filter</a></h2>
+<p>Die Filter-Leiste (ab v1.21 als Flowpane für kleine Bildschirme):</p>
+<ul>
+<li><strong>Show only QTF</strong>: Richtungsfilter aktivieren (Buttons N/NE/E/… oder Grad-Eingabe)</li>
+<li><strong>Show only QRB [km] &lt;=</strong>: Entfernungsfilter aktivieren (Toggle-Button)</li>
+<li><strong>Hide Worked [Band]</strong>: Gearbeitete Stationen pro Band ausblenden (je ein Toggle pro Band)</li>
+<li><strong>Hide NOT-QRV [Band]</strong>: NOT-QRV-markierte Stationen pro Band ausblenden</li>
+</ul>
+<hr>
+<h2 id="stationsinfo-panel-(further-info)" tabindex="-1"><a class="header-anchor" href="#stationsinfo-panel-(further-info)">Stationsinfo-Panel (Further Info)</a></h2>
+<p>Rechts unten: Zeigt alle Nachrichten einer ausgewählten Station (CQ-Nachrichten und PMs in einem Panel). Ein Nachrichtenfilter lässt sich über den Standard-Filter in den Preferences vorbelegen.</p>
+<p>Hier können auch <strong>Sked-Erinnerungen</strong> aktiviert werden.</p>
+<hr>
+<h2 id="priorit%C3%A4tsliste" tabindex="-1"><a class="header-anchor" href="#priorit%C3%A4tsliste">Prioritätsliste</a></h2>
+<p>Zeigt die vom Score-Service berechneten Top-Kandidaten. Aktualisiert sich automatisch im Hintergrund basierend auf Richtung, Entfernung und AP-Verfügbarkeit.</p>
+<hr>
+<h2 id="cluster-%26-qso-der-anderen" tabindex="-1"><a class="header-anchor" href="#cluster-%26-qso-der-anderen">Cluster &amp; QSO der anderen</a></h2>
+<p>Separates Fenster (kann miniaturisiert werden). Zeigt den Kommunikationsfluss zwischen anderen Stationen – interessant in ruhigeren Phasen.</p>
+<hr>
+<h2 id="men%C3%BC" tabindex="-1"><a class="header-anchor" href="#men%C3%BC">Menü</a></h2>
+<h3 id="window" tabindex="-1"><a class="header-anchor" href="#window">Window</a></h3>
+<ul>
+<li><strong>Use Dark Mode</strong> (ab v1.26): Dunkles Farbschema aktivieren/deaktivieren.</li>
+</ul>
+<hr>
+<h2 id="fenstergr%C3%B6%C3%9Fen-und-divider" tabindex="-1"><a class="header-anchor" href="#fenstergr%C3%B6%C3%9Fen-und-divider">Fenstergrößen und Divider</a></h2>
+<p>Ab <strong>v1.21</strong> werden beim Klick auf <strong>„Save Settings&quot;</strong> auch Fenstergrößen und Divider-Positionen aller Panels in der Konfigurationsdatei gespeichert und beim nächsten Start wiederhergestellt.</p>
+<p>Bei Problemen mit der Darstellung: Konfigurationsdatei löschen → KST4Contest erstellt neue Standardwerte.</p>
+<hr>
+<h2 id="tipps-zur-bedienung" tabindex="-1"><a class="header-anchor" href="#tipps-zur-bedienung">Tipps zur Bedienung</a></h2>
+<ul>
+<li><strong>Einstellungsfenster geöffnet lassen</strong>: Schneller Zugriff auf Beacon-Aktivierung/Deaktivierung.</li>
+<li><strong>Rechtsklick in der Benutzerliste</strong>: Öffnet das Snippet-Menü und weitere Aktionen (QRZ.com-Profil, NOT-QRV-Tags setzen).</li>
+<li><strong>Enter aus dem Chat heraus</strong>: Wenn im Sendfeld Text steht, sendet Enter direkt – auch wenn der Fokus woanders liegt.</li>
+<li><strong>Beacon stoppen</strong>: Beim Scannen von Frequenzen den Beacon ausschalten, damit der Chat nicht mit Meldungen überflutet wird.</li>
+</ul>
+
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>

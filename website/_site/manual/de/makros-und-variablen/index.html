@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ manual.title }} | KST4Contest Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de/manual/de/makros-und-variablen/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta property="og:description" content="KST4Contest manual page: {{ manual.title }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de/manual/de/makros-und-variablen/">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+      <a href="/faq/">FAQ</a>
+    </nav>
+  </header>
+
+  <main>
+    
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/de/">← Back to manual overview</a></p>
+    <h1>Makros und Variablen</h1>
+    <h1 id="makros-und-variablen" tabindex="-1"><a class="header-anchor" href="#makros-und-variablen">Makros und Variablen</a></h1>
+<blockquote>
+<p>🇬🇧 <a href="en-Macros-and-Variables">English version</a> | 🇩🇪 Du liest gerade die deutsche Version</p>
+</blockquote>
+<p>KST4Contest bietet ein flexibles System aus Text-Snippets, Shortcuts und eingebauten Variablen, die den Chat-Workflow im Contest erheblich beschleunigen.</p>
+<hr>
+<h2 id="%C3%BCberblick" tabindex="-1"><a class="header-anchor" href="#%C3%BCberblick">Überblick</a></h2>
+<table>
+<thead>
+<tr>
+<th>Typ</th>
+<th>Aufruf</th>
+<th>Zweck</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Shortcuts</strong></td>
+<td>Button in der Toolbar</td>
+<td>Schneller Text-Insert ins Sendfeld</td>
+</tr>
+<tr>
+<td><strong>Snippets</strong></td>
+<td>Rechtsklick / Ctrl+1…0</td>
+<td>Text-Bausteine, optionaler PM-Versand</td>
+</tr>
+<tr>
+<td><strong>Variablen</strong></td>
+<td>In allen Text-Feldern verwendbar</td>
+<td>Dynamische Werte (QRG, Locator, AP-Daten)</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="shortcuts-(schnellzugriff-schaltfl%C3%A4chen)" tabindex="-1"><a class="header-anchor" href="#shortcuts-(schnellzugriff-schaltfl%C3%A4chen)">Shortcuts (Schnellzugriff-Schaltflächen)</a></h2>
+<p>Konfigurierbar in den Preferences → <strong>Shortcut Settings</strong>.</p>
+<ul>
+<li>Jeder konfigurierte Text erzeugt <strong>einen Button</strong> in der Benutzeroberfläche.</li>
+<li>Ein Klick fügt den Text in das <strong>Sendfeld</strong> ein.</li>
+<li><strong>Alle Variablen</strong> können in Shortcuts verwendet werden und werden beim Einfügen sofort aufgelöst.</li>
+<li>Auch längere Texte möglich.</li>
+</ul>
+<p><strong>Tipp</strong>: Häufig verwendete Abkürzungen wie „pse&quot;, „rrr&quot;, „tnx&quot;, „73&quot; als Shortcuts anlegen.</p>
+<hr>
+<h2 id="snippets-(text-bausteine)" tabindex="-1"><a class="header-anchor" href="#snippets-(text-bausteine)">Snippets (Text-Bausteine)</a></h2>
+<p>Konfigurierbar in den Preferences → <strong>Snippet Settings</strong>.</p>
+<h3 id="aufruf" tabindex="-1"><a class="header-anchor" href="#aufruf">Aufruf</a></h3>
+<ul>
+<li><strong>Rechtsklick</strong> auf ein Rufzeichen in der Benutzerliste</li>
+<li><strong>Rechtsklick</strong> in der CQ-Nachrichtentabelle</li>
+<li><strong>Rechtsklick</strong> in der PM-Nachrichtentabelle</li>
+<li><strong>Tastaturkürzel</strong>: <code>Ctrl+1</code> bis <code>Ctrl+0</code> für die ersten 10 Snippets</li>
+</ul>
+<h3 id="verhalten-mit-ausgew%C3%A4hltem-rufzeichen" tabindex="-1"><a class="header-anchor" href="#verhalten-mit-ausgew%C3%A4hltem-rufzeichen">Verhalten mit ausgewähltem Rufzeichen</a></h3>
+<p>Wenn in der Benutzerliste ein Rufzeichen ausgewählt ist, wird der Snippet als <strong>Privatnachricht</strong> adressiert:</p>
+<pre><code>/CQ RUFZEICHEN &lt;Snippet-Text&gt;
+</code></pre>
+<p>Anschließend kann mit <strong>Enter</strong> direkt gesendet werden – auch wenn das Sendfeld nicht den Fokus hat.</p>
+<h3 id="hardware-makro-tastatur" tabindex="-1"><a class="header-anchor" href="#hardware-makro-tastatur">Hardware-Makro-Tastatur</a></h3>
+<p><em>(Idee von IU3OAR, Gianluca Costantino)</em></p>
+<p>Die Tastenkombinationen <code>Ctrl+1</code> bis <code>Ctrl+0</code> können auf einer programmierbaren Makro-Tastatur belegt werden. Ein weiterer Tastendruck (auf eine „Enter&quot;-Taste) sendet den Text sofort. Im Contest-Betrieb spart das erheblich Zeit.</p>
+<h3 id="vordefinierte-standard-snippets" tabindex="-1"><a class="header-anchor" href="#vordefinierte-standard-snippets">Vordefinierte Standard-Snippets</a></h3>
+<p>Beim ersten Start werden einige Snippets vorbelegt, z. B.:</p>
+<ul>
+<li><code>Hi OM, try sked?</code></li>
+<li><code>I am calling cq ur dir, pse lsn to me at MYQRG</code></li>
+<li><code>pse ur qrg?</code></li>
+<li><code>rrr, I move to your qrg nw, pse ant dir me</code></li>
+</ul>
+<p>Diese können in den Preferences angepasst oder gelöscht werden.</p>
+<hr>
+<h2 id="variablen" tabindex="-1"><a class="header-anchor" href="#variablen">Variablen</a></h2>
+<p>Variablen werden in geschriebenen Texten (Snippets, Shortcuts, Beacon, Sendfeld) durch ihre aktuellen Werte ersetzt. Einfach den Variablennamen <strong>großgeschrieben</strong> in den Text einfügen.</p>
+<h3 id="myqrg" tabindex="-1"><a class="header-anchor" href="#myqrg">MYQRG</a></h3>
+<p>Wird durch die aktuelle Transceiverfrequenz ersetzt.</p>
+<ul>
+<li>Quelle: TRX-Sync via UDP vom Logprogramm (wenn aktiviert)</li>
+<li>Fallback: Manuell eingetragener Wert im MYQRG-Textfeld rechts neben dem Sendbutton</li>
+<li>Format: <code>144.388.03</code></li>
+</ul>
+<p><strong>Beispiel</strong>: <code>calling cq at MYQRG</code> → <code>calling cq at 144.388.03</code></p>
+<h3 id="myqrgshort" tabindex="-1"><a class="header-anchor" href="#myqrgshort">MYQRGSHORT</a></h3>
+<p>Wie MYQRG, aber nur die ersten 7 Zeichen.</p>
+<ul>
+<li>Format: <code>144.388</code></li>
+</ul>
+<p><strong>Beispiel</strong>: <code>qrg: MYQRGSHORT</code> → <code>qrg: 144.388</code></p>
+<h3 id="mylocator" tabindex="-1"><a class="header-anchor" href="#mylocator">MYLOCATOR</a></h3>
+<p>Wird durch den eigenen Maidenhead-Locator (6-stellig) ersetzt.</p>
+<ul>
+<li>Format: <code>JO51IJ</code></li>
+</ul>
+<p><strong>Beispiel</strong>: <code>my loc: MYLOCATOR</code> → <code>my loc: JO51IJ</code></p>
+<h3 id="mylocatorshort" tabindex="-1"><a class="header-anchor" href="#mylocatorshort">MYLOCATORSHORT</a></h3>
+<p>Wie MYLOCATOR, aber nur die ersten 4 Zeichen.</p>
+<ul>
+<li>Format: <code>JO51</code></li>
+</ul>
+<p><strong>Beispiel</strong>: <code>loc: MYLOCATORSHORT</code> → <code>loc: JO51</code></p>
+<h3 id="qrzname" tabindex="-1"><a class="header-anchor" href="#qrzname">QRZNAME</a></h3>
+<p>Wird durch den <strong>Namen</strong> der aktuell ausgewählten Station aus dem Chat-Namenfeld ersetzt.</p>
+<p><strong>Beispiel</strong>: <code>Hi QRZNAME, sked?</code> → <code>Hi Gianluca, sked?</code></p>
+<h3 id="firstap" tabindex="-1"><a class="header-anchor" href="#firstap">FIRSTAP</a></h3>
+<p>Wird durch Daten des ersten reflektierbaren Flugzeugs zur ausgewählten Station ersetzt (sofern vorhanden).</p>
+<ul>
+<li>Bedingung: AirScout ist aktiv und ein Flugzeug ist verfügbar.</li>
+<li>Format-Beispiel: <code>a very big AP in 1 min</code></li>
+</ul>
+<p><strong>Beispiel</strong>: <code>AP info: FIRSTAP</code> → <code>AP info: a very big AP in 1 min</code></p>
+<h3 id="secondap" tabindex="-1"><a class="header-anchor" href="#secondap">SECONDAP</a></h3>
+<p>Wie FIRSTAP, aber für das zweite verfügbare Flugzeug.</p>
+<ul>
+<li>Format-Beispiel: <code>Next big AP in 9 min</code></li>
+</ul>
+<p><strong>Beispiel</strong>: <code>also: SECONDAP</code> → <code>also: Next big AP in 9 min</code></p>
+<h3 id="myqtf-(geplant-f%C3%BCr-v1.3)" tabindex="-1"><a class="header-anchor" href="#myqtf-(geplant-f%C3%BCr-v1.3)">MYQTF <em>(geplant für v1.3)</em></a></h3>
+<p>Wird durch die aktuelle Antennenrichtung in Worten ersetzt (z. B. <code>north</code>, <code>north east</code>, <code>east</code>, …).</p>
+<ul>
+<li>Quelle: Winkelwert im MYQTF-Eingabefeld (rechts neben dem MYQRG-Feld)</li>
+</ul>
+<hr>
+<h2 id="variablen-im-beacon" tabindex="-1"><a class="header-anchor" href="#variablen-im-beacon">Variablen im Beacon</a></h2>
+<p>Alle Variablen können auch im <strong>automatischen Beacon</strong> (Intervall-Nachrichten) verwendet werden. Empfohlene Beacon-Konfiguration:</p>
+<pre><code>calling cq at MYQRG, loc MYLOCATOR, GL all!
+</code></pre>
+<p>Da KST4Contest QRG-Daten automatisch aus Chat-Nachrichten ausliest: Wenn andere Stationen ebenfalls KST4Contest nutzen, sehen sie die eigene QRG sofort in der QRG-Spalte der Benutzerliste.</p>
+<hr>
+<h2 id="beispiel-workflow-mit-makros-im-contest" tabindex="-1"><a class="header-anchor" href="#beispiel-workflow-mit-makros-im-contest">Beispiel-Workflow mit Makros im Contest</a></h2>
+<ol>
+<li>Station in der Benutzerliste auswählen → Rufzeichen ist nun vorausgewählt.</li>
+<li><code>Ctrl+1</code> drücken → Snippet „Hi OM, try sked?&quot; wird als PM adressiert.</li>
+<li>Enter drücken → Nachricht wird gesendet.</li>
+<li>Station antwortet mit Frequenz → QRG-Spalte wird automatisch befüllt.</li>
+<li><code>Ctrl+2</code> → Snippet „I am calling cq ur dir, pse lsn to me at 144.388&quot; (MYQRG aufgelöst).</li>
+<li>Enter → Gesendet.</li>
+</ol>
+<p>Ohne manuelle Tipparbeit, ohne Fehler, ohne Unterbrechung des CQ-Rufens.</p>
+
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>

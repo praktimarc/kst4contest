@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ manual.title }} | KST4Contest Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de/manual/de/funktionen/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta property="og:description" content="KST4Contest manual page: {{ manual.title }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de/manual/de/funktionen/">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+      <a href="/faq/">FAQ</a>
+    </nav>
+  </header>
+
+  <main>
+    
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/de/">← Back to manual overview</a></p>
+    <h1>Funktionen</h1>
+    <h1 id="funktionen" tabindex="-1"><a class="header-anchor" href="#funktionen">Funktionen</a></h1>
+<blockquote>
+<p>🇬🇧 <a href="en-Features">English version</a> | 🇩🇪 Du liest gerade die deutsche Version</p>
+</blockquote>
+<p>Übersicht aller Hauptfunktionen von KST4Contest.</p>
+<hr>
+<h2 id="sked-richtungs-hervorhebung" tabindex="-1"><a class="header-anchor" href="#sked-richtungs-hervorhebung">Sked-Richtungs-Hervorhebung</a></h2>
+<p>Eine der Kernfunktionen: Wenn eine Station ein Sked in die <strong>eigene Richtung</strong> sendet, wird sie in der Benutzerliste <strong>grün und fett</strong> hervorgehoben.</p>
+<h3 id="wie-funktioniert-das%3F" tabindex="-1"><a class="header-anchor" href="#wie-funktioniert-das%3F">Wie funktioniert das?</a></h3>
+<p>Die Berechnung basiert auf folgender Logik:</p>
+<ul>
+<li>Wenn Station A eine Sked-Anfrage an Station B sendet, wird angenommen, dass A ihre Antenne auf B ausrichtet.</li>
+<li>Wenn die daraus resultierende Richtung von A zur eigenen Station innerhalb des halben Öffnungswinkels der eigenen Antenne liegt, wird A hervorgehoben.</li>
+</ul>
+<p><strong>Beispiel</strong> (Öffnungswinkel 69°, Halbwinkel 34,5°):</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Ergebnis für DO5AMF in JN49</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sked von F5FEN → DM5M</td>
+<td>✅ Hervorhebung (F5FEN zeigt Richtung DM5M, das liegt nahe JN49)</td>
+</tr>
+<tr>
+<td>Sked von DM5M → F5FEN</td>
+<td>✅ Hervorhebung (DM5M antwortet in Richtung F5FEN)</td>
+</tr>
+<tr>
+<td>F1DBN ist unbeteiligt</td>
+<td>❌ Keine Hervorhebung</td>
+</tr>
+<tr>
+<td>DO5AMF/P (anderer Standort)</td>
+<td>❌ Keine Hervorhebung für Sked-Antwort</td>
+</tr>
+</tbody>
+</table>
+<p>Die Berechnung berücksichtigt keine topografischen Wegberechnungen – das ist eine bewusste Vereinfachung. Möglicherweise wird das in einer späteren Version ergänzt.</p>
+<blockquote>
+<p>Konfiguration: <a href="Konfiguration#antennen-%C3%B6ffnungswinkel-antenna-beamwidth">Konfiguration – Antennen-Öffnungswinkel</a></p>
+</blockquote>
+<hr>
+<h2 id="sked-richtungs-spots-(integrierter-dx-cluster)" tabindex="-1"><a class="header-anchor" href="#sked-richtungs-spots-(integrierter-dx-cluster)">Sked-Richtungs-Spots (Integrierter DX-Cluster)</a></h2>
+<p>Ab <strong>v1.23</strong>: Richtungs-Warnungen werden als DX-Cluster-Spots an das Logprogramm weitergeleitet, wenn eine QRG bekannt ist. Details: <a href="de-DX-Cluster-Server">DX-Cluster-Server</a>.</p>
+<hr>
+<h2 id="qrg-erkennung-(qrg-reading)" tabindex="-1"><a class="header-anchor" href="#qrg-erkennung-(qrg-reading)">QRG-Erkennung (QRG Reading)</a></h2>
+<p>KST4Contest verarbeitet jede Chat-Nachricht und extrahiert automatisch <strong>Frequenzangaben</strong>. Diese werden in der Benutzerliste in der <strong>QRG-Spalte</strong> angezeigt.</p>
+<p>Erkannte Formate: <code>144.205</code>, <code>432.088</code>, <code>.205</code> (mit konfigurierter Bandannahme), etc.</p>
+<p><strong>Nutzen</strong>: Ohne nachzufragen kann man direkt auf die QRG einer Station schauen und entscheiden, ob eine Verbindung möglich ist.</p>
+<hr>
+<h2 id="worked-markierung" tabindex="-1"><a class="header-anchor" href="#worked-markierung">Worked-Markierung</a></h2>
+<p>Gearbeitete Stationen werden in der Benutzerliste visuell markiert – pro Band. Grundlage ist die <a href="de-Log-Synchronisation">Log-Synchronisation</a> via UDP oder Simplelogfile.</p>
+<p>Vor jedem Contest die Datenbank zurücksetzen: <a href="Konfiguration#worked-station-database-settings">Konfiguration – Worked Station Database Settings</a>.</p>
+<hr>
+<h2 id="not-qrv-tags-(ab-v1.2)" tabindex="-1"><a class="header-anchor" href="#not-qrv-tags-(ab-v1.2)">NOT-QRV-Tags (ab v1.2)</a></h2>
+<p>Wenn eine Station mitteilt, dass sie auf einem bestimmten Band nicht QRV ist, kann dies manuell markiert werden:</p>
+<ol>
+<li>Station in der Benutzerliste auswählen.</li>
+<li>Rechtsklick → NOT-QRV für das entsprechende Band setzen.</li>
+</ol>
+<p>Diese Tags werden in der internen Datenbank gespeichert und bleiben nach einem Neustart von KST4Contest erhalten. Zurücksetzen über die Einstellungen möglich.</p>
+<p><strong>Nutzen</strong>: Verhindert wiederholte Sked-Anfragen auf Bändern, auf denen die Station nicht QRV ist – schont sowohl die eigenen Nerven als auch die der Gegenstation.</p>
+<hr>
+<h2 id="richtungsfilter-(direction-filter)" tabindex="-1"><a class="header-anchor" href="#richtungsfilter-(direction-filter)">Richtungsfilter (Direction Filter)</a></h2>
+<p>Zeigt in der Benutzerliste nur Stationen an, die sich in einer bestimmten Richtung befinden. Aktivierbar über die Buttons N / NE / E / SE / S / SW / W / NW oder durch manuelle Eingabe von Grad.</p>
+<p>Sinnvoll: Während man CQ in eine bestimmte Richtung ruft, nur Stationen in dieser Richtung anzeigen.</p>
+<hr>
+<h2 id="entfernungsfilter-(distance-filter)" tabindex="-1"><a class="header-anchor" href="#entfernungsfilter-(distance-filter)">Entfernungsfilter (Distance Filter)</a></h2>
+<p>Stationen jenseits einer maximalen Entfernung ausblenden. Schaltfläche <strong>„Show only QRB [km] &lt;=&quot;</strong> ist ein Toggle-Button.</p>
+<hr>
+<h2 id="worked--und-not-qrv-filter" tabindex="-1"><a class="header-anchor" href="#worked--und-not-qrv-filter">Worked- und NOT-QRV-Filter</a></h2>
+<p>Toggle-Buttons (einer pro Band) zum Ausblenden bereits gearbeiteter Stationen und/oder NOT-QRV-markierter Stationen. Der Filter wirkt <strong>sofort</strong> ohne manuelles Neu-Aktivieren (ab v1.22 live).</p>
+<hr>
+<h2 id="farbige-pm-zeilen-(ab-v1.25)" tabindex="-1"><a class="header-anchor" href="#farbige-pm-zeilen-(ab-v1.25)">Farbige PM-Zeilen (ab v1.25)</a></h2>
+<p>Neue Privatnachrichten erscheinen in <strong>Rot</strong>. Die Farbe wechselt alle 30 Sekunden über Gelb bis Weiß – wie ein Regenbogen-Fade. So ist auf einen Blick erkennbar, wie aktuell eine Nachricht ist.</p>
+<p><em>(Idee von IU3OAR, Gianluca Costantino – danke!)</em></p>
+<hr>
+<h2 id="pm-abfang-(catching-personal-messages)" tabindex="-1"><a class="header-anchor" href="#pm-abfang-(catching-personal-messages)">PM-Abfang (Catching Personal Messages)</a></h2>
+<p>Manche Nutzer senden Direktnachrichten versehentlich öffentlich, z. B.:</p>
+<pre><code>(DM5M) pse ur qrg
+</code></pre>
+<p>KST4Contest erkennt solche Nachrichten, die das eigene Rufzeichen enthalten, und sortiert sie automatisch in die <strong>Privatnachrichten-Tabelle</strong> ein. So gehen keine Nachrichten verloren.</p>
+<hr>
+<h2 id="multi-channel-login-(ab-v1.26)" tabindex="-1"><a class="header-anchor" href="#multi-channel-login-(ab-v1.26)">Multi-Channel-Login (ab v1.26)</a></h2>
+<p>Gleichzeitiger Login in <strong>zwei Chat-Kategorien</strong> (z. B. 144 MHz und 432 MHz). Beide Chats werden parallel überwacht.</p>
+<hr>
+<h2 id="dark-mode-(ab-v1.26)" tabindex="-1"><a class="header-anchor" href="#dark-mode-(ab-v1.26)">Dark Mode (ab v1.26)</a></h2>
+<p>Aktivierbar über: <strong>Window → Use Dark Mode</strong></p>
+<p>Für individuelle Farbanpassungen: CSS-Datei bearbeiten (Pfad in den Programmunterlagen).</p>
+<hr>
+<h2 id="opposite-station-multi-callsign-login-tagging-(ab-v1.26)" tabindex="-1"><a class="header-anchor" href="#opposite-station-multi-callsign-login-tagging-(ab-v1.26)">Opposite Station Multi-Callsign Login-Tagging (ab v1.26)</a></h2>
+<p>Unterstützung für Stationen, die mit mehreren Rufzeichen gleichzeitig im Chat aktiv sind (z. B. Expedition-Setups).</p>
+<hr>
+<h2 id="qrz.com-und-qrz-cq-profil-buttons-(ab-v1.24)" tabindex="-1"><a class="header-anchor" href="#qrz.com-und-qrz-cq-profil-buttons-(ab-v1.24)"><a href="http://QRZ.com">QRZ.com</a> und QRZ-CQ Profil-Buttons (ab v1.24)</a></h2>
+<p>Für ausgewählte Stationen in der Benutzerliste gibt es direkte Buttons, um das <strong>QRZ.com-Profil</strong> und das <strong>QRZ-CQ-Profil</strong> im Browser zu öffnen.</p>
+<hr>
+<h2 id="sked-erinnerungen-mit-alert-(ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#sked-erinnerungen-mit-alert-(ab-v1.40)">Sked-Erinnerungen mit ALERT (ab v1.40)</a></h2>
+<p>Für jeden Chatmember kann ein Sked-Erinnerungsdienst mit automatischen Nachrichten aktiviert werden. Konfigurierbare Intervallmuster:</p>
+<ul>
+<li><strong>2+1 Minuten</strong>: Nachrichten bei 2 min und 1 min vor dem Sked.</li>
+<li><strong>5+2+1 Minuten</strong>: Nachrichten bei 5, 2 und 1 min vor dem Sked.</li>
+<li><strong>10+5+2+1 Minuten</strong>: Nachrichten bei 10, 5, 2 und 1 min vor dem Sked.</li>
+</ul>
+<p>Zusätzlich zu den Nachrichten an die Gegenstation gibt es eine <strong>akustische und optische Benachrichtigung</strong> für den eigenen Operator, sodass kein Sked vergessen wird.</p>
+<p>Aktivierung: FurtherInfo-Panel der entsprechenden Station.</p>
+<hr>
+<h2 id="qso-sniffer-(ab-v1.31)" tabindex="-1"><a class="header-anchor" href="#qso-sniffer-(ab-v1.31)">QSO-Sniffer (ab v1.31)</a></h2>
+<p>Der QSO-Sniffer überwacht den Chat auf Nachrichten von einer konfigurierbaren Rufzeichen-Liste und leitet diese automatisch in das <strong>PM-Fenster</strong> weiter. So gehen keine relevanten Nachrichten im allgemeinen Chat-Rauschen unter.</p>
+<p>Konfiguration: <a href="de-Konfiguration#sniffer-einstellungen-ab-v131">Konfiguration – Sniffer-Einstellungen</a></p>
+<hr>
+<h2 id="win-test-integration-(ab-v1.31%2C-vollst%C3%A4ndig-ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#win-test-integration-(ab-v1.31%2C-vollst%C3%A4ndig-ab-v1.40)">Win-Test-Integration (ab v1.31, vollständig ab v1.40)</a></h2>
+<p>KST4Contest unterstützt <a href="https://www.win-test.com/">Win-Test</a> vollständig als Logprogramm:</p>
+<ul>
+<li><strong>Log-Synchronisation</strong>: Gearbeitete Stationen werden automatisch aus Win-Test übernommen und in der Benutzerliste markiert.</li>
+<li><strong>Frequenz-Auswertung</strong>: Die aktuelle TRX-Frequenz wird aus Win-Test-UDP-Paketen ausgewertet und befüllt die <code>MYQRG</code>-Variable.</li>
+<li><strong>Sked-Übergabe (SKED Push via UDP)</strong>: Vereinbarte Skeds aus KST4Contest können direkt an Win-Test übertragen werden, sodass das Rufzeichen der Gegenstation im Win-Test-Sked-Fenster erscheint.</li>
+</ul>
+<p>Details zur Konfiguration: <a href="de-Konfiguration#win-test-netzwerk-listener">Konfiguration – Win-Test-Netzwerk-Listener</a></p>
+<hr>
+<h2 id="pstrotator-interface-(ab-v1.31%2C-vollst%C3%A4ndig-ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#pstrotator-interface-(ab-v1.31%2C-vollst%C3%A4ndig-ab-v1.40)">PSTRotator-Interface (ab v1.31, vollständig ab v1.40)</a></h2>
+<p>KST4Contest kann die Antennenrichtung direkt über <strong>PSTRotator</strong> steuern. Wenn in der Benutzerliste eine Station ausgewählt wird, kann der Rotator automatisch auf den QTF zur ausgewählten Station gedreht werden.</p>
+<p>Konfiguration: <a href="de-Konfiguration#pstrotator-einstellungen-ab-v131">Konfiguration – PSTRotator-Einstellungen</a></p>
+<hr>
+<h2 id="band-alert-bei-neuen-qsos-(ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#band-alert-bei-neuen-qsos-(ab-v1.40)">Band-Alert bei neuen QSOs (ab v1.40)</a></h2>
+<p>Wenn eine Station geloggt wird, prüft KST4Contest automatisch, ob diese Station im Chat weitere aktive Bänder angezeigt hat, auf denen man selbst ebenfalls QRV ist. Falls ja, erscheint ein <strong>Hinweis-Alert</strong>, damit keine Multi-Band-Möglichkeit übersehen wird.</p>
+<hr>
+<h2 id="worked-tag-lebensdauer-(ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#worked-tag-lebensdauer-(ab-v1.40)">Worked-Tag-Lebensdauer (ab v1.40)</a></h2>
+<p>Gearbeitete Stationen werden nach <strong>3 Tagen</strong> automatisch aus der Datenbank entfernt. Ein manuelles Zurücksetzen der Worked-Datenbank vor jedem Contest ist damit nicht mehr zwingend notwendig – die Datenbank hält sich selbst aktuell.</p>
+<hr>
+<h2 id="chatmember-score-system-%2F-priorit%C3%A4tsliste-(ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#chatmember-score-system-%2F-priorit%C3%A4tsliste-(ab-v1.40)">Chatmember Score-System / Prioritätsliste (ab v1.40)</a></h2>
+<p>KST4Contest berechnet automatisch eine <strong>Prioritätsbewertung</strong> für jeden aktiven Chatmember. Der Score setzt sich zusammen aus:</p>
+<ul>
+<li>Antennenrichtung der Gegenstation (zeigt sie auf mich?)</li>
+<li>QRB (Entfernung)</li>
+<li>Aktivitätszeit und Nachrichtenanzahl</li>
+<li>Aktive Bänder und Frequenzen</li>
+<li>AP-Verfügbarkeit (AirScout)</li>
+<li>Sked-Richtung</li>
+<li>Sked-Erfolgsrate und Skedfail-Markierungen</li>
+</ul>
+<p>Die Top-Kandidaten werden in einer eigenen Prioritätsliste hervorgehoben und helfen, im Contest-Stress die wichtigsten Stationen nicht zu übersehen.</p>
+<p>Stationen, bei denen ein Sked gescheitert ist, können über den <strong>Skedfail-Button</strong> im FurtherInfo-Panel markiert werden – das senkt ihren Score vorübergehend.</p>
+<hr>
+<h2 id="ap-timeline-(ab-v1.40)" tabindex="-1"><a class="header-anchor" href="#ap-timeline-(ab-v1.40)">AP-Timeline (ab v1.40)</a></h2>
+<p>Eine visuelle Zeitleiste zeigt für jeden möglichen AP-Ankunftsminuten-Slot bis zu 4 hochbewertete Stationen, die per Aircraft Scatter erreichbar wären. Priorisierungskriterien:</p>
+<ul>
+<li>Bevorzugt werden APs mit dem <strong>höchsten Reflexionspotenzial</strong> (nicht unbedingt die schnellste Ankunft).</li>
+<li>Stationen, auf die die eigene Antenne nicht zeigt, werden <strong>transparent</strong> dargestellt.</li>
+</ul>
+<p>So kann der Contest-Operator auf einem Blick sehen, welche Stationen wann und über welche Flugzeuge erreichbar sein werden.</p>
+<hr>
+<h2 id="intervall-beacon" tabindex="-1"><a class="header-anchor" href="#intervall-beacon">Intervall-Beacon</a></h2>
+<p>Automatische CQ-Meldungen im öffentlichen Kanal in konfigurierbarem Intervall. Empfohlene Verwendung mit der Variable <code>MYQRG</code> für aktuelle Frequenzangabe. Details: <a href="Konfiguration#beacon-settings-automatischer-beacon">Konfiguration – Beacon Settings</a>.</p>
+<hr>
+<h2 id="simplelogfile" tabindex="-1"><a class="header-anchor" href="#simplelogfile">Simplelogfile</a></h2>
+<p>Dateibasierte Log-Auswertung per Regex. Details: <a href="Log-Synchronisation#methode-1-universal-file-based-callsign-interpreter-simplelogfile">Log-Synchronisation</a>.</p>
+<hr>
+<h2 id="cluster-%26-qso-der-anderen" tabindex="-1"><a class="header-anchor" href="#cluster-%26-qso-der-anderen">Cluster &amp; QSO der anderen</a></h2>
+<p>Ein separates Fenster zeigt den QSO-Fluss zwischen anderen Stationen. Besonders interessant in ruhigeren Nacht-Stunden während des Contests, wenn weniger Verkehr herrscht.</p>
+<p>Dieses Fenster kann miniaturisiert werden, wenn es nicht benötigt wird. Zukünftig geplant: Filterung auf Stationen im ausgewählten QTF.</p>
+<hr>
+<h2 id="stationskarte-(ab-v1.41)" tabindex="-1"><a class="header-anchor" href="#stationskarte-(ab-v1.41)">Stationskarte (ab v1.41)</a></h2>
+<p>Eine interaktive OpenStreetMap-Karte zeigt die geografische Position aller aktiven Chatmember.</p>
+<p><strong>Funktionen:</strong></p>
+<ul>
+<li>Stationsmarker mit Rufzeichen-Labels, farblich nach Aktivität und Sked-Status</li>
+<li><strong>Antennen-Kegel</strong> für die eigene Station</li>
+<li><strong>Verbindungslinie</strong> zur aktuell ausgewählten Station</li>
+<li><strong>Maidenhead-Raster</strong> (QRA-Locator-Gitter als Overlay)</li>
+<li><strong>Wegprofil-Diagramm</strong>: Geländehöhen-Querschnitt zwischen eigener und ausgewählter Station, inklusive Fresnel-Zonen-Analyse und Horizonterkennung</li>
+<li>Mehrere Terrainquellen: <strong>Copernicus GLO-30</strong> (hochauflösendes DEM), <strong>Open-Meteo API</strong>, synthetischer Fallback und <strong>Offline-DEM-Import</strong> für den Betrieb ohne Internetverbindung</li>
+<li>Aircraft-Scatter-Weganalyse verknüpft mit den Geländedaten</li>
+</ul>
+<p>Die Karte funktioniert in gepackten Umgebungen (AppImage, Flatpak) ohne Zugriff auf externe CDNs: Die Kartenkacheln werden über einen lokalen Tile-Proxy abgerufen, die Leaflet.js-Bibliothek ist in der Anwendung eingebettet.</p>
+<hr>
+<h2 id="optimierte-nachrichtenverarbeitung-%2F-30.000-nachrichten-limit-(ab-v1.41)" tabindex="-1"><a class="header-anchor" href="#optimierte-nachrichtenverarbeitung-%2F-30.000-nachrichten-limit-(ab-v1.41)">Optimierte Nachrichtenverarbeitung / 30.000-Nachrichten-Limit (ab v1.41)</a></h2>
+<p>Die internen Chat- und Nachrichtentabellen sind auf <strong>30.000 Einträge</strong> begrenzt. Ältere Nachrichten werden automatisch verworfen, sobald das Limit erreicht wird. Damit bleiben Speicherverbrauch und Darstellungsperformance auch bei mehrtägigen Contest-Betrieb stabil.</p>
+<hr>
+<h2 id="bildschirmgerechte-fenstergr%C3%B6%C3%9Fe-(ab-v1.41)" tabindex="-1"><a class="header-anchor" href="#bildschirmgerechte-fenstergr%C3%B6%C3%9Fe-(ab-v1.41)">Bildschirmgerechte Fenstergröße (ab v1.41)</a></h2>
+<p>Beim Programmstart berechnet KST4Contest eine bildschirmgerechte Startgröße für das Hauptfenster:</p>
+<ul>
+<li>Die gespeicherte Fenstergröße aus der letzten Session wird verwendet – aber <strong>niemals größer als der aktuelle Bildschirm</strong>.</li>
+<li>Wenn KST4Contest zuletzt auf einem größeren Monitor betrieben wurde, wird das Fenster automatisch auf die aktuelle Anzeige verkleinert.</li>
+<li>Das UI-Layout ist <strong>kompakter und reaktionsfähiger auf kleineren Bildschirmen</strong>.</li>
+</ul>
+<p>Damit werden unbrauchbare, abgeschnittene Fenster beim Wechsel zwischen Geräten oder Monitoren verhindert.</p>
+
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>

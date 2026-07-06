@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ manual.title }} | KST4Contest Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de/manual/de/konfiguration/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta property="og:description" content="KST4Contest manual page: {{ manual.title }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de/manual/de/konfiguration/">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+      <a href="/faq/">FAQ</a>
+    </nav>
+  </header>
+
+  <main>
+    
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/de/">← Back to manual overview</a></p>
+    <h1>Konfiguration</h1>
+    <h1 id="konfiguration" tabindex="-1"><a class="header-anchor" href="#konfiguration">Konfiguration</a></h1>
+<blockquote>
+<p>🇬🇧 <a href="en-Configuration">English version</a> | 🇩🇪 Du liest gerade die deutsche Version</p>
+</blockquote>
+<p>Nach dem ersten Start öffnet sich das <strong>Einstellungsfenster</strong> – dieses ist der zentrale Ausgangspunkt für alle Konfigurationen. Es empfiehlt sich, das Einstellungsfenster während des Betriebs geöffnet zu lassen (z. B. um den Beacon schnell ein- und auszuschalten).</p>
+<blockquote>
+<p><strong>Wichtig</strong>: Nach jeder Änderung unbedingt <strong>„Save Settings&quot;</strong> klicken! Die Einstellungen werden unter Linux in <code>~/.praktikst/preferences.xml</code> und unter Windows in <code>%USERPROFILE%\.praktikst\preferences.xml</code> (bzw. <code>C:\Users\&lt;Benutzername&gt;\.praktikst\preferences.xml</code>) gespeichert. Ab v1.21 werden auch Fenstergrößen und Divider-Positionen beim Speichern gesichert.</p>
+</blockquote>
+<hr>
+<h2 id="station-settings-(stationseinstellungen)" tabindex="-1"><a class="header-anchor" href="#station-settings-(stationseinstellungen)">Station Settings (Stationseinstellungen)</a></h2>
+<p><img src="client_settings_window_station.png" alt="Stationseinstellungen"></p>
+<h3 id="login-und-chat-kategorien" tabindex="-1"><a class="header-anchor" href="#login-und-chat-kategorien">Login und Chat-Kategorien</a></h3>
+<p>Hier werden die Zugangsdaten für den ON4KST-Chat eingetragen (Rufzeichen und Passwort).
+Zudem wird die <strong>primäre Chat-Kategorie</strong> (z. B. IARU Region 1 VHF/Microwave) ausgewählt.</p>
+<p>Mit der Option für einen <strong>zweiten Chat</strong> (Multi-Channel-Login) kann man sich gleichzeitig in eine weitere Kategorie (z. B. UHF/SHF) einloggen. Beide Chats werden dann parallel überwacht. Hier kann optional auch ein abweichender Login-Name für den zweiten Chat vergeben werden (nützlich für Opposite Station Multi-Callsign Logging).</p>
+<h3 id="rufzeichen-und-locator" tabindex="-1"><a class="header-anchor" href="#rufzeichen-und-locator">Rufzeichen und Locator</a></h3>
+<p>Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. <code>JN49IJ</code>) eintragen. Diese Werte werden für Distanz- und Richtungsberechnungen benötigt.</p>
+<h3 id="aktivierte-b%C3%A4nder" tabindex="-1"><a class="header-anchor" href="#aktivierte-b%C3%A4nder">Aktivierte Bänder</a></h3>
+<p>Über die <strong>„my station uses band&quot;</strong>-Checkboxen werden die aktiven Bänder ausgewählt. Nur für ausgewählte Bänder erscheinen Schaltflächen und Tabellenzeilen in der Benutzeroberfläche. Nach Änderungen muss die Software neu gestartet werden.</p>
+<h3 id="antennen-%C3%B6ffnungswinkel-(antenna-beamwidth)" tabindex="-1"><a class="header-anchor" href="#antennen-%C3%B6ffnungswinkel-(antenna-beamwidth)">Antennen-Öffnungswinkel (Antenna Beamwidth)</a></h3>
+<p>Einen realistischen Wert für den Öffnungswinkel der eigenen Antenne eintragen (in Grad). Dieser Wert wird für die <a href="Funktionen#sked-richtungs-hervorhebung">Sked-Richtungs-Hervorhebung</a> verwendet. Ein Testwert von 50° hat sich bewährt; DM5M nutzt Quads mit 69°.</p>
+<blockquote>
+<p><strong>Keinesfalls</strong> Fantasy-Werte eintragen – die Richtungsberechnungen werden sonst unbrauchbar.</p>
+</blockquote>
+<h3 id="standard-maximum-qrb" tabindex="-1"><a class="header-anchor" href="#standard-maximum-qrb">Standard-Maximum-QRB</a></h3>
+<p>Maximale Entfernung (in km), für die Richtungs-Warnungen ausgelöst werden sollen. Realistischer Wert für DM5M: 900 km. Stationen, die weiter entfernt sind, werden für Highlighting-Zwecke ignoriert.</p>
+<hr>
+<h2 id="server-einstellungen-(ab-v1.31)" tabindex="-1"><a class="header-anchor" href="#server-einstellungen-(ab-v1.31)">Server-Einstellungen (ab v1.31)</a></h2>
+<p>Der Chat-Server-DNS und -Port sind in den Preferences konfigurierbar:</p>
+<ul>
+<li><strong>Server-DNS</strong>: Standard <code>www.on4kst.org</code> (ab v1.31 geändert von <code>www.on4kst.info</code>).</li>
+<li><strong>Port</strong>: Standardport des ON4KST-Servers.</li>
+</ul>
+<p>Eine Änderung ist nur notwendig, wenn der Server umzieht oder ein alternativer Endpunkt genutzt wird.</p>
+<hr>
+<h2 id="log-sync-einstellungen" tabindex="-1"><a class="header-anchor" href="#log-sync-einstellungen">Log-Sync-Einstellungen</a></h2>
+<p>Drei Methoden stehen zur Verfügung, um gearbeitete Stationen automatisch zu markieren. Details: <a href="de-Log-Synchronisation">Log-Synchronisation</a>.</p>
+<h3 id="universal-file-based-callsign-interpreter-(simplelogfile)" tabindex="-1"><a class="header-anchor" href="#universal-file-based-callsign-interpreter-(simplelogfile)">Universal File Based Callsign Interpreter (Simplelogfile)</a></h3>
+<p>Interpretiert beliebige Log-Dateien per Regex nach Rufzeichen-Mustern. Keine Bandinformation möglich. Geeignet als Fallback oder für nicht direkt unterstützte Logprogramme.</p>
+<h3 id="netzwerk-listener-f%C3%BCr-qso-udp-broadcast" tabindex="-1"><a class="header-anchor" href="#netzwerk-listener-f%C3%BCr-qso-udp-broadcast">Netzwerk-Listener für QSO-UDP-Broadcast</a></h3>
+<p><strong>Empfohlene Methode.</strong> KST4Contest hört auf UDP-Pakete, die das Logprogramm beim Speichern eines QSOs an die Broadcast-Adresse sendet. Die Stationen werden mit Bandinformation markiert. UDP-Port: Standard <strong>12060</strong>. (Wird z. B. von UCXLog, N1MM+, QARTest, <a href="http://DXLog.net">DXLog.net</a> genutzt).</p>
+<h3 id="win-test-network-listener-(zus%C3%A4tzlicher-udp-listener)" tabindex="-1"><a class="header-anchor" href="#win-test-network-listener-(zus%C3%A4tzlicher-udp-listener)">Win-Test Network-Listener (Zusätzlicher UDP-Listener)</a></h3>
+<p>Dedizierter Netzwerk-Erkenner für Win-Test. KST4Contest empfängt und verarbeitet Win-Test-spezifische UDP-Pakete (inkl. Sked-Übergabe) auf dem dafür konfigurierten Port.</p>
+<hr>
+<h2 id="trx-sync-einstellungen" tabindex="-1"><a class="header-anchor" href="#trx-sync-einstellungen">TRX-Sync-Einstellungen</a></h2>
+<p>Empfängt die aktuelle Frequenz des Transceivers vom Logprogramm via UDP. Ermöglicht die automatische Befüllung der Variable <code>MYQRG</code>. Nützlich für:</p>
+<ul>
+<li>Schnelles Einfügen der eigenen QRG in Chat-Nachrichten.</li>
+<li>Automatische CQ-Baken mit aktueller Frequenz.</li>
+</ul>
+<blockquote>
+<p><strong>Hinweis für Multi-Setup</strong>: Wenn zwei Logprogramme an zwei Computern betrieben werden, aber nur eine KST4Contest-Instanz, darf nur ein Logprogramm die Frequenzpakete senden. KST4Contest kann nicht zwischen den Quellen unterscheiden.</p>
+</blockquote>
+<hr>
+<h2 id="airscout-einstellungen" tabindex="-1"><a class="header-anchor" href="#airscout-einstellungen">AirScout-Einstellungen</a></h2>
+<p>Konfiguration der Schnittstelle zu AirScout für die Flugzeug-Scatter-Erkennung. Details: <a href="de-AirScout-Integration">AirScout-Integration</a>.</p>
+<hr>
+<h2 id="notification-settings-(benachrichtigungen)" tabindex="-1"><a class="header-anchor" href="#notification-settings-(benachrichtigungen)">Notification Settings (Benachrichtigungen)</a></h2>
+<p>Drei Benachrichtigungstypen stehen zur Wahl:</p>
+<ol>
+<li><strong>Einfache Sounds</strong>: TADA-Sound für eingehende Nachrichten, Tick für Sked-Richtungserkennung usw.</li>
+<li><strong>CW-Ansage</strong>: Das Rufzeichen einer Station, die eine Privatnachricht sendet, wird als CW-Signal ausgegeben.</li>
+<li><strong>Phonetische Ansage</strong>: Das Rufzeichen wird phonetisch ausgesprochen.</li>
+</ol>
+<hr>
+<h2 id="shortcut-settings-(schnellzugriff-schaltfl%C3%A4chen)" tabindex="-1"><a class="header-anchor" href="#shortcut-settings-(schnellzugriff-schaltfl%C3%A4chen)">Shortcut Settings (Schnellzugriff-Schaltflächen)</a></h2>
+<p>Konfiguration von Schnellzugriff-Schaltflächen, die direkt im Hauptfenster erscheinen. Ein Klick auf eine Schaltfläche fügt den konfigurierten Text in das Sendfeld ein. Alle <a href="Makros-und-Variablen#variablen">Variablen</a> können verwendet werden.</p>
+<hr>
+<h2 id="snippet-settings-(text-snippets)" tabindex="-1"><a class="header-anchor" href="#snippet-settings-(text-snippets)">Snippet Settings (Text-Snippets)</a></h2>
+<p>Text-Snippets sind über folgende Wege abrufbar:</p>
+<ul>
+<li><strong>Rechtsklick</strong> auf ein Rufzeichen in der Benutzerliste</li>
+<li><strong>Rechtsklick</strong> in der CQ-Nachrichtentabelle</li>
+<li><strong>Rechtsklick</strong> in der PM-Nachrichtentabelle</li>
+<li><strong>Tastenkombinationen</strong>: <code>Ctrl+1</code> bis <code>Ctrl+0</code> für die ersten 10 Snippets</li>
+</ul>
+<p>Wenn in der Benutzerliste ein Rufzeichen ausgewählt ist, wird der Snippet als Direktnachricht adressiert:
+<code>/CQ RUFZEICHEN &lt;Snippet-Text&gt;</code></p>
+<hr>
+<h2 id="beacon-settings-(automatischer-beacon)" tabindex="-1"><a class="header-anchor" href="#beacon-settings-(automatischer-beacon)">Beacon Settings (Automatischer Beacon)</a></h2>
+<p>Konfiguration eines automatischen Intervall-Beacons im öffentlichen Chat-Kanal. Empfohlen: Variable <code>MYQRG</code> im Text verwenden, damit die aktuelle Frequenz immer aktuell ist. Intervall und Text sind frei konfigurierbar.</p>
+<blockquote>
+<p><strong>Tipp</strong>: Beacon beim CQ-Rufen aktivieren und im Einstellungsfenster schnell deaktivieren, wenn kein CQ gerufen wird.</p>
+</blockquote>
+<hr>
+<h2 id="messagehandling-settings-(ab-v1.25)" tabindex="-1"><a class="header-anchor" href="#messagehandling-settings-(ab-v1.25)">Messagehandling Settings (ab v1.25)</a></h2>
+<p>Neuer Einstellungsbereich mit folgenden Optionen:</p>
+<ul>
+<li><strong>Auto-Antwort auf alle eingehenden Nachrichten</strong>: Automatische Antwort auf Privatnachrichten konfigurierbar.</li>
+<li><strong>Auto-Antwort mit eigener CQ-QRG</strong>: Wenn jemand nach der eigenen QRG fragt, antwortet KST4Contest automatisch mit dem Inhalt der <code>MYQRG</code>-Variable.</li>
+<li><strong>Standard-Filter für das Userinfo-Fenster</strong>: Voreingestellter Nachrichtenfilter für das Stationsinfo-Fenster konfigurierbar <em>(für Gianluca :-) )</em>.</li>
+</ul>
+<hr>
+<h2 id="win-test-netzwerk-listener-(ab-v1.31)" tabindex="-1"><a class="header-anchor" href="#win-test-netzwerk-listener-(ab-v1.31)">Win-Test-Netzwerk-Listener (ab v1.31)</a></h2>
+<p>Dedizierter Empfänger für Win-Test-spezifische UDP-Pakete. Ermöglicht:</p>
+<ul>
+<li><strong>Log-Synchronisation</strong>: Gearbeitete Stationen werden aus Win-Test übernommen und in der Benutzerliste markiert.</li>
+<li><strong>Frequenz-Auswertung</strong>: Die aktuelle TRX-Frequenz aus Win-Test befüllt die <code>MYQRG</code>-Variable.</li>
+<li><strong>Sked-Übergabe (SKED Push)</strong>: Skeds aus KST4Contest werden via UDP direkt an Win-Test übergeben. Der UDP-Broadcast-Standardport von Win-Test (9871) wird verwendet.</li>
+</ul>
+<p>Einstellungen:</p>
+<ul>
+<li><strong>Aktivieren/Deaktivieren</strong>: Checkbox in den Preferences (ab v1.40).</li>
+<li><strong>Port</strong>: Konfigurierbarer UDP-Port für den Win-Test-Listener.</li>
+<li><strong>Sked-UDP-Adresse und Port</strong>: Zieladresse und Port für die SKED-Übergabe an Win-Test.</li>
+</ul>
+<blockquote>
+<p><strong>Hinweis</strong>: Der Win-Test-Listener ist ein <strong>zusätzlicher</strong> Listener – der Standard-QSO-UDP-Broadcast-Listener auf Port 12060 bleibt davon unabhängig.</p>
+</blockquote>
+<hr>
+<h2 id="pstrotator-einstellungen-(ab-v1.31)" tabindex="-1"><a class="header-anchor" href="#pstrotator-einstellungen-(ab-v1.31)">PSTRotator-Einstellungen (ab v1.31)</a></h2>
+<p>KST4Contest kann die Antennenrichtung über PSTRotator steuern.</p>
+<p>Einstellungen:</p>
+<ul>
+<li><strong>Aktivieren/Deaktivieren</strong>: Checkbox in den Preferences (ab v1.40).</li>
+<li><strong>IP-Adresse</strong>: IP-Adresse des PSTRotator-Rechners (Standard: <code>127.0.0.1</code> bei Betrieb auf demselben PC).</li>
+<li><strong>Port</strong>: Kommunikationsport von PSTRotator.</li>
+</ul>
+<blockquote>
+<p><strong>Hinweis</strong>: Nach einem Klick auf den Richtungs-Button wartet KST4Contest kurz auf die Rotatorantwort. Bei langsamen Rotoren (z. B. SPID) kann es zu einer kleinen Verzögerung kommen.</p>
+</blockquote>
+<hr>
+<h2 id="sniffer-einstellungen-(ab-v1.31)" tabindex="-1"><a class="header-anchor" href="#sniffer-einstellungen-(ab-v1.31)">Sniffer-Einstellungen (ab v1.31)</a></h2>
+<p>Der QSO-Sniffer filtert Chat-Nachrichten von konfigurierbaren Rufzeichen und leitet sie ins PM-Fenster weiter.</p>
+<p>Einstellungen:</p>
+<ul>
+<li><strong>Rufzeichen-Liste</strong>: Kommagetrennte Liste von Rufzeichen, deren Nachrichten immer in das PM-Fenster weitergeleitet werden sollen.</li>
+</ul>
+<p>Anwendungsfall: Wichtige Stationen (z. B. DX-Peditionen oder feste Verbündete im Contest) im Auge behalten, ohne den Haupt-Chat ständig zu beobachten.</p>
+<hr>
+<h2 id="worked-station-database-settings-(gearbeitete-stationen-datenbank)" tabindex="-1"><a class="header-anchor" href="#worked-station-database-settings-(gearbeitete-stationen-datenbank)">Worked Station Database Settings (Gearbeitete-Stationen-Datenbank)</a></h2>
+<p>Die interne Worked-Datenbank enthält:</p>
+<ul>
+<li>Worked-Status aller Stationen (pro Band)</li>
+<li>NOT-QRV-Tags (seit v1.2)</li>
+</ul>
+<p><strong>Ab v1.40</strong>: Einträge haben eine automatische Lebensdauer von <strong>3 Tagen</strong> – ein manuelles Zurücksetzen vor jedem Contest ist nicht mehr zwingend notwendig. Für ein vollständiges Reset kann trotzdem die Schaltfläche <strong>„Reinitialize&quot;</strong> verwendet werden.</p>
+<hr>
+<h2 id="dark-mode-(ab-v1.26)" tabindex="-1"><a class="header-anchor" href="#dark-mode-(ab-v1.26)">Dark Mode (ab v1.26)</a></h2>
+<p>Umschaltbar über das Menü: <strong>Window → Use Dark Mode</strong>. Die Farben können über CSS individuell angepasst werden.</p>
+<hr>
+<h2 id="einstellungen-speichern" tabindex="-1"><a class="header-anchor" href="#einstellungen-speichern">Einstellungen speichern</a></h2>
+<p>Nach <strong>jeder</strong> Änderung <strong>„Save Settings&quot;</strong> klicken! Ohne Speichern gehen alle Änderungen beim nächsten Start verloren.</p>
+<ul>
+<li>Speicherort: unter Linux <code>~/.praktikst/preferences.xml</code> und unter Windows <code>%USERPROFILE%\.praktikst\preferences.xml</code> (bzw. <code>C:\Users\&lt;Benutzername&gt;\.praktikst\preferences.xml</code>)</li>
+<li>Ab v1.21: Fenstergrößen und Divider-Positionen werden ebenfalls gespeichert.</li>
+<li>Bei Problemen: Konfigurationsdatei löschen → KST4Contest erstellt eine neue mit Standardwerten.</li>
+</ul>
+
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>

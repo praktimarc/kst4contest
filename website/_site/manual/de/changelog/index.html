@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ manual.title }} | KST4Contest Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de/manual/de/changelog/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta property="og:description" content="KST4Contest manual page: {{ manual.title }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de/manual/de/changelog/">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+      <a href="/faq/">FAQ</a>
+    </nav>
+  </header>
+
+  <main>
+    
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/de/">← Back to manual overview</a></p>
+    <h1>Changelog</h1>
+    <h1 id="changelog" tabindex="-1"><a class="header-anchor" href="#changelog">Changelog</a></h1>
+<blockquote>
+<p>🇬🇧 <a href="en-Changelog">English version</a> | 🇩🇪 Du liest gerade die deutsche Version</p>
+</blockquote>
+<p>Versionsverlauf von KST4Contest / PraktiKST.</p>
+<hr>
+<p>letzter Changelog bitte aus GitHub entnehmen. Der bisherige Changelog</p>
+<h2 id="v1.41" tabindex="-1"><a class="header-anchor" href="#v1.41">v1.41</a></h2>
+<p><strong>Stationskarte, Performance, Reaktionsfähiges UI</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li><strong>Stationskarte</strong>: Interaktive OpenStreetMap-Karte zeigt die geografische Position aller aktiven Chatmember. Enthält Stationsmarker, Antennen-Kegel, Verbindungslinie zur ausgewählten Station, Maidenhead-Raster-Overlay und ein Wegprofil-Diagramm mit Geländehöhen-Analyse (Fresnel-Zonen, Horizonterkennung). Geländedaten aus Copernicus GLO-30, Open-Meteo API oder Offline-DEM-Import. Aircraft-Scatter-Weganalyse integriert. Funktioniert in AppImage und Flatpak ohne externe CDN-Verbindung (lokaler Tile-Proxy, eingebettetes Leaflet.js).</li>
+</ul>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li><strong>Nachrichten-Tabellen-Limit auf 30.000 erhöht</strong>: Chat- und Nachrichtentabellen sind auf 30.000 Einträge begrenzt. Ältere Nachrichten werden automatisch verworfen, was die Performance bei mehrtägigem Contest-Betrieb stabil hält.</li>
+<li><strong>Bildschirmgerechte Fenstergröße</strong>: Beim Start wird das Hauptfenster auf den aktuellen Bildschirm angepasst. Wenn KST4Contest zuletzt auf einem größeren Monitor betrieben wurde, wird das Fenster automatisch verkleinert. Das UI-Layout ist kompakter und reaktionsfähiger auf kleineren Bildschirmen.</li>
+</ul>
+<hr>
+<h2 id="v1.40-(2026-02-16)" tabindex="-1"><a class="header-anchor" href="#v1.40-(2026-02-16)">v1.40 (2026-02-16)</a></h2>
+<p><strong>Großes Feature-Release: Score-System, AP-Timeline, Win-Test, PSTRotator</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li><strong>Chatmember Score-System</strong>: Jeder Chatmember erhält automatisch eine Prioritätsbewertung anhand von Antennenrichtung, Aktivitätszeit, Nachrichtenanzahl, aktiven Bändern, Frequenzen, Sked-Richtung und anderen Faktoren. Die Top-Kandidaten werden in einer eigenen Liste hervorgehoben.</li>
+<li><strong>AP-Timeline</strong>: Für jeden möglichen AP-Ankunftsminuten-Slot werden bis zu 4 hochbewertete Stationen angezeigt, die erreichbar wären. Bevorzugt werden APs mit dem höchsten Potenzial, nicht die schnellste Ankunft. Stationen, auf die die eigene Antenne nicht zeigt, werden transparent dargestellt.</li>
+<li><strong>Win-Test-Unterstützung</strong> (ab v1.31 als Beta, jetzt vollständig konfigurierbar): Log-Synchronisation, Frequenzauswertung und <strong>Sked-Übergabe via UDP</strong> vollständig integriert. In den Preferences aktivier-/deaktivierbar.</li>
+<li><strong>PSTRotator-Interface</strong> (ab v1.31 als Beta, jetzt vollständig konfigurierbar): Aktualisierung der Rotatorposition direkt aus KST4Contest. In den Preferences aktivier-/deaktivierbar.</li>
+<li><strong>QSO-Sniffer</strong>: Nachrichten von konfigurierbaren Rufzeichen-Listen werden automatisch in das PM-Fenster weitergeleitet.</li>
+<li><strong>Band-Alert bei gearbeiteten Stationen</strong>: Wenn eine Station geloggt wird, erscheint ein Hinweis, wenn diese Station ein weiteres Band aktiv hat, auf dem man selbst ebenfalls QRV ist.</li>
+<li><strong>Sked-Erinnerungs-ALERT</strong>: Pro Chatmember kann ein Sked-Alarm mit automatischen Nachrichten in konfigurierbaren Intervallen (2+1 / 5+2+1 / 10+5+2+1 Minuten vor dem Sked) eingerichtet werden, plus akustische und optische Benachrichtigung.</li>
+<li><strong>Chat-Historie beim Start laden</strong>: Beim Verbindungsaufbau wird die Serverhistorie geladen, um aktive Chatmember und letzte Nachrichten sofort sichtbar zu machen.</li>
+<li><strong>Skedfail-Button</strong>: Im FurtherInfo-Panel kann ein Sked-Misserfolg für einen Chatmember markiert werden, was dessen Score senkt.</li>
+</ul>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li>AP-Notizen in DX-Cluster-Spots integriert.</li>
+<li>Scrolling der Chatmember-Tabelle folgt automatisch der aktuellen Nachrichtenauswahl.</li>
+<li>Generic Auto-Antwort und QRG-Auto-Antwort senden max. einmal pro 45 Sekunden pro Rufzeichen (verhindert Spam-Schleifen).</li>
+<li>Speicherbare Einstellungen erweitert: ServerDNS/Port, PSTRotator-Interface, Win-Test-Interface, Callsign-Sniffer, Dark-Mode-Standard.</li>
+<li>Datum in der Chat-Tabelle entfernt (nur Uhrzeit verbleibt – spart Platz).</li>
+</ul>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Benutzerliste wird jetzt bei jedem Neu-Login automatisch sortiert.</li>
+<li>Posonpill-Nachrichten beenden jetzt nur genau eine Client-Instanz (nicht alle und nicht wtKST).</li>
+<li>wtKST: Absturz bei KST4Contest-Trennung behoben.</li>
+<li>Mehrere Probleme mit Rufzeichen-Suffixen wie <code>/p</code>, <code>-2</code> etc. behoben.</li>
+<li><code>QTFDefault</code> wurde nicht korrekt gespeichert → behoben.</li>
+<li>AirScout-Watchlist (ASWATCHLIST) wurde nicht korrekt aktualisiert → behoben.</li>
+<li>Dark Mode: QRG-Felder wurden nicht vollständig angezeigt → behoben.</li>
+<li>Versionsnummer-Anzeige korrigiert.</li>
+</ul>
+<hr>
+<h2 id="v1.31-(2025-12-13)" tabindex="-1"><a class="header-anchor" href="#v1.31-(2025-12-13)">v1.31 (2025-12-13)</a></h2>
+<p><strong>Win-Test + PSTRotator Beta, QSO-Sniffer, DNS-Hotfix</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li><strong>Win-Test-Unterstützung</strong> (Beta, noch nicht deaktivierbar): Log-Synchronisation und Frequenzauswertung.</li>
+<li><strong>PSTRotator-Unterstützung</strong> (Beta, noch nicht deaktivierbar).</li>
+<li><strong>QSO-Sniffer</strong>: Nachrichten von konfigurierbaren Rufzeichen werden ins PM-Fenster weitergeleitet.</li>
+</ul>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li><strong>DNS-Server geändert</strong>: Von <code>www.on4kst.info</code> auf <code>www.on4kst.org</code> (Hotfix). Der DNS-Server ist ab sofort in den Preferences änderbar.</li>
+</ul>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Endlosschleife im Fehlerfall friert den Client ein → behoben.</li>
+</ul>
+<hr>
+<h2 id="v1.266-(2025-10-03)" tabindex="-1"><a class="header-anchor" href="#v1.266-(2025-10-03)">v1.266 (2025-10-03)</a></h2>
+<p><strong>AirScout-Fix für Rufzeichen mit Suffix</strong></p>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>AirScout-Interface funktionierte nicht, wenn das Login-Rufzeichen einen Suffix enthielt (z. B. <code>9A1W-2</code>). AirScout kann mit diesem Format nicht umgehen – es wird jetzt nur noch das Basis-Rufzeichen ohne Suffix an AirScout übergeben.</li>
+</ul>
+<p><em>(Fehler gemeldet und getestet von 9A2HM / Kreso – herzlichen Dank!)</em></p>
+<hr>
+<h2 id="v1.265-(2025-09-28)" tabindex="-1"><a class="header-anchor" href="#v1.265-(2025-09-28)">v1.265 (2025-09-28)</a></h2>
+<p><strong>Richtungs-Buttons bleiben aktiviert eingefärbt</strong></p>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Richtungs-Buttons (N / NE / E usw.) behalten jetzt ihre Farbe, wenn sie aktiviert sind, sodass der Aktivierungsstatus auf einen Blick erkennbar ist.</li>
+</ul>
+<hr>
+<h2 id="v1.264-(2025-08-02)" tabindex="-1"><a class="header-anchor" href="#v1.264-(2025-08-02)">v1.264 (2025-08-02)</a></h2>
+<p><strong>Simplelogfile: Rufzeichen-Erkennung verbessert</strong></p>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Rufzeichen wie <code>S53CC</code>, <code>S51A</code> usw. wurden in der SimpleLogFile-Auswertung nicht als gearbeitet markiert → Erkennungsmuster verbessert.</li>
+</ul>
+<p><em>(Fehler gemeldet von Boris, S53CC – danke!)</em></p>
+<hr>
+<h2 id="v1.263-(2025-06-08)" tabindex="-1"><a class="header-anchor" href="#v1.263-(2025-06-08)">v1.263 (2025-06-08)</a></h2>
+<p><strong>AirScout-Kommunikation und Login-Name</strong></p>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li>AirScout-Kommunikation grundlegend überarbeitet: Nur noch Stationen mit QRB &lt; max-QRB werden an AirScout gesendet.</li>
+<li>Abfrage-Intervall von 12 Sekunden auf <strong>60 Sekunden</strong> erhöht.</li>
+<li>Deutlich weniger Berechnungsaufwand und Nachrichtenverkehr → Stabileres AirScout-Tracking.</li>
+<li>Name des AS-Clients und AS-Servers ist jetzt aus den Preferences konfigurierbar (war vorher hartcodiert auf „KST&quot; / „AS&quot;).</li>
+</ul>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>„Track in AirScout&quot;-Button war sehr träge → durch neue Kommunikationslogik deutlich verbessert.</li>
+<li>Name im Chat ist jetzt speicherbar (Fehler behoben).</li>
+<li>Visuelle Korrekturen vor und nach dem Login.</li>
+<li>Fehler behoben, der von 9A2HM (Kreso) gemeldet wurde.</li>
+</ul>
+<hr>
+<h2 id="v1.262-(2025-05-21)" tabindex="-1"><a class="header-anchor" href="#v1.262-(2025-05-21)">v1.262 (2025-05-21)</a></h2>
+<p><strong>Freeze-Fix bei vorzeitiger Nachrichtenlieferung</strong></p>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>ON4KST liefert manchmal Nachrichten, bevor der Login abgeschlossen ist. Das verursachte Fehler in der Nachrichtenverarbeitung → jetzt behoben.</li>
+</ul>
+<hr>
+<h2 id="v1.26-(2025-05)" tabindex="-1"><a class="header-anchor" href="#v1.26-(2025-05)">v1.26 (2025-05)</a></h2>
+<p><strong>Multi-Channel-Login und Dark Mode</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li><strong>Dark Mode</strong>: Umschaltbar über <code>Window → Use Dark Mode</code>.</li>
+<li><strong>Multi-Channel-Login</strong>: Gleichzeitiger Login in zwei Chat-Kategorien.</li>
+<li><strong>Opposite Station Multi-Callsign Login-Tagging</strong>: Unterstützung für Stationen mit mehreren Rufzeichen.</li>
+</ul>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li>Farbgebungs-Mechanismus überarbeitet: Farben können jetzt über CSS angepasst werden.</li>
+</ul>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Stationsmarkierung komplett überarbeitet und korrekt gestellt.</li>
+</ul>
+<hr>
+<h2 id="v1.251-(2025-02)" tabindex="-1"><a class="header-anchor" href="#v1.251-(2025-02)">v1.251 (2025-02)</a></h2>
+<p><strong>Bugfix für UDP-Broadcast-Spot-Info</strong></p>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Problem beim Lesen von UDP-Broadcast-Spot-Informationen behoben (gemeldet von Steve Clements – danke!).</li>
+<li>Stationsmarkierung (erneut verbessert).</li>
+</ul>
+<hr>
+<h2 id="v1.25-(2025-02)" tabindex="-1"><a class="header-anchor" href="#v1.25-(2025-02)">v1.25 (2025-02)</a></h2>
+<p><strong>Wunschliste umgesetzt</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li><strong>Neuer Einstellungs-Tab: Messagehandling</strong>
+<ul>
+<li>Auto-Antwort auf eingehende Nachrichten konfigurierbar.</li>
+<li>Automatische Antwort mit eigener CQ-QRG, wenn jemand danach fragt.</li>
+<li>Konfigurierbarer Standard-Filter für das Userinfo-Fenster <em>(für Gianluca :-) )</em>.</li>
+</ul>
+</li>
+<li><strong>Farbige PM-Zeilen</strong>: Neue Privatnachrichten erscheinen rot und faden alle 30 Sekunden über Gelb bis Weiß ab <em>(Idee von IU3OAR, Gianluca)</em>.</li>
+</ul>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Stationen mit Suffixen wie „-2&quot; und „-70&quot; wurden nicht als gearbeitet markiert → werden jetzt ignoriert, Station wird korrekt markiert.</li>
+</ul>
+<hr>
+<h2 id="v1.24-(2024-11)" tabindex="-1"><a class="header-anchor" href="#v1.24-(2024-11)">v1.24 (2024-11)</a></h2>
+<p><strong>Wunschliste + DX-Cluster-Spots</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li>Button zum Öffnen des <strong>QRZ.com-Profils</strong> der ausgewählten Station.</li>
+<li>Button zum Öffnen des <strong>QRZ-CQ-Profils</strong> der ausgewählten Station.</li>
+<li><strong>DX-Cluster-Server-Integration</strong>: Richtungs-Warnungen werden als Spots an das Logprogramm gesendet (wenn QRG bekannt).</li>
+</ul>
+<p><em>(Zusätzlich wurden Farbgebungen der PM-Zeilen hinzugefügt – tnx Gianluca)</em></p>
+<hr>
+<h2 id="v1.23-(2024-10)" tabindex="-1"><a class="header-anchor" href="#v1.23-(2024-10)">v1.23 (2024-10)</a></h2>
+<p><strong>Integrierter DX-Cluster-Server</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li>KST4Contest enthält jetzt einen <strong>integrierten DX-Cluster-Server</strong>.</li>
+<li>Generiert DX-Cluster-Spots und sendet sie an das Logprogramm, wenn eine Richtungs-Warnung ausgelöst und eine QRG bekannt ist.</li>
+<li>Spotter-Rufzeichen muss sich vom Contest-Rufzeichen unterscheiden (für korrekte Filterung im Logprogramm).</li>
+</ul>
+<p><em>(Idee von OM0AAO, Viliam Petrik – danke!)</em></p>
+<hr>
+<h2 id="v1.22-(2024-05)" tabindex="-1"><a class="header-anchor" href="#v1.22-(2024-05)">v1.22 (2024-05)</a></h2>
+<p><strong>Usability-Verbesserungen und AirScout-Button-Fix</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li>Neue Variablen (tnx OM0AAO, Viliam Petrik):
+<ul>
+<li><code>MYLOCATORSHORT</code></li>
+<li><code>MYQRGSHORT</code></li>
+<li><code>QRZNAME</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li>Sendfeld-Fokus: Nach Klick auf Rufzeichen in der Benutzerliste erhält das Sendfeld sofort den Fokus – kein Doppelklick notwendig <em>(tnx Gianluca)</em>.</li>
+</ul>
+<p><strong>Behoben:</strong></p>
+<ul>
+<li>Worked-Station-Filter ist jetzt live-aktiv: Gearbeitete Stationen verschwinden sofort nach Aktivierung des Filters <em>(tnx Gianluca)</em>.</li>
+<li>QRB-Sortierung war lexikografisch → jetzt numerisch <em>(tnx Alessandro Murador)</em>.</li>
+<li>AirScout-„Show Path&quot;-Button: Klick maximiert AirScout und zeigt den Pfad korrekt an.</li>
+</ul>
+<hr>
+<h2 id="v1.21-(2024-04)" tabindex="-1"><a class="header-anchor" href="#v1.21-(2024-04)">v1.21 (2024-04)</a></h2>
+<p><strong>Usability-Verbesserungen</strong></p>
+<p><strong>Geändert:</strong></p>
+<ul>
+<li>Fenstergrößen und Divider-Positionen werden beim Klick auf „Save Settings&quot; in der Konfigurationsdatei gespeichert und beim Start wiederhergestellt.</li>
+<li>Filter-Bereich als Flowpane → bessere Darstellung auf kleineren Bildschirmen.</li>
+</ul>
+<hr>
+<h2 id="v1.2-(2024-04)" tabindex="-1"><a class="header-anchor" href="#v1.2-(2024-04)">v1.2 (2024-04)</a></h2>
+<p><strong>Bandselektion und NOT-QRV-Tags</strong></p>
+<p><strong>Neu:</strong></p>
+<ul>
+<li><strong>Bandselektion</strong>: In den Preferences auswählbar, welche Bänder aktiv sind. Nur für gewählte Bänder erscheinen Buttons und Felder in der UI. Speichern und Neustart erforderlich.</li>
+<li><strong>NOT-QRV-Tags pro Station und Band</strong>: Stationen können für jedes Band als „nicht QRV&quot; markiert werden. Kombinierbar mit dem Userlist-Filter.</li>
+<li><strong>QTF-Pfeil</strong>: Der „Show path in AS&quot;-Button zeigt jetzt einen Pfeil mit dem QTF der ausgewählten Station an.</li>
+</ul>
+<hr>
+<h2 id="fr%C3%BChere-versionen" tabindex="-1"><a class="header-anchor" href="#fr%C3%BChere-versionen">Frühere Versionen</a></h2>
+<h3 id="v1.1" tabindex="-1"><a class="header-anchor" href="#v1.1">v1.1</a></h3>
+<p>Erste öffentlich veröffentlichte Version. Grundfunktionen:</p>
+<ul>
+<li>Worked-Markierung via Simplelogfile und UDP</li>
+<li>Sked-Richtungs-Hervorhebung</li>
+<li>QRG-Erkennung</li>
+<li>Text-Snippets und Shortcuts</li>
+<li>AirScout-Interface (erste Version)</li>
+<li>Intervall-Beacon</li>
+<li>PM-Abfang für öffentliche Nachrichten mit eigenem Rufzeichen</li>
+<li>Update-Hinweis-Dienst</li>
+</ul>
+<hr>
+<h2 id="geplante-features" tabindex="-1"><a class="header-anchor" href="#geplante-features">Geplante Features</a></h2>
+<ul>
+<li><code>MYQTF</code>-Variable (eigene Antennenrichtung als Text)</li>
+<li><s>Lebensdauer für den Worked-Status (automatisches Zurücksetzen)</s> ✅ <strong>Umgesetzt in v1.40</strong> (3-Tage-Lebensdauer, kein manuelles Zurücksetzen mehr nötig)</li>
+<li>Filterung des „Cluster &amp; QSO der anderen&quot;-Fensters auf eigenes QTF</li>
+<li>Weitere Topografie-basierte Berechnungen für die Richtungswarnung</li>
+</ul>
+
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>

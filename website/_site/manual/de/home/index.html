@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ manual.title }} | KST4Contest Manual</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="canonical" href="https://kst4contest.hamradioonline.de/manual/de/home/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta property="og:description" content="KST4Contest manual page: {{ manual.title }}">
+  <meta property="og:url" content="https://kst4contest.hamradioonline.de/manual/de/home/">
+  <meta property="og:site_name" content="KST4Contest">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ manual.title }} | KST4Contest Manual">
+  <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
+
+  <link rel="stylesheet" href="/assets/css/main.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">KST4Contest</a>
+    <nav>
+      <a href="/features/">Features</a>
+      <a href="/download/">Download</a>
+      <a href="/manual/">Manual</a>
+      <a href="/screenshots/">Screenshots</a>
+      <a href="/news/">News</a>
+      <a href="https://github.com/praktimarc/kst4contest">GitHub</a>
+      <a href="/faq/">FAQ</a>
+    </nav>
+  </header>
+
+  <main>
+    
+<section class="section">
+  <div class="card manual-content">
+    <p><a href="/manual/de/">← Back to manual overview</a></p>
+    <h1>Home</h1>
+    <h1 id="kst4contest-%E2%80%93-wiki" tabindex="-1"><a class="header-anchor" href="#kst4contest-%E2%80%93-wiki">KST4Contest – Wiki</a></h1>
+<blockquote>
+<p>🇬🇧 <a href="en-Home">English version</a> | 🇩🇪 Du liest gerade die deutsche Version</p>
+</blockquote>
+<p><strong>KST4Contest</strong> (auch bekannt als <em>PraktiKST</em>) ist ein Java-basierter Chat-Client für den <a href="http://www.on4kst.info/chat/">ON4KST-Chat</a>, der speziell für den Contest-Betrieb auf den VHF/UHF/SHF-Bändern (144 MHz und aufwärts) entwickelt wurde.</p>
+<p>Entwickelt von <strong>DO5AMF (Marc Fröhlich)</strong>, Operator bei DM5M.</p>
+<hr>
+<h2 id="schnellnavigation" tabindex="-1"><a class="header-anchor" href="#schnellnavigation">Schnellnavigation</a></h2>
+<table>
+<thead>
+<tr>
+<th>Seite</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="de-Installation">Installation</a></td>
+<td>Download, Java-Voraussetzungen, Update</td>
+</tr>
+<tr>
+<td><a href="de-Konfiguration">Konfiguration</a></td>
+<td>Alle Einstellungen im Detail</td>
+</tr>
+<tr>
+<td><a href="de-Log-Synchronisation">Log-Synchronisation</a></td>
+<td>UCXLog, N1MM+, QARTest, <a href="http://DXLog.net">DXLog.net</a>, WinTest</td>
+</tr>
+<tr>
+<td><a href="de-AirScout-Integration">AirScout-Integration</a></td>
+<td>Flugzeug-Scatter-Erkennung</td>
+</tr>
+<tr>
+<td><a href="de-DX-Cluster-Server">DX-Cluster-Server</a></td>
+<td>Integrierter DX-Cluster für das Log-Programm</td>
+</tr>
+<tr>
+<td><a href="de-Funktionen">Funktionen</a></td>
+<td>Alle Features im Überblick</td>
+</tr>
+<tr>
+<td><a href="de-Makros-und-Variablen">Makros und Variablen</a></td>
+<td>Text-Snippets, Shortcuts, Variablen</td>
+</tr>
+<tr>
+<td><a href="de-Benutzeroberflaeche">Benutzeroberfläche</a></td>
+<td>UI-Erklärung und Bedienung</td>
+</tr>
+<tr>
+<td><a href="de-Changelog">Changelog</a></td>
+<td>Versionsgeschichte</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="was-ist-kst4contest%3F" tabindex="-1"><a class="header-anchor" href="#was-ist-kst4contest%3F">Was ist KST4Contest?</a></h2>
+<p>Der ON4KST-Chat ist der De-facto-Standard für Skeds auf den 144-MHz-und-höher-Bändern. KST4Contest erweitert die Chat-Nutzung um contest-spezifische Funktionen:</p>
+<ul>
+<li><strong>Worked-Markierung</strong>: Bereits gearbeitete Stationen werden farblich markiert, direkt aus dem Logprogramm via UDP synchronisiert.</li>
+<li><strong>Sked-Richtungs-Erkennung</strong>: Wenn eine Station eine andere aus deiner Richtung anruft, wird sie grün und fett hervorgehoben.</li>
+<li><strong>QRG-Erkennung</strong>: KST4Contest liest Frequenzen automatisch aus dem Chat-Verkehr und zeigt sie in der Benutzerliste an.</li>
+<li><strong>AirScout-Interface</strong>: Anzeige reflektierbarer Flugzeuge direkt in der Benutzerliste.</li>
+<li><strong>Integrierter DX-Cluster-Server</strong>: Spots werden direkt an das Logprogramm gesendet.</li>
+<li><strong>Dark Mode</strong> (ab v1.26): Schont die Augen in der Nacht.</li>
+<li><strong>Multi-Channel-Login</strong> (ab v1.26): Gleichzeitig in zwei Chat-Kategorien einloggen.</li>
+</ul>
+<hr>
+<h2 id="kontakt-%26-support" tabindex="-1"><a class="header-anchor" href="#kontakt-%26-support">Kontakt &amp; Support</a></h2>
+<ul>
+<li><strong>E-Mail</strong>: <a href="mailto:praktimarc+kst4contest@gmail.com">praktimarc+kst4contest@gmail.com</a> <em>(nur für kst4contest-Themen)</em></li>
+<li><strong>GitHub</strong>: <a href="https://github.com/praktimarc/kst4contest">https://github.com/praktimarc/kst4contest</a></li>
+<li><strong>Download</strong>: <a href="https://github.com/praktimarc/kst4contest/releases/latest">https://github.com/praktimarc/kst4contest/releases/latest</a></li>
+</ul>
+<h3 id="fehler-melden-(issue-erstellen)" tabindex="-1"><a class="header-anchor" href="#fehler-melden-(issue-erstellen)">Fehler melden (Issue erstellen)</a></h3>
+<p>Beim Melden eines Fehlers bitte <strong>immer die Logdatei anhängen</strong>. KST4Contest schreibt automatisch eine Fehler-Logdatei (nur Fehlermeldungen, keine persönlichen Daten):</p>
+<table>
+<thead>
+<tr>
+<th>Betriebssystem</th>
+<th>Pfad zur Logdatei</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linux / macOS</td>
+<td><code>~/.praktiKST/kst4contest-errors.log</code></td>
+</tr>
+<tr>
+<td>Windows</td>
+<td><code>C:\Users\&lt;Benutzername&gt;\.praktiKST\kst4contest-errors.log</code></td>
+</tr>
+</tbody>
+</table>
+<p>Beim Erstellen eines Issues auf GitHub steht eine Vorlage bereit, die alle wichtigen Felder abfragt.</p>
+<hr>
+<h2 id="danksagungen" tabindex="-1"><a class="header-anchor" href="#danksagungen">Danksagungen</a></h2>
+<p>Besonderer Dank gilt: Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), OM0AAO (Viliam Petrik, DX-Cluster-Idee), DC9DJ (Konrad Neitzel, Projektstruktur), DO5ALF (Andreas, Webmaster <a href="http://funkerportal.de">funkerportal.de</a>), PE0WGA (Franz van Velzen, Tester) sowie allen weiteren Testern und Ideengebern.</p>
+
+  </div>
+</section>
+  </main>
+
+  <footer class="site-footer">
+    <p>KST4Contest – ON4KST contest workflow for VHF/UHF/SHF operators.</p>
+  </footer>
+</body>
+</html>
