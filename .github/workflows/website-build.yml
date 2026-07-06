@@ -7,14 +7,14 @@ on:
     paths:
       - website/**
       - github_docs/**
-      - .github/workflows/website-deploy.yml
+      - .github/workflows/website-build.yml
   pull_request:
     branches:
       - main
     paths:
       - website/**
       - github_docs/**
-      - .github/workflows/website-deploy.yml
+      - .github/workflows/website-build.yml
   workflow_dispatch:
 
 env:
