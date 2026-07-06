@@ -19,25 +19,68 @@
 
 html {
     scroll-behavior: smooth;
+    background: var(--bg);
 }
 
 body {
     margin: 0;
-    background: var(--bg);
+    min-height: 100vh;
+    background:
+            radial-gradient(circle at 14% 12%, rgba(168, 85, 247, 0.30), transparent 28%),
+            radial-gradient(circle at 82% 16%, rgba(56, 189, 248, 0.24), transparent 30%),
+            radial-gradient(circle at 50% 85%, rgba(34, 197, 94, 0.11), transparent 35%),
+            linear-gradient(180deg, #050816 0%, #07111f 100%);
     color: var(--text);
     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     line-height: 1.65;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: -20%;
+    z-index: -3;
+    background:
+            radial-gradient(circle at 20% 20%, rgba(168, 85, 247, 0.22), transparent 28%),
+            radial-gradient(circle at 78% 18%, rgba(56, 189, 248, 0.18), transparent 30%),
+            radial-gradient(circle at 45% 80%, rgba(34, 197, 94, 0.10), transparent 26%);
+    filter: blur(48px);
+    transform: translateZ(0);
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    pointer-events: none;
+    background-image:
+            linear-gradient(rgba(255,255,255,0.038) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.038) 1px, transparent 1px);
+    background-size: 54px 54px;
+    -webkit-mask-image: radial-gradient(circle at center, black 0%, black 46%, transparent 78%);
+    mask-image: radial-gradient(circle at center, black 0%, black 46%, transparent 78%);
 }
 
 .site-bg {
     position: fixed;
     inset: 0;
     z-index: -1;
+    pointer-events: none;
     background:
-            radial-gradient(circle at 15% 8%, rgba(168, 85, 247, 0.30), transparent 30%),
-            radial-gradient(circle at 82% 18%, rgba(56, 189, 248, 0.26), transparent 30%),
-            radial-gradient(circle at 50% 90%, rgba(34, 197, 94, 0.12), transparent 30%),
-            linear-gradient(180deg, #050816 0%, #07111f 100%);
+            linear-gradient(180deg, rgba(5, 8, 22, 0.10), rgba(5, 8, 22, 0.84)),
+            radial-gradient(circle at 8% 24%, rgba(168, 85, 247, 0.18), transparent 26%),
+            radial-gradient(circle at 82% 20%, rgba(56, 189, 248, 0.16), transparent 30%);
+}
+
+.site-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+            radial-gradient(circle at top, transparent 0%, rgba(5, 8, 22, 0.42) 72%),
+            linear-gradient(90deg, rgba(5, 8, 22, 0.25), transparent 50%, rgba(5, 8, 22, 0.25));
 }
 
 .site-bg::after {
@@ -45,14 +88,11 @@ body {
     position: absolute;
     inset: 0;
     background-image:
-            linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-    background-size: 54px 54px;
-    -webkit-mask-image:
-            radial-gradient(circle at center, black, transparent 72%);
-
-    mask-image:
-            radial-gradient(circle at center, black, transparent 72%);
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.10) 1px, transparent 0);
+    background-size: 28px 28px;
+    opacity: 0.11;
+    -webkit-mask-image: radial-gradient(circle at 50% 22%, black 0%, transparent 68%);
+    mask-image: radial-gradient(circle at 50% 22%, black 0%, transparent 68%);
 }
 
 a {
@@ -92,8 +132,12 @@ a:hover {
     width: 40px;
     height: 40px;
     border-radius: 14px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    box-shadow: 0 0 26px rgba(168, 85, 247, 0.45);
+    background:
+            radial-gradient(circle at 30% 20%, white, transparent 22%),
+            linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow:
+            0 0 26px rgba(168, 85, 247, 0.45),
+            0 0 50px rgba(56, 189, 248, 0.18);
 }
 
 .brand strong {
@@ -134,8 +178,22 @@ a:hover {
 }
 
 .hero {
+    position: relative;
     padding: 92px 6vw 62px;
     max-width: 1180px;
+}
+
+.hero::before {
+    content: "";
+    position: absolute;
+    inset: -160px -12vw auto -12vw;
+    height: 420px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+            radial-gradient(circle at 24% 40%, rgba(168, 85, 247, 0.20), transparent 36%),
+            radial-gradient(circle at 62% 30%, rgba(56, 189, 248, 0.14), transparent 40%);
+    filter: blur(74px);
 }
 
 .hero-split {
@@ -151,8 +209,9 @@ a:hover {
     font-size: clamp(3rem, 8vw, 6.5rem);
     line-height: 0.95;
     letter-spacing: -0.07em;
-    background: linear-gradient(90deg, white, var(--accent), var(--accent2));
+    background: linear-gradient(90deg, #ffffff 0%, #7dd3fc 40%, #a855f7 78%);
     -webkit-background-clip: text;
+    background-clip: text;
     color: transparent;
 }
 
@@ -163,20 +222,6 @@ a:hover {
     color: var(--muted);
     font-size: 1.18rem;
     max-width: 850px;
-}
-.hero::before {
-    content:"";
-    position:absolute;
-    inset:-200px;
-
-    background:
-            radial-gradient(circle,
-            rgba(56,189,248,.18),
-            transparent 65%);
-
-    filter:blur(120px);
-
-    pointer-events:none;
 }
 
 .badge,
@@ -194,6 +239,7 @@ a:hover {
     letter-spacing: 0.08em;
     font-size: 0.74rem;
     font-weight: 800;
+    box-shadow: 0 0 22px rgba(168, 85, 247, 0.12);
 }
 
 .actions {
@@ -213,7 +259,14 @@ a:hover {
     color: #020617;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     font-weight: 800;
-    box-shadow: 0 16px 44px rgba(56, 189, 248, 0.25);
+    box-shadow:
+            0 16px 44px rgba(56, 189, 248, 0.25),
+            inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.button:hover {
+    color: white;
+    transform: translateY(-1px);
 }
 
 .button.secondary {
@@ -233,15 +286,30 @@ a:hover {
 .hero-panel,
 .card,
 .cta-panel {
-    background: var(--panel);
+    background:
+            linear-gradient(180deg, rgba(255,255,255,0.045), transparent 42%),
+            var(--panel);
     border: 1px solid var(--border);
     border-radius: 26px;
     box-shadow: var(--shadow);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
 }
 
 .hero-panel {
+    position: relative;
     overflow: hidden;
     transform: perspective(1200px) rotateY(-5deg) rotateX(2deg);
+}
+
+.hero-panel::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    background:
+            linear-gradient(135deg, rgba(56, 189, 248, 0.45), transparent 35%, rgba(168, 85, 247, 0.38));
+    opacity: 0.18;
 }
 
 .terminal-bar {
@@ -324,13 +392,18 @@ a:hover {
 
 .card {
     padding: 24px;
-    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }
 
 .card:hover {
     transform: translateY(-4px);
     border-color: rgba(56, 189, 248, 0.45);
-    background: rgba(15, 23, 42, 0.92);
+    background:
+            linear-gradient(180deg, rgba(255,255,255,0.055), transparent 42%),
+            rgba(15, 23, 42, 0.92);
+    box-shadow:
+            0 26px 90px rgba(0, 0, 0, 0.50),
+            0 0 30px rgba(56, 189, 248, 0.08);
 }
 
 .card h3,
@@ -443,5 +516,12 @@ a:hover {
     .site-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .button,
+    .card {
+        transition: all 180ms ease;
     }
 }
