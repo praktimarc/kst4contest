@@ -1656,7 +1656,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						if (cellDataFeatures.getValue().isWorked144()) {
 							wkd.setValue("X");
 						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_144)) {
-							wkd.setValue("★");
+							wkd.setValue("B+");
 						} else {
 							wkd.setValue("");
 						}
@@ -1677,7 +1677,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						if (cellDataFeatures.getValue().isWorked432()) {
 							wkd.setValue("X");
 						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_432)) {
-							wkd.setValue("★");
+							wkd.setValue("B+");
 						} else {
 							wkd.setValue("");
 						}
@@ -1698,7 +1698,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				if (cellDataFeatures.getValue().isWorked1240()) {
 					wkd.setValue("X");
 				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_1296)) {
-					wkd.setValue("★");
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1718,7 +1718,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				if (cellDataFeatures.getValue().isWorked2300()) {
 					wkd.setValue("X");
 				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_2320)) {
-					wkd.setValue("★");
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1738,7 +1738,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				if (cellDataFeatures.getValue().isWorked3400()) {
 					wkd.setValue("X");
 				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_3400)) {
-					wkd.setValue("★");
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1758,7 +1758,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				if (cellDataFeatures.getValue().isWorked5600()) {
 					wkd.setValue("X");
 				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_5760)) {
-					wkd.setValue("★");
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1778,7 +1778,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				if (cellDataFeatures.getValue().isWorked10G()) {
 					wkd.setValue("X");
 				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_10G)) {
-					wkd.setValue("★");
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}

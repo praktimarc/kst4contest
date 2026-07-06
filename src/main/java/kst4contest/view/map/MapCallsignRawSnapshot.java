@@ -63,7 +63,7 @@ public record MapCallsignRawSnapshot(
         String baseLabel = bandSummary.isBlank()
                 ? displayCallSign
                 : displayCallSign + " (" + bandSummary + ")";
-        return offersSelectedBand ? baseLabel + " ★" : baseLabel;
+        return offersSelectedBand ? baseLabel + " B+" : baseLabel;
     }
 
     public String detailFrequencyText() {

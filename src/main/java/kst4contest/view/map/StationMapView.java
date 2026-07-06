@@ -857,7 +857,7 @@ public final class StationMapView {
         detailQtfValue.setText(String.format(Locale.US, "%.0f°", selectedSnapshot.qtfDeg()));
         String bandText = selectedSnapshot.bandSummary().isBlank() ? "-" : selectedSnapshot.bandSummary();
         if (selectedSnapshot.offersSelectedBand()) {
-            bandText += " ★";
+            bandText += " B+";
         }
         detailBandsValue.setText(bandText);
         detailFrequenciesArea.setText(selectedSnapshot.detailFrequencyText());
