@@ -4,127 +4,73 @@ title: KST4Contest – Contest-Optimized ON4KST Chat Client
 description: KST4Contest is a modern ON4KST chat client built for VHF, UHF and SHF contest operation.
 ---
 
-<section class="hero">
-
-    <p class="eyebrow">The contest-optimized ON4KST client</p>
-
+<section class="hero hero-split">
+  <div>
+    <p class="badge">The contest-optimized ON4KST client</p>
     <h1>KST4Contest</h1>
-
-    <p>
-        Work smarter. Make more QSOs.
-        Built for serious VHF, UHF and SHF contest operators.
+    <p class="lead">
+      Work smarter. Make more QSOs. KST4Contest brings priority candidates,
+      AirScout workflow, sked reminders, dual chat categories and log synchronization
+      into one contest-focused ON4KST client.
     </p>
 
     <div class="actions">
-        <a class="button"
-           href="https://github.com/praktimarc/kst4contest/releases/latest">
-            Download latest release
-        </a>
-
-        <a class="button secondary"
-           href="https://github.com/praktimarc/kst4contest">
-            GitHub
-        </a>
-
-        <a class="button secondary"
-           href="/manual/">
-            Documentation
-        </a>
+      <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Download latest release</a>
+      <a class="button secondary" href="https://github.com/praktimarc/kst4contest">View on GitHub</a>
+      <a class="button ghost" href="/manual/">Read manual</a>
     </div>
+  </div>
 
+  <div class="hero-panel">
+    <div class="terminal-bar">
+      <span></span><span></span><span></span>
+      <strong>KST4Contest workflow</strong>
+    </div>
+    <div class="mock-grid">
+      {% for feature in features | slice(0, 6) %}
+        <div class="mini-card">
+          <strong>{{ feature.icon }} {{ feature.title }}</strong>
+          <small>{{ feature.summary }}</small>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
 </section>
-
 
 <section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Powerful features</p>
+    <h2>Everything you need for contest success</h2>
+    <p>Every feature is designed to reduce operator workload and improve decision speed during real contest operation.</p>
+  </div>
 
-    <p class="eyebrow">
-        Powerful Features
-    </p>
-
-    <h2>
-        Everything you need for contest success
-    </h2>
-
-    <div class="grid">
-
-        {% for feature in features %}
-
-        <article class="card">
-
-            <div class="feature-icon">
-                {{ feature.icon }}
-            </div>
-
-            <p class="eyebrow">
-                {{ feature.category }}
-            </p>
-
-            <h3>
-                <a href="/features/{{ feature.slug }}/">
-                    {{ feature.title }}
-                </a>
-            </h3>
-
-            <p>
-                {{ feature.summary }}
-            </p>
-
-            <a href="/features/{{ feature.slug }}/">
-                Learn more →
-            </a>
-
-        </article>
-
-        {% endfor %}
-
-    </div>
-
+  <div class="grid">
+    {% for feature in features %}
+      <article class="card feature-card">
+        <div class="feature-icon">{{ feature.icon }}</div>
+        <p class="eyebrow">{{ feature.category }}</p>
+        <h3><a href="/features/{{ feature.slug }}/">{{ feature.title }}</a></h3>
+        <p>{{ feature.summary }}</p>
+        <a href="/features/{{ feature.slug }}/">Learn more →</a>
+      </article>
+    {% endfor %}
+  </div>
 </section>
-
 
 <section class="section">
-
-    <p class="eyebrow">
-        Why KST4Contest?
+  <div class="cta-panel">
+    <p class="eyebrow">Open Source</p>
+    <h2>Built by contesters for contesters.</h2>
+    <p>
+      KST4Contest is developed around real VHF/UHF/SHF contest workflows:
+      ON4KST chat, aircraft scatter, skeds, logging and fast operator decisions.
     </p>
-
-    <h2>
-        Built by contesters for contesters.
-    </h2>
-
-    <div class="grid">
-
-        <div class="card">
-            <h3>Contest Workflow</h3>
-
-            <p>
-                Unlike traditional ON4KST clients, KST4Contest focuses on
-                operator workflow instead of simply displaying chat messages.
-            </p>
-        </div>
-
-        <div class="card">
-            <h3>Decision Support</h3>
-
-            <p>
-                Priority candidates, activity detection, AirScout integration,
-                timeline and sked reminders help operators make better decisions.
-            </p>
-        </div>
-
-        <div class="card">
-            <h3>Open Source</h3>
-
-            <p>
-                KST4Contest is open source and continuously developed together
-                with the amateur radio contest community.
-            </p>
-        </div>
-
+    <div class="actions">
+      <a class="button" href="/download/">Download KST4Contest</a>
+      <a class="button secondary" href="/features/">Explore features</a>
     </div>
-
+  </div>
 </section>
-
 
 <script type="application/ld+json">
 {

@@ -5,14 +5,28 @@ description: Download KST4Contest releases for Windows, Linux and macOS.
 ---
 
 <section class="hero">
-  <h1>Download KST4Contest</h1>
-  <p>
-    Official builds are published through GitHub Releases for Windows, Linux
-    and macOS.
+  <p class="badge">Download</p>
+  <h1>Get KST4Contest</h1>
+  <p class="lead">
+    Official builds are published through GitHub Releases for Windows, Linux and macOS.
   </p>
 
   <div class="actions">
-    <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Latest Release</a>
-    <a class="button secondary" href="https://github.com/praktimarc/kst4contest/releases">All Releases</a>
+    <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Latest release</a>
+    <a class="button secondary" href="https://github.com/praktimarc/kst4contest/releases">All releases</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="grid">
+    {% for item in downloads %}
+      <article class="card download-card">
+        <div class="feature-icon">{{ item.icon }}</div>
+        {% if item.recommended %}<p class="badge">Recommended</p>{% endif %}
+        <h3>{{ item.os }}</h3>
+        <p>{{ item.format }}</p>
+        <a href="{{ item.url }}">Open download →</a>
+      </article>
+    {% endfor %}
   </div>
 </section>

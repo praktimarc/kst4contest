@@ -10,13 +10,13 @@ description: "{{ feature.summary }}"
 ---
 
 <section class="hero">
-  <p class="eyebrow">{{ feature.category }}</p>
+  <p class="badge">{{ feature.category }} · since {{ feature.since }}</p>
   <h1>{{ feature.title }}</h1>
-  <p>{{ feature.summary }}</p>
+  <p class="lead">{{ feature.summary }}</p>
 </section>
 
-<section class="section">
-  <div class="card">
+<section class="section narrow">
+  <article class="card content-card">
     <div class="feature-icon large">{{ feature.icon }}</div>
 
     <h2>Why it matters</h2>
@@ -24,11 +24,22 @@ description: "{{ feature.summary }}"
 
     <h2>Built for contest operation</h2>
     <p>
-      This feature is designed for real VHF, UHF and SHF contest workflows,
-      where speed, awareness and correct operator decisions matter.
+      This feature supports real VHF, UHF and SHF contest workflows where timing,
+      awareness and fast decisions matter. It is part of the broader KST4Contest
+      approach: ON4KST chat should not just be displayed, it should actively support
+      contest operation.
     </p>
 
-    {% if feature.related and feature.related.length %}
+    {% if feature.tags %}
+      <h2>Keywords</h2>
+      <div class="tag-list">
+        {% for tag in feature.tags %}
+          <span>{{ tag }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if feature.related %}
       <h2>Related features</h2>
       <div class="actions">
         {% for slug in feature.related %}
@@ -40,5 +51,5 @@ description: "{{ feature.summary }}"
         {% endfor %}
       </div>
     {% endif %}
-  </div>
+  </article>
 </section>

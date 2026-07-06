@@ -5,8 +5,9 @@ description: Screenshots of KST4Contest, the contest-optimized ON4KST chat clien
 ---
 
 <section class="hero">
-  <h1>Screenshots</h1>
-  <p>
+  <p class="badge">Screenshots</p>
+  <h1>See the contest workflow.</h1>
+  <p class="lead">
     Visual impressions of KST4Contest: ON4KST chat workflow, priority candidates,
     sked handling, AirScout integration and contest-focused operator tools.
   </p>
@@ -14,19 +15,14 @@ description: Screenshots of KST4Contest, the contest-optimized ON4KST chat clien
 
 <section class="section">
   <div class="grid">
-    <div class="card">
-      <h3>Main Window</h3>
-      <p>ON4KST chat workflow with contest-oriented controls.</p>
-    </div>
-
-    <div class="card">
-      <h3>Priority Candidates</h3>
-      <p>Candidate ranking for faster operator decisions.</p>
-    </div>
-
-    <div class="card">
-      <h3>AirScout / AP Timeline</h3>
-      <p>Aircraft scatter timing support for VHF/UHF/SHF operation.</p>
-    </div>
+    {% for shot in screenshots %}
+      <article class="card screenshot-card">
+        <div class="screenshot-placeholder">
+          <span>{{ shot.title }}</span>
+        </div>
+        <h3>{{ shot.title }}</h3>
+        <p>{{ shot.caption }}</p>
+      </article>
+    {% endfor %}
   </div>
 </section>

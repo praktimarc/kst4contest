@@ -5,8 +5,9 @@ description: Contest-optimized ON4KST features for VHF, UHF and SHF operation.
 ---
 
 <section class="hero">
-  <h1>Features built for serious VHF/UHF/SHF contest operation.</h1>
-  <p>
+  <p class="badge">Features</p>
+  <h1>Contest tools, not just chat windows.</h1>
+  <p class="lead">
     KST4Contest combines ON4KST chat, candidate scoring, AirScout workflow,
     sked handling, log synchronization and operator decision support.
   </p>
@@ -15,7 +16,7 @@ description: Contest-optimized ON4KST features for VHF, UHF and SHF operation.
 <section class="section">
   <div class="grid">
     {% for feature in features %}
-      <article class="card">
+      <article class="card feature-card">
         <div class="feature-icon">{{ feature.icon }}</div>
         <p class="eyebrow">{{ feature.category }}</p>
         <h3><a href="/features/{{ feature.slug }}/">{{ feature.title }}</a></h3>
