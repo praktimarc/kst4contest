@@ -855,7 +855,11 @@ public final class StationMapView {
         detailLocatorValue.setText(selectedSnapshot.locator6());
         detailQrbValue.setText(String.format(Locale.US, "%.0f km", selectedSnapshot.qrbKm()));
         detailQtfValue.setText(String.format(Locale.US, "%.0f°", selectedSnapshot.qtfDeg()));
-        detailBandsValue.setText(selectedSnapshot.bandSummary().isBlank() ? "-" : selectedSnapshot.bandSummary());
+        String bandText = selectedSnapshot.bandSummary().isBlank() ? "-" : selectedSnapshot.bandSummary();
+        if (selectedSnapshot.offersSelectedBand()) {
+            bandText += " ★";
+        }
+        detailBandsValue.setText(bandText);
         detailFrequenciesArea.setText(selectedSnapshot.detailFrequencyText());
         detailAirplanesValue.setText(String.valueOf(selectedSnapshot.reachableAirplanes()));
         triggerClusterSpotButton.setDisable(false);

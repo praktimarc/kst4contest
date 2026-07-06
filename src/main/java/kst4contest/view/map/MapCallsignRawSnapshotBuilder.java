@@ -8,11 +8,13 @@ import kst4contest.model.ChatMember;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Builds immutable map snapshots from the currently visible chat members.
@@ -22,8 +24,11 @@ import java.util.Map;
  */
 public final class MapCallsignRawSnapshotBuilder {
 
+    private static final Pattern TOKEN_SPLIT_PATTERN = Pattern.compile("[^A-Z0-9]+");
+
     public List<MapCallsignRawSnapshot> buildSnapshots(Collection<ChatMember> visibleChatMembers,
-                                                       ChatMember selectedChatMember) {
+                                                       ChatMember selectedChatMember,
+                                                       EnumSet<Band> selectedBands) {
 
         if (visibleChatMembers == null || visibleChatMembers.isEmpty()) {
             return List.of();
@@ -69,7 +74,9 @@ public final class MapCallsignRawSnapshotBuilder {
             Location location = new Location(locator6);
 
             LinkedHashMap<String, String> frequenciesByBand = collectLastKnownFrequenciesByBand(variants);
-            String bandSummary = String.join(", ", frequenciesByBand.keySet());
+            EnumSet<Band> sureBands = collectSureBands(variants, frequenciesByBand);
+            String bandSummary = buildBandSummary(sureBands);
+            boolean offersSelectedBand = hasAnySelectedBand(sureBands, selectedBands);
 
             boolean warningToMyDirection = variants.stream().anyMatch(ChatMember::isInAngleAndRange);
             boolean worked = variants.stream().anyMatch(this::isWorkedAtAnyBand);
@@ -92,6 +99,7 @@ public final class MapCallsignRawSnapshotBuilder {
                     location.getLongitude().toDegrees(),
                     bandSummary,
                     frequenciesByBand,
+                    offersSelectedBand,
                     warningToMyDirection,
                     worked,
                     selected,
@@ -180,6 +188,101 @@ public final class MapCallsignRawSnapshotBuilder {
                 .forEach(entry -> ordered.put(toBandDisplayLabel(entry.getKey()), entry.getValue().formattedFrequency()));
 
         return ordered;
+    }
+
+    private EnumSet<Band> collectSureBands(List<ChatMember> variants,
+                                           LinkedHashMap<String, String> frequenciesByBand) {
+        EnumSet<Band> sureBands = EnumSet.noneOf(Band.class);
+
+        if (frequenciesByBand != null) {
+            for (String label : frequenciesByBand.keySet()) {
+                Band mappedBand = bandFromDisplayLabel(label);
+                if (mappedBand != null) {
+                    sureBands.add(mappedBand);
+                }
+            }
+        }
+
+        for (ChatMember variant : variants) {
+            if (variant == null || variant.getName() == null || variant.getName().isBlank()) {
+                continue;
+            }
+            sureBands.addAll(detectBandsFromStationName(variant.getName()));
+        }
+
+        return sureBands;
+    }
+
+    private EnumSet<Band> detectBandsFromStationName(String stationName) {
+        EnumSet<Band> detectedBands = EnumSet.noneOf(Band.class);
+        if (stationName == null || stationName.isBlank()) {
+            return detectedBands;
+        }
+
+        String normalized = stationName.toUpperCase(Locale.ROOT);
+        String[] tokens = TOKEN_SPLIT_PATTERN.split(normalized);
+        for (String token : tokens) {
+            if (token == null || token.isBlank()) {
+                continue;
+            }
+
+            switch (token) {
+                case "2", "2M", "144", "144MHZ" -> detectedBands.add(Band.B_144);
+                case "70", "70CM", "432", "432MHZ" -> detectedBands.add(Band.B_432);
+                case "23", "23CM", "1296", "1296MHZ" -> detectedBands.add(Band.B_1296);
+                case "13", "13CM", "2300", "2320", "2320MHZ" -> detectedBands.add(Band.B_2320);
+                case "9", "9CM", "3400", "3400MHZ" -> detectedBands.add(Band.B_3400);
+                case "6", "6CM", "5600", "5760", "5760MHZ" -> detectedBands.add(Band.B_5760);
+                case "3", "3CM", "10G", "10GHZ", "10368", "10368MHZ" -> detectedBands.add(Band.B_10G);
+                case "24G", "24GHZ", "24048", "24048MHZ" -> detectedBands.add(Band.B_24G);
+                default -> {
+                }
+            }
+        }
+
+        return detectedBands;
+    }
+
+    private String buildBandSummary(EnumSet<Band> sureBands) {
+        if (sureBands == null || sureBands.isEmpty()) {
+            return "";
+        }
+
+        List<String> labels = sureBands.stream()
+                .sorted()
+                .map(this::toBandDisplayLabel)
+                .toList();
+        return String.join(", ", labels);
+    }
+
+    private boolean hasAnySelectedBand(EnumSet<Band> sureBands, EnumSet<Band> selectedBands) {
+        if (sureBands == null || sureBands.isEmpty() || selectedBands == null || selectedBands.isEmpty()) {
+            return false;
+        }
+        for (Band band : selectedBands) {
+            if (sureBands.contains(band)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Band bandFromDisplayLabel(String label) {
+        if (label == null || label.isBlank()) {
+            return null;
+        }
+
+        return switch (label) {
+            case "144" -> Band.B_144;
+            case "432" -> Band.B_432;
+            case "1296" -> Band.B_1296;
+            case "2320" -> Band.B_2320;
+            case "3400" -> Band.B_3400;
+            case "5760" -> Band.B_5760;
+            case "10368" -> Band.B_10G;
+            case "24048" -> Band.B_24G;
+            default -> null;
+        };
     }
 
     /**
