@@ -388,8 +388,18 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return sb.toString();
 	}
 
-	private boolean isSelectedBandOfferForMainView(ChatMember chatMember) {
+	/**
+	 * Checks whether a station has known activity on the given band and that band is
+	 * one of my own currently enabled bands, i.e. a new-band opportunity worth flagging
+	 * with a star in that band's table cell.
+	 *
+	 * @param chatMember station row
+	 * @param band       band to check
+	 * @return true if the band cell should show a star
+	 */
+	private boolean isBandOfferForMainView(ChatMember chatMember, Band band) {
 		if (chatMember == null
+				|| band == null
 				|| chatcontroller == null
 				|| chatcontroller.getReachabilityService() == null
 				|| chatMember.getCallSignRaw() == null
@@ -398,7 +408,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		}
 
 		EnumSet<Band> enabledBands = chatcontroller.getReachabilityService().getEnabledStationBands();
-		if (enabledBands == null || enabledBands.isEmpty()) {
+		if (enabledBands == null || !enabledBands.contains(band)) {
 			return false;
 		}
 
@@ -421,7 +431,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		List<MapCallsignRawSnapshot> snapshots = mainViewBandMarkerSnapshotBuilder.buildSnapshots(
 				variants,
 				null,
-				enabledBands
+				EnumSet.of(band)
 		);
 
 		return snapshots.stream().anyMatch(MapCallsignRawSnapshot::offersSelectedBand);
@@ -1605,34 +1615,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					@Override
 					public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-						return new SimpleStringProperty(formatWorkedAnyGridStatusForMainView(cellDataFeatures.getValue()));
+						return new SimpleStringProperty(formatWorkedAnyGridStatus(cellDataFeatures.getValue()));
 					}
 				});
 		wkdAny_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(14));
-
-		/**
-		 * Shows the compact worked/grid status and explains it by tooltip.
-		 */
-		wkdAny_subcol.setCellFactory(column -> new TableCell<ChatMember, String>() {
-			@Override
-			protected void updateItem(String item, boolean empty) {
-				super.updateItem(item, empty);
-
-				if (empty) {
-					setText(null);
-					setTooltip(null);
-					setStyle("");
-					return;
-				}
-
-				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
-
-				setText(item);
-				setTooltip(new Tooltip(buildWorkedAnyGridStatusTooltip(member)));
-				setAlignment(Pos.CENTER);
-				setStyle("-fx-font-weight: bold;");
-			}
-		});
 
 		/**
 		 * Shows the compact worked/grid status and explains it by tooltip.
@@ -1669,6 +1655,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						if (cellDataFeatures.getValue().isWorked144()) {
 							wkd.setValue("X");
+						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_144)) {
+							wkd.setValue("★");
 						} else {
 							wkd.setValue("");
 						}
@@ -1688,6 +1676,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						if (cellDataFeatures.getValue().isWorked432()) {
 							wkd.setValue("X");
+						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_432)) {
+							wkd.setValue("★");
 						} else {
 							wkd.setValue("");
 						}
@@ -1707,6 +1697,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked1240()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_1296)) {
+					wkd.setValue("★");
 				} else {
 					wkd.setValue("");
 				}
@@ -1725,6 +1717,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked2300()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_2320)) {
+					wkd.setValue("★");
 				} else {
 					wkd.setValue("");
 				}
@@ -1743,6 +1737,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked3400()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_3400)) {
+					wkd.setValue("★");
 				} else {
 					wkd.setValue("");
 				}
@@ -1761,6 +1757,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked5600()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_5760)) {
+					wkd.setValue("★");
 				} else {
 					wkd.setValue("");
 				}
@@ -1779,6 +1777,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked10G()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_10G)) {
+					wkd.setValue("★");
 				} else {
 					wkd.setValue("");
 				}
@@ -9685,14 +9685,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		if (callWorked && gridWorked) {
 			return "xo";
-		}
-
-		private String formatWorkedAnyGridStatusForMainView(ChatMember member) {
-			String baseStatus = formatWorkedAnyGridStatus(member);
-			if (member != null && !member.isWorked() && isSelectedBandOfferForMainView(member)) {
-				return baseStatus + " ★";
-			}
-			return baseStatus;
 		}
 
 		if (callWorked) {
