@@ -1,7 +1,14 @@
-name: Build and Deploy Website
+name: Build Website
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - website/**
+      - github_docs/**
+      - .github/workflows/website-deploy.yml
+  pull_request:
     branches:
       - main
     paths:
@@ -14,15 +21,15 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
-  group: website-deploy
+  group: website-build-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy 11ty Website
+  build-website:
+    name: Build 11ty Website
     runs-on: ubuntu-latest
 
     steps:
@@ -44,12 +51,9 @@ jobs:
         working-directory: website
         run: npm run build
 
-      - name: Deploy via rsync
-        uses: easingthemes/ssh-deploy@v5.1.0
+      - name: Upload website artifact
+        uses: actions/upload-artifact@v4.3.4
         with:
-          SSH_PRIVATE_KEY: ${{ secrets.KST4CONTEST_DEPLOY_KEY }}
-          REMOTE_HOST: ${{ secrets.KST4CONTEST_DEPLOY_HOST }}
-          REMOTE_USER: ${{ secrets.KST4CONTEST_DEPLOY_USER }}
-          SOURCE: website/_site/
-          TARGET: ${{ secrets.KST4CONTEST_DEPLOY_PATH }}
-          ARGS: "-rlgoDzvc --delete"
+          name: kst4contest-website
+          path: website/_site/
+          retention-days: 7
