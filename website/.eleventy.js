@@ -3,6 +3,29 @@ const path = require("path");
 const markdownIt = require("markdown-it");
 const markdownItAnchor = require("markdown-it-anchor");
 
+function rewriteManualLinks(content, lang) {
+    return (content || "")
+        // GitHub-Wiki-Links im Stil [[de-Installation]] oder [[en-Installation]]
+        .replace(/\[\[(en|de)-([^\]|]+)\]\]/g, (match, linkLang, slug) => {
+            return `[${slug.replace(/-/g, " ")}](/manual/${linkLang}/${slug.toLowerCase()}/)`;
+        })
+
+        // GitHub-Wiki-Links mit Label: [[Text|de-Installation]]
+        .replace(/\[\[([^\]|]+)\|(en|de)-([^\]]+)\]\]/g, (match, label, linkLang, slug) => {
+            return `[${label}](/manual/${linkLang}/${slug.toLowerCase()}/)`;
+        })
+
+        // Markdown-Links auf de-/en-Dateien ohne .md
+        .replace(/\]\((en|de)-([^)#]+)\)/g, (match, linkLang, slug) => {
+            return `](/manual/${linkLang}/${slug.toLowerCase()}/)`;
+        })
+
+        // Markdown-Links auf de-/en-Dateien mit .md
+        .replace(/\]\((en|de)-([^)#]+)\.md\)/g, (match, linkLang, slug) => {
+            return `](/manual/${linkLang}/${slug.toLowerCase()}/)`;
+        });
+}
+
 module.exports = function (eleventyConfig) {
     eleventyConfig.addPassthroughCopy({ "src/assets": "assets" });
 
@@ -49,7 +72,7 @@ module.exports = function (eleventyConfig) {
                     lang,
                     slug,
                     title,
-                    content: raw
+                    content: rewriteManualLinks(raw, lang)
                 };
             });
     });
