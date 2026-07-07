@@ -1,6 +1,10 @@
 # KST4Contest
 
-KST4Contest (also known as pratiKST) is a Java-based chat client for ON4KST, focused on VHF/UHF/SHF contest operation.
+KST4Contest (also known as pratiKST) is a Java-based chat client for [ON4KST](http://www.on4kst.com/chat), focused on VHF/UHF/SHF contest operation.
+
+## Website
+
+The offical Website of KST4Contest is now instead of [do5amf.funkerportal.de](https://do5amf.funkerportal.de) the new website [here](https://kst4contest.hamradioonline.de) [https://kst4contest.hamradioonline.de](https://kst4contest.hamradioonline.de)
 
 ## Documentation
 
