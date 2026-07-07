@@ -12,9 +12,17 @@ module.exports = [
     },
     {
         os: "Linux",
-        format: "AppImage x86_64",
+        format: "Flatpak (.flatpakref)",
         icon: "🐧",
         recommended: true,
+        note: "Recommended for most Linux users. Open the file with GNOME Software / Discover, or run: flatpak install de.x08.KST4Contest.flatpakref",
+        url: `${base}/de.x08.KST4Contest.flatpakref`
+    },
+    {
+        os: "Linux",
+        format: "AppImage x86_64",
+        icon: "🐧",
+        recommended: false,
         note: "Portable Linux build without package installation.",
         url: `${base}/KST4Contest-${latestTag}-linux-x86_64.AppImage`
     },
