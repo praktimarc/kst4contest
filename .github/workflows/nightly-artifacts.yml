@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - main
-  schedule:
-    - cron: "20 2 * * *"
+    paths:
+      - "src/**"
+      - "pom.xml"
+      - "mvnw"
+      - "mvnw.cmd"
+      - ".github/workflows/nightly-artifacts.yml"
   workflow_dispatch:
 
 env:
