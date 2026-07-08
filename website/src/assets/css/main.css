@@ -415,6 +415,18 @@ a:hover {
     color: var(--muted);
 }
 
+.roadmap-version + .roadmap-version {
+    margin-top: 24px;
+}
+
+.roadmap-version ul {
+    padding-left: 20px;
+}
+
+.roadmap-version li {
+    margin-bottom: 8px;
+}
+
 .roadmap-done a {
     color: var(--muted);
     text-decoration: line-through;

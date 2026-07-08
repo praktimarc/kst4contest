@@ -16,7 +16,7 @@ description: Planned enhancements for upcoming KST4Contest versions, generated f
 
 <section class="section narrow">
   {% if roadmap.length == 0 %}
-    <article class="card content-card">
+    <article class="card content-card roadmap-version">
       <p>No planned enhancements are currently assigned to a version milestone.</p>
       <p>
         See all open feature requests on
@@ -26,7 +26,7 @@ description: Planned enhancements for upcoming KST4Contest versions, generated f
   {% endif %}
 
   {% for version in roadmap %}
-    <article class="card content-card">
+    <article class="card content-card roadmap-version">
       {% if version.version %}
         <h2><a href="{{ version.url }}">{{ version.version }}</a></h2>
       {% else %}
