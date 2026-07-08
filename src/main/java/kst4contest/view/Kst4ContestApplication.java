@@ -820,7 +820,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 		selectedCallSignShowAsPathBtn.setGraphic(createArrow(selectedCallSignInfoStageChatMember.getQTFdirection()));
 
-		Button selectedCallSignShowOnMapBtn = new Button("🧭 Show on map");
+		Button selectedCallSignShowOnMapBtn = new Button("\uD83D\uDDFA Show on map");
+		selectedCallSignShowOnMapBtn.setTooltip(new Tooltip("Show selected station on map"));
+
 		selectedCallSignShowOnMapBtn.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent actionEvent) {
