@@ -9185,7 +9185,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //					if (GuiUtils.isNumeric(txtFldUDPPortforUCX.getText())) {
 
 					System.out.println(
-							"[Main.java, Info]: AS server name resetted to: " + txtFld_asServerNameString.getText());
+							"[Main.java, Info]: AS server name reset to: " + txtFld_asServerNameString.getText());
 					chatcontroller.getChatPreferences()
 							.setAirScout_asServerNameString(txtFld_asServerNameString.getText());
 
@@ -9211,7 +9211,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //					if (GuiUtils.isNumeric(txtFldUDPPortforUCX.getText())) {
 
 					System.out.println(
-							"[Main.java, Info]: AS client name resetted to: " + txtFld_asClientNameString.getText());
+							"[Main.java, Info]: AS client name reset to: " + txtFld_asClientNameString.getText());
 //					chatcontroller.getChatPreferences()
 //							.setAirScout_asServerNameString(txtFld_asClientNameString.getText());
 					chatcontroller.getChatPreferences()
@@ -9238,7 +9238,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				} else {
 					if (GuiUtils.isNumeric(txtFld_asUDPPortInt.getText())) {
 
-						System.out.println("[Main.java, Info]: AS port resetted to: " + txtFld_asUDPPortInt.getText());
+						System.out.println("[Main.java, Info]: AS port reset to: " + txtFld_asUDPPortInt.getText());
 						chatcontroller.getChatPreferences()
 								.setAirScout_asCommunicationPort((Integer.parseInt(txtFld_asUDPPortInt.getText())));
 
@@ -9262,7 +9262,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				} else {
 					if (GuiUtils.isNumeric(txtFld_asQRGInt.getText())) {
 
-						System.out.println("[Main.java, Info]: AS qrg resetted to: " + txtFld_asQRGInt.getText());
+						System.out.println("[Main.java, Info]: AS qrg reset to: " + txtFld_asQRGInt.getText());
 						chatcontroller.getChatPreferences()
 								.setAirScout_asBandString(((Integer.parseInt(txtFld_asQRGInt.getText()))) + "");
 						;
@@ -9809,7 +9809,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //		            chatcontroller.getChatPreferences().setMYQRG(txt_ownqrg.getText());
 						chatcontroller.getChatPreferences()
 								.setBcn_beaconIntervalInMinutesMainCat((Integer.parseInt(txtFldBeaconInterval.getText())));
-						System.out.println("[Main.java, Info]: resetted the beacon-interval to: "
+						System.out.println("[Main.java, Info]: reset the beacon-interval to: "
 								+ txtFldBeaconInterval.getText());
 
 					} else {
@@ -9865,7 +9865,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						chatcontroller.getChatPreferences()
 								.setBcn_beaconIntervalInMinutesSecondCat((Integer.parseInt(txtFldBeaconIntervalSecondCat.getText())));
-						System.out.println("[Main.java, Info]: resetted the beacon-interval (2nd) to: "
+						System.out.println("[Main.java, Info]: reset the beacon-interval (2nd) to: "
 								+ txtFldBeaconIntervalSecondCat.getText());
 
 					} else {
@@ -10014,7 +10014,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					Alert a = new Alert(AlertType.INFORMATION);
 
 					a.setTitle("Worked data");
-					a.setHeaderText("All worked data had been resetted. " + affectedLines
+					a.setHeaderText("All worked data had been reset. " + affectedLines
 							+ " callsign entries had been updated.");
 					a.show();
 
