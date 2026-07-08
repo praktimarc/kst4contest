@@ -78,8 +78,30 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 // The status text itself remains visible independently of this flag.
 	private boolean gridSquareHighlightEnabled = false;
 
+
+	/**
+	 * True for a very short moment when the operator explicitly interacts with the
+	 * ChatMember table by mouse or keyboard.
+	 *
+	 * This flag is the distinction between:
+	 * - real operator selection: may overwrite the send field with "/cq CALL "
+	 * - artificial refresh/selection event: must not overwrite operator text
+	 */
+	private boolean operatorInitiatedChatMemberSelectionChange = false;
+
+
 	private PauseTransition userListRefreshCoalescer;
 	private String pendingUserListUpdateReason = "";
+
+	/**
+	 * Remembers the last combined ChatMember table predicate that was applied.
+	 *
+	 * This avoids repeatedly assigning the same predicate to the FilteredList during
+	 * periodic refreshes. Reassigning the predicate without a real filter change can
+	 * invalidate the TableView and trigger artificial selection events.
+	 */
+	private Predicate<ChatMember> lastAppliedChatMemberFilterPredicate = null;
+
 
 	private Band selectedReachabilityBandOverride = null;
 
@@ -105,6 +127,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	// Keep in sync with TimelineView PREVIEW_TIME_MS (currently 30 minutes = 30L * 60L * 1000L)
 	private static final long TIMELINE_PREVIEW_TIME_MS = 30L * 60L * 1000L;
 
+	/**
+	 * Reused show-all predicate for the station table.
+	 *
+	 * Using the same instance avoids unnecessary FilteredList invalidations when no
+	 * station filters are active. Such invalidations can make the TableView selection
+	 * model fire again although the operator did not select another station.
+	 */
+	private static final Predicate<ChatMember> SHOW_ALL_CHAT_MEMBER_PREDICATE = chatMember -> true;
 
 	//recoloring of the chatmembers list is turned on and off here
 	private static final boolean ENABLE_PRIORITY_SCORE_ROW_COLORING = false;
@@ -1069,10 +1099,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	/**
 	 * Applies the currently selected station filters to the ChatMember FilteredList.
 	 *
-	 * <p>This replaces the old predicate-property binding. The old binding worked
-	 * for normal filter changes, but it became unstable when we tried to force a
-	 * refresh by adding/removing a dummy predicate. Calling this method simply
-	 * rebuilds the combined predicate and sets it directly on the FilteredList.</p>
+	 * This replaces the old predicate-property binding / forced refresh mechanics.
+	 * The important point is that the TableView should only be invalidated when the
+	 * effective filter really changed. Otherwise JavaFX may emit selection events
+	 * during normal periodic updates although the operator did not click another
+	 * station.
 	 */
 	private void applyChatMemberFilterPredicates() {
 		if (chatcontroller == null
@@ -1081,11 +1112,29 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			return;
 		}
 
-		Predicate<ChatMember> combinedPredicate =
-				chatcontroller.getLst_chatMemberListFilterPredicates()
-						.stream()
-						.reduce(chatMember -> true, Predicate::and);
+		Predicate<ChatMember> combinedPredicate;
 
+		if (chatcontroller.getLst_chatMemberListFilterPredicates().isEmpty()) {
+			combinedPredicate = SHOW_ALL_CHAT_MEMBER_PREDICATE;
+		} else {
+			combinedPredicate = chatcontroller.getLst_chatMemberListFilterPredicates()
+					.stream()
+					.reduce(SHOW_ALL_CHAT_MEMBER_PREDICATE, Predicate::and);
+		}
+
+		/*
+		 * Do not reset the same show-all predicate over and over again.
+		 *
+		 * The periodic priority/user-list refresh calls this method regularly. If the
+		 * FilteredList is invalidated without real filter changes, the TableView
+		 * selection model may emit another selection event and the send-text field can
+		 * be prepared again.
+		 */
+		if (combinedPredicate == lastAppliedChatMemberFilterPredicate) {
+			return;
+		}
+
+		lastAppliedChatMemberFilterPredicate = combinedPredicate;
 		chatcontroller.getLst_chatMemberListFiltered().setPredicate(combinedPredicate);
 	}
 
@@ -2008,30 +2057,417 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return null;
 	}
 
+	/**
+	 * Focuses a ChatMember and prepares the send field.
+	 *
+	 * This overload is used by explicit operator actions such as timeline clicks or
+	 * context actions. In those cases it is acceptable to overwrite the previous
+	 * automatic /cq template, because the operator intentionally chose a station.
+	 */
 	private void focusChatMemberAndPrepareCq(ChatMember member) {
-		if (member == null) return;
+		focusChatMemberAndPrepareCq(member, true);
+	}
 
-		// Try selecting in table if it is visible (nice UX), but do not depend on it
+	/**
+	 * Focuses a ChatMember and optionally prepares the /cq command.
+	 *
+	 * The method selects the member in the table if possible, but guards that
+	 * programmatic selection with programmaticChatMemberSelectionChange. This prevents
+	 * the table selection listener from running the same logic a second time.
+	 *
+	 * @param member ChatMember that should become the active station
+	 * @param forcePrepareCq true if /cq should be prepared even if the logical
+	 *                       selection did not change
+	 */
+	private void focusChatMemberAndPrepareCq(ChatMember member, boolean forcePrepareCq) {
+		if (member == null) {
+			return;
+		}
+
+		ChatMember previousSelectedMember = selectedCallSignInfoStageChatMember;
+
+		/*
+		 * Selecting the row programmatically is useful for visual feedback, but the
+		 * table-selection listener must not prepare /cq a second time.
+		 */
 		try {
-			if (tbl_chatMember != null && tbl_chatMember.getItems() != null && tbl_chatMember.getItems().contains(member)) {
+			if (tbl_chatMember != null
+					&& tbl_chatMember.getItems() != null
+					&& tbl_chatMember.getItems().contains(member)) {
+				programmaticChatMemberSelectionChange = true;
 				tbl_chatMember.getSelectionModel().select(member);
 				tbl_chatMember.scrollTo(member);
 			}
 		} catch (Exception ignored) {
-			// ignore: table not ready or filtered
+			// Ignore: table may not be ready yet or member may currently be filtered out.
+		} finally {
+			programmaticChatMemberSelectionChange = false;
 		}
 
-		// Force selection effects regardless of filters/selection state
-		selectedCallSignInfoStageChatMember = member;
-		chatcontroller.getScoreService().setSelectedChatMember(member);
+		handleChatMemberSelectionChanged(member, previousSelectedMember, forcePrepareCq);
+	}
 
-		selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(member));
+	/**
+	 * Central handler for a selected ChatMember.
+	 *
+	 * Selection changes can be emitted by JavaFX even when the user did not click a
+	 * new station, for example after FilteredList/SortedList invalidations during
+	 * periodic score updates.
+	 *
+	 * Therefore the send text is only auto-prepared when:
+	 * - the logical station really changed, or
+	 * - the caller explicitly forces preparation.
+	 *
+	 * Even then, the send field is protected by prepareCqTextForSelectedChatMember()
+	 * so manually typed operator text is not destroyed.
+	 */
+	private void handleChatMemberSelectionChanged(ChatMember selectedMember, ChatMember previousMember, boolean forcePrepareCq) {
+		if (selectedMember == null) {
+			return;
+		}
 
-		txt_chatMessageUserInput.clear();
-		txt_chatMessageUserInput.setText("/cq " + member.getCallSign() + " ");
+		boolean logicalSelectionChanged = !isSameLogicalChatMember(previousMember, selectedMember);
+
+		selectedCallSignInfoStageChatMember = selectedMember;
+
+		if (chatcontroller != null && chatcontroller.getScoreService() != null) {
+			chatcontroller.getScoreService().setSelectedChatMember(selectedMember);
+		}
+
+		try {
+			selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(selectedMember));
+		} catch (Exception exception) {
+			System.out.println("KST4CApp: ERROR, selected member disappeared: " + exception.getMessage());
+		}
+
+		if (forcePrepareCq || logicalSelectionChanged) {
+			prepareCqTextForSelectedChatMember(selectedMember, forcePrepareCq);
+		}
+	}
+
+	/**
+	 * Prepares the send field with "/cq CALL " for the selected ChatMember.
+	 *
+	 * The ChatMember's category is stored together with the prepared text. This is
+	 * required because a later table refresh may change the selected row while the
+	 * operator is still editing the message. The send handler can then still send the
+	 * message in the category of the callsign shown in the text field.
+	 */
+	private void prepareCqTextForSelectedChatMember(ChatMember member, boolean forceOverwrite) {
+		if (member == null) {
+			return;
+		}
+
+		prepareCqTextForCallsign(member.getCallSign(), member.getChatCategory(), forceOverwrite);
+	}
+
+	/**
+	 * Convenience overload when only a callsign is known.
+	 *
+	 * No category is attached in this case. The send handler will later try to
+	 * resolve the category from the visible /cq callsign and the active user list.
+	 */
+	private void prepareCqTextForCallsign(String callSign, boolean forceOverwrite) {
+		prepareCqTextForCallsign(callSign, null, forceOverwrite);
+	}
+
+	/**
+	 * Prepares "/cq CALL " in the send field without destroying operator input.
+	 *
+	 * The field may only be overwritten when:
+	 * - forceOverwrite is true,
+	 * - the field is empty, or
+	 * - the field still contains the previous automatically generated /cq template.
+	 *
+	 * If the operator already changed the text, this method leaves the field exactly
+	 * as it is.
+	 */
+	private void prepareCqTextForCallsign(String callSign, ChatCategory preparedCategory, boolean forceOverwrite) {
+		if (callSign == null || callSign.isBlank() || txt_chatMessageUserInput == null) {
+			return;
+		}
+
+		String preparedText = "/cq " + callSign.trim() + " ";
+
+		if (!forceOverwrite && !canOverwriteSendTextWithAutoPreparedText()) {
+			return;
+		}
+
+		txt_chatMessageUserInput.setText(preparedText);
+
+		/*
+		 * Remember the generated text and its target. This connects the visible /cq
+		 * command to the correct chat category even if the selected table row changes
+		 * later due to refresh/filter activity.
+		 */
+		lastAutoPreparedSendText = preparedText;
+		lastAutoPreparedCqTargetCallsign = normalizeCallsignForCategoryResolution(callSign);
+		lastAutoPreparedCqTargetCategory = normalizeToActiveChatCategory(preparedCategory);
+
 		txt_chatMessageUserInput.requestFocus();
 		txt_chatMessageUserInput.selectEnd();
 	}
+
+	/**
+	 * Checks whether an automatic /cq preparation is allowed to overwrite the input.
+	 *
+	 * It is safe to overwrite:
+	 * - an empty field
+	 * - the exact text that was previously created automatically
+	 *
+	 * It is not safe to overwrite anything else, because that means the operator has
+	 * started typing or editing a message.
+	 */
+	private boolean canOverwriteSendTextWithAutoPreparedText() {
+		String currentText = txt_chatMessageUserInput == null ? null : txt_chatMessageUserInput.getText();
+
+		if (currentText == null || currentText.isBlank()) {
+			return true;
+		}
+
+		return currentText.equals(lastAutoPreparedSendText);
+	}
+
+	/**
+	 * Compares two ChatMember objects by their logical identity.
+	 *
+	 * JavaFX may replace item instances during refreshes, so object identity alone is
+	 * not enough. For selection stability we compare callsign/raw callsign and chat
+	 * category number.
+	 */
+	private boolean isSameLogicalChatMember(ChatMember a, ChatMember b) {
+		if (a == b) {
+			return true;
+		}
+		if (a == null || b == null) {
+			return false;
+		}
+
+		String aCall = a.getCallSignRaw() != null ? a.getCallSignRaw() : a.getCallSign();
+		String bCall = b.getCallSignRaw() != null ? b.getCallSignRaw() : b.getCallSign();
+
+		if (aCall == null || bCall == null || !aCall.equalsIgnoreCase(bCall)) {
+			return false;
+		}
+
+		ChatCategory aCategory = a.getChatCategory();
+		ChatCategory bCategory = b.getChatCategory();
+
+		if (aCategory == bCategory) {
+			return true;
+		}
+		if (aCategory == null || bCategory == null) {
+			return false;
+		}
+
+		return aCategory.getCategoryNumber() == bCategory.getCategoryNumber();
+	}
+
+	/**
+	 * Resolves the chat category for an outgoing message.
+	 *
+	 * Important: if the send field contains an explicit "/cq CALL ...", the target
+	 * callsign in the text is authoritative. This prevents a later table refresh or
+	 * selection event from sending an already typed message in the category of a
+	 * different selected ChatMember.
+	 */
+	private ChatCategory resolveOutgoingChatCategory(String outgoingText, ChatMember selectedMember) {
+		ChatCategory mainCategory = chatcontroller != null ? chatcontroller.getChatCategoryMain() : null;
+		ChatCategory selectedMemberCategory = getActiveChatCategoryForMember(selectedMember);
+		String cqTargetCallsign = extractCqTargetCallsign(outgoingText);
+
+		if (cqTargetCallsign != null) {
+			String normalizedTarget = normalizeCallsignForCategoryResolution(cqTargetCallsign);
+
+			/*
+			 * If this text was auto-prepared from a concrete ChatMember, keep that
+			 * category attached to the text even if the table selection changes later.
+			 */
+			if (normalizedTarget.equals(lastAutoPreparedCqTargetCallsign)
+					&& lastAutoPreparedCqTargetCategory != null) {
+				return lastAutoPreparedCqTargetCategory;
+			}
+
+			/*
+			 * If the currently selected member is the same station as the /cq target,
+			 * its category is safe to use.
+			 */
+			if (selectedMember != null
+					&& selectedMemberCategory != null
+					&& chatMemberMatchesCallsign(selectedMember, normalizedTarget)) {
+				return selectedMemberCategory;
+			}
+
+			/*
+			 * Otherwise resolve the /cq target from the user list. This also protects
+			 * manually typed /cq texts when a different station is selected.
+			 */
+			ChatCategory uniqueCategoryForTarget = findUniqueActiveCategoryForCallsign(normalizedTarget);
+			if (uniqueCategoryForTarget != null) {
+				return uniqueCategoryForTarget;
+			}
+
+			System.out.println("KST4CApp: WARNING, could not resolve chat category for explicit /cq target "
+					+ cqTargetCallsign + "; using main chat category as safe fallback.");
+			return mainCategory;
+		}
+
+		if (selectedMemberCategory != null) {
+			return selectedMemberCategory;
+		}
+
+		return mainCategory;
+	}
+
+	/**
+	 * Returns an active ChatCategory object for the member category.
+	 *
+	 * This avoids sending with stale category instances and maps the member category
+	 * to the controller's current main/second category objects.
+	 */
+	private ChatCategory getActiveChatCategoryForMember(ChatMember member) {
+		if (member == null) {
+			return null;
+		}
+		return normalizeToActiveChatCategory(member.getChatCategory());
+	}
+
+	/**
+	 * Maps any category object to the currently active main/second chat category.
+	 *
+	 * This is safer than directly reusing a category object from a ChatMember, because
+	 * the controller owns the actual active category instances used for sending.
+	 */
+	private ChatCategory normalizeToActiveChatCategory(ChatCategory category) {
+		if (category == null || chatcontroller == null) {
+			return null;
+		}
+
+		String categoryNumber = category.getCategoryNumber() + "";
+
+		if (chatcontroller.getChatCategoryMain() != null
+				&& categoryNumber.equals(chatcontroller.getChatCategoryMain().getCategoryNumber() + "")) {
+			return chatcontroller.getChatCategoryMain();
+		}
+
+		if (chatcontroller.getChatCategorySecondChat() != null
+				&& categoryNumber.equals(chatcontroller.getChatCategorySecondChat().getCategoryNumber() + "")) {
+			return chatcontroller.getChatCategorySecondChat();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Extracts the target callsign from a directed ON4KST command such as:
+	 *
+	 * /cq DL1ABC hello
+	 *
+	 * Returns null for normal/general messages that do not start with "/cq ".
+	 */
+	private String extractCqTargetCallsign(String outgoingText) {
+		if (outgoingText == null) {
+			return null;
+		}
+
+		String trimmedText = outgoingText.trim();
+		if (trimmedText.length() < 5 || !trimmedText.toLowerCase(Locale.ROOT).startsWith("/cq ")) {
+			return null;
+		}
+
+		String afterCommand = trimmedText.substring(4).trim();
+		if (afterCommand.isBlank()) {
+			return null;
+		}
+
+		String[] parts = afterCommand.split("\\s+", 2);
+		return parts.length > 0 && !parts[0].isBlank() ? parts[0].trim() : null;
+	}
+
+	/**
+	 * Searches the active user list for one unique category for a callsign.
+	 *
+	 * If the same callsign is present in both active chat channels, the result is not
+	 * unique and null is returned. In that case the send handler falls back to the
+	 * main category and logs a warning.
+	 */
+	private ChatCategory findUniqueActiveCategoryForCallsign(String normalizedCallsign) {
+		if (normalizedCallsign == null || normalizedCallsign.isBlank()
+				|| chatcontroller == null || chatcontroller.getLst_chatMemberList() == null) {
+			return null;
+		}
+
+		ChatCategory foundCategory = null;
+
+		for (ChatMember chatMember : chatcontroller.getLst_chatMemberList()) {
+			if (chatMember == null || !chatMemberMatchesCallsign(chatMember, normalizedCallsign)) {
+				continue;
+			}
+
+			ChatCategory activeCategory = getActiveChatCategoryForMember(chatMember);
+			if (activeCategory == null) {
+				continue;
+			}
+
+			if (foundCategory == null) {
+				foundCategory = activeCategory;
+			} else if (foundCategory.getCategoryNumber() != activeCategory.getCategoryNumber()) {
+				// Same callsign is present in multiple active chat channels; not unique.
+				return null;
+			}
+		}
+
+		return foundCategory;
+	}
+
+	/**
+	 * Checks whether a ChatMember represents the given normalized callsign.
+	 *
+	 * Both getCallSign() and getCallSignRaw() are checked because different parts of
+	 * the program use either the decorated/display callsign or the raw callsign.
+	 */
+	private boolean chatMemberMatchesCallsign(ChatMember chatMember, String normalizedCallsign) {
+		if (chatMember == null || normalizedCallsign == null || normalizedCallsign.isBlank()) {
+			return false;
+		}
+
+		String callSign = normalizeCallsignForCategoryResolution(chatMember.getCallSign());
+		String callSignRaw = normalizeCallsignForCategoryResolution(chatMember.getCallSignRaw());
+
+		return normalizedCallsign.equals(callSign) || normalizedCallsign.equals(callSignRaw);
+	}
+
+	/**
+	 * Normalizes callsigns for safe comparisons.
+	 */
+	private String normalizeCallsignForCategoryResolution(String callsign) {
+		return callsign == null ? "" : callsign.trim().toUpperCase(Locale.ROOT);
+	}
+
+//	private void focusChatMemberAndPrepareCq(ChatMember member) {
+//		if (member == null) return;
+//
+//		// Try selecting in table if it is visible (nice UX), but do not depend on it
+//		try {
+//			if (tbl_chatMember != null && tbl_chatMember.getItems() != null && tbl_chatMember.getItems().contains(member)) {
+//				tbl_chatMember.getSelectionModel().select(member);
+//				tbl_chatMember.scrollTo(member);
+//			}
+//		} catch (Exception ignored) {
+//			// ignore: table not ready or filtered
+//		}
+//
+//		// Force selection effects regardless of filters/selection state
+//		selectedCallSignInfoStageChatMember = member;
+//		chatcontroller.getScoreService().setSelectedChatMember(member);
+//
+//		selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(member));
+//
+//		txt_chatMessageUserInput.clear();
+//		txt_chatMessageUserInput.setText("/cq " + member.getCallSign() + " ");
+//		txt_chatMessageUserInput.requestFocus();
+//		txt_chatMessageUserInput.selectEnd();
+//	}
 
 
 
@@ -3556,19 +3992,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			return;
 		}
 
-		if (tbl_chatMember.getItems().contains(resolved)) {
-			tbl_chatMember.getSelectionModel().select(resolved);
-			tbl_chatMember.scrollTo(resolved);
-		} else {
-			selectedCallSignInfoStageChatMember = resolved;
-			chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+//		if (tbl_chatMember.getItems().contains(resolved)) {
+//			tbl_chatMember.getSelectionModel().select(resolved);
+//			tbl_chatMember.scrollTo(resolved);
+//		} else {
+//			selectedCallSignInfoStageChatMember = resolved;
+//			chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+//
+//			selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
+//			txt_chatMessageUserInput.clear();
+//			txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
+//			txt_chatMessageUserInput.requestFocus();
+//			txt_chatMessageUserInput.selectEnd();
+//		}
 
-			selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
-			txt_chatMessageUserInput.clear();
-			txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
-			txt_chatMessageUserInput.requestFocus();
-			txt_chatMessageUserInput.selectEnd();
-		}
+		tbl_chatMember.getSelectionModel().select(resolved); //new mechanic for selectionchange events due to textfield
+		//manipulation...
 
 		// Keep ScoreService selection in sync even if the visible table selection path was used.
 		chatcontroller.getScoreService().setSelectedChatMember(resolved);
@@ -4766,6 +5205,45 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	TextField txt_ownqrgMainCategory = new TextField();
 	TextField txt_ownqrgSecondCategory = new TextField();
 	TextField txt_myQTF = new TextField();
+
+	/**
+	 * Stores the last automatically prepared text in the send input field.
+	 *
+	 * This is used to distinguish between:
+	 * - text that KST4Contest created automatically, e.g. "/cq DL1ABC "
+	 * - text that the operator has already edited manually
+	 *
+	 * Only automatically prepared text may be overwritten by a later automatic
+	 * preparation. Manually typed text must never be destroyed by a table refresh.
+	 */
+	private String lastAutoPreparedSendText = "";
+
+	/**
+	 * Callsign behind the last automatically prepared /cq command.
+	 *
+	 * This is important for category resolution while sending. If the visible text is
+	 * "/cq DL1ABC ..." and a later table refresh changes the selected ChatMember, the
+	 * outgoing message must still be sent in the category that belonged to DL1ABC.
+	 */
+	private String lastAutoPreparedCqTargetCallsign = "";
+
+	/**
+	 * Chat category that belonged to the last automatically prepared /cq target.
+	 *
+	 * The send handler uses this as the strongest category hint when the current
+	 * input still targets the same callsign.
+	 */
+	private ChatCategory lastAutoPreparedCqTargetCategory = null;
+
+	/**
+	 * Guard flag for programmatic table selections.
+	 *
+	 * Some UI actions intentionally select a row in the ChatMember table for visual
+	 * feedback. Those programmatic selections must not run the normal user-selection
+	 * handler again, otherwise /cq preparation can happen twice or at the wrong time.
+	 */
+	private boolean programmaticChatMemberSelectionChange = false;
+
 	Button btnOptionspnlConnect;
 	ContextMenu chatMessageContextMenu; // public due need to update it on modify
 	ContextMenu chatMemberContextMenu;// public due need to update it on modify
@@ -5596,6 +6074,99 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			sendButton = new Button("TX");
 			sendButton.setMinSize(20, 0);
+//			sendButton.setOnAction(new EventHandler<ActionEvent>() {
+//				@Override
+//				public void handle(ActionEvent event) {
+//
+//					ChatMessage sendMe = new ChatMessage();
+//
+//					/*
+//					 * Resolve the selected station safely.
+//					 *
+//					 * Normal case:
+//					 * - selectedCallSignInfoStageChatMember is set by clicking/selecting a station.
+//					 *
+//					 * Fallbacks:
+//					 * - current table selection
+//					 * - ScoreService selected member
+//					 *
+//					 * If no station is selected at all, the message is sent to the main category.
+//					 */
+//					ChatMember effectiveSelectedMember = selectedCallSignInfoStageChatMember;
+//
+//					if (effectiveSelectedMember == null
+//							&& tbl_chatMember != null
+//							&& tbl_chatMember.getSelectionModel() != null) {
+//						effectiveSelectedMember = tbl_chatMember.getSelectionModel().getSelectedItem();
+//					}
+//
+//					if (effectiveSelectedMember == null
+//							&& chatcontroller != null
+//							&& chatcontroller.getScoreService() != null) {
+//						effectiveSelectedMember = chatcontroller.getScoreService().getSelectedChatMember();
+//					}
+//
+//					/*
+//					 * Default decision:
+//					 * If no station is selected, use the main category.
+//					 */
+//					ChatCategory sendMeInThisCat = chatcontroller.getChatCategoryMain();
+//
+//					/*
+//					 * If a station is selected and its category matches one of our active chat
+//					 * categories, send in that category. This keeps the old behaviour, but avoids
+//					 * NullPointerExceptions when no station has been selected yet.
+//					 */
+//					if (effectiveSelectedMember != null && effectiveSelectedMember.getChatCategory() != null) {
+//
+//						String categoryNumber = effectiveSelectedMember.getChatCategory().getCategoryNumber() + "";
+//
+//						if (chatcontroller.getChatCategoryMain() != null
+//								&& categoryNumber.equals(chatcontroller.getChatCategoryMain().getCategoryNumber() + "")) {
+//
+//							sendMeInThisCat = chatcontroller.getChatCategoryMain();
+//
+//						} else if (chatcontroller.getChatCategorySecondChat() != null
+//								&& categoryNumber.equals(chatcontroller.getChatCategorySecondChat().getCategoryNumber() + "")) {
+//
+//							sendMeInThisCat = chatcontroller.getChatCategorySecondChat();
+//
+//						} else {
+//							sendMeInThisCat = chatcontroller.getChatCategoryMain(); // Chatcategory default decision
+//						}
+//					}
+//
+//					String selectedMemberDebugText;
+//					if (effectiveSelectedMember == null) {
+//						selectedMemberDebugText = "none, using main category";
+//					} else {
+//						selectedMemberDebugText = effectiveSelectedMember.getCallSignRaw()
+//								+ " / "
+//								+ effectiveSelectedMember.getChatCategory();
+//					}
+//
+//					System.out.println("<<<<<<<<<<<<<<<<<<<<< detected Category for sending message is "
+//							+ sendMeInThisCat
+//							+ " // selected member: "
+//							+ selectedMemberDebugText
+//							+ " evt "
+//							+ event.isConsumed());
+//
+//					sendMe.setChatCategory(sendMeInThisCat); // new in 1.26, answer in channel of the selected member if available
+//					sendMe.setMessageText(txt_chatMessageUserInput.getText());
+//
+//					// If operator sends "/cq CALL ..." => arm pending ping metrics for reply-time / no-reply tracking
+//					chatcontroller.getStationMetricsService().tryRecordOutboundCq(sendMe.getMessageText(), System.currentTimeMillis());
+//					chatcontroller.getScoreService().requestRecompute("outbound-tx");
+//
+//					sendMe.setMessageDirectedToServer(false);
+//
+//					chatcontroller.getMessageTXBus().add(sendMe); // move the message to the tx queue
+//
+//					txt_chatMessageUserInput.clear();
+//				}
+//			});
+
 			sendButton.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent event) {
@@ -5629,35 +6200,34 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					}
 
 					/*
-					 * Default decision:
-					 * If no station is selected, use the main category.
+					 * Category decision:
+					 *
+					 * If the outgoing text starts with "/cq CALL ...", the target callsign inside
+					 * the text is authoritative. The message category is therefore resolved from
+					 * that target callsign, not blindly from the current table selection.
+					 *
+					 * This is important because the ChatMember table can emit artificial selection
+					 * events during periodic refreshes. Such events must not move an already typed
+					 * /cq message into another channel.
 					 */
-					ChatCategory sendMeInThisCat = chatcontroller.getChatCategoryMain();
+					ChatCategory sendMeInThisCat = resolveOutgoingChatCategory(
+							txt_chatMessageUserInput.getText(),
+							effectiveSelectedMember
+					);
 
 					/*
-					 * If a station is selected and its category matches one of our active chat
-					 * categories, send in that category. This keeps the old behaviour, but avoids
-					 * NullPointerExceptions when no station has been selected yet.
+					 * Final safety fallback:
+					 * If the category could not be resolved for any reason, use the main category.
 					 */
-					if (effectiveSelectedMember != null && effectiveSelectedMember.getChatCategory() != null) {
-
-						String categoryNumber = effectiveSelectedMember.getChatCategory().getCategoryNumber() + "";
-
-						if (chatcontroller.getChatCategoryMain() != null
-								&& categoryNumber.equals(chatcontroller.getChatCategoryMain().getCategoryNumber() + "")) {
-
-							sendMeInThisCat = chatcontroller.getChatCategoryMain();
-
-						} else if (chatcontroller.getChatCategorySecondChat() != null
-								&& categoryNumber.equals(chatcontroller.getChatCategorySecondChat().getCategoryNumber() + "")) {
-
-							sendMeInThisCat = chatcontroller.getChatCategorySecondChat();
-
-						} else {
-							sendMeInThisCat = chatcontroller.getChatCategoryMain(); // Chatcategory default decision
-						}
+					if (sendMeInThisCat == null) {
+						sendMeInThisCat = chatcontroller.getChatCategoryMain();
 					}
 
+					/*
+					 * Debug output:
+					 * Helps verify whether the selected station and the final send category match
+					 * the expected behavior during tests.
+					 */
 					String selectedMemberDebugText;
 					if (effectiveSelectedMember == null) {
 						selectedMemberDebugText = "none, using main category";
@@ -5674,17 +6244,42 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 							+ " evt "
 							+ event.isConsumed());
 
-					sendMe.setChatCategory(sendMeInThisCat); // new in 1.26, answer in channel of the selected member if available
+					/*
+					 * Build outgoing chat message.
+					 *
+					 * The category has already been resolved above. It may be:
+					 * - the category of the /cq target callsign,
+					 * - the category of the currently selected member,
+					 * - or the main category as fallback.
+					 */
+					sendMe.setChatCategory(sendMeInThisCat);
 					sendMe.setMessageText(txt_chatMessageUserInput.getText());
 
-					// If operator sends "/cq CALL ..." => arm pending ping metrics for reply-time / no-reply tracking
-					chatcontroller.getStationMetricsService().tryRecordOutboundCq(sendMe.getMessageText(), System.currentTimeMillis());
+					/*
+					 * If operator sends "/cq CALL ..." then update the station metrics.
+					 *
+					 * This keeps reply-time / no-reply tracking working after the category fix.
+					 */
+					chatcontroller.getStationMetricsService()
+							.tryRecordOutboundCq(sendMe.getMessageText(), System.currentTimeMillis());
+
 					chatcontroller.getScoreService().requestRecompute("outbound-tx");
 
 					sendMe.setMessageDirectedToServer(false);
 
-					chatcontroller.getMessageTXBus().add(sendMe); // move the message to the tx queue
+					/*
+					 * Move the message to the TX queue.
+					 *
+					 * Actual sending is still handled by the existing TX mechanism.
+					 */
+					chatcontroller.getMessageTXBus().add(sendMe);
 
+					/*
+					 * Clear the input field only after the message has been queued.
+					 *
+					 * This is an intentional clear after sending, not the old problematic
+					 * selection-listener overwrite.
+					 */
 					txt_chatMessageUserInput.clear();
 				}
 			});
@@ -5976,71 +6571,115 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			ObservableList<ChatMessage> selectedChatMessageList = privateChatselectionModelChatMessage
 					.getSelectedItems();
-			selectedChatMessageList.addListener(new ListChangeListener<ChatMessage>() {
-				@Override
-				public void onChanged(Change<? extends ChatMessage> selectedChatMemberPrivateChat) {
-					if (privateChatselectionModelChatMessage.getSelectedItems().isEmpty()) {
-						// do nothing, that was a deselection-event!
-					} else {
+			privateChatselectionModelChatMessage.selectedItemProperty().addListener(
+					(observableValue, oldSelectedMessage, newSelectedMessage) -> {
+						if (newSelectedMessage == null) {
+							return;
+						}
 
-						/**
-						 * We need a special trick here. Since the private message list is a messagelist only for my own callsign, it´s not useful to show a sender and receiver.
-						 * But if you choose a line with a message which you sent do another station, the default mechanism will type "/cq MYOWNCALL" to the textfield and if you are sleepy,
-						 * you wouldnt remark that you sent a message to yourself. Thatswhy the rx-callsign (in brackets) will be extracted out of your sended message and added to the sendmessage-field.
-						 * Thats what happening in line with //here1
-						 * Your own sent texts will look like this:
-						 *
-						 * (>ON4KST) Hi team! Nice to meet you
-						 *
+						/*
+						 * Special case:
+						 * If the selected private message was sent by ourselves, the sender is our
+						 * own callsign. Replying to ourselves would be wrong, so the receiver is
+						 * extracted from the original message text and used as /cq target.
 						 */
+						if (newSelectedMessage.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign())) {
+							System.out.println("////////////////////////////// rx in orginal message: "
+									+ newSelectedMessage.getReceiver().getCallSign());
 
-						if (selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign()) ) {
-							//selected message of own callsign ... now filter the foreign callsign and fill it in after /cq
-							System.out.println("////////////////////////////// rx in orginal message: " + selectedChatMemberPrivateChat.getList().get(0).getReceiver().getCallSign());
-							System.out.println("privChat selected ChatMember: was own object...!" + "rx was: " + selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))));
+							String receiverCallsign = newSelectedMessage.getMessageText()
+									.substring(2, (newSelectedMessage.getMessageText().indexOf(")")));
 
-							txt_chatMessageUserInput.clear();
-							txt_chatMessageUserInput.setText("/cq "
-									+ selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))) + " "); //here1
-							txt_chatMessageUserInput.requestFocus();
-							txt_chatMessageUserInput.selectEnd();
+							System.out.println("privChat selected ChatMember: was own object...! rx was: " + receiverCallsign);
 
-							//own messages end here
+							prepareCqTextForCallsign(receiverCallsign, newSelectedMessage.getChatCategory(), false);
 
 						} else {
-
-
-							txt_chatMessageUserInput.clear();
-							txt_chatMessageUserInput.setText("/cq "
-									+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
-							txt_chatMessageUserInput.requestFocus();
-							txt_chatMessageUserInput.selectEnd();
-
-
-							focusChatMemberAndPrepareCq(selectedChatMemberPrivateChat.getList().get(0).getSender());
-
+							prepareCqTextForSelectedChatMember(newSelectedMessage.getSender(), false);
+							focusChatMemberAndPrepareCq(newSelectedMessage.getSender(), false);
 
 							try {
 								selectedCallSignFurtherInfoPane.getChildren().clear();
-								selectedCallSignInfoStageChatMember = selectedChatMemberPrivateChat.getList().get(0).getSender();
+								selectedCallSignInfoStageChatMember = newSelectedMessage.getSender();
 								chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
-
-								chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection change
-								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+								selectedCallSignFurtherInfoPane.getChildren()
+										.add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
 								txt_chatMessageUserInput.requestFocus();
 								txt_chatMessageUserInput.selectEnd();
 							} catch (Exception exception) {
 								System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
 							}
 
-							System.out.println("privChat selected ChatMember: "
-									+ selectedChatMemberPrivateChat.getList().get(0).getSender());
-							// selectedChatMemberList.clear();
-//						selectionModelChatMember.clearSelection(0);
+							System.out.println("privChat selected ChatMember: " + newSelectedMessage.getSender());
 						}
 					}
-				}
-			});
+			);
+
+//			selectedChatMessageList.addListener(new ListChangeListener<ChatMessage>() {
+//				@Override
+//				public void onChanged(Change<? extends ChatMessage> selectedChatMemberPrivateChat) {
+//					if (privateChatselectionModelChatMessage.getSelectedItems().isEmpty()) {
+//						// do nothing, that was a deselection-event!
+//					} else {
+//
+//						/**
+//						 * We need a special trick here. Since the private message list is a messagelist only for my own callsign, it´s not useful to show a sender and receiver.
+//						 * But if you choose a line with a message which you sent do another station, the default mechanism will type "/cq MYOWNCALL" to the textfield and if you are sleepy,
+//						 * you wouldnt remark that you sent a message to yourself. Thatswhy the rx-callsign (in brackets) will be extracted out of your sended message and added to the sendmessage-field.
+//						 * Thats what happening in line with //here1
+//						 * Your own sent texts will look like this:
+//						 *
+//						 * (>ON4KST) Hi team! Nice to meet you
+//						 *
+//						 */
+//
+//						if (selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign()) ) {
+//							//selected message of own callsign ... now filter the foreign callsign and fill it in after /cq
+//							System.out.println("////////////////////////////// rx in orginal message: " + selectedChatMemberPrivateChat.getList().get(0).getReceiver().getCallSign());
+//							System.out.println("privChat selected ChatMember: was own object...!" + "rx was: " + selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))));
+//
+//							txt_chatMessageUserInput.clear();
+//							txt_chatMessageUserInput.setText("/cq "
+//									+ selectedChatMemberPrivateChat.getList().get(0).getMessageText().substring(2,(selectedChatMemberPrivateChat.getList().get(0).getMessageText().indexOf(")"))) + " "); //here1
+//							txt_chatMessageUserInput.requestFocus();
+//							txt_chatMessageUserInput.selectEnd();
+//
+//							//own messages end here
+//
+//						} else {
+//
+//
+//							txt_chatMessageUserInput.clear();
+//							txt_chatMessageUserInput.setText("/cq "
+//									+ selectedChatMemberPrivateChat.getList().get(0).getSender().getCallSign() + " ");
+//							txt_chatMessageUserInput.requestFocus();
+//							txt_chatMessageUserInput.selectEnd();
+//
+//
+//							focusChatMemberAndPrepareCq(selectedChatMemberPrivateChat.getList().get(0).getSender());
+//
+//
+//							try {
+//								selectedCallSignFurtherInfoPane.getChildren().clear();
+//								selectedCallSignInfoStageChatMember = selectedChatMemberPrivateChat.getList().get(0).getSender();
+//								chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+//
+//								chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection change
+//								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+//								txt_chatMessageUserInput.requestFocus();
+//								txt_chatMessageUserInput.selectEnd();
+//							} catch (Exception exception) {
+//								System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
+//							}
+//
+//							System.out.println("privChat selected ChatMember: "
+//									+ selectedChatMemberPrivateChat.getList().get(0).getSender());
+//							// selectedChatMemberList.clear();
+////						selectionModelChatMember.clearSelection(0);
+//						}
+//					}
+//				}
+//			});
 
 			timer_updatePrivatemessageTable = new Timer();
 			timer_updatePrivatemessageTable.scheduleAtFixedRate(new TimerTask() {
@@ -6071,51 +6710,81 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			TableViewSelectionModel<ChatMessage> generalChatselectionModelChatMessage = tbl_generalMessageTable
 					.getSelectionModel();
-			privateChatselectionModelChatMessage.setSelectionMode(SelectionMode.SINGLE);
+			generalChatselectionModelChatMessage.setSelectionMode(SelectionMode.SINGLE);
 
-			ObservableList<ChatMessage> selectedChatMessageListGeneralChat = generalChatselectionModelChatMessage
-					.getSelectedItems();
-			selectedChatMessageListGeneralChat.addListener(new ListChangeListener<ChatMessage>() {
-				@Override
-				public void onChanged(Change<? extends ChatMessage> selectedChatMemberGeneralChat) {
-					if (generalChatselectionModelChatMessage.getSelectedItems().isEmpty()) {
-						// do nothing, that was a deselection-event!
-					} else {
+			generalChatselectionModelChatMessage.selectedItemProperty().addListener(
+					(observableValue, oldSelectedMessage, newSelectedMessage) -> {
+						if (newSelectedMessage == null) {
+							return;
+						}
 
-						txt_chatMessageUserInput.clear();
-						txt_chatMessageUserInput.setText("/cq "
-								+ selectedChatMemberGeneralChat.getList().get(0).getSender().getCallSign() + " ");
-						txt_chatMessageUserInput.requestFocus();
-						txt_chatMessageUserInput.selectEnd();
-						System.out.println("cq chat selected ChatMember: "
-								+ selectedChatMemberGeneralChat.getList().get(0).getSender());
+						prepareCqTextForSelectedChatMember(newSelectedMessage.getSender(), false);
 
+						System.out.println("cq chat selected ChatMember: " + newSelectedMessage.getSender());
 
 						try {
-							//scroll the chatmembers table to the entry - try because of sender could be null
-							focusChatMemberAndPrepareCq(selectedChatMemberGeneralChat.getList().get(0).getSender());
-
+							focusChatMemberAndPrepareCq(newSelectedMessage.getSender(), false);
 						} catch (Exception exception) {
 							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
 						}
 
 						try {
 							selectedCallSignFurtherInfoPane.getChildren().clear();
-							selectedCallSignInfoStageChatMember = selectedChatMemberGeneralChat.getList().get(0).getSender();
+							selectedCallSignInfoStageChatMember = newSelectedMessage.getSender();
 							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
-
-							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection change
-							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+							selectedCallSignFurtherInfoPane.getChildren()
+									.add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
 							txt_chatMessageUserInput.requestFocus();
 							txt_chatMessageUserInput.selectEnd();
 						} catch (Exception exception) {
 							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
 						}
-						// selectedChatMemberList.clear();
-//						selectionModelChatMember.clearSelection(0);
 					}
-				}
-			});
+			);
+
+//			ObservableList<ChatMessage> selectedChatMessageListGeneralChat = generalChatselectionModelChatMessage
+//					.getSelectedItems();
+//			selectedChatMessageListGeneralChat.addListener(new ListChangeListener<ChatMessage>() {
+//				@Override
+//				public void onChanged(Change<? extends ChatMessage> selectedChatMemberGeneralChat) {
+//					if (generalChatselectionModelChatMessage.getSelectedItems().isEmpty()) {
+//						// do nothing, that was a deselection-event!
+//					} else {
+//
+//						txt_chatMessageUserInput.clear();
+//						txt_chatMessageUserInput.setText("/cq "
+//								+ selectedChatMemberGeneralChat.getList().get(0).getSender().getCallSign() + " ");
+//						txt_chatMessageUserInput.requestFocus();
+//						txt_chatMessageUserInput.selectEnd();
+//						System.out.println("cq chat selected ChatMember: "
+//								+ selectedChatMemberGeneralChat.getList().get(0).getSender());
+//
+//
+//						try {
+//							//scroll the chatmembers table to the entry - try because of sender could be null
+//							focusChatMemberAndPrepareCq(selectedChatMemberGeneralChat.getList().get(0).getSender());
+//
+//						} catch (Exception exception) {
+//							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
+//						}
+//
+//						try {
+//							selectedCallSignFurtherInfoPane.getChildren().clear();
+//							selectedCallSignInfoStageChatMember = selectedChatMemberGeneralChat.getList().get(0).getSender();
+//							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+//
+//							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection change
+//							selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+//							txt_chatMessageUserInput.requestFocus();
+//							txt_chatMessageUserInput.selectEnd();
+//						} catch (Exception exception) {
+//							System.out.println("KST4CApp, <<<catched error>>>>: message sender is not in the userlist any more!");
+//						}
+//						// selectedChatMemberList.clear();
+////						selectionModelChatMember.clearSelection(0);
+//					}
+//				}
+//			});
 
 
 
@@ -6159,6 +6828,35 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			tbl_chatMember = initChatMemberTable();
 
+			/*
+			 * Detect real operator interaction with the ChatMember table.
+			 *
+			 * The selection listener itself cannot reliably know whether a selection change
+			 * came from the user or from a periodic table refresh. Mouse and keyboard events
+			 * happen before the selection model changes, so they are used to mark the next
+			 * selection event as intentional.
+			 */
+			tbl_chatMember.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+				markOperatorChatMemberSelectionIntent();
+			});
+
+			tbl_chatMember.addEventFilter(KeyEvent.KEY_PRESSED, event -> {
+				switch (event.getCode()) {
+					case UP:
+					case DOWN:
+					case PAGE_UP:
+					case PAGE_DOWN:
+					case HOME:
+					case END:
+					case ENTER:
+					case SPACE:
+						markOperatorChatMemberSelectionIntent();
+						break;
+					default:
+						break;
+				}
+			});
+
 			timelineView.setOnCandidateClicked(ev -> {
 				if (ev == null) return;
 
@@ -6177,57 +6875,88 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 //			tbl_chatMember.getda
 
-			ObservableList<ChatMember> selectedChatMemberList = selectionModelChatMember.getSelectedItems();
-			selectedChatMemberList.addListener(new ListChangeListener<ChatMember>() {
-				@Override
-				public void onChanged(Change<? extends ChatMember> selectedChatMember) {
-					try{
-
-						if (selectionModelChatMember.getSelectedItems().isEmpty()) {
-							// do nothing, that was a deselection-event!
-						} else {
-
-
-
-							selectedCallSignInfoStageChatMember = selectionModelChatMember.getSelectedItems().get(0); //TODO: temp test 1.26: get selected chatmember out of ist
-							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection cchange
-
-//							selectedCallSignInfoStageChatMember = chatcontroller.getLst_chatMemberList()
-//									.get(chatcontroller.checkListForChatMemberIndexByCallSign(
-//											selectedChatMember.getList().get(0)));
-
-							try {
-								selectedCallSignFurtherInfoPane.getChildren().clear();
-							} catch (Exception exception) {
-								System.out.println("KST4CApp: ERROR: " + exception.getMessage() );
-							}
-
-							try {
-
-								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
-							} catch (Exception exception) {
-							System.out.println("KST4CApp: ERROR, selected member disappeared: " + exception.getStackTrace() );
-							exception.printStackTrace();
+			selectionModelChatMember.selectedItemProperty().addListener(
+					(observableValue, oldSelectedMember, newSelectedMember) -> {
+						if (newSelectedMember == null || programmaticChatMemberSelectionChange) {
+							return;
 						}
 
-							txt_chatMessageUserInput.clear();
-							txt_chatMessageUserInput
-									.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
-							txt_chatMessageUserInput.requestFocus();
-							txt_chatMessageUserInput.selectEnd();
-//							System.out.println(
-//									"##################selected ChatMember: " + selectedChatMember.getList().get(0));
-							// selectedChatMemberList.clear();
-	//						selectionModelChatMember.clearSelection(0);
+						/*
+						 * If the operator really selected a ChatMember by mouse or keyboard, keep
+						 * the old KST4Contest behavior: always prepare "/cq CALL ", even if the
+						 * send field already contains text.
+						 *
+						 * If this selection event came from a periodic refresh, filter update,
+						 * score update or table rebuild, do not force overwriting. In that case
+						 * prepareCqTextForSelectedChatMember() may only update an empty or still
+						 * automatically prepared field.
+						 */
+						boolean forcePrepareCqBecauseOperatorSelected =
+								operatorInitiatedChatMemberSelectionChange;
+
+						try {
+							handleChatMemberSelectionChanged(
+									newSelectedMember,
+									oldSelectedMember,
+									forcePrepareCqBecauseOperatorSelected
+							);
+						} finally {
+							operatorInitiatedChatMemberSelectionChange = false;
 						}
-					} catch (Exception exception) {
-						exception.printStackTrace();
-						selectedCallSignFurtherInfoPane.getChildren().clear();
-						txt_chatMessageUserInput.clear();
-						System.out.println("KST4ContestApp <<<catched ERROR>>>, selected user left chat!");
 					}
-				}
-			});
+			);
+
+//			ObservableList<ChatMember> selectedChatMemberList = selectionModelChatMember.getSelectedItems();
+//			selectedChatMemberList.addListener(new ListChangeListener<ChatMember>() {
+//				@Override
+//				public void onChanged(Change<? extends ChatMember> selectedChatMember) {
+//					try{
+//
+//						if (selectionModelChatMember.getSelectedItems().isEmpty()) {
+//							// do nothing, that was a deselection-event!
+//						} else {
+//
+//
+//
+//							selectedCallSignInfoStageChatMember = selectionModelChatMember.getSelectedItems().get(0); //TODO: temp test 1.26: get selected chatmember out of ist
+//							chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember); //important after selection cchange
+//
+////							selectedCallSignInfoStageChatMember = chatcontroller.getLst_chatMemberList()
+////									.get(chatcontroller.checkListForChatMemberIndexByCallSign(
+////											selectedChatMember.getList().get(0)));
+//
+//							try {
+//								selectedCallSignFurtherInfoPane.getChildren().clear();
+//							} catch (Exception exception) {
+//								System.out.println("KST4CApp: ERROR: " + exception.getMessage() );
+//							}
+//
+//							try {
+//
+//								selectedCallSignFurtherInfoPane.getChildren().add(generateFurtherInfoAbtSelectedCallsignBP(selectedCallSignInfoStageChatMember));
+//							} catch (Exception exception) {
+//							System.out.println("KST4CApp: ERROR, selected member disappeared: " + exception.getStackTrace() );
+//							exception.printStackTrace();
+//						}
+//
+//							txt_chatMessageUserInput.clear();
+//							txt_chatMessageUserInput
+//									.setText("/cq " + selectedChatMember.getList().get(0).getCallSign() + " ");
+//							txt_chatMessageUserInput.requestFocus();
+//							txt_chatMessageUserInput.selectEnd();
+////							System.out.println(
+////									"##################selected ChatMember: " + selectedChatMember.getList().get(0));
+//							// selectedChatMemberList.clear();
+//	//						selectionModelChatMember.clearSelection(0);
+//						}
+//					} catch (Exception exception) {
+//						exception.printStackTrace();
+//						selectedCallSignFurtherInfoPane.getChildren().clear();
+//						txt_chatMessageUserInput.clear();
+//						System.out.println("KST4ContestApp <<<catched ERROR>>>, selected user left chat!");
+//					}
+//				}
+//			});
 
 			// TODO: Take together contextmenu and macromenu, generate together
 
@@ -6384,9 +7113,19 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				Predicate<ChatMember> maxQrbPredicate = new Predicate<ChatMember>() {
 					@Override
 					public boolean test(ChatMember chatMember) {
-						if (chatMember.getQrb() < Double.parseDouble(chatMemberTableFilterMaxQrbTF.getText())) {
+//						if (chatMember.getQrb() < Double.parseDouble(chatMemberTableFilterMaxQrbTF.getText())) {
+//							return true;
+//						} else return false;
+
+						try {
+							String maxQrbText = chatMemberTableFilterMaxQrbTF.getText();
+							if (chatMember == null || maxQrbText == null || maxQrbText.isBlank()) {
+								return true;
+							}
+							return chatMember.getQrb() <= Double.parseDouble(maxQrbText);
+						} catch (Exception exception) {
 							return true;
-						} else return false;
+						}
 					}
 				};
 				@Override
@@ -6398,14 +7137,31 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			});
 
 			chatMemberTableFilterQRBHBox.getChildren().add(tglBtnQRBEnable);
+//			chatMemberTableFilterMaxQrbTF.textProperty().addListener(new ChangeListener<String>() {
+//				@Override
+//				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
+//					if (!newValue.matches("\\d*")) {
+//						chatMemberTableFilterMaxQrbTF.setText(newValue.replaceAll("[^\\d]", ""));
+//					}
+//				}
+//			});
+
 			chatMemberTableFilterMaxQrbTF.textProperty().addListener(new ChangeListener<String>() {
 				@Override
 				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
-					if (!newValue.matches("\\d*")) {
-						chatMemberTableFilterMaxQrbTF.setText(newValue.replaceAll("[^\\d]", ""));
+					String safeValue = newValue == null ? "" : newValue.replaceAll("[^\\d]", "");
+					if (newValue != null && !newValue.equals(safeValue)) {
+						chatMemberTableFilterMaxQrbTF.setText(safeValue);
+						return;
+					}
+
+					if (tglBtnQRBEnable.isSelected()) {
+						lastAppliedChatMemberFilterPredicate = null;
+						applyChatMemberFilterPredicates();
 					}
 				}
 			});
+
 			chatMemberTableFilterMaxQrbTF.setPrefSize(50,0);
 
 			chatMemberTableFilterQRBHBox.getChildren().add(chatMemberTableFilterMaxQrbTF);
@@ -6430,20 +7186,42 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF:");
 			TextField chatMemberTableFilterQtfTF = new TextField(chatcontroller.getChatPreferences().getStn_qtfDefault()+"");
 			chatMemberTableFilterQtfTF.setFocusTraversable(false);
+//			chatMemberTableFilterQtfTF.textProperty().addListener(new ChangeListener<String>() {
+//				@Override
+//				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
+//					if (newValue.equals("")) {
+//						chatMemberTableFilterQtfTF.setText("0");
+//					}
+//					if (!newValue.matches("\\d*")) {
+//						chatMemberTableFilterQtfTF.setText(newValue.replaceAll("[^\\d]", ""));
+//					}
+//					System.out.println("new default QTF: " + newValue);
+//					chatMemberTableFilterQtfEnableChkbx.setSelected(false);
+//					chatMemberTableFilterQtfEnableChkbx.setSelected(true);
+//				}
+//			});
+
 			chatMemberTableFilterQtfTF.textProperty().addListener(new ChangeListener<String>() {
 				@Override
 				public void changed(ObservableValue<? extends String> observableValue, String oldValue, String newValue) {
-					if (newValue.equals("")) {
-						chatMemberTableFilterQtfTF.setText("0");
+					String safeValue = newValue == null || newValue.isBlank()
+							? "0"
+							: newValue.replaceAll("[^\\d]", "");
+
+					if (newValue == null || !newValue.equals(safeValue)) {
+						chatMemberTableFilterQtfTF.setText(safeValue);
+						return;
 					}
-					if (!newValue.matches("\\d*")) {
-						chatMemberTableFilterQtfTF.setText(newValue.replaceAll("[^\\d]", ""));
+
+					System.out.println("new default QTF: " + safeValue);
+
+					if (chatMemberTableFilterQtfEnableChkbx.isSelected()) {
+						lastAppliedChatMemberFilterPredicate = null;
+						applyChatMemberFilterPredicates();
 					}
-					System.out.println("new default QTF: " + newValue);
-					chatMemberTableFilterQtfEnableChkbx.setSelected(false);
-					chatMemberTableFilterQtfEnableChkbx.setSelected(true);
 				}
 			});
+
 			chatMemberTableFilterQtfEnableChkbx.selectedProperty().addListener(new ChangeListener<Boolean>() {
 
 				Predicate<ChatMember> qtfCheckPredicate = new Predicate<ChatMember>() {
@@ -6611,52 +7389,93 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					(ListChangeListener<Predicate<ChatMember>>) change -> applyChatMemberFilterPredicates()
 			);
 
-			TextField chatMemberTableFilterTextField = new TextField("Find...");
+			TextField chatMemberTableFilterTextField = new TextField();
+			chatMemberTableFilterTextField.setPromptText("Find...");
+
 			chatMemberTableFilterTextField.setFocusTraversable(false);
-			chatMemberTableFilterTextField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-				@Override
-				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
-					if (chatMemberTableFilterTextField.focusedProperty().getValue()) {
+//			chatMemberTableFilterTextField.focusedProperty().addListener(new ChangeListener<Boolean>() {
+//				@Override
+//				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
+//					if (chatMemberTableFilterTextField.focusedProperty().getValue()) {
+//
+//						chatMemberTableFilterTextField.clear();
+//					} else {
+//						if (!chatMemberTableFilterTextField.focusedProperty().getValue() && chatMemberTableFilterTextField.textProperty().equals("")) {
+//
+//						chatMemberTableFilterTextField.setText("Find...");
+//						}
+//					}
+////					System.out.println(chatMemberTableFilterTextField.focusedProperty().getValue());
+//				}
+//			});
+//			chatMemberTableFilterTextField.textProperty().addListener(new ChangeListener<String>() {
+//
+//				Predicate<ChatMember> searchTextPredicate = new Predicate<ChatMember>() {
+//					@Override
+//					public boolean test(ChatMember chatMember) {
+//						if (chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toUpperCase()) ||
+//								chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toLowerCase())) {
+//							return true;
+//						} else
+//
+//							return false;
+//					}
+//
+//				};
+//
+//				@Override
+//				public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
+//
+//					if (chatMemberTableFilterTextField.textProperty().getValue().equals("") && !chatMemberTableFilterTextField.focusedProperty().getValue()) {
+//						chatMemberTableFilterTextField.setText("Find...");
+//						chatcontroller.getLst_chatMemberListFilterPredicates().remove(searchTextPredicate);
+//					}
+//					else {
+//						if (!chatcontroller.getLst_chatMemberListFilterPredicates().contains(searchTextPredicate)) {
+//							chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
+//						}
+//					}
+//
+//					System.out.println("KST4CApp " + chatMemberTableFilterTextField.textProperty().getValue().equals("") + " / " + !chatMemberTableFilterTextField.focusedProperty().getValue());
+//				}
+//			});
 
-						chatMemberTableFilterTextField.clear();
-					} else {
-						if (!chatMemberTableFilterTextField.focusedProperty().getValue() && chatMemberTableFilterTextField.textProperty().equals("")) {
-
-						chatMemberTableFilterTextField.setText("Find...");
-						}
-					}
-//					System.out.println(chatMemberTableFilterTextField.focusedProperty().getValue());
-				}
-			});
 			chatMemberTableFilterTextField.textProperty().addListener(new ChangeListener<String>() {
 
 				Predicate<ChatMember> searchTextPredicate = new Predicate<ChatMember>() {
 					@Override
 					public boolean test(ChatMember chatMember) {
-						if (chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toUpperCase()) ||
-								chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toLowerCase())) {
+						String filterText = chatMemberTableFilterTextField.getText();
+						if (filterText == null || filterText.isBlank()) {
 							return true;
-						} else
+						}
 
-							return false;
+						String callSign = chatMember == null || chatMember.getCallSign() == null
+								? ""
+								: chatMember.getCallSign();
+
+						return callSign.toUpperCase(Locale.ROOT).contains(filterText.trim().toUpperCase(Locale.ROOT));
 					}
-
 				};
 
 				@Override
-				public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
+				public void changed(ObservableValue<? extends String> observableValue, String oldText, String newText) {
+					boolean filterActive = newText != null && !newText.isBlank();
+					boolean predicatePresent = chatcontroller.getLst_chatMemberListFilterPredicates().contains(searchTextPredicate);
 
-					if (chatMemberTableFilterTextField.textProperty().getValue().equals("") && !chatMemberTableFilterTextField.focusedProperty().getValue()) {
-						chatMemberTableFilterTextField.setText("Find...");
+					if (filterActive && !predicatePresent) {
+						chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
+					} else if (!filterActive && predicatePresent) {
 						chatcontroller.getLst_chatMemberListFilterPredicates().remove(searchTextPredicate);
+					} else {
+						/*
+						 * The predicate object captures the TextField. When the text changes from
+						 * e.g. "D" to "DL", the predicate list itself does not change, so the
+						 * filter must be re-applied explicitly.
+						 */
+						lastAppliedChatMemberFilterPredicate = null;
+						applyChatMemberFilterPredicates();
 					}
-					else {
-						if (!chatcontroller.getLst_chatMemberListFilterPredicates().contains(searchTextPredicate)) {
-							chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
-						}
-					}
-
-					System.out.println("KST4CApp " + chatMemberTableFilterTextField.textProperty().getValue().equals("") + " / " + !chatMemberTableFilterTextField.focusedProperty().getValue());
 				}
 			});
 
@@ -10355,6 +11174,28 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		}
 
 		return marginDb.getAsDouble() >= 0.0;
+	}
+
+	/**
+	 * Marks that the next ChatMember selection event is caused by direct operator
+	 * interaction.
+	 *
+	 * JavaFX selection events do not reliably tell us whether they were caused by
+	 * the user or by a table refresh. Therefore we set this flag on mouse/key input
+	 * before the selection model fires.
+	 *
+	 * Platform.runLater() resets the flag after the current JavaFX event cycle, so a
+	 * later periodic refresh cannot accidentally reuse this operator intent.
+	 */
+	private void markOperatorChatMemberSelectionIntent() {
+		operatorInitiatedChatMemberSelectionChange = true;
+
+		Platform.runLater(new Runnable() {
+			@Override
+			public void run() {
+				operatorInitiatedChatMemberSelectionChange = false;
+			}
+		});
 	}
 
 	/**
