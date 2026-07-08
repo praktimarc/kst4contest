@@ -64,6 +64,8 @@ import javafx.scene.shape.Polygon;
 import javafx.stage.Screen;
 
 import kst4contest.utils.ApplicationFileUtils;
+import kst4contest.view.map.MapCallsignRawSnapshot;
+import kst4contest.view.map.MapCallsignRawSnapshotBuilder;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
@@ -115,6 +117,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private final Button btnSkedWarnIndicator = new Button("SKED");
 	private final Tooltip tipSkedWarnIndicator = new Tooltip();
 	private Timeline skedWarnBlinkTimeline;
+
+	private final MapCallsignRawSnapshotBuilder mainViewBandMarkerSnapshotBuilder = new MapCallsignRawSnapshotBuilder();
 
 
 	// Timeline: show at most N priority markers per minute bucket (minute 0/1 often has many planes)
@@ -412,6 +416,55 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		}
 
 		return sb.toString();
+	}
+
+	/**
+	 * Checks whether a station has known activity on the given band and that band is
+	 * one of my own currently enabled bands, i.e. a new-band opportunity worth flagging
+	 * with a star in that band's table cell.
+	 *
+	 * @param chatMember station row
+	 * @param band       band to check
+	 * @return true if the band cell should show a star
+	 */
+	private boolean isBandOfferForMainView(ChatMember chatMember, Band band) {
+		if (chatMember == null
+				|| band == null
+				|| chatcontroller == null
+				|| chatcontroller.getReachabilityService() == null
+				|| chatMember.getCallSignRaw() == null
+				|| chatMember.getCallSignRaw().isBlank()) {
+			return false;
+		}
+
+		EnumSet<Band> enabledBands = chatcontroller.getReachabilityService().getEnabledStationBands();
+		if (enabledBands == null || !enabledBands.contains(band)) {
+			return false;
+		}
+
+		List<ChatMember> variants = new ArrayList<>();
+		synchronized (chatcontroller.getLst_chatMemberList()) {
+			for (ChatMember variant : chatcontroller.getLst_chatMemberList()) {
+				if (variant == null || variant.getCallSignRaw() == null) {
+					continue;
+				}
+				if (variant.getCallSignRaw().equalsIgnoreCase(chatMember.getCallSignRaw())) {
+					variants.add(variant);
+				}
+			}
+		}
+
+		if (variants.isEmpty()) {
+			variants = List.of(chatMember);
+		}
+
+		List<MapCallsignRawSnapshot> snapshots = mainViewBandMarkerSnapshotBuilder.buildSnapshots(
+				variants,
+				null,
+				EnumSet.of(band)
+		);
+
+		return snapshots.stream().anyMatch(MapCallsignRawSnapshot::offersSelectedBand);
 	}
 
 	private String bandToHumanLabel(kst4contest.model.Band b) {
@@ -1204,14 +1257,18 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
 				SimpleStringProperty callsgn = new SimpleStringProperty();
 
-				if (cellDataFeatures.getValue().getState() == 1) {
-					callsgn.setValue("(" + cellDataFeatures.getValue().getCallSign() + ")"); //away user
-				} else {
+				ChatMember member = cellDataFeatures.getValue();
+				String baseCallsign;
 
-					callsgn.setValue(cellDataFeatures.getValue().getCallSign());
+				if (member.getState() == 1) {
+					baseCallsign = "(" + member.getCallSign() + ")"; //away user
+				} else {
+					baseCallsign = member.getCallSign();
 				}
 
-//				System.out.println(cellDataFeatures.getValue().getCallSign() + " / " + cellDataFeatures.getValue().getState()+ " <<<<<<<<<<<<<<<<<< state ");
+				callsgn.setValue(baseCallsign);
+
+//				System.out.println(member.getCallSign() + " / " + member.getState()+ " <<<<<<<<<<<<<<<<<< state ");
 
 				return callsgn;
 			}
@@ -1656,30 +1713,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		/**
-		 * Shows the compact worked/grid status and explains it by tooltip.
-		 */
-		wkdAny_subcol.setCellFactory(column -> new TableCell<ChatMember, String>() {
-			@Override
-			protected void updateItem(String item, boolean empty) {
-				super.updateItem(item, empty);
-
-				if (empty) {
-					setText(null);
-					setTooltip(null);
-					setStyle("");
-					return;
-				}
-
-				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
-
-				setText(item);
-				setTooltip(new Tooltip(buildWorkedAnyGridStatusTooltip(member)));
-				setAlignment(Pos.CENTER);
-				setStyle("-fx-font-weight: bold;");
-			}
-		});
-
 
 		TableColumn<ChatMember, String> vhfCol_subcol = new TableColumn<ChatMember, String>("144");
 		vhfCol_subcol
@@ -1691,6 +1724,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						if (cellDataFeatures.getValue().isWorked144()) {
 							wkd.setValue("X");
+						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_144)) {
+							wkd.setValue("B+");
 						} else {
 							wkd.setValue("");
 						}
@@ -1710,6 +1745,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						if (cellDataFeatures.getValue().isWorked432()) {
 							wkd.setValue("X");
+						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_432)) {
+							wkd.setValue("B+");
 						} else {
 							wkd.setValue("");
 						}
@@ -1729,6 +1766,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked1240()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_1296)) {
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1747,6 +1786,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked2300()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_2320)) {
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1765,6 +1806,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked3400()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_3400)) {
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1783,6 +1826,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked5600()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_5760)) {
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}
@@ -1801,6 +1846,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				if (cellDataFeatures.getValue().isWorked10G()) {
 					wkd.setValue("X");
+				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_10G)) {
+					wkd.setValue("B+");
 				} else {
 					wkd.setValue("");
 				}

@@ -20,6 +20,7 @@ public record MapCallsignRawSnapshot(
         double longitudeDeg,
         String bandSummary,
         Map<String, String> lastKnownFrequenciesByBand,
+        boolean offersSelectedBand,
         boolean warningToMyDirection,
         boolean worked,
         boolean selected,
@@ -59,9 +60,10 @@ public record MapCallsignRawSnapshot(
     }
 
     public String markerLabel() {
-        return bandSummary.isBlank()
+        String baseLabel = bandSummary.isBlank()
                 ? displayCallSign
                 : displayCallSign + " (" + bandSummary + ")";
+        return offersSelectedBand ? baseLabel + " B+" : baseLabel;
     }
 
     public String detailFrequencyText() {

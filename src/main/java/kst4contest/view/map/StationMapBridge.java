@@ -11,6 +11,7 @@ import kst4contest.model.ChatPreferences;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -142,8 +143,13 @@ public final class StationMapBridge {
     private void refreshNow() {
         List<ChatMember> visibleChatMembers = new ArrayList<>(chatController.getLst_chatMemberSortedFilteredList());
         ChatMember selectedChatMember = chatController.getScoreService().getSelectedChatMember();
+        EnumSet<Band> selectedBands = chatController.getReachabilityService().getEnabledStationBands();
 
-        List<MapCallsignRawSnapshot> snapshots = snapshotBuilder.buildSnapshots(visibleChatMembers, selectedChatMember);
+        List<MapCallsignRawSnapshot> snapshots = snapshotBuilder.buildSnapshots(
+                visibleChatMembers,
+                selectedChatMember,
+                selectedBands
+        );
 
         MapCallsignRawSnapshot selectedSnapshot = null;
         if (selectedChatMember != null && selectedChatMember.getCallSignRaw() != null) {
