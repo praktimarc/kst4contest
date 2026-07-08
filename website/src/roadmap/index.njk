@@ -1,0 +1,50 @@
+---
+layout: base.njk
+title: KST4Contest Roadmap
+description: Planned enhancements for upcoming KST4Contest versions, generated from GitHub milestones and issues.
+---
+
+<section class="hero">
+  <p class="badge">Roadmap</p>
+  <h1>What's planned next.</h1>
+  <p class="lead">
+    Generated automatically from the "enhancement" issues in our
+    <a href="https://github.com/praktimarc/kst4contest">GitHub repository</a>,
+    grouped by their target version milestone.
+  </p>
+</section>
+
+<section class="section narrow">
+  {% if roadmap.length == 0 %}
+    <article class="card content-card">
+      <p>No planned enhancements are currently assigned to a version milestone.</p>
+      <p>
+        See all open feature requests on
+        <a href="https://github.com/praktimarc/kst4contest/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement">GitHub</a>.
+      </p>
+    </article>
+  {% endif %}
+
+  {% for version in roadmap %}
+    <article class="card content-card">
+      {% if version.version %}
+        <h2><a href="{{ version.url }}">{{ version.version }}</a></h2>
+      {% else %}
+        <h2>Planned, no version yet</h2>
+      {% endif %}
+      {% if version.description %}<p>{{ version.description }}</p>{% endif %}
+      {% if version.released %}
+        <p class="eyebrow">Released{% if version.releasedOn %} {{ version.releasedOn | readableDate }}{% endif %}</p>
+      {% elif version.dueOn %}
+        <p class="eyebrow">Due {{ version.dueOn | readableDate }}</p>
+      {% endif %}
+      <ul>
+        {% for item in version.enhancements %}
+          <li{% if item.done or item.notPlanned %} class="roadmap-done"{% endif %}>
+            <a href="{{ item.url }}">{{ item.title }}</a>{% if item.done %} ✓{% endif %}{% if item.notPlanned %} (not planned){% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+    </article>
+  {% endfor %}
+</section>

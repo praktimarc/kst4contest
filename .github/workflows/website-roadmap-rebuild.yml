@@ -1,40 +1,32 @@
-name: Build Website
+name: Rebuild Roadmap
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - website/**
-      - github_docs/**
-      - .github/workflows/website-build.yml
-  pull_request:
-    branches:
-      - main
-    paths:
-      - website/**
-      - github_docs/**
-      - .github/workflows/website-build.yml
-  workflow_dispatch:
+  issues:
+    types: [opened, edited, closed, reopened, labeled, unlabeled, milestoned, demilestoned]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
   group: website-build-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
-  build-website:
-    name: Build 11ty Website
+  rebuild-roadmap:
+    name: Rebuild website roadmap
     runs-on: ubuntu-latest
+    # Only worth a rebuild if the "enhancement" label is involved: either the
+    # issue currently carries it, or this event just added/removed it.
+    if: contains(github.event.issue.labels.*.name, 'enhancement') || github.event.label.name == 'enhancement'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
+        with:
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -53,15 +45,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload website artifact
-        uses: actions/upload-artifact@v4.3.4
-        with:
-          name: kst4contest-website
-          path: website/_site/
-          retention-days: 7
-
       - name: Commit rebuilt site
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -69,6 +53,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: rebuild website [skip ci]"
+            git commit -m "chore: rebuild website roadmap [skip ci]"
             git push
           fi
