@@ -1106,6 +1106,17 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 * effective filter really changed. Otherwise JavaFX may emit selection events
 	 * during normal periodic updates although the operator did not click another
 	 * station.
+	 *
+	 * <p>Regardless of whether the invalidation below was really necessary,
+	 * re-evaluating the FilteredList predicate can make the TableView emit a
+	 * selection-changed event for the still-selected station (e.g. because the
+	 * FilteredList/SortedList rebuild produces a new ChatMember instance for the
+	 * same callsign). This happens synchronously for every caller of this method,
+	 * including the callsign search field's textProperty listener on every single
+	 * keystroke. Without a guard, that spurious event reaches the table-selection
+	 * listener and re-prepares/re-focuses the send text field, yanking keyboard
+	 * focus away from wherever the operator currently is. Guard it the same way
+	 * focusChatMemberAndPrepareCq guards its own programmatic selection.</p>
 	 */
 	private void applyChatMemberFilterPredicates() {
 		if (chatcontroller == null
@@ -1137,7 +1148,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		}
 
 		lastAppliedChatMemberFilterPredicate = combinedPredicate;
-		chatcontroller.getLst_chatMemberListFiltered().setPredicate(combinedPredicate);
+
+		boolean previousProgrammaticFlag = programmaticChatMemberSelectionChange;
+		programmaticChatMemberSelectionChange = true;
+		try {
+			chatcontroller.getLst_chatMemberListFiltered().setPredicate(combinedPredicate);
+		} finally {
+			programmaticChatMemberSelectionChange = previousProgrammaticFlag;
+		}
 	}
 
 
@@ -10655,6 +10673,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 * not necessarily create a JavaFX list-change event. Therefore we explicitly
 	 * re-apply the combined predicate instead of adding/removing a dummy predicate.
 	 * The dummy-predicate trick can corrupt SortedList mapping in JavaFX.</p>
+	 *
+	 * <p>applyChatMemberFilterPredicates() itself guards against the resulting
+	 * spurious TableView selection events, so no extra guard is needed here.</p>
 	 */
 	private void forceChatMemberFilterRefresh() {
 		applyChatMemberFilterPredicates();
