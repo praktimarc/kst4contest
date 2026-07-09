@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<praktiKST>
+    <latestVersion>
+        <versionNumber>1.411</versionNumber>
+        <adminMessage></adminMessage>
+        <majorChanges>- Score of Top-Priority Candidates in the user section
+- Broadcast Messages (To ALL Station in Contest) in seperate Window</majorChanges>
+        <latestVersionPathOnWebserver>https://github.com/praktimarc/kst4contest/releases/download/v1.41.1/praktiKST-v1.41.1-windows-x64.zip</latestVersionPathOnWebserver>
+    </latestVersion>
+    <needUpdateSinceLastVersion>
+        <filename>nothing</filename>
+    </needUpdateSinceLastVersion>
+<roadmap>
+        <featurerequest>
+            <featureDescription>Cyclic update of own name in chat to actual QRG</featureDescription>
+            <requestDate>2024-02</requestDate>
+            <state>open</state>
+        </featurerequest>
+        <featurerequest>
+            <featureDescription>Acoustic warnings</featureDescription>
+            <requestDate>2023-12</requestDate>
+            <state>added</state>
+        </featurerequest>
+        <featurerequest>
+            <featureDescription>Airscout support</featureDescription>
+            <requestDate>2023-03</requestDate>
+            <state>added</state>
+        </featurerequest>
+        <featurerequest>
+            <featureDescription>cyclic beacon messages in public chat</featureDescription>
+            <requestDate>2023-03</requestDate>
+            <state>added</state>
+        </featurerequest>
+    </roadmap>
+<bugsReported>
+        <bug>
+            <bugdescription>
+stations like ol7c-7 and ol7c-2 will not be marked as worked if only "ol7c"
+is in the log. Need to interprete that. May ignore suffix starting with "-"</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>
+worked callsigns table is updated only once after connected to chat
+Should be available directly after program started.
+But Reset works all time</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request: language-specific strings, maybe based to an xml file
+            </bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request: Macros
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Automatic elimination of calls already connected from the log
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Limitation of users beyond a certain QRB
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            User division for QTF perhaps settable based on the antenna lobe
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Notification of new incoming users</bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Evidence of a call which was written but not responded to.
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            direction based reachable-warnings:
+            if the chatclient detects a realised qso between two stations which both must have
+            directed their beams to my station, there should be an instant warning to me for
+            working at least one of the stations at the detected qrg</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            implement ASShowpath message to airacout;
+            by doubleclicking a callsign in the chatmember list, the path and plane state should be
+            provided by airscout </bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            make chatlines copyable to the clipboard...</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            adding an activity detection for sensing if another chatmembers alive-state</bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>On sql error close the connection to make a clean exit</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>SETNAME /MYQRG in options menu doesnt work</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>Disconnect button does not work (DL5ZK)</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>Password-wrong error not displayed (DO5SA)</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>/CQ isnt written on own PMs</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>rightclick-textsnippets arent available in cq-table</bugdescription>
+            <state>solved</state>
+        </bug>
+    </bugsReported>
+    <changeLog>
+        <changedVersionNumber>1.411</changedVersionNumber>
+        <date>2026-07-08</date>
+        <description>Release v1.41.1</description>
+        <added></added>
+        <changed>Hotfix of Bug #56</changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+    <changeLog>
+        <changedVersionNumber>1.41</changedVersionNumber>
+        <date>2026-07-01</date>
+        <description>Release v1.41.0</description>
+        <added>- Score of Top-Priority Candidates in the user section
+- Broadcast Messages (To ALL Station in Contest) in seperate Window</added>
+        <changed>Migration to Github
+- Band and Frequency Detection per Chatmember — KST4Contest identifies which bands or frequencies a station appears active or reachable on based on chat data. This information is integrated into the display and prioritization.
+- Band Alert — If a logged station could be of interest on other locally active bands, KST14Contest can alert the user.
+- Sked Reminder ALERT — New reminder function for planned Skeds to ensure that agreed contacts are not forgotten during contest operation.
+- Skedfail Button — Failed Skeds can be marked; this allows the station to be handled differently in terms of score and workflow.
+- Win-Test SKED Push via UDP — Skeds can be passed to Win-Test via a LOCKSKED/ADDSKED/UNLOCKSKED sequence. This feature is configurable in the preferences and disabled by default.
+- Win-Test Broadcast Defaults and SKed Workflow — Improved broadcast addresses, frequency formats, mode selection, and notes including locator/azimuth.
+- PSTRotator Interface — KST4Contest received an interface to PSTRoter to better integrate antenna direction and rotator workflow.
+- QSO /-Callsign Sniffer — Callsigns or QSO-relevant information can be detected and utilized for further workflow.
+- Chat History at Startup — Historical chat data can be loaded upon startup, allowing the client to quickly gain relevant context for scoring, activity, and station identification.
+- Station Map / Map View — New map view with station markers, your own location, locator/Maidenhead reference, connection line, and antenna/beam representation.
+- Local Leaflet /-TileProxy Backend — The map function utilizes embedded Leaflet resources and a local TileProxy approach, making the map more portable and independent.
+- Maidenhead /-Grid Overlay — The map can display locator/grid information; recently added Grid-Square coloring.
+- Path /-Terrain /-Horizon Profile — Map documentation describes a path profile with terrain, Fresnel, and horizon information for the selected link.
+- Tropo /-AS Reachability Filters — New filters and sorting were added for Tropospheric reachability, AirScoop availability, large locator fields, and priority.
+- Reachability Band Selector — Added a band selection for range/Troposphere calculations.
+- 4-Char Locator Filter — Locator evaluations can be reduced to 4-character fields; this improves overview and performance.
+- KST Testserver Support — A KST server test server was added into the Source.
+@praktimarc and @Rsclub22</changed>
+        <fixed>- [BUG]
+- [BUG] Programmstart kann ohne selektieren keine Nachrichten senden
+- KST4Contest crashes after to many messages or to much RAM Usage
+- Scaling Problem at 1280x800 screen resolution</fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.40</changedVersionNumber>
+        <date>2026-02-16</date>
+        <description>Much changes and fixes</description>
+        <added>
+- win-test support (not deactivable yet, beta)
+- QSO sniffer which filters changable callsigns lists messages to your pm window
+- Chatmember Score system. Each chatmember gets a score depending to antenna direction, activity time,
+  activity msgcount, positive signals, active bands, active frequencies, his sked direction (degrees),
+  self handed rate, sked-made-rate and some others
+- Chatmember Band and frequency recognition: now we list all active bands of each other chatmember
+- Band alert for logged stations
+- Sked reminder ALERT with automatic messages in 2+1 / 5+2+1 / 10+5+2+1 minutes
+- PSTRotator interface
+- AirPlane Timeline
+- Skedfail button in furtherinfo panel
+- Wintest logsynch interface can now be activated and deactivated in the preferences
+- load chat history on startup
+        </added>
+        <changed>
+- added save option: ServerDNS / Port
+- added save option: activate/deactivate pstRotator interface
+- added save option: activate/deactivate wintest interface
+- added save option: callsign sniffer
+- added save option: boolean GUI_darkModeActiveByDefault = false
+- added AP notes at the internal DX cluster spots
+- Generic Autoanswer fires maximum once in 45 seconds per rx callsign
+        </changed>
+        <fixed>
+- Userlist sort automatically on new member signon
+- Posonpill-messages now kills only exactly one Client instance (bugreport 9A2HM)
+- Crash of wtkst by disconnection of kst4Contest
+- wtKST crashes when kst4contest is running (many reporters)
+- wintest: logged per band excludes pre worked band (bugreport SM6VTZ)
+- PSTRotator SOCKET Close on DISCONNECT BUTTON works now
+- AirScout Map had not been updated (bugreport SM0RJV)
+- QTFDefault had been not saved correctly (bugreport SM0RJV)
+- Show path in AS button worked only with fixed server Strings (bugreport 9A2HM)
+- Version number had been displayed wrong
+- suffixes like /p, -2, etc. problem now fixed everywhere
+- Dark mode: passing for qrg fields fix
+        </fixed>
+        <removed>
+- No more date display. Not needed. Saving space, only time is important
+        </removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.31</changedVersionNumber>
+        <date>2025-12-13</date>
+        <description>Much changes and a hotfix</description>
+        <added>
+- win-test support (not deactivable yet, beta)
+- pstRotator support (not deactivable yet, beta)
+- airScout fix (calculations depends to cpu load now)
+- QSO sniffer
+        </added>
+        <changed>
+- DNS from www.on4kst.info to www.on4kst.org (hotfix, now configurable in preferences)
+        </changed>
+        <fixed>
+- Endless loop in error case lets freeze the client
+- PSTRotator SOCKET Close on DISCONNECT BUTTON
+- Dark mode: passing for qrg fields fix
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.266</changedVersionNumber>
+        <date>2025-10-03</date>
+        <description>Airscout interface did not work with multi-signons</description>
+        <added>nothing</added>
+        <changed>nothing</changed>
+        <fixed>
+Fixed by using raw callsign (without -2 suffix etc.) when communicating with AirScout.
+Thank you very much for testing this, Kreso 9A2HM!
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.265</changedVersionNumber>
+        <date>2025-09-28</date>
+        <description>Direction buttons stay now colored, if activated</description>
+        <added>nothing</added>
+        <changed>nothing</changed>
+        <fixed>The buttons stay now colored, if activated</fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.264</changedVersionNumber>
+        <date>2025-08-02</date>
+        <description>Changed the callsign recognition pattern for Simplelogfile</description>
+        <added>nothing</added>
+        <changed>nothing</changed>
+        <fixed>
+Callsigns like S53CC, S51A etc. are now correctly marked as worked in SimpleLogFile.txt.
+(bugreport Boris, S53CC)
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.263</changedVersionNumber>
+        <date>2025-06-08</date>
+        <description>Airscout communication and Loginname</description>
+        <added>nothing</added>
+        <changed>
+Only entries with QRB lower than max-QRB are sent to AirScout in 60s intervals (was 12s for all).
+        </changed>
+        <fixed>
+- AS communication message count hugely reduced
+- Name in chat is now saveable
+- Fixed AS client name (was hard-wired to "KST")
+73 / DO5AMF
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.262</changedVersionNumber>
+        <date>2025-05-21</date>
+        <description>Freezes caused by getting messages before user login should be fixed now</description>
+        <added>nothing</added>
+        <changed>nothing</changed>
+        <fixed>
+ON4KST delivers messages of stations not yet logged in. That caused a freeze at the message
+processing engine which is now fixed.
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.26</changedVersionNumber>
+        <date>2025-05</date>
+        <description>Login to multiple Channels via single signon / spend some colors</description>
+        <added>
+1. UI: Dark mode. Switch in "Window -> use dark mode"
+2. Usage of two Chatcategories at the same time
+3. opposite station multi-callsign login-tagging
+73 / DO5AMF
+        </added>
+        <changed>
+- Coloring mechanic of the software. Modify colors via css by yourself...
+        </changed>
+        <fixed>
+- Station tagging fixed completely
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.251</changedVersionNumber>
+        <date>2025-02</date>
+        <description>BUGFIX of 1.25, tnx Steve Clements!</description>
+        <added>
+- Steve spotted a problem in udp broadcast spot info reading, its now fixed!
+73 / DO5AMF
+        </added>
+        <changed></changed>
+        <fixed>- Station tagging</fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.25</changedVersionNumber>
+        <date>2025-02</date>
+        <description>Wishlist-time</description>
+        <added>
+- New configuration Tab: Messagehandling (auto-answering, CQ qrg auto-answer)
+- Coloured lines: new pm rows appear in red, fade rainbow-like to white over 30s (tnx Gianluca)
+73 / DO5AMF
+        </added>
+        <changed></changed>
+        <fixed>
+- Users with suffixes like "-2 and -70" are now correctly marked as worked
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.24</changedVersionNumber>
+        <date>2024-11</date>
+        <description>Wishlist-time</description>
+        <added>
+- Button to show qrz.com profile of a selected station
+- Button to show qrzcq.com profile of a selected station
+        </added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.23</changedVersionNumber>
+        <date>2024-10</date>
+        <description>DXCluster Server is now implemented</description>
+        <added>
+- DXCluster Server (tnx OMAAO): KST4Contest now provides a DXCluster server to feed
+  your log client with station-reachable warnings.
+        </added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.22</changedVersionNumber>
+        <date>2024-05</date>
+        <description>Increase usability, fixed AS button</description>
+        <added>- Variables (tnx OMAAO): MYLOCATORSHORT, MYQRGSHORT, QRZNAME</added>
+        <changed>- Sendtext-field focus on callsign click</changed>
+        <fixed>
+- Worked-station-filter (tnx Gianluca): filter is now live
+- Chatters list sorting by QRB (tnx Alessandro): fixed to numeric sort
+- Airscout showpath button now maximizes AS and shows the path
+        </fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.21</changedVersionNumber>
+        <date>2024-04</date>
+        <description>Increase usability</description>
+        <added></added>
+        <changed>
+- Window sizes and divider positions are now stored and restored on next startup
+- Filters section is now a flowpane for lower resolutions
+        </changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.2</changedVersionNumber>
+        <date>2024-04</date>
+        <description>Increase usability</description>
+        <added>
+- Selectable bands
+- Unworkable tags for each callsign per band
+- QTF-Arrow on the "show path in AS" button
+        </added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.1</changedVersionNumber>
+        <date>2024-03</date>
+        <description>Increased workflow</description>
+        <added>
+- Reachable warning function
+- Variables FIRSTAP and SECONDAP for predefined texts
+- Marking new connected stations (bold) and away-state (brackets)
+- Activity-timer since last message of a chatter
+        </added>
+        <changed>- QRB/QTF info in pm-window</changed>
+        <fixed>
+- Behaviour of messagefilter-radiobutton corrected (tnx Gian)
+- Error sending macros on selected stations in pm window (tnx Gian)
+        </fixed>
+        <removed>- boot sound</removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>1.0</changedVersionNumber>
+        <date>2024-02</date>
+        <description>First stable release</description>
+        <added>
+- audio notification support
+- update-available warning
+- changelog displaying
+- known-bugs displaying
+- message filters for selected station
+- stationlist-filters (show by qtf / textstring, hide by qrb, qtf, workedstate)
+- 10 macros (textsnippets available by hitting strg+numberkey)
+        </added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.9</changedVersionNumber>
+        <date>2024-02</date>
+        <description>Now the chat is disconnectable without closing it</description>
+        <added></added>
+        <changed></changed>
+        <fixed>disconnect-button, Textsnippets in CQ Window, "/CQ" at click on own sendtexts,
+setname "qrg" works now</fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.8</changedVersionNumber>
+        <date>2023-10</date>
+        <description>savesettings function and disconnect function added. MYCALL-Highlighting fixed</description>
+        <added>savesettings function, disconnect function</added>
+        <changed></changed>
+        <fixed>MYCALL-Highlighting</fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.7</changedVersionNumber>
+        <date>2023-07</date>
+        <description>Internal database for worked stations, shortcut and textsnippet editor</description>
+        <added>database, shortcut-editor, textsnipped-editor</added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.6</changedVersionNumber>
+        <date>2023-07</date>
+        <description>Added periodically sent beacon function</description>
+        <added>beacon to public channel</added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.5</changedVersionNumber>
+        <date>2023-02</date>
+        <description>Airscout interface, UDP interfaces for worked-station data and TRX info, shortcuts</description>
+        <added>Airscout-interface, packetreceiver for ucxlog, n1mm, qartest</added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.4</changedVersionNumber>
+        <date>2022-12</date>
+        <description>Worked info by logfile via universal pattern matching logfile interpreter</description>
+        <added>simple-logfile</added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.3</changedVersionNumber>
+        <date>2022-10</date>
+        <description>Added a GUI, chat was text based only</description>
+        <added>Graphical user interface</added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.2</changedVersionNumber>
+        <date>2022-10</date>
+        <description>Pattern matching system for frequency information, frequency collection per chatmember</description>
+        <added>frequency-extraction for every callsign</added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.15</changedVersionNumber>
+        <date>2022-09</date>
+        <description>Researched the Chatprotocol and developed the base communication with the chatserver</description>
+        <added></added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+<changeLog>
+        <changedVersionNumber>0.1</changedVersionNumber>
+        <date>2022-09</date>
+        <description>Primary architecture of the chat, message bus system for handling the message queues</description>
+        <added></added>
+        <changed></changed>
+        <fixed></fixed>
+        <removed></removed>
+    </changeLog>
+</praktiKST>
