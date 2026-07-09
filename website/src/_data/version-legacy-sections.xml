@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Static roadmap/bugsReported sections carried over from the previously
+     hand-maintained kst4ContestVersionInfo.xml on do5amf.funkerportal.de.
+     UpdateChecker.java does not parse these today; kept for parity/history. -->
+<legacy>
+    <roadmap>
+        <featurerequest>
+            <featureDescription>Cyclic update of own name in chat to actual QRG</featureDescription>
+            <requestDate>2024-02</requestDate>
+            <state>open</state>
+        </featurerequest>
+        <featurerequest>
+            <featureDescription>Acoustic warnings</featureDescription>
+            <requestDate>2023-12</requestDate>
+            <state>added</state>
+        </featurerequest>
+        <featurerequest>
+            <featureDescription>Airscout support</featureDescription>
+            <requestDate>2023-03</requestDate>
+            <state>added</state>
+        </featurerequest>
+        <featurerequest>
+            <featureDescription>cyclic beacon messages in public chat</featureDescription>
+            <requestDate>2023-03</requestDate>
+            <state>added</state>
+        </featurerequest>
+    </roadmap>
+    <bugsReported>
+        <bug>
+            <bugdescription>
+stations like ol7c-7 and ol7c-2 will not be marked as worked if only "ol7c"
+is in the log. Need to interprete that. May ignore suffix starting with "-"</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>
+worked callsigns table is updated only once after connected to chat
+Should be available directly after program started.
+But Reset works all time</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request: language-specific strings, maybe based to an xml file
+            </bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request: Macros
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Automatic elimination of calls already connected from the log
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Limitation of users beyond a certain QRB
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            User division for QTF perhaps settable based on the antenna lobe
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Notification of new incoming users</bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            Evidence of a call which was written but not responded to.
+            </bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            direction based reachable-warnings:
+            if the chatclient detects a realised qso between two stations which both must have
+            directed their beams to my station, there should be an instant warning to me for
+            working at least one of the stations at the detected qrg</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            implement ASShowpath message to airacout;
+            by doubleclicking a callsign in the chatmember list, the path and plane state should be
+            provided by airscout </bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            make chatlines copyable to the clipboard...</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>feature request:
+            adding an activity detection for sensing if another chatmembers alive-state</bugdescription>
+            <state>added</state>
+        </bug>
+        <bug>
+            <bugdescription>On sql error close the connection to make a clean exit</bugdescription>
+            <state>open</state>
+        </bug>
+        <bug>
+            <bugdescription>SETNAME /MYQRG in options menu doesnt work</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>Disconnect button does not work (DL5ZK)</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>Password-wrong error not displayed (DO5SA)</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>/CQ isnt written on own PMs</bugdescription>
+            <state>solved</state>
+        </bug>
+        <bug>
+            <bugdescription>rightclick-textsnippets arent available in cq-table</bugdescription>
+            <state>solved</state>
+        </bug>
+    </bugsReported>
+</legacy>
