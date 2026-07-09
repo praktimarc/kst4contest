@@ -41,6 +41,14 @@ import javafx.scene.layout.ColumnConstraints;
  */
 public final class StationMapView {
 
+    /**
+     * Enables verbose map debug output.
+     *
+     * Keep this false for normal operation because scroll and viewport logs are very
+     * noisy during map interaction.
+     */
+    private static final boolean MAP_DEBUG_LOGGING = false;
+
     private final PathProfileChart detailPathProfileChart = new PathProfileChart();
     private final Label detailPathModeValue = new Label("-");
 
@@ -287,12 +295,17 @@ public final class StationMapView {
         webView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> handleWebViewClick(event));
 
         webView.addEventHandler(ScrollEvent.SCROLL, event -> {
-            System.out.println("[StationMap FX] SCROLL x=" + (int) event.getX()
-                    + " y=" + (int) event.getY()
-                    + " deltaY=" + event.getDeltaY());
+
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap FX] SCROLL x=" + (int) event.getX()
+                        + " y=" + (int) event.getY()
+                        + " deltaY=" + event.getDeltaY());
+            }
 
             InteractiveTarget target = inspectInteractiveTarget(event.getX(), event.getY());
-            System.out.println("[StationMap FX] inspect scroll -> " + target);
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap FX] inspect scroll -> " + target);
+            }
 
             if (event.getDeltaY() > 0) {
                 executeMapScriptSafely("window.kstMapApi.zoomIn();");

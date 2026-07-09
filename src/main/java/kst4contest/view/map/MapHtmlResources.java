@@ -13,8 +13,12 @@ import java.nio.charset.StandardCharsets;
  * - inspectPoint(x,y) returns what is under the cursor
  * - zoomIn()/zoomOut() are callable from Java
  * - grid / beam / connection use non-interactive panes
- * - JavaScript logs are forwarded to Java through javaMapBridge
+ * - JavaScript errors are forwarded to Java through javaMapBridge
  * - setTheme(light|dark) aligns the map with the JavaFX application theme
+ *
+ * Important:
+ * This version intentionally uses integer Leaflet zoom levels again.
+ * Fractional zoom in JavaFX WebView caused unreliable marker positioning.
  */
 public final class MapHtmlResources {
 
@@ -184,6 +188,111 @@ public final class MapHtmlResources {
                             font-weight: 800;
                         }
 
+                        .station-cluster-wrapper {
+                            background: transparent;
+                            border: none;
+                            box-shadow: none;
+                        }
+
+                        .station-cluster-root {
+                            position: relative;
+                            width: 1px;
+                            height: 1px;
+                            pointer-events: auto;
+                            cursor: pointer;
+                            user-select: none;
+                        }
+
+                        /*
+                         * Cluster design aligned with normal KST4Contest station markers:
+                         * - dark center like station-dot
+                         * - blue border for normal clustered stations
+                         * - yellow border when the cluster contains worked stations
+                         * - orange hover border similar to selected station state
+                         */
+                        .station-cluster-bubble {
+                            position: absolute;
+                            left: -16px;
+                            top: -16px;
+                            min-width: 32px;
+                            height: 32px;
+                            padding: 0 7px;
+                            border-radius: 18px;
+                            background: #1d1d1d;
+                            color: #f4f7fa;
+                            border: 2px solid #4da6ff;
+                            box-shadow:
+                                0 0 0 1px rgba(0, 0, 0, 0.35),
+                                0 2px 7px rgba(0, 0, 0, 0.42);
+                            box-sizing: border-box;
+                            font-size: 13px;
+                            font-weight: 800;
+                            line-height: 28px;
+                            text-align: center;
+                            white-space: nowrap;
+                        }
+
+                        .station-cluster-bubble.medium {
+                            left: -18px;
+                            top: -18px;
+                            min-width: 36px;
+                            height: 36px;
+                            border-radius: 20px;
+                            font-size: 14px;
+                            line-height: 32px;
+                        }
+
+                        .station-cluster-bubble.large {
+                            left: -21px;
+                            top: -21px;
+                            min-width: 42px;
+                            height: 42px;
+                            border-radius: 23px;
+                            font-size: 15px;
+                            line-height: 38px;
+                        }
+
+                        .station-cluster-bubble.worked {
+                            border-color: #ffd24d;
+                        }
+
+                        .station-cluster-bubble.warning {
+                            border-color: #00ff66;
+                            color: #00ff66;
+                        }
+
+                        .station-cluster-root:hover .station-cluster-bubble {
+                            border-color: #ff9900;
+                            box-shadow:
+                                0 0 0 2px rgba(255, 153, 0, 0.28),
+                                0 2px 9px rgba(0, 0, 0, 0.48);
+                        }
+
+                        body.kst-theme-dark .station-cluster-bubble {
+                            background: #202428;
+                            color: #f1f3f5;
+                            border-color: #4da6ff;
+                            box-shadow:
+                                0 0 0 1px rgba(255, 255, 255, 0.12),
+                                0 2px 8px rgba(0, 0, 0, 0.58);
+                        }
+
+                        body.kst-theme-dark .station-cluster-bubble.worked {
+                            border-color: #ffd24d;
+                        }
+
+                        body.kst-theme-dark .station-cluster-bubble.warning {
+                            border-color: #00ff66;
+                            color: #00ff66;
+                        }
+
+                        body.kst-theme-dark .station-cluster-root:hover .station-cluster-bubble {
+                            border-color: #ff9900;
+                            box-shadow:
+                                0 0 0 2px rgba(255, 153, 0, 0.32),
+                                0 2px 10px rgba(0, 0, 0, 0.65);
+                        }
+
                         .maidenhead-grid-label-wrapper {
                             background: transparent;
                             border: none;
@@ -225,9 +334,6 @@ public final class MapHtmlResources {
                 <script>window._kstTileProxyPort=__TILE_PROXY_PORT__;</script>
 
                 <script>
-                
-                
-                
                     window.kstMapApi = (function () {
                         let map;
                         let stationLayer;
@@ -235,11 +341,77 @@ public final class MapHtmlResources {
                         let beamLayer;
                         let connectionLayer;
                         let profileHoverMarker;
+
+                        /*
+                         * Currently visible individual station markers.
+                         *
+                         * A callsign is present here only when it is rendered individually.
+                         * If the station is inside a cluster, stationsByCallsignRaw is used
+                         * for focus/zoom operations.
+                         */
                         let markersByCallsignRaw = {};
+
+                        /*
+                         * All station data as received from Java.
+                         */
+                        let stationData = [];
+                        let stationsByCallsignRaw = {};
+
+                        let clustersById = {};
+                        let clusterSequence = 0;
+
                         let activeTheme = 'light';
                         let invalidateNotifyTimer = 0;
 
+                        /*
+                         * Integer zoom only.
+                         *
+                         * Fractional zoom is intentionally disabled because JavaFX WebView
+                         * and Leaflet marker positioning were unreliable at intermediate
+                         * zoom levels.
+                         */
+                        const KST_ZOOM_STEP = 1;
+                        const KST_MIN_ZOOM = 3;
+                        const KST_MAX_ZOOM = 18;
+
+                        /*
+                         * Enables verbose JavaScript map logging.
+                         *
+                         * Keep this false for normal operation. jsError() still reports
+                         * real errors.
+                         */
+                        const KST_MAP_DEBUG = false;
+
+                        /*
+                         * Cluster settings.
+                         *
+                         * With integer zoom, clustering is disabled at zoom >= 8.
+                         * At zoom 7 only very close stations are grouped.
+                         */
+                        const KST_CLUSTER_DISABLE_ZOOM = 8;
+
+                        /*
+                         * Do not cluster pairs immediately. Two nearby stations are still
+                         * readable and should remain individually clickable.
+                         */
+                        const KST_CLUSTER_MIN_STATIONS = 3;
+
+                        /*
+                         * Cluster cell sizes in screen pixels.
+                         *
+                         * Smaller cells make clustering less aggressive. Stations must be
+                         * closer together on screen before they are grouped.
+                         */
+                        const KST_CLUSTER_CELL_SIZE_HIGH_ZOOM = 55;
+                        const KST_CLUSTER_CELL_SIZE_MEDIUM_ZOOM = 70;
+                        const KST_CLUSTER_CELL_SIZE_LOW_ZOOM = 95;
+                        const KST_CLUSTER_CELL_SIZE_VERY_LOW_ZOOM = 125;
+
                         function jsLog(message) {
+                            if (!KST_MAP_DEBUG) {
+                                return;
+                            }
+
                             try {
                                 if (window.javaMapBridge) {
                                     window.javaMapBridge.onJsLog(String(message));
@@ -358,6 +530,331 @@ public final class MapHtmlResources {
                                 + '</div>';
                         }
 
+                        function getStationCallsignKey(station) {
+                            if (!station || station.callSignRaw === null || station.callSignRaw === undefined) {
+                                return '';
+                            }
+
+                            return String(station.callSignRaw);
+                        }
+
+                        function isStationPositionValid(station) {
+                            if (!station) {
+                                return false;
+                            }
+
+                            return isFinite(station.latitudeDeg) && isFinite(station.longitudeDeg);
+                        }
+
+                        /**
+                         * Returns true for stations that must not be hidden inside a cluster.
+                         *
+                         * These stations remain individually visible even at low zoom levels
+                         * because they are operationally important during contest operation.
+                         */
+                        function shouldRenderStationIndividually(station) {
+                            if (!station) {
+                                return false;
+                            }
+
+                            if (station.selected) {
+                                return true;
+                            }
+
+                            if (station.warningToMyDirection) {
+                                return true;
+                            }
+
+                            return false;
+                        }
+
+                        /**
+                         * Returns the cluster grid size in screen pixels for the current zoom level.
+                         *
+                         * The cluster calculation is screen-based, not locator-based. This makes
+                         * the decision match the real visual problem: too many labels in the same
+                         * screen area.
+                         */
+                        function getClusterCellSizePx() {
+                            if (!map) {
+                                return KST_CLUSTER_CELL_SIZE_MEDIUM_ZOOM;
+                            }
+
+                            const zoom = Number(map.getZoom());
+
+                            if (zoom >= 7) {
+                                return KST_CLUSTER_CELL_SIZE_HIGH_ZOOM;
+                            }
+
+                            if (zoom >= 6) {
+                                return KST_CLUSTER_CELL_SIZE_MEDIUM_ZOOM;
+                            }
+
+                            if (zoom >= 5) {
+                                return KST_CLUSTER_CELL_SIZE_LOW_ZOOM;
+                            }
+
+                            return KST_CLUSTER_CELL_SIZE_VERY_LOW_ZOOM;
+                        }
+
+                        function buildClusterMarkerHtml(clusterId, clusterStations) {
+                            const count = clusterStations ? clusterStations.length : 0;
+
+                            let bubbleClasses = 'station-cluster-bubble';
+
+                            if (count >= 20) {
+                                bubbleClasses += ' large';
+                            } else if (count >= 8) {
+                                bubbleClasses += ' medium';
+                            }
+
+                            const containsWorkedStation = clusterStations
+                                && clusterStations.some(station => station && station.worked);
+
+                            const containsWarningStation = clusterStations
+                                && clusterStations.some(station => station && station.warningToMyDirection);
+
+                            if (containsWarningStation) {
+                                bubbleClasses += ' warning';
+                            } else if (containsWorkedStation) {
+                                bubbleClasses += ' worked';
+                            }
+
+                            return '<div class="station-cluster-root" data-cluster-id="' + escapeHtml(clusterId) + '">'
+                                + '<div class="' + bubbleClasses + '">' + count + '</div>'
+                                + '</div>';
+                        }
+
+                        function buildClusterTooltipHtml(clusterStations) {
+                            if (!clusterStations || clusterStations.length === 0) {
+                                return '';
+                            }
+
+                            const callsigns = clusterStations
+                                .map(station => station.markerLabel || station.callSignRaw || station.callSign || '')
+                                .filter(value => value !== null && value !== undefined && String(value).trim() !== '')
+                                .map(value => String(value).trim())
+                                .sort();
+
+                            const maxPreviewCount = 20;
+                            const preview = callsigns
+                                .slice(0, maxPreviewCount)
+                                .map(value => escapeHtml(value))
+                                .join('<br>');
+
+                            const remainingCount = Math.max(0, callsigns.length - maxPreviewCount);
+
+                            let html = '<b>' + clusterStations.length + ' stations</b>';
+
+                            if (preview) {
+                                html += '<br>' + preview;
+                            }
+
+                            if (remainingCount > 0) {
+                                html += '<br>+' + remainingCount + ' more';
+                            }
+
+                            html += '<br><i>Click to zoom in</i>';
+
+                            return html;
+                        }
+
+                        function addStationMarker(station) {
+                            if (!stationLayer || !isStationPositionValid(station)) {
+                                return;
+                            }
+
+                            const marker = L.marker(
+                                [station.latitudeDeg, station.longitudeDeg],
+                                {
+                                    interactive: true,
+                                    keyboard: false,
+                                    icon: L.divIcon({
+                                        className: 'station-marker-wrapper',
+                                        html: buildStationMarkerHtml(station),
+                                        iconSize: [1, 1],
+                                        iconAnchor: [0, 0]
+                                    })
+                                }
+                            );
+
+                            marker.addTo(stationLayer);
+
+                            const callSignKey = getStationCallsignKey(station);
+                            if (callSignKey) {
+                                markersByCallsignRaw[callSignKey] = marker;
+                            }
+                        }
+
+                        function addClusterMarker(clusterStations) {
+                            if (!stationLayer || !clusterStations || clusterStations.length === 0) {
+                                return;
+                            }
+
+                            let latSum = 0.0;
+                            let lonSum = 0.0;
+                            let validCount = 0;
+
+                            clusterStations.forEach(station => {
+                                if (isStationPositionValid(station)) {
+                                    latSum += Number(station.latitudeDeg);
+                                    lonSum += Number(station.longitudeDeg);
+                                    validCount++;
+                                }
+                            });
+
+                            if (validCount === 0) {
+                                return;
+                            }
+
+                            const centerLat = latSum / validCount;
+                            const centerLon = lonSum / validCount;
+
+                            const clusterId = 'cluster-' + (++clusterSequence);
+                            clustersById[clusterId] = clusterStations;
+
+                            const clusterMarker = L.marker(
+                                [centerLat, centerLon],
+                                {
+                                    interactive: true,
+                                    keyboard: false,
+                                    icon: L.divIcon({
+                                        className: 'station-cluster-wrapper',
+                                        html: buildClusterMarkerHtml(clusterId, clusterStations),
+                                        iconSize: [1, 1],
+                                        iconAnchor: [0, 0]
+                                    })
+                                }
+                            );
+
+                            clusterMarker.on('click', function () {
+                                zoomToCluster(clusterStations);
+                            });
+
+                            clusterMarker.bindTooltip(buildClusterTooltipHtml(clusterStations), {
+                                direction: 'top',
+                                sticky: true,
+                                opacity: 0.95
+                            });
+
+                            clusterMarker.addTo(stationLayer);
+                        }
+
+                        function renderAllStationsIndividually() {
+                            stationData.forEach(station => {
+                                addStationMarker(station);
+                            });
+                        }
+
+                        /**
+                         * Renders stations with simple screen-grid clustering.
+                         *
+                         * Important stations such as the currently selected station and warning
+                         * stations are rendered individually before clustering. They remain
+                         * visible even at low zoom levels.
+                         */
+                        function renderClusteredStations() {
+                            const clusterCellSizePx = getClusterCellSizePx();
+                            const buckets = {};
+
+                            stationData.forEach(station => {
+                                if (!isStationPositionValid(station)) {
+                                    return;
+                                }
+
+                                if (shouldRenderStationIndividually(station)) {
+                                    addStationMarker(station);
+                                    return;
+                                }
+
+                                const point = map.latLngToContainerPoint([station.latitudeDeg, station.longitudeDeg]);
+                                const cellX = Math.floor(point.x / clusterCellSizePx);
+                                const cellY = Math.floor(point.y / clusterCellSizePx);
+                                const key = cellX + ':' + cellY;
+
+                                if (!buckets[key]) {
+                                    buckets[key] = [];
+                                }
+
+                                buckets[key].push(station);
+                            });
+
+                            Object.keys(buckets).forEach(key => {
+                                const bucketStations = buckets[key];
+
+                                if (bucketStations.length >= KST_CLUSTER_MIN_STATIONS) {
+                                    addClusterMarker(bucketStations);
+                                } else {
+                                    bucketStations.forEach(station => addStationMarker(station));
+                                }
+                            });
+                        }
+
+                        /**
+                         * Re-renders station markers for the current zoom and viewport.
+                         *
+                         * This is called when stations arrive from Java and after zoom/move
+                         * events, because screen-grid clusters depend on the current viewport.
+                         */
+                        function renderStationMarkers() {
+                            if (!map || !stationLayer) {
+                                return;
+                            }
+
+                            stationLayer.clearLayers();
+                            markersByCallsignRaw = {};
+                            clustersById = {};
+                            clusterSequence = 0;
+
+                            if (!stationData || stationData.length === 0) {
+                                return;
+                            }
+
+                            if (Number(map.getZoom()) >= KST_CLUSTER_DISABLE_ZOOM) {
+                                renderAllStationsIndividually();
+                            } else {
+                                renderClusteredStations();
+                            }
+                        }
+
+                        /**
+                         * Zooms into a cluster.
+                         *
+                         * A cluster click does not select one station. It moves the map towards
+                         * the cluster center and increases zoom until individual stations become
+                         * visible.
+                         */
+                        function zoomToCluster(clusterStations) {
+                            if (!map || !clusterStations || clusterStations.length === 0) {
+                                return;
+                            }
+
+                            const latLngs = [];
+
+                            clusterStations.forEach(station => {
+                                if (isStationPositionValid(station)) {
+                                    latLngs.push(L.latLng(station.latitudeDeg, station.longitudeDeg));
+                                }
+                            });
+
+                            if (latLngs.length === 0) {
+                                return;
+                            }
+
+                            const bounds = L.latLngBounds(latLngs);
+                            const currentZoom = Number(map.getZoom());
+
+                            const targetZoom = clampZoomToLeafletLimits(
+                                Math.min(KST_CLUSTER_DISABLE_ZOOM, currentZoom + 1)
+                            );
+
+                            map.setView(bounds.getCenter(), targetZoom, {
+                                animate: false
+                            });
+
+                            notifyViewport();
+                        }
+
                         function init() {
                             if (map) {
                                 return true;
@@ -372,6 +869,17 @@ public final class MapHtmlResources {
 
                             map = L.map('map', {
                                 zoomControl: true,
+                                minZoom: KST_MIN_ZOOM,
+                                maxZoom: KST_MAX_ZOOM,
+
+                                /*
+                                 * Integer zoom only.
+                                 * This keeps station positions stable in JavaFX WebView.
+                                 */
+                                zoomSnap: 1,
+                                zoomDelta: 1,
+                                wheelPxPerZoomLevel: 120,
+
                                 zoomAnimation: false,
                                 fadeAnimation: false,
                                 markerZoomAnimation: false,
@@ -383,7 +891,8 @@ public final class MapHtmlResources {
                             const tileLayer = L.tileLayer(
                                 'http://127.0.0.1:' + window._kstTileProxyPort + '/tiles/{s}/{z}/{x}/{y}.png',
                                 {
-                                    maxZoom: 18,
+                                    minZoom: KST_MIN_ZOOM,
+                                    maxZoom: KST_MAX_ZOOM,
                                     updateWhenZooming: false,
                                     keepBuffer: 4,
                                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -419,12 +928,12 @@ public final class MapHtmlResources {
                             connectionLayer = L.layerGroup().addTo(map);
 
                             map.on('zoomend', function () {
-                                jsLog('zoomend -> ' + map.getZoom());
+                                renderStationMarkers();
                                 notifyViewport();
                             });
 
                             map.on('moveend', function () {
-                                jsLog('moveend');
+                                renderStationMarkers();
                                 notifyViewport();
                             });
 
@@ -476,20 +985,39 @@ public final class MapHtmlResources {
                             invalidateSize();
                         }
 
-                        function zoomIn() {
+                        /**
+                         * Keeps the zoom value inside the explicit KST zoom limits.
+                         */
+                        function clampZoomToLeafletLimits(zoom) {
+                            return Math.max(KST_MIN_ZOOM, Math.min(KST_MAX_ZOOM, zoom));
+                        }
+
+                        /**
+                         * Changes the zoom in stable integer steps.
+                         */
+                        function changeZoomByKstStep(delta) {
                             if (!map) {
                                 return;
                             }
 
-                            map.setZoom(map.getZoom() + 1, { animate: false });
+                            const currentZoom = Number(map.getZoom());
+                            const nextZoom = clampZoomToLeafletLimits(currentZoom + delta);
+
+                            if (nextZoom === currentZoom) {
+                                return;
+                            }
+
+                            map.setZoom(nextZoom, {
+                                animate: false
+                            });
+                        }
+
+                        function zoomIn() {
+                            changeZoomByKstStep(KST_ZOOM_STEP);
                         }
 
                         function zoomOut() {
-                            if (!map) {
-                                return;
-                            }
-
-                            map.setZoom(map.getZoom() - 1, { animate: false });
+                            changeZoomByKstStep(-KST_ZOOM_STEP);
                         }
 
                         function getViewportState() {
@@ -522,6 +1050,12 @@ public final class MapHtmlResources {
                                     return 'station|' + callSignRaw + '|' + el.tagName + '|' + (el.className || '') + '|' + (el.textContent || '').trim();
                                 }
 
+                                const clusterRoot = el.closest('.station-cluster-root');
+                                if (clusterRoot) {
+                                    const clusterId = clusterRoot.getAttribute('data-cluster-id') || '';
+                                    return 'cluster|' + clusterId + '|' + el.tagName + '|' + (el.className || '') + '|' + (el.textContent || '').trim();
+                                }
+
                                 const zoomInButton = el.closest('.leaflet-control-zoom-in');
                                 if (zoomInButton) {
                                     return 'zoomIn||' + el.tagName + '|' + (el.className || '') + '|' + (el.textContent || '').trim();
@@ -542,8 +1076,8 @@ public final class MapHtmlResources {
                             if (!init()) {
                                 return;
                             }
-                            jsLog('setHome lat=' + lat + ' lon=' + lon + ' zoom=' + zoom);
-                            map.setView([lat, lon], zoom);
+
+                            map.setView([lat, lon], clampZoomToLeafletLimits(Math.round(Number(zoom))));
                         }
 
                         function setStations(stationsJson) {
@@ -551,30 +1085,17 @@ public final class MapHtmlResources {
                                 return;
                             }
 
-                            stationLayer.clearLayers();
-                            markersByCallsignRaw = {};
+                            stationData = JSON.parse(stationsJson);
+                            stationsByCallsignRaw = {};
 
-                            const stations = JSON.parse(stationsJson);
-                            jsLog('setStations count=' + stations.length);
-
-                            stations.forEach(station => {
-                                const marker = L.marker(
-                                    [station.latitudeDeg, station.longitudeDeg],
-                                    {
-                                        interactive: true,
-                                        keyboard: false,
-                                        icon: L.divIcon({
-                                            className: 'station-marker-wrapper',
-                                            html: buildStationMarkerHtml(station),
-                                            iconSize: [1, 1],
-                                            iconAnchor: [0, 0]
-                                        })
-                                    }
-                                );
-
-                                marker.addTo(stationLayer);
-                                markersByCallsignRaw[station.callSignRaw] = marker;
+                            stationData.forEach(station => {
+                                const callSignKey = getStationCallsignKey(station);
+                                if (callSignKey) {
+                                    stationsByCallsignRaw[callSignKey] = station;
+                                }
                             });
+
+                            renderStationMarkers();
                         }
 
                         function setBeam(beamJson) {
@@ -591,8 +1112,6 @@ public final class MapHtmlResources {
                             if (!points || points.length < 3) {
                                 return;
                             }
-
-                            jsLog('setBeam points=' + points.length);
 
                             const latLngs = points.map(point => [point.lat, point.lon]);
 
@@ -620,8 +1139,6 @@ public final class MapHtmlResources {
                             if (!points || points.length !== 2) {
                                 return;
                             }
-
-                            jsLog('setConnection');
 
                             L.polyline(points.map(point => [point.lat, point.lon]), {
                                 pane: 'connectionPane',
@@ -671,7 +1188,6 @@ public final class MapHtmlResources {
                             gridLayer.clearLayers();
 
                             const cells = JSON.parse(gridJson);
-                            jsLog('setGrid cells=' + cells.length);
 
                             cells.forEach(cell => {
                                 const rectangle = L.rectangle(
@@ -712,44 +1228,56 @@ public final class MapHtmlResources {
                         }
 
                         function focusCallsignRaw(callSignRaw) {
-                             if (!map || !callSignRaw) {
-                                 return;
-                             }
-                
-                             const marker = markersByCallsignRaw[callSignRaw];
-                             if (!marker) {
-                                 jsLog('focusCallsignRaw skipped for ' + callSignRaw);
-                                 return;
-                             }
-                
-                             jsLog('focusCallsignRaw ' + callSignRaw);
-                
-                             map.panTo(marker.getLatLng(), {
-                                 animate: false
-                             });
-                
-                             notifyViewport();
-                         }
-                         
-                         
+                            if (!map || !callSignRaw) {
+                                return;
+                            }
 
+                            const marker = markersByCallsignRaw[callSignRaw];
+                            if (marker) {
+                                map.panTo(marker.getLatLng(), {
+                                    animate: false
+                                });
+
+                                notifyViewport();
+                                return;
+                            }
+
+                            /*
+                             * If the station is currently hidden inside a cluster, there is no
+                             * individual marker. Use the raw station data and zoom in far enough
+                             * so clustering is disabled and the station becomes visible.
+                             */
+                            const station = stationsByCallsignRaw[callSignRaw];
+                            if (station && isStationPositionValid(station)) {
+                                const focusZoom = clampZoomToLeafletLimits(
+                                    Math.max(Number(map.getZoom()), KST_CLUSTER_DISABLE_ZOOM)
+                                );
+
+                                map.setView([station.latitudeDeg, station.longitudeDeg], focusZoom, {
+                                    animate: false
+                                });
+
+                                notifyViewport();
+                            }
+                        }
+                         
                         return {
-                              init: init,
-                              invalidateSize: invalidateSize,
-                              resize: resize,
-                              zoomIn: zoomIn,
-                              zoomOut: zoomOut,
-                              inspectPoint: inspectPoint,
-                              getViewportState: getViewportState,
-                              setHome: setHome,
-                              setStations: setStations,
-                              setBeam: setBeam,
-                              setConnection: setConnection,
-                              setProfileHoverPoint: setProfileHoverPoint,
-                              setGrid: setGrid,
-                              focusCallsignRaw: focusCallsignRaw,
-                              setTheme: setTheme
-                          };
+                            init: init,
+                            invalidateSize: invalidateSize,
+                            resize: resize,
+                            zoomIn: zoomIn,
+                            zoomOut: zoomOut,
+                            inspectPoint: inspectPoint,
+                            getViewportState: getViewportState,
+                            setHome: setHome,
+                            setStations: setStations,
+                            setBeam: setBeam,
+                            setConnection: setConnection,
+                            setProfileHoverPoint: setProfileHoverPoint,
+                            setGrid: setGrid,
+                            focusCallsignRaw: focusCallsignRaw,
+                            setTheme: setTheme
+                        };
                     })();
                 </script>
                 </body>
