@@ -5970,9 +5970,19 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			txt_myQTF.getStyleClass().add("text-input");
 			txt_myQTF.getStyleClass().add("text-input-MYQRG1");
 
-            txt_myQTF.textProperty().bind(Bindings.createStringBinding(
-                    () -> Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()),
-                    chatcontroller.getChatPreferences().getActualQTF()));
+			// Rotator sync on/off determines whether this field is bound (read-only, driven
+			// by PSTRotator) or free for manual entry, mirroring the MYQRG sync behaviour above.
+			if (chatcontroller.getChatPreferences().isStn_pstRotatorEnabled()) {
+				txt_myQTF.textProperty().bind(Bindings.createStringBinding(
+						() -> Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()),
+						chatcontroller.getChatPreferences().getActualQTF()));
+				txt_myQTF.setTooltip(new Tooltip("This is your current QTF, read out at PSTRotator"));
+				txt_myQTF.setFocusTraversable(false);
+			} else {
+				txt_myQTF.setText(Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()));
+				txt_myQTF.setTooltip(new Tooltip("Enter your antenna heading (QTF) by hand - no rotator sync active"));
+				txt_myQTF.setFocusTraversable(true);
+			}
 
 			txt_myQTF.focusedProperty().addListener(new ChangeListener<Boolean>() {
 				@Override
@@ -5982,13 +5992,16 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //			            System.out.println("Textfield on focus");
 						// Do nothing until field loses focus, user will enter his frequency
 					} else {
+						if (txt_myQTF.textProperty().isBound()) {
+							return; // rotator sync active, field is driven by PSTRotator
+						}
 						try {
 						System.out.println(
 								"[Main.java, Info]: Set the MYQTF property by hand to: " + txt_myQTF.getText());
-						chatcontroller.getChatPreferences().getActualQTF().set(Integer.parseInt(txt_myQTF.getText()));}
+						chatcontroller.getChatPreferences().getActualQTF().set(Double.parseDouble(txt_myQTF.getText()));}
 						catch (Exception exception) {
 							System.out.println("bullshit entered in myqtf");
-							txt_myQTF.setText("0");
+							txt_myQTF.setText("0.0");
 						}
 					}
 				}
@@ -5997,8 +6010,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			txt_myQTF.setPrefSize(40, 0);
 //			txt_ownqrg.setMinSize(40, 0);
 			txt_myQTF.setAlignment(Pos.BASELINE_RIGHT);
-			txt_myQTF.setTooltip(new Tooltip("This is your current QTF, read out at PSTRotator"));
-			txt_myQTF.setFocusTraversable(false);
 
 			SplitPane mainWindowLeftSplitPane = new SplitPane();
 			mainWindowLeftSplitPane.setOrientation(Orientation.HORIZONTAL);
@@ -8637,9 +8648,21 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		chkBx_station_pstRotatorEnabled.setTooltip(new Tooltip(
 				"If disabled: no PSTRotator connection is started and antenna direction is ignored in priority scoring."
 		));
-		chkBx_station_pstRotatorEnabled.selectedProperty().addListener((obs, oldV, newV) ->
-				chatcontroller.getChatPreferences().setStn_pstRotatorEnabled(newV)
-		);
+		chkBx_station_pstRotatorEnabled.selectedProperty().addListener((obs, oldV, newV) -> {
+			chatcontroller.getChatPreferences().setStn_pstRotatorEnabled(newV);
+			if (newV) {
+				txt_myQTF.textProperty().bind(Bindings.createStringBinding(
+						() -> Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()),
+						chatcontroller.getChatPreferences().getActualQTF()));
+				txt_myQTF.setTooltip(new Tooltip("This is your current QTF, read out at PSTRotator"));
+				txt_myQTF.setFocusTraversable(false);
+			} else {
+				txt_myQTF.textProperty().unbind();
+				txt_myQTF.setText(Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()));
+				txt_myQTF.setTooltip(new Tooltip("Enter your antenna heading (QTF) by hand - no rotator sync active"));
+				txt_myQTF.setFocusTraversable(true);
+			}
+		});
 
 
 		grdPnlStation.add(lblCallSign, 0, 0);
