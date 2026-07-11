@@ -6,5 +6,7 @@ module.exports = [
     { title: "News", url: "/news/" },
     { title: "Roadmap", url: "/roadmap/" },
     { title: "About", url: "/about/" },
-    { title: "FAQ", url: "/faq/" }
+    { title: "FAQ", url: "/faq/" },
+    { title: "Support", url: "/support/"
+    }
 ];

@@ -5016,7 +5016,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		help2.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
-				getHostServices().showDocument("https://www.paypal.com/paypalme/do5amf");
+				getHostServices().showDocument("https://ko-fi.com/praktimarc");
 
 			}
 		});
