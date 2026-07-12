@@ -1241,26 +1241,43 @@ public class MessageBusManagementThread extends Thread {
 											 */
 												if (splittedMessageLine[0].contains(USERINFOUPDATEORUSERISBACK)) {
 
-													ChatMember stateChangeMember = new ChatMember();
+													if (splittedMessageLine.length < 6) {
+														System.out.println("[MSGBUSMGT, warning:] Malformed UM3 message ignored: "
+																+ messageToProcess.getMessageText());
+													} else {
+														ChatMember stateChangeMember = new ChatMember();
 
-													stateChangeMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+														stateChangeMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
+														stateChangeMember.setCallSign(splittedMessageLine[2]);
+														stateChangeMember.setName(splittedMessageLine[3]);
+														stateChangeMember.setQra(splittedMessageLine[4]);
+														stateChangeMember.setState(Integer.parseInt(splittedMessageLine[5]));
+														stateChangeMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
+														stateChangeMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(
+																client.getChatPreferences().getStn_loginLocatorMainCat(),
+																stateChangeMember.getQra()));
+														stateChangeMember.setQTFdirection(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())
+																.getBearing(new Location(stateChangeMember.getQra())));
 
-													stateChangeMember.setCallSign(splittedMessageLine[2]);
-													stateChangeMember.setName(splittedMessageLine[3]);
-													stateChangeMember.setQra(splittedMessageLine[4]);
-													stateChangeMember.setState(Integer.parseInt(splittedMessageLine[5]));
-													stateChangeMember.setLastActivity(new Utils4KST().time_generateActualTimeInDateFormat());
-													stateChangeMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(client.getChatPreferences().getStn_loginLocatorMainCat(), stateChangeMember.getQra()));
-													stateChangeMember.setQTFdirection(new Location(client.getChatPreferences().getStn_loginLocatorMainCat()).getBearing(new Location(stateChangeMember.getQra())));
-
-													this.client.getDbHandler().storeChatMember(stateChangeMember); // TODO: not clean, it should be an
-													// upodate
-
-//					System.out.println("[MSGBUSMGT:] DXCluster Message detected ");
-
-													// -1 could be the case if mycall is processed; own call is not displayed in the active-member list.
-													if (!client.getChatPreferences().getStn_loginCallSign().equalsIgnoreCase(stateChangeMember.getCallSign())) {
-														this.client.updateOrAddActiveChatMemberInfo(stateChangeMember);
+														/*
+														 * UM3 is only an info/profile update. ON4KST also sends it for stations
+														 * that are not logged into this channel. Such stations must not become
+														 * visible chat members, otherwise the user could try to address an
+														 * offline callsign and receive server-side errors.
+														 *
+														 * Therefore UM3 updates existing active members only. Unknown UM3 calls
+														 * are intentionally ignored; if the station joins later, UA0/UA5/UA2
+														 * will deliver the complete current user information again.
+														 */
+														if (!client.getChatPreferences().getStn_loginCallSign().equalsIgnoreCase(stateChangeMember.getCallSign())) {
+															boolean updatedActiveMember = this.client.updateActiveChatMemberInfoIfPresent(stateChangeMember);
+															if (updatedActiveMember) {
+																this.client.getDbHandler().storeChatMember(stateChangeMember); // TODO: not clean, it should be an update
+															} else {
+																System.out.println("[MSGBUSMGT, Info:] UM3 ignored for inactive user: "
+																		+ stateChangeMember.getCallSign() + " / " + stateChangeMember.getChatCategory());
+															}
+														}
 													}
 
 												} else

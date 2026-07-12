@@ -1357,20 +1357,26 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 	/**
-	 * Applies a UM3-style user-info update to an already known member. If ON4KST
-	 * sends the update before the matching enter message, the member is added so
-	 * later CH messages can resolve sender/receiver immediately.
+	 * Applies a UM3-style user-info update only to an already active chat member.
+	 *
+	 * ON4KST may send UM3 messages for stations that are not logged into the
+	 * current channel, for example when a user changes locator/profile data on the
+	 * website. Such stations must not be added to the visible chat member list,
+	 * because they cannot be addressed in the channel. Their full information will
+	 * be delivered again with UA0/UA5/UA2 when they actually join.
+	 *
+	 * @return true if an active member was found and updated, false if the UM3
+	 *         information was intentionally ignored.
 	 */
-	public void updateOrAddActiveChatMemberInfo(ChatMember updatedMember) {
+	public boolean updateActiveChatMemberInfoIfPresent(ChatMember updatedMember) {
 		String key = buildActiveChatMemberKey(updatedMember);
 		if (key == null) {
-			return;
+			return false;
 		}
 
 		ChatMember activeMember = activeChatMembersByCallAndCategory.get(key);
 		if (activeMember == null) {
-			addOrUpdateActiveChatMember(updatedMember);
-			return;
+			return false;
 		}
 
 		activeMember.setName(updatedMember.getName());
@@ -1381,6 +1387,15 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		activeMember.setQrb(updatedMember.getQrb());
 		activeMember.setQTFdirection(updatedMember.getQTFdirection());
 		fireUserListUpdate("User info updated");
+		return true;
+	}
+
+	/**
+	 * Backward-compatible wrapper for older call sites. Despite the historic name,
+	 * this method no longer adds unknown UM3 users to the active member model.
+	 */
+	public boolean updateOrAddActiveChatMemberInfo(ChatMember updatedMember) {
+		return updateActiveChatMemberInfoIfPresent(updatedMember);
 	}
 
 	/**
