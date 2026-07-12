@@ -2,33 +2,14 @@
     "use strict";
 
     const canvas = document.querySelector("[data-hero-radio-fx]");
-
-    if (!(canvas instanceof HTMLCanvasElement)) {
-        return;
-    }
-
-    const context = canvas.getContext("2d", {
-        alpha: true,
-        desynchronized: true
-    });
-
-    if (!context) {
-        return;
-    }
+    if (!(canvas instanceof HTMLCanvasElement)) return;
 
     const hero = canvas.closest(".hero");
+    const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+    if (!(hero instanceof HTMLElement) || !ctx) return;
 
-    if (!(hero instanceof HTMLElement)) {
-        return;
-    }
-
-    const reducedMotion = window.matchMedia(
-        "(prefers-reduced-motion: reduce)"
-    );
-
-    const coarsePointer = window.matchMedia(
-        "(pointer: coarse)"
-    );
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+    const coarsePointer = matchMedia("(pointer: coarse)");
 
     const state = {
         width: 0,
@@ -37,967 +18,492 @@
         running: false,
         visible: true,
         lastFrame: 0,
-        spawnAccumulator: 0,
-        beamAccumulator: 0,
-        animationFrameId: 0,
-        pointer: {
-            x: 0,
-            y: 0,
-            active: false
-        },
+        spawnTime: 0,
+        beamTime: 0,
+        frameId: 0,
+        pointer: { x: 0, y: 0, active: false },
         planes: [],
         beams: [],
         reflections: []
     };
 
-    const clamp = (value, minimum, maximum) =>
-        Math.max(minimum, Math.min(maximum, value));
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const random = (min, max) => min + Math.random() * (max - min);
 
-    const randomBetween = (minimum, maximum) =>
-        minimum + Math.random() * (maximum - minimum);
-
-    function getCssColor(name, fallback) {
-        const value = getComputedStyle(document.documentElement)
-            .getPropertyValue(name)
-            .trim();
-
-        return value || fallback;
+    function css(name, fallback) {
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
     }
 
-    function getPalette() {
+    function palette() {
         return {
-            plane: getCssColor("--fx-plane", "#79ff73"),
-            planeMuted: getCssColor("--fx-plane-muted", "rgba(121,255,115,.42)"),
-            beam: getCssColor("--fx-beam", "#52ff65"),
-            beamGlow: getCssColor("--fx-beam-glow", "rgba(82,255,101,.28)"),
-            reflection: getCssColor("--fx-reflection", "#c8ffbf"),
-            trail: getCssColor("--fx-trail", "rgba(121,255,115,.16)"),
-            grid: getCssColor("--fx-grid", "rgba(121,255,115,.055)")
+            plane: css("--fx-plane", "#79ff73"),
+            planeMuted: css("--fx-plane-muted", "rgba(121,255,115,.42)"),
+            beam: css("--fx-beam", "#52ff65"),
+            beamGlow: css("--fx-beam-glow", "rgba(82,255,101,.28)"),
+            reflection: css("--fx-reflection", "#d2ffc8"),
+            trail: css("--fx-trail", "rgba(121,255,115,.17)"),
+            grid: css("--fx-grid", "rgba(121,255,115,.055)")
         };
     }
 
-    function resizeCanvas() {
-        const bounds = hero.getBoundingClientRect();
+    function roundedRect(x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+    }
 
-        state.width = Math.max(1, Math.round(bounds.width));
-        state.height = Math.max(1, Math.round(bounds.height));
-        state.dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-
+    function resize() {
+        const rect = hero.getBoundingClientRect();
+        state.width = Math.max(1, Math.round(rect.width));
+        state.height = Math.max(1, Math.round(rect.height));
+        state.dpr = Math.min(devicePixelRatio || 1, 1.5);
         canvas.width = Math.round(state.width * state.dpr);
         canvas.height = Math.round(state.height * state.dpr);
-
         canvas.style.width = `${state.width}px`;
         canvas.style.height = `${state.height}px`;
-
-        context.setTransform(
-            state.dpr,
-            0,
-            0,
-            state.dpr,
-            0,
-            0
-        );
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
 
         if (!state.pointer.active) {
-            state.pointer.x = state.width * 0.54;
+            state.pointer.x = state.width * 0.55;
             state.pointer.y = state.height * 0.42;
         }
     }
 
-    function getPlaneLimit() {
-        if (coarsePointer.matches) {
-            return 5;
-        }
+    function stations() {
+        const targetX = state.width * 0.54;
+        const targetY = state.height * 0.43;
+        const left = { x: state.width * 0.075, y: state.height * 0.82, label: "JN49EM" };
+        const right = { x: state.width * 0.925, y: state.height * 0.80, label: "JO66MD" };
+        left.angle = Math.atan2(targetY - left.y, targetX - left.x);
+        right.angle = Math.atan2(targetY - right.y, targetX - right.x);
+        return [left, right];
+    }
 
-        if (state.width < 900) {
-            return 7;
-        }
-
-        return 12;
+    function planeLimit() {
+        if (coarsePointer.matches) return 5;
+        return state.width < 900 ? 7 : 12;
     }
 
     function createPlane() {
         const margin = 55;
         const edge = Math.floor(Math.random() * 4);
-
         let x;
         let y;
 
-        switch (edge) {
-            case 0:
-                x = randomBetween(0, state.width);
-                y = -margin;
-                break;
-
-            case 1:
-                x = state.width + margin;
-                y = randomBetween(0, state.height);
-                break;
-
-            case 2:
-                x = randomBetween(0, state.width);
-                y = state.height + margin;
-                break;
-
-            default:
-                x = -margin;
-                y = randomBetween(0, state.height);
-                break;
+        if (edge === 0) {
+            x = random(0, state.width);
+            y = -margin;
+        } else if (edge === 1) {
+            x = state.width + margin;
+            y = random(0, state.height);
+        } else if (edge === 2) {
+            x = random(0, state.width);
+            y = state.height + margin;
+        } else {
+            x = -margin;
+            y = random(0, state.height);
         }
 
-        const targetX = state.pointer.active
-            ? state.pointer.x
-            : state.width * randomBetween(0.38, 0.72);
-
-        const targetY = state.pointer.active
-            ? state.pointer.y
-            : state.height * randomBetween(0.2, 0.72);
-
-        const angle = Math.atan2(targetY - y, targetX - x);
-        const speed = randomBetween(18, 34);
+        const tx = state.pointer.active ? state.pointer.x : state.width * random(0.38, 0.72);
+        const ty = state.pointer.active ? state.pointer.y : state.height * random(0.20, 0.72);
+        const angle = Math.atan2(ty - y, tx - x);
+        const speed = random(18, 34);
 
         return {
-            x,
-            y,
-            previousX: x,
-            previousY: y,
-            velocityX: Math.cos(angle) * speed,
-            velocityY: Math.sin(angle) * speed,
-            angle,
-            size: randomBetween(5.5, 9),
+            x, y, angle,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: random(5.5, 9),
             age: 0,
-            maximumAge: randomBetween(12, 20),
-            steering: randomBetween(0.65, 1.2),
-            wobble: randomBetween(0, Math.PI * 2),
-            wobbleSpeed: randomBetween(0.7, 1.4),
+            maxAge: random(12, 20),
+            steering: random(0.65, 1.2),
+            wobble: random(0, Math.PI * 2),
+            wobbleSpeed: random(0.7, 1.4),
             hit: 0
         };
     }
 
-    function updatePlane(plane, deltaSeconds) {
-        plane.age += deltaSeconds;
-        plane.wobble += deltaSeconds * plane.wobbleSpeed;
+    function updatePlane(plane, dt) {
+        plane.age += dt;
+        plane.wobble += dt * plane.wobbleSpeed;
 
-        plane.previousX = plane.x;
-        plane.previousY = plane.y;
+        const tx = state.pointer.active ? state.pointer.x : state.width * 0.56;
+        const ty = state.pointer.active ? state.pointer.y : state.height * 0.44;
+        const desired = Math.atan2(ty - plane.y, tx - plane.x);
+        let diff = desired - plane.angle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        plane.angle += diff * plane.steering * dt;
 
-        const targetX = state.pointer.active
-            ? state.pointer.x
-            : state.width * 0.56;
-
-        const targetY = state.pointer.active
-            ? state.pointer.y
-            : state.height * 0.44;
-
-        const desiredAngle = Math.atan2(
-            targetY - plane.y,
-            targetX - plane.x
-        );
-
-        let angleDifference = desiredAngle - plane.angle;
-
-        while (angleDifference > Math.PI) {
-            angleDifference -= Math.PI * 2;
-        }
-
-        while (angleDifference < -Math.PI) {
-            angleDifference += Math.PI * 2;
-        }
-
-        plane.angle += angleDifference * plane.steering * deltaSeconds;
-
-        const speed = Math.hypot(
-            plane.velocityX,
-            plane.velocityY
-        );
-
+        const speed = Math.hypot(plane.vx, plane.vy);
         const wobble = Math.sin(plane.wobble) * 0.14;
-
-        plane.velocityX =
-            Math.cos(plane.angle + wobble) * speed;
-
-        plane.velocityY =
-            Math.sin(plane.angle + wobble) * speed;
-
-        plane.x += plane.velocityX * deltaSeconds;
-        plane.y += plane.velocityY * deltaSeconds;
-
-        plane.hit = Math.max(0, plane.hit - deltaSeconds * 1.8);
+        plane.vx = Math.cos(plane.angle + wobble) * speed;
+        plane.vy = Math.sin(plane.angle + wobble) * speed;
+        plane.x += plane.vx * dt;
+        plane.y += plane.vy * dt;
+        plane.hit = Math.max(0, plane.hit - dt * 1.8);
     }
 
-    function isPlaneExpired(plane) {
+    function expired(plane) {
         const margin = 180;
-
-        return (
-            plane.age > plane.maximumAge ||
-            plane.x < -margin ||
-            plane.x > state.width + margin ||
-            plane.y < -margin ||
-            plane.y > state.height + margin
-        );
+        return plane.age > plane.maxAge || plane.x < -margin || plane.x > state.width + margin || plane.y < -margin || plane.y > state.height + margin;
     }
 
-    function chooseBeamTarget() {
-        if (state.planes.length === 0) {
-            return null;
-        }
-
-        const targetX = state.pointer.active
-            ? state.pointer.x
-            : state.width * 0.56;
-
-        const targetY = state.pointer.active
-            ? state.pointer.y
-            : state.height * 0.44;
-
-        const candidates = state.planes
-            .map((plane) => ({
-                plane,
-                distance: Math.hypot(
-                    plane.x - targetX,
-                    plane.y - targetY
-                )
-            }))
-            .filter((entry) => entry.distance < 260)
+    function beamTarget() {
+        if (!state.planes.length) return null;
+        const tx = state.pointer.active ? state.pointer.x : state.width * 0.56;
+        const ty = state.pointer.active ? state.pointer.y : state.height * 0.44;
+        const nearby = state.planes
+            .map(plane => ({ plane, distance: Math.hypot(plane.x - tx, plane.y - ty) }))
+            .filter(item => item.distance < 280)
             .sort((a, b) => a.distance - b.distance);
-
-        if (candidates.length > 0) {
-            return candidates[0].plane;
-        }
-
-        return state.planes[
-            Math.floor(Math.random() * state.planes.length)
-            ];
+        return nearby[0]?.plane || state.planes[Math.floor(Math.random() * state.planes.length)];
     }
 
-    function getRadioStations() {
-        const centerX = state.width * 0.54;
-        const centerY = state.height * 0.43;
-
-        const left = {
-            x: state.width * 0.075,
-            y: state.height * 0.82,
-            label: "JN49EM"
-        };
-
-        const right = {
-            x: state.width * 0.925,
-            y: state.height * 0.80,
-            label: "JO66MD"
-        };
-
-        left.angle = Math.atan2(
-            centerY - left.y,
-            centerX - left.x
-        );
-
-        right.angle = Math.atan2(
-            centerY - right.y,
-            centerX - right.x
-        );
-
-        return [left, right];
-    }
-
-    function createBeam(target) {function createBeam(target) {
-        const stations = getRadioStations();
-
-        const source = stations
-            .map((station) => ({
-                station,
-                distance: Math.hypot(
-                    target.x - station.x,
-                    target.y - station.y
-                )
-            }))
+    function createBeam(target) {
+        const source = stations()
+            .map(station => ({ station, distance: Math.hypot(target.x - station.x, target.y - station.y) }))
             .sort((a, b) => a.distance - b.distance)[0].station;
 
-        const beamAngle = Math.atan2(
-            target.y - source.y,
-            target.x - source.x
-        );
-
-        /*
-         * Der Strahl beginnt nicht im Antennenmast,
-         * sondern etwas vor der Yagi.
-         */
-        const antennaTipDistance = 45;
-
-        const startX =
-            source.x +
-            Math.cos(beamAngle) * antennaTipDistance;
-
-        const startY =
-            source.y +
-            Math.sin(beamAngle) * antennaTipDistance;
-
+        const angle = Math.atan2(target.y - source.y, target.x - source.x);
+        const tip = 45;
         state.beams.push({
-            startX,
-            startY,
+            startX: source.x + Math.cos(angle) * tip,
+            startY: source.y + Math.sin(angle) * tip,
             endX: target.x,
             endY: target.y,
             age: 0,
-            maximumAge: 0.72
+            maxAge: 0.72
         });
 
         target.hit = 1;
-
-        const probabilities = [50, 75, 100];
-        const probability =
-            probabilities[
-                Math.floor(Math.random() * probabilities.length)
-                ];
-
+        const values = [50, 75, 100];
         state.reflections.push({
             x: target.x,
             y: target.y,
             age: 0,
-            maximumAge: 1.25,
-            radius: randomBetween(8, 13),
-            probability
+            maxAge: 1.25,
+            radius: random(8, 13),
+            probability: values[Math.floor(Math.random() * values.length)]
         });
     }
 
-    function updateEffects(deltaSeconds) {
-        for (const beam of state.beams) {
-            beam.age += deltaSeconds;
-        }
-
-        state.beams = state.beams.filter(
-            (beam) => beam.age < beam.maximumAge
-        );
-
-        for (const reflection of state.reflections) {
-            reflection.age += deltaSeconds;
-            reflection.radius += deltaSeconds * 30;
-        }
-
-        state.reflections = state.reflections.filter(
-            (reflection) =>
-                reflection.age < reflection.maximumAge
-        );
+    function updateEffects(dt) {
+        state.beams.forEach(beam => beam.age += dt);
+        state.beams = state.beams.filter(beam => beam.age < beam.maxAge);
+        state.reflections.forEach(r => {
+            r.age += dt;
+            r.radius += dt * 30;
+        });
+        state.reflections = state.reflections.filter(r => r.age < r.maxAge);
     }
 
-    function drawGrid(palette) {
-        context.save();
-
-        context.strokeStyle = palette.grid;
-        context.lineWidth = 1;
-
+    function drawGrid(p) {
+        ctx.save();
+        ctx.strokeStyle = p.grid;
+        ctx.lineWidth = 1;
         const spacing = 54;
-
-        for (
-            let x = spacing;
-            x < state.width;
-            x += spacing
-        ) {
-            context.beginPath();
-            context.moveTo(x, 0);
-            context.lineTo(x, state.height);
-            context.stroke();
+        for (let x = spacing; x < state.width; x += spacing) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, state.height);
+            ctx.stroke();
         }
-
-        for (
-            let y = spacing;
-            y < state.height;
-            y += spacing
-        ) {
-            context.beginPath();
-            context.moveTo(0, y);
-            context.lineTo(state.width, y);
-            context.stroke();
+        for (let y = spacing; y < state.height; y += spacing) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(state.width, y);
+            ctx.stroke();
         }
-
-        context.restore();
+        ctx.restore();
     }
 
-    function drawRadarTarget(palette) {
-        const x = state.pointer.active
-            ? state.pointer.x
-            : state.width * 0.56;
-
-        const y = state.pointer.active
-            ? state.pointer.y
-            : state.height * 0.44;
-
-        context.save();
-
-        context.strokeStyle = palette.planeMuted;
-        context.lineWidth = 1;
-
+    function drawRadar(p) {
+        const x = state.pointer.active ? state.pointer.x : state.width * 0.56;
+        const y = state.pointer.active ? state.pointer.y : state.height * 0.44;
+        ctx.save();
+        ctx.strokeStyle = p.planeMuted;
+        ctx.lineWidth = 1;
         for (const radius of [24, 48, 82]) {
-            context.globalAlpha = 0.24 - radius / 500;
-
-            context.beginPath();
-            context.arc(x, y, radius, 0, Math.PI * 2);
-            context.stroke();
+            ctx.globalAlpha = 0.24 - radius / 500;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
         }
-
-        context.globalAlpha = 0.2;
-
-        context.beginPath();
-        context.moveTo(x - 100, y);
-        context.lineTo(x + 100, y);
-        context.moveTo(x, y - 100);
-        context.lineTo(x, y + 100);
-        context.stroke();
-
-        context.restore();
+        ctx.globalAlpha = 0.2;
+        ctx.beginPath();
+        ctx.moveTo(x - 100, y);
+        ctx.lineTo(x + 100, y);
+        ctx.moveTo(x, y - 100);
+        ctx.lineTo(x, y + 100);
+        ctx.stroke();
+        ctx.restore();
     }
 
-        function drawYagi(station, palette) {
-            context.save();
+    function drawYagi(station, p) {
+        ctx.save();
+        ctx.translate(station.x, station.y);
+        ctx.rotate(station.angle);
+        ctx.strokeStyle = p.plane;
+        ctx.fillStyle = p.plane;
+        ctx.lineWidth = 1.5;
+        ctx.lineCap = "round";
+        ctx.shadowColor = p.beamGlow;
+        ctx.shadowBlur = 9;
 
-            context.translate(station.x, station.y);
-            context.rotate(station.angle);
+        ctx.beginPath();
+        ctx.moveTo(-30, 26);
+        ctx.lineTo(-30, -5);
+        ctx.stroke();
 
-            context.strokeStyle = palette.plane;
-            context.fillStyle = palette.plane;
-            context.lineCap = "round";
-            context.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-32, 0);
+        ctx.lineTo(43, 0);
+        ctx.stroke();
 
-            context.shadowColor = palette.beamGlow;
-            context.shadowBlur = 9;
-
-            /*
-             * Mast
-             */
-            context.beginPath();
-            context.moveTo(-30, 26);
-            context.lineTo(-30, -5);
-            context.stroke();
-
-            /*
-             * Ausleger / Boom
-             */
-            context.beginPath();
-            context.moveTo(-32, 0);
-            context.lineTo(43, 0);
-            context.stroke();
-
-            /*
-             * Reflektor
-             */
-            context.beginPath();
-            context.moveTo(-27, -17);
-            context.lineTo(-27, 17);
-            context.stroke();
-
-            /*
-             * Dipol
-             */
-            context.beginPath();
-            context.moveTo(-12, -14);
-            context.lineTo(-12, 14);
-            context.stroke();
-
-            /*
-             * Direktoren
-             */
-            const directors = [
-                { x: 2, length: 22 },
-                { x: 14, length: 19 },
-                { x: 25, length: 16 },
-                { x: 35, length: 13 }
-            ];
-
-            for (const director of directors) {
-                context.beginPath();
-                context.moveTo(
-                    director.x,
-                    -director.length / 2
-                );
-                context.lineTo(
-                    director.x,
-                    director.length / 2
-                );
-                context.stroke();
-            }
-
-            /*
-             * Einspeisepunkt
-             */
-            context.beginPath();
-            context.arc(-12, 0, 3.2, 0, Math.PI * 2);
-            context.fill();
-
-            context.restore();
-
-            /*
-             * Locator bleibt waagerecht lesbar.
-             */
-            context.save();
-
-            context.font =
-                '700 11px Inter, system-ui, sans-serif';
-
-            const labelWidth =
-                context.measureText(station.label).width + 14;
-
-            const labelX = station.x - labelWidth / 2;
-            const labelY = station.y + 32;
-
-            context.fillStyle = "rgba(6, 18, 10, 0.86)";
-            context.strokeStyle = palette.planeMuted;
-            context.lineWidth = 1;
-
-            context.beginPath();
-            context.roundRect(
-                labelX,
-                labelY,
-                labelWidth,
-                23,
-                6
-            );
-            context.fill();
-            context.stroke();
-
-            context.fillStyle = palette.plane;
-            context.textAlign = "center";
-            context.textBaseline = "middle";
-
-            context.fillText(
-                station.label,
-                station.x,
-                labelY + 11.5
-            );
-
-            context.restore();
+        for (const element of [
+            { x: -27, length: 34 },
+            { x: -12, length: 28 },
+            { x: 2, length: 22 },
+            { x: 14, length: 19 },
+            { x: 25, length: 16 },
+            { x: 35, length: 13 }
+        ]) {
+            ctx.beginPath();
+            ctx.moveTo(element.x, -element.length / 2);
+            ctx.lineTo(element.x, element.length / 2);
+            ctx.stroke();
         }
 
-    function drawPlane(plane, palette) {
-        context.save();
+        ctx.beginPath();
+        ctx.arc(-12, 0, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
-        context.translate(plane.x, plane.y);
-        context.rotate(plane.angle);
-
-        const alpha = clamp(
-            Math.min(
-                plane.age * 1.8,
-                (plane.maximumAge - plane.age) * 1.8
-            ),
-            0,
-            1
-        );
-
-        context.globalAlpha = alpha;
-
-        context.strokeStyle = palette.trail;
-        context.lineWidth = 1;
-
-        context.beginPath();
-        context.moveTo(-plane.size * 4.5, 0);
-        context.lineTo(-plane.size * 1.4, 0);
-        context.stroke();
-
-        context.fillStyle =
-            plane.hit > 0
-                ? palette.reflection
-                : palette.plane;
-
-        context.shadowColor =
-            plane.hit > 0
-                ? palette.reflection
-                : palette.beamGlow;
-
-        context.shadowBlur =
-            plane.hit > 0
-                ? 16
-                : 5;
-
-        const size = plane.size;
-
-        context.beginPath();
-
-        context.moveTo(size * 1.65, 0);
-        context.lineTo(-size * 0.7, size * 0.34);
-        context.lineTo(-size * 0.15, size * 1.05);
-        context.lineTo(-size * 0.65, size * 1.08);
-        context.lineTo(-size * 1.35, size * 0.3);
-        context.lineTo(-size * 1.7, size * 0.28);
-        context.lineTo(-size * 1.12, 0);
-        context.lineTo(-size * 1.7, -size * 0.28);
-        context.lineTo(-size * 1.35, -size * 0.3);
-        context.lineTo(-size * 0.65, -size * 1.08);
-        context.lineTo(-size * 0.15, -size * 1.05);
-        context.lineTo(-size * 0.7, -size * 0.34);
-
-        context.closePath();
-        context.fill();
-
-        context.restore();
+        ctx.save();
+        ctx.font = "700 11px Inter, system-ui, sans-serif";
+        const width = ctx.measureText(station.label).width + 14;
+        const x = station.x - width / 2;
+        const y = station.y + 32;
+        ctx.fillStyle = "rgba(6,18,10,.86)";
+        ctx.strokeStyle = p.planeMuted;
+        roundedRect(x, y, width, 23, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = p.plane;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(station.label, station.x, y + 11.5);
+        ctx.restore();
     }
 
-    function drawBeam(beam, palette) {
-        const progress = beam.age / beam.maximumAge;
+    function drawPlane(plane, p) {
+        ctx.save();
+        ctx.translate(plane.x, plane.y);
+        ctx.rotate(plane.angle);
+        ctx.globalAlpha = clamp(Math.min(plane.age * 1.8, (plane.maxAge - plane.age) * 1.8), 0, 1);
+        ctx.strokeStyle = p.trail;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-plane.size * 4.5, 0);
+        ctx.lineTo(-plane.size * 1.4, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = plane.hit > 0 ? p.reflection : p.plane;
+        ctx.shadowColor = plane.hit > 0 ? p.reflection : p.beamGlow;
+        ctx.shadowBlur = plane.hit > 0 ? 16 : 5;
+        const s = plane.size;
+        ctx.beginPath();
+        ctx.moveTo(s * 1.65, 0);
+        ctx.lineTo(-s * 0.7, s * 0.34);
+        ctx.lineTo(-s * 0.15, s * 1.05);
+        ctx.lineTo(-s * 0.65, s * 1.08);
+        ctx.lineTo(-s * 1.35, s * 0.3);
+        ctx.lineTo(-s * 1.7, s * 0.28);
+        ctx.lineTo(-s * 1.12, 0);
+        ctx.lineTo(-s * 1.7, -s * 0.28);
+        ctx.lineTo(-s * 1.35, -s * 0.3);
+        ctx.lineTo(-s * 0.65, -s * 1.08);
+        ctx.lineTo(-s * 0.15, -s * 1.05);
+        ctx.lineTo(-s * 0.7, -s * 0.34);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    function drawBeam(beam, p) {
+        const progress = beam.age / beam.maxAge;
         const alpha = Math.sin(progress * Math.PI);
-
-        context.save();
-
-        context.globalAlpha = alpha;
-        context.strokeStyle = palette.beamGlow;
-        context.lineWidth = 8;
-        context.shadowColor = palette.beam;
-        context.shadowBlur = 15;
-
-        context.setLineDash([10, 6]);
-        context.lineDashOffset = -progress * 36;
-
-        context.beginPath();
-        context.moveTo(beam.startX, beam.startY);
-        context.lineTo(beam.endX, beam.endY);
-        context.stroke();
-
-        context.strokeStyle = palette.beam;
-        context.lineWidth = 1.8;
-        context.shadowBlur = 5;
-
-        context.beginPath();
-        context.moveTo(beam.startX, beam.startY);
-        context.lineTo(beam.endX, beam.endY);
-        context.stroke();
-
-        context.setLineDash([]);
-
-        context.restore();
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = p.beamGlow;
+        ctx.lineWidth = 8;
+        ctx.shadowColor = p.beam;
+        ctx.shadowBlur = 15;
+        ctx.setLineDash([10, 6]);
+        ctx.lineDashOffset = -progress * 36;
+        ctx.beginPath();
+        ctx.moveTo(beam.startX, beam.startY);
+        ctx.lineTo(beam.endX, beam.endY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = p.beam;
+        ctx.lineWidth = 1.8;
+        ctx.shadowBlur = 5;
+        ctx.beginPath();
+        ctx.moveTo(beam.startX, beam.startY);
+        ctx.lineTo(beam.endX, beam.endY);
+        ctx.stroke();
+        ctx.restore();
     }
 
-        function drawReflection(reflection, palette) {
-            const progress =
-                reflection.age / reflection.maximumAge;
-
-            const alpha = 1 - progress;
-
-            context.save();
-
-            context.translate(
-                reflection.x,
-                reflection.y
-            );
-
-            context.globalAlpha = alpha;
-
-            /*
-             * Äußerer Reflexionsring
-             */
-            context.strokeStyle = palette.reflection;
-            context.lineWidth = 1.6;
-            context.shadowColor = palette.beam;
-            context.shadowBlur = 18;
-
-            context.beginPath();
-            context.arc(
-                0,
-                0,
-                reflection.radius,
-                0,
-                Math.PI * 2
-            );
-            context.stroke();
-
-            /*
-             * Zweiter Ring
-             */
-            context.globalAlpha = alpha * 0.55;
-
-            context.beginPath();
-            context.arc(
-                0,
-                0,
-                reflection.radius * 1.65,
-                0,
-                Math.PI * 2
-            );
-            context.stroke();
-
-            /*
-             * Reflexionskreuz
-             */
-            context.globalAlpha = alpha * 0.8;
-            context.lineWidth = 1;
-
-            const crossSize =
-                reflection.radius * 1.25;
-
-            context.beginPath();
-            context.moveTo(-crossSize, 0);
-            context.lineTo(crossSize, 0);
-            context.moveTo(0, -crossSize);
-            context.lineTo(0, crossSize);
-            context.stroke();
-
-            /*
-             * Heller Reflexionspunkt
-             */
-            context.globalAlpha = alpha;
-            context.fillStyle = palette.reflection;
-            context.shadowBlur = 24;
-
-            context.beginPath();
-            context.arc(0, 0, 3.8, 0, Math.PI * 2);
-            context.fill();
-
-            context.restore();
-
-            /*
-             * AP-Prozentwert
-             */
-            context.save();
-
-            const label = `${reflection.probability}%`;
-
-            context.font =
-                '800 12px Inter, system-ui, sans-serif';
-
-            const textWidth =
-                context.measureText(label).width;
-
-            const boxWidth = textWidth + 16;
-            const boxHeight = 25;
-
-            const boxX =
-                reflection.x + reflection.radius + 12;
-
-            const boxY =
-                reflection.y - reflection.radius - 17;
-
-            context.globalAlpha =
-                clamp(alpha * 1.25, 0, 1);
-
-            context.fillStyle = "rgba(6, 18, 10, 0.91)";
-            context.strokeStyle = palette.plane;
-            context.lineWidth = 1;
-
-            context.shadowColor = palette.beamGlow;
-            context.shadowBlur = 10;
-
-            context.beginPath();
-            context.roundRect(
-                boxX,
-                boxY,
-                boxWidth,
-                boxHeight,
-                6
-            );
-            context.fill();
-            context.stroke();
-
-            context.shadowBlur = 0;
-            context.fillStyle = palette.reflection;
-            context.textAlign = "center";
-            context.textBaseline = "middle";
-
-            context.fillText(
-                label,
-                boxX + boxWidth / 2,
-                boxY + boxHeight / 2
-            );
-
-            context.restore();
+    function drawReflection(r, p) {
+        const progress = r.age / r.maxAge;
+        const alpha = 1 - progress;
+        ctx.save();
+        ctx.translate(r.x, r.y);
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = p.reflection;
+        ctx.lineWidth = 1.6;
+        ctx.shadowColor = p.beam;
+        ctx.shadowBlur = 18;
+        for (const scale of [1, 1.65]) {
+            ctx.globalAlpha = alpha * (scale === 1 ? 1 : 0.55);
+            ctx.beginPath();
+            ctx.arc(0, 0, r.radius * scale, 0, Math.PI * 2);
+            ctx.stroke();
         }
+        ctx.globalAlpha = alpha * 0.8;
+        const cross = r.radius * 1.25;
+        ctx.beginPath();
+        ctx.moveTo(-cross, 0);
+        ctx.lineTo(cross, 0);
+        ctx.moveTo(0, -cross);
+        ctx.lineTo(0, cross);
+        ctx.stroke();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.reflection;
+        ctx.beginPath();
+        ctx.arc(0, 0, 3.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
 
-    function drawStaticScene() {
-        const palette = getPalette();
-
-        context.clearRect(
-            0,
-            0,
-            state.width,
-            state.height
-        );
-
-        drawGrid(palette);
-        drawRadarTarget(palette);
-
-        for (const station of getRadioStations()) {
-            drawYagi(station, palette);
-        }
+        ctx.save();
+        const label = `${r.probability}%`;
+        ctx.font = "800 12px Inter, system-ui, sans-serif";
+        const width = ctx.measureText(label).width + 16;
+        const height = 25;
+        const x = r.x + r.radius + 12;
+        const y = r.y - r.radius - 17;
+        ctx.globalAlpha = clamp(alpha * 1.25, 0, 1);
+        ctx.fillStyle = "rgba(6,18,10,.91)";
+        ctx.strokeStyle = p.plane;
+        ctx.shadowColor = p.beamGlow;
+        ctx.shadowBlur = 10;
+        roundedRect(x, y, width, height, 6);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = p.reflection;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, x + width / 2, y + height / 2);
+        ctx.restore();
     }
 
-    function drawScene() {
-        const palette = getPalette();
-
-        context.clearRect(
-            0,
-            0,
-            state.width,
-            state.height
-        );
-
-        drawGrid(palette);
-        drawRadarTarget(palette);
-
-        for (const station of getRadioStations()) {
-            drawYagi(station, palette);
-        }
-
-        for (const plane of state.planes) {
-            drawPlane(plane, palette);
-        }
-
-        for (const beam of state.beams) {
-            drawBeam(beam, palette);
-        }
-
-        for (const reflection of state.reflections) {
-            drawReflection(reflection, palette);
-        }
+    function draw(staticOnly = false) {
+        const p = palette();
+        ctx.clearRect(0, 0, state.width, state.height);
+        drawGrid(p);
+        drawRadar(p);
+        stations().forEach(station => drawYagi(station, p));
+        if (staticOnly) return;
+        state.planes.forEach(plane => drawPlane(plane, p));
+        state.beams.forEach(beam => drawBeam(beam, p));
+        state.reflections.forEach(r => drawReflection(r, p));
     }
 
     function animate(timestamp) {
-        if (!state.running) {
-            return;
-        }
-
-        const deltaSeconds = clamp(
-            (timestamp - state.lastFrame) / 1000 || 0,
-            0,
-            0.05
-        );
-
+        if (!state.running) return;
+        const dt = clamp((timestamp - state.lastFrame) / 1000 || 0, 0, 0.05);
         state.lastFrame = timestamp;
 
         if (!state.visible || document.hidden) {
-            state.animationFrameId =
-                requestAnimationFrame(animate);
-
+            state.frameId = requestAnimationFrame(animate);
             return;
         }
 
-        state.spawnAccumulator += deltaSeconds;
-        state.beamAccumulator += deltaSeconds;
+        state.spawnTime += dt;
+        state.beamTime += dt;
+        const spawnInterval = coarsePointer.matches ? 2.2 : 1.15;
+        const beamInterval = coarsePointer.matches ? 3.3 : 1.8;
 
-        const planeLimit = getPlaneLimit();
-        const spawnInterval =
-            coarsePointer.matches ? 2.2 : 1.15;
-
-        if (
-            state.spawnAccumulator >= spawnInterval &&
-            state.planes.length < planeLimit
-        ) {
-            state.spawnAccumulator = 0;
+        if (state.spawnTime >= spawnInterval && state.planes.length < planeLimit()) {
+            state.spawnTime = 0;
             state.planes.push(createPlane());
         }
 
-        const beamInterval =
-            coarsePointer.matches ? 3.3 : 1.8;
-
-        if (
-            state.beamAccumulator >= beamInterval &&
-            state.planes.length > 0
-        ) {
-            state.beamAccumulator = 0;
-
-            const target = chooseBeamTarget();
-
-            if (target) {
-                createBeam(target);
-            }
+        if (state.beamTime >= beamInterval && state.planes.length) {
+            state.beamTime = 0;
+            const target = beamTarget();
+            if (target) createBeam(target);
         }
 
-        for (const plane of state.planes) {
-            updatePlane(plane, deltaSeconds);
-        }
-
-        state.planes = state.planes.filter(
-            (plane) => !isPlaneExpired(plane)
-        );
-
-        updateEffects(deltaSeconds);
-        drawScene();
-
-        state.animationFrameId =
-            requestAnimationFrame(animate);
+        state.planes.forEach(plane => updatePlane(plane, dt));
+        state.planes = state.planes.filter(plane => !expired(plane));
+        updateEffects(dt);
+        draw(false);
+        state.frameId = requestAnimationFrame(animate);
     }
 
     function start() {
-        cancelAnimationFrame(state.animationFrameId);
-
-        resizeCanvas();
-
+        cancelAnimationFrame(state.frameId);
+        resize();
         if (reducedMotion.matches) {
             state.running = false;
-            drawStaticScene();
+            draw(true);
             return;
         }
 
         state.running = true;
         state.lastFrame = performance.now();
-
-        if (state.planes.length === 0) {
-            const initialPlanes =
-                coarsePointer.matches ? 2 : 5;
-
-            for (let index = 0; index < initialPlanes; index++) {
+        if (!state.planes.length) {
+            const count = coarsePointer.matches ? 2 : 5;
+            for (let i = 0; i < count; i++) {
                 const plane = createPlane();
                 plane.age = Math.random() * 2;
                 state.planes.push(plane);
             }
         }
-
-        state.animationFrameId =
-            requestAnimationFrame(animate);
+        state.frameId = requestAnimationFrame(animate);
     }
 
-    function updatePointer(event) {
-        const bounds = hero.getBoundingClientRect();
-
-        state.pointer.x = clamp(
-            event.clientX - bounds.left,
-            0,
-            bounds.width
-        );
-
-        state.pointer.y = clamp(
-            event.clientY - bounds.top,
-            0,
-            bounds.height
-        );
-
+    hero.addEventListener("pointermove", event => {
+        const rect = hero.getBoundingClientRect();
+        state.pointer.x = clamp(event.clientX - rect.left, 0, rect.width);
+        state.pointer.y = clamp(event.clientY - rect.top, 0, rect.height);
         state.pointer.active = true;
-    }
+    }, { passive: true });
 
-    hero.addEventListener("pointermove", updatePointer, {
-        passive: true
-    });
-
-    hero.addEventListener("pointerleave", () => {
-        state.pointer.active = false;
-    });
-
-    window.addEventListener("resize", resizeCanvas, {
-        passive: true
-    });
-
-    document.addEventListener("visibilitychange", () => {
-        state.lastFrame = performance.now();
-    });
-
+    hero.addEventListener("pointerleave", () => state.pointer.active = false);
+    addEventListener("resize", resize, { passive: true });
+    document.addEventListener("visibilitychange", () => state.lastFrame = performance.now());
     reducedMotion.addEventListener("change", start);
 
-    const resizeObserver = new ResizeObserver(() => {
-        resizeCanvas();
+    new ResizeObserver(() => {
+        resize();
+        if (reducedMotion.matches) draw(true);
+    }).observe(hero);
 
-        if (reducedMotion.matches) {
-            drawStaticScene();
-        }
-    });
-
-    resizeObserver.observe(hero);
-
-    const intersectionObserver = new IntersectionObserver(
-        (entries) => {
-            state.visible =
-                entries[0]?.isIntersecting ?? true;
-
-            state.lastFrame = performance.now();
-        },
-        {
-            threshold: 0.05
-        }
-    );
-
-    intersectionObserver.observe(hero);
+    new IntersectionObserver(entries => {
+        state.visible = entries[0]?.isIntersecting ?? true;
+        state.lastFrame = performance.now();
+    }, { threshold: 0.05 }).observe(hero);
 
     start();
 })();
