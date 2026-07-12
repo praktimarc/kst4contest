@@ -270,40 +270,91 @@
             ];
     }
 
-    function createBeam(target) {
-        const leftStation = {
-            x: state.width * 0.12,
-            y: state.height * 0.82
+    function getRadioStations() {
+        const centerX = state.width * 0.54;
+        const centerY = state.height * 0.43;
+
+        const left = {
+            x: state.width * 0.075,
+            y: state.height * 0.82,
+            label: "JN49EM"
         };
 
-        const rightStation = {
-            x: state.width * 0.88,
-            y: state.height * 0.78
+        const right = {
+            x: state.width * 0.925,
+            y: state.height * 0.80,
+            label: "JO66MD"
         };
 
-        const source =
-            Math.abs(target.x - leftStation.x) <
-            Math.abs(target.x - rightStation.x)
-                ? leftStation
-                : rightStation;
+        left.angle = Math.atan2(
+            centerY - left.y,
+            centerX - left.x
+        );
+
+        right.angle = Math.atan2(
+            centerY - right.y,
+            centerX - right.x
+        );
+
+        return [left, right];
+    }
+
+    function createBeam(target) {function createBeam(target) {
+        const stations = getRadioStations();
+
+        const source = stations
+            .map((station) => ({
+                station,
+                distance: Math.hypot(
+                    target.x - station.x,
+                    target.y - station.y
+                )
+            }))
+            .sort((a, b) => a.distance - b.distance)[0].station;
+
+        const beamAngle = Math.atan2(
+            target.y - source.y,
+            target.x - source.x
+        );
+
+        /*
+         * Der Strahl beginnt nicht im Antennenmast,
+         * sondern etwas vor der Yagi.
+         */
+        const antennaTipDistance = 45;
+
+        const startX =
+            source.x +
+            Math.cos(beamAngle) * antennaTipDistance;
+
+        const startY =
+            source.y +
+            Math.sin(beamAngle) * antennaTipDistance;
 
         state.beams.push({
-            startX: source.x,
-            startY: source.y,
+            startX,
+            startY,
             endX: target.x,
             endY: target.y,
             age: 0,
-            maximumAge: 0.62
+            maximumAge: 0.72
         });
 
         target.hit = 1;
+
+        const probabilities = [50, 75, 100];
+        const probability =
+            probabilities[
+                Math.floor(Math.random() * probabilities.length)
+                ];
 
         state.reflections.push({
             x: target.x,
             y: target.y,
             age: 0,
-            maximumAge: 0.9,
-            radius: randomBetween(8, 15)
+            maximumAge: 1.25,
+            radius: randomBetween(8, 13),
+            probability
         });
     }
 
@@ -394,6 +445,126 @@
         context.restore();
     }
 
+        function drawYagi(station, palette) {
+            context.save();
+
+            context.translate(station.x, station.y);
+            context.rotate(station.angle);
+
+            context.strokeStyle = palette.plane;
+            context.fillStyle = palette.plane;
+            context.lineCap = "round";
+            context.lineWidth = 1.5;
+
+            context.shadowColor = palette.beamGlow;
+            context.shadowBlur = 9;
+
+            /*
+             * Mast
+             */
+            context.beginPath();
+            context.moveTo(-30, 26);
+            context.lineTo(-30, -5);
+            context.stroke();
+
+            /*
+             * Ausleger / Boom
+             */
+            context.beginPath();
+            context.moveTo(-32, 0);
+            context.lineTo(43, 0);
+            context.stroke();
+
+            /*
+             * Reflektor
+             */
+            context.beginPath();
+            context.moveTo(-27, -17);
+            context.lineTo(-27, 17);
+            context.stroke();
+
+            /*
+             * Dipol
+             */
+            context.beginPath();
+            context.moveTo(-12, -14);
+            context.lineTo(-12, 14);
+            context.stroke();
+
+            /*
+             * Direktoren
+             */
+            const directors = [
+                { x: 2, length: 22 },
+                { x: 14, length: 19 },
+                { x: 25, length: 16 },
+                { x: 35, length: 13 }
+            ];
+
+            for (const director of directors) {
+                context.beginPath();
+                context.moveTo(
+                    director.x,
+                    -director.length / 2
+                );
+                context.lineTo(
+                    director.x,
+                    director.length / 2
+                );
+                context.stroke();
+            }
+
+            /*
+             * Einspeisepunkt
+             */
+            context.beginPath();
+            context.arc(-12, 0, 3.2, 0, Math.PI * 2);
+            context.fill();
+
+            context.restore();
+
+            /*
+             * Locator bleibt waagerecht lesbar.
+             */
+            context.save();
+
+            context.font =
+                '700 11px Inter, system-ui, sans-serif';
+
+            const labelWidth =
+                context.measureText(station.label).width + 14;
+
+            const labelX = station.x - labelWidth / 2;
+            const labelY = station.y + 32;
+
+            context.fillStyle = "rgba(6, 18, 10, 0.86)";
+            context.strokeStyle = palette.planeMuted;
+            context.lineWidth = 1;
+
+            context.beginPath();
+            context.roundRect(
+                labelX,
+                labelY,
+                labelWidth,
+                23,
+                6
+            );
+            context.fill();
+            context.stroke();
+
+            context.fillStyle = palette.plane;
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+
+            context.fillText(
+                station.label,
+                station.x,
+                labelY + 11.5
+            );
+
+            context.restore();
+        }
+
     function drawPlane(plane, palette) {
         context.save();
 
@@ -465,9 +636,12 @@
 
         context.globalAlpha = alpha;
         context.strokeStyle = palette.beamGlow;
-        context.lineWidth = 6;
+        context.lineWidth = 8;
         context.shadowColor = palette.beam;
         context.shadowBlur = 15;
+
+        context.setLineDash([10, 6]);
+        context.lineDashOffset = -progress * 36;
 
         context.beginPath();
         context.moveTo(beam.startX, beam.startY);
@@ -475,7 +649,7 @@
         context.stroke();
 
         context.strokeStyle = palette.beam;
-        context.lineWidth = 1.4;
+        context.lineWidth = 1.8;
         context.shadowBlur = 5;
 
         context.beginPath();
@@ -483,33 +657,144 @@
         context.lineTo(beam.endX, beam.endY);
         context.stroke();
 
-        context.restore();
-    }
-
-    function drawReflection(reflection, palette) {
-        const progress =
-            reflection.age / reflection.maximumAge;
-
-        context.save();
-
-        context.globalAlpha = 1 - progress;
-        context.strokeStyle = palette.reflection;
-        context.lineWidth = 1.5;
-        context.shadowColor = palette.beam;
-        context.shadowBlur = 12;
-
-        context.beginPath();
-        context.arc(
-            reflection.x,
-            reflection.y,
-            reflection.radius,
-            0,
-            Math.PI * 2
-        );
-        context.stroke();
+        context.setLineDash([]);
 
         context.restore();
     }
+
+        function drawReflection(reflection, palette) {
+            const progress =
+                reflection.age / reflection.maximumAge;
+
+            const alpha = 1 - progress;
+
+            context.save();
+
+            context.translate(
+                reflection.x,
+                reflection.y
+            );
+
+            context.globalAlpha = alpha;
+
+            /*
+             * Äußerer Reflexionsring
+             */
+            context.strokeStyle = palette.reflection;
+            context.lineWidth = 1.6;
+            context.shadowColor = palette.beam;
+            context.shadowBlur = 18;
+
+            context.beginPath();
+            context.arc(
+                0,
+                0,
+                reflection.radius,
+                0,
+                Math.PI * 2
+            );
+            context.stroke();
+
+            /*
+             * Zweiter Ring
+             */
+            context.globalAlpha = alpha * 0.55;
+
+            context.beginPath();
+            context.arc(
+                0,
+                0,
+                reflection.radius * 1.65,
+                0,
+                Math.PI * 2
+            );
+            context.stroke();
+
+            /*
+             * Reflexionskreuz
+             */
+            context.globalAlpha = alpha * 0.8;
+            context.lineWidth = 1;
+
+            const crossSize =
+                reflection.radius * 1.25;
+
+            context.beginPath();
+            context.moveTo(-crossSize, 0);
+            context.lineTo(crossSize, 0);
+            context.moveTo(0, -crossSize);
+            context.lineTo(0, crossSize);
+            context.stroke();
+
+            /*
+             * Heller Reflexionspunkt
+             */
+            context.globalAlpha = alpha;
+            context.fillStyle = palette.reflection;
+            context.shadowBlur = 24;
+
+            context.beginPath();
+            context.arc(0, 0, 3.8, 0, Math.PI * 2);
+            context.fill();
+
+            context.restore();
+
+            /*
+             * AP-Prozentwert
+             */
+            context.save();
+
+            const label = `${reflection.probability}%`;
+
+            context.font =
+                '800 12px Inter, system-ui, sans-serif';
+
+            const textWidth =
+                context.measureText(label).width;
+
+            const boxWidth = textWidth + 16;
+            const boxHeight = 25;
+
+            const boxX =
+                reflection.x + reflection.radius + 12;
+
+            const boxY =
+                reflection.y - reflection.radius - 17;
+
+            context.globalAlpha =
+                clamp(alpha * 1.25, 0, 1);
+
+            context.fillStyle = "rgba(6, 18, 10, 0.91)";
+            context.strokeStyle = palette.plane;
+            context.lineWidth = 1;
+
+            context.shadowColor = palette.beamGlow;
+            context.shadowBlur = 10;
+
+            context.beginPath();
+            context.roundRect(
+                boxX,
+                boxY,
+                boxWidth,
+                boxHeight,
+                6
+            );
+            context.fill();
+            context.stroke();
+
+            context.shadowBlur = 0;
+            context.fillStyle = palette.reflection;
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+
+            context.fillText(
+                label,
+                boxX + boxWidth / 2,
+                boxY + boxHeight / 2
+            );
+
+            context.restore();
+        }
 
     function drawStaticScene() {
         const palette = getPalette();
@@ -523,6 +808,10 @@
 
         drawGrid(palette);
         drawRadarTarget(palette);
+
+        for (const station of getRadioStations()) {
+            drawYagi(station, palette);
+        }
     }
 
     function drawScene() {
@@ -537,6 +826,10 @@
 
         drawGrid(palette);
         drawRadarTarget(palette);
+
+        for (const station of getRadioStations()) {
+            drawYagi(station, palette);
+        }
 
         for (const plane of state.planes) {
             drawPlane(plane, palette);
