@@ -11,18 +11,6 @@
     --accent2: #a855f7;
     --accent3: #22c55e;
     --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
-
-    --accent: #54d63d;
-    --accent2: #8aef64;
-    --accent3: #31b54a;
-
-    --fx-plane: #79ff73;
-    --fx-plane-muted: rgba(121, 255, 115, 0.42);
-    --fx-beam: #52ff65;
-    --fx-beam-glow: rgba(82, 255, 101, 0.28);
-    --fx-reflection: #d2ffc8;
-    --fx-trail: rgba(121, 255, 115, 0.17);
-    --fx-grid: rgba(121, 255, 115, 0.055);
 }
 
 * {
@@ -37,7 +25,6 @@ html {
 body {
     margin: 0;
     min-height: 100vh;
-
     background:
             radial-gradient(circle at 14% 12%, rgba(168, 85, 247, 0.30), transparent 28%),
             radial-gradient(circle at 82% 16%, rgba(56, 189, 248, 0.24), transparent 30%),
@@ -575,52 +562,246 @@ a:hover {
         grid-template-columns: 1fr;
     }
 }
+/* ================================================================
+   KST4Contest brand recovery: green operator-console identity
+   and full-screen interactive hero
+   ================================================================ */
 
-/*
- * Full-width, full-height home hero
- */
+:root {
+    --bg: #050806;
+    --bg2: #0b140f;
+    --panel: rgba(15, 28, 20, 0.82);
+    --panel2: rgba(24, 43, 31, 0.84);
+    --border: rgba(125, 178, 134, 0.22);
+    --text: #f4f7f3;
+    --muted: #a9b8ad;
+    --soft: #6e8173;
+    --accent: #54d63d;
+    --accent2: #8aef64;
+    --accent3: #31b54a;
+    --fx-plane: #79ff73;
+    --fx-plane-muted: rgba(121, 255, 115, 0.42);
+    --fx-beam: #52ff65;
+    --fx-beam-glow: rgba(82, 255, 101, 0.28);
+    --fx-reflection: #d2ffc8;
+    --fx-trail: rgba(121, 255, 115, 0.17);
+    --fx-grid: rgba(121, 255, 115, 0.055);
+}
+
+body {
+    background:
+            radial-gradient(circle at 14% 12%, rgba(52, 165, 57, 0.20), transparent 30%),
+            radial-gradient(circle at 82% 16%, rgba(95, 218, 82, 0.14), transparent 32%),
+            radial-gradient(circle at 50% 85%, rgba(32, 126, 55, 0.12), transparent 36%),
+            linear-gradient(180deg, #070b09 0%, #0b1410 100%);
+}
+
+body::before {
+    background:
+            radial-gradient(circle at 20% 20%, rgba(60, 173, 61, 0.18), transparent 28%),
+            radial-gradient(circle at 78% 18%, rgba(97, 222, 80, 0.13), transparent 30%),
+            radial-gradient(circle at 45% 80%, rgba(34, 122, 53, 0.11), transparent 26%);
+}
+
+body::after {
+    background-image:
+            linear-gradient(rgba(160,255,160,0.032) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(160,255,160,0.032) 1px, transparent 1px);
+}
+
+.site-bg {
+    background:
+            linear-gradient(180deg, rgba(5, 8, 6, 0.10), rgba(5, 8, 6, 0.84)),
+            radial-gradient(circle at 8% 24%, rgba(52, 165, 57, 0.14), transparent 26%),
+            radial-gradient(circle at 82% 20%, rgba(95, 218, 82, 0.12), transparent 30%);
+}
+
+.site-header {
+    background: rgba(5, 8, 7, 0.82);
+}
+
+.brand-mark,
+.nav-cta,
+.button {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+}
+
+.brand-mark {
+    box-shadow:
+            0 0 26px rgba(84, 214, 61, 0.42),
+            0 0 50px rgba(49, 181, 74, 0.16);
+}
+
+.nav-cta {
+    color: #061008 !important;
+    box-shadow: 0 0 22px rgba(84, 214, 61, 0.28);
+}
 
 main {
     width: 100%;
 }
 
 .hero.hero-split {
+    position: relative;
     width: 100%;
     max-width: none;
-    min-height: calc(100vh - 77px);
-    padding:
-            clamp(56px, 7vh, 100px)
-            clamp(28px, 6vw, 110px);
+    min-height: calc(100vh - 73px);
+    display: grid;
+    grid-template-columns: minmax(420px, 0.9fr) minmax(520px, 1.1fr);
+    gap: clamp(40px, 5vw, 110px);
+    align-items: center;
     align-content: center;
+    padding: clamp(56px, 7vh, 100px) clamp(28px, 6vw, 110px);
     overflow: hidden;
 }
 
-.hero.hero-split > div:first-of-type {
+.hero.hero-split > *:not(.hero-radio-fx):not(.hero-fx-vignette) {
+    position: relative;
+    z-index: 3;
+}
+
+.hero-copy {
     max-width: 760px;
 }
 
-.hero.hero-split .hero-panel {
-    width: min(100%, 700px);
+.hero.hero-split h1 {
+    font-size: clamp(3.4rem, 8vw, 7rem);
+    background: linear-gradient(90deg, #ffffff 0%, #c9ffd0 28%, #77ec70 58%, #45bd4d 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.badge,
+.eyebrow {
+    color: #caffc0;
+    background: rgba(52, 165, 57, 0.12);
+    border-color: rgba(105, 232, 88, 0.32);
+    box-shadow: 0 0 22px rgba(82, 255, 101, 0.08);
+}
+
+.button {
+    color: #041007;
+    box-shadow:
+            0 16px 44px rgba(84, 214, 61, 0.22),
+            inset 0 1px 0 rgba(255,255,255,0.35);
+}
+
+.button.secondary {
+    color: white;
+    background: rgba(28, 43, 32, 0.90);
+}
+
+.hero-panel {
+    width: min(100%, 760px);
     justify-self: center;
+    transform: perspective(1200px) rotateY(-4deg) rotateX(1.5deg);
+}
+
+.hero-panel,
+.card,
+.cta-panel {
+    background:
+            linear-gradient(180deg, rgba(255,255,255,0.045), transparent 42%),
+            rgba(15, 28, 20, 0.82);
+}
+
+.mini-card {
+    background: rgba(12, 25, 17, 0.88);
+    border-color: rgba(148, 184, 155, 0.16);
+}
+
+.card:hover {
+    border-color: rgba(84, 214, 61, 0.42);
+    background:
+            linear-gradient(180deg, rgba(255,255,255,0.055), transparent 42%),
+            rgba(12, 25, 17, 0.94);
+    box-shadow:
+            0 26px 90px rgba(0,0,0,0.50),
+            0 0 30px rgba(84,214,61,0.07);
+}
+
+.hero-radio-fx {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0.78;
+}
+
+.hero-fx-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+            linear-gradient(90deg,
+            rgba(7,11,9,0.92) 0%,
+            rgba(7,11,9,0.70) 32%,
+            rgba(7,11,9,0.17) 62%,
+            rgba(7,11,9,0.38) 100%),
+            linear-gradient(180deg,
+            rgba(7,11,9,0.08),
+            rgba(7,11,9,0.58));
+}
+
+html[data-theme="light"] {
+    --bg: #f4f4f2;
+    --bg2: #ffffff;
+    --panel: rgba(255,255,255,0.90);
+    --panel2: rgba(242,242,239,0.94);
+    --border: rgba(91,91,86,0.20);
+    --text: #252522;
+    --muted: #656560;
+    --soft: #888881;
+    --accent: #d33732;
+    --accent2: #f25a51;
+    --accent3: #ae2727;
+    --fx-plane: #df3732;
+    --fx-plane-muted: rgba(211,55,50,0.38);
+    --fx-beam: #ef4039;
+    --fx-beam-glow: rgba(239,64,57,0.22);
+    --fx-reflection: #ff8d84;
+    --fx-trail: rgba(211,55,50,0.15);
+    --fx-grid: rgba(185,47,43,0.045);
 }
 
 @media (min-width: 1600px) {
     .hero.hero-split {
-        grid-template-columns:
-      minmax(520px, 0.85fr)
-      minmax(600px, 1.15fr);
-        gap: clamp(50px, 6vw, 130px);
+        grid-template-columns: minmax(520px, 0.85fr) minmax(620px, 1.15fr);
     }
 
-    .hero.hero-split .hero-panel {
-        width: min(100%, 780px);
+    .hero-panel {
+        width: min(100%, 820px);
     }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
     .hero.hero-split {
         min-height: auto;
-        padding-top: 60px;
-        padding-bottom: 60px;
+        grid-template-columns: 1fr;
+        padding-top: 64px;
+        padding-bottom: 64px;
+    }
+
+    .hero-panel {
+        width: min(100%, 760px);
+        transform: none;
+    }
+
+    .hero-radio-fx {
+        opacity: 0.50;
+    }
+
+    .hero-fx-vignette {
+        background: linear-gradient(180deg, rgba(7,11,9,0.84), rgba(7,11,9,0.34));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-radio-fx {
+        opacity: 0.28;
     }
 }
