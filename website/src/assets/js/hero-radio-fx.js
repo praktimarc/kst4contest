@@ -77,8 +77,8 @@
     function stations() {
         const targetX = state.width * 0.54;
         const targetY = state.height * 0.43;
-        const left = { x: state.width * 0.075, y: state.height * 0.82, label: "JN49EM" };
-        const right = { x: state.width * 0.925, y: state.height * 0.80, label: "JO66MD" };
+        const left = { x: state.width * 0.075, y: state.height * 0.82, label: "JO51IJ" };
+        const right = { x: state.width * 0.925, y: state.height * 0.80, label: "JN49FL" };
         left.angle = Math.atan2(targetY - left.y, targetX - left.x);
         right.angle = Math.atan2(targetY - right.y, targetX - right.x);
         return [left, right];
