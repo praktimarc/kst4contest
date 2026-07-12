@@ -24,6 +24,7 @@ import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.*;
 import kst4contest.test.MockKstServer;
 import kst4contest.utils.PlayAudioUtils;
+import kst4contest.locatorUtils.Location;
 import kst4contest.view.Kst4ContestApplication;
 
 import java.io.*;
@@ -31,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+
 
 
 
@@ -318,33 +320,29 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 		EnumSet<Band> offered = EnumSet.noneOf(Band.class);
 
-		synchronized (getLst_chatMemberList()) {
-			for (ChatMember cm : getLst_chatMemberList()) {
-				if (cm == null || cm.getCallSignRaw() == null) continue;
-				if (!normalizeCallRaw(cm.getCallSignRaw()).equals(callRaw)) continue;
+		for (ChatMember cm : findActiveChatMembersByRawCall(callRaw)) {
+			if (cm == null || cm.getCallSignRaw() == null) continue;
 
-				Map<Band, ChatMember.ActiveFrequencyInfo> map = cm.getKnownActiveBands();
-				if (map == null || map.isEmpty()) continue;
+			Map<Band, ChatMember.ActiveFrequencyInfo> map = cm.getKnownActiveBands();
+			if (map == null || map.isEmpty()) continue;
 
-				for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> e : map.entrySet()) {
-					if (e.getKey() == null || e.getValue() == null) continue;
+			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> e : map.entrySet()) {
+				if (e.getKey() == null || e.getValue() == null) continue;
 
-					long age = nowMs - e.getValue().timestampEpoch;
-					if (age >= 0 && age <= maxAgeMs) {
-						offered.add(e.getKey());
-					}
+				long age = nowMs - e.getValue().timestampEpoch;
+				if (age >= 0 && age <= maxAgeMs) {
+					offered.add(e.getKey());
+				}
 
-					if (DEBUG_BAND_UPGRADE_HINT) {
-						System.out.println("[BandUpgradeHint] history call=" + callRaw
-								+ " band=" + e.getKey()
-								+ " freq=" + e.getValue().frequency
-								+ " ageMs=" + age);
-					}
-
-
+				if (DEBUG_BAND_UPGRADE_HINT) {
+					System.out.println("[BandUpgradeHint] history call=" + callRaw
+							+ " band=" + e.getKey()
+							+ " freq=" + e.getValue().frequency
+							+ " ageMs=" + age);
 				}
 			}
 		}
+
 		return offered;
 	}
 
@@ -356,21 +354,19 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 		EnumSet<Band> worked = EnumSet.noneOf(Band.class);
 
-		synchronized (getLst_chatMemberList()) {
-			for (ChatMember cm : getLst_chatMemberList()) {
-				if (cm == null || cm.getCallSignRaw() == null) continue;
-				if (!normalizeCallRaw(cm.getCallSignRaw()).equals(callRaw)) continue;
+		for (ChatMember cm : findActiveChatMembersByRawCall(callRaw)) {
+			if (cm == null || cm.getCallSignRaw() == null) continue;
 
-				if (cm.isWorked144())  worked.add(Band.B_144);
-				if (cm.isWorked432())  worked.add(Band.B_432);
-				if (cm.isWorked1240()) worked.add(Band.B_1296);
-				if (cm.isWorked2300()) worked.add(Band.B_2320);
-				if (cm.isWorked3400()) worked.add(Band.B_3400);
-				if (cm.isWorked5600()) worked.add(Band.B_5760);
-				if (cm.isWorked10G())  worked.add(Band.B_10G);
-				if (cm.isWorked24G())  worked.add(Band.B_24G); // optional, only if your Band enum supports it
-			}
+			if (cm.isWorked144())  worked.add(Band.B_144);
+			if (cm.isWorked432())  worked.add(Band.B_432);
+			if (cm.isWorked1240()) worked.add(Band.B_1296);
+			if (cm.isWorked2300()) worked.add(Band.B_2320);
+			if (cm.isWorked3400()) worked.add(Band.B_3400);
+			if (cm.isWorked5600()) worked.add(Band.B_5760);
+			if (cm.isWorked10G())  worked.add(Band.B_10G);
+			if (cm.isWorked24G())  worked.add(Band.B_24G);
 		}
+
 		return worked;
 	}
 
@@ -645,7 +641,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 //            rotatorClient.
 
-			this.lst_chatMemberList.clear();;
+//			this.lst_chatMemberList.clear();;
+			this.clearActiveChatMembers();
 			this.lst_clusterMemberList.clear();
 
 			this.setDisconnected(true);
@@ -713,7 +710,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			}
 		} else if (action.equals(ApplicationConstants.DISCSTRING_DISCONNECTONLY)){
 
-			this.lst_chatMemberList.clear();;
+			this.clearActiveChatMembers();
 			this.lst_clusterMemberList.clear();
 
 
@@ -959,16 +956,9 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
 			return null;
 		}
-		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
-		synchronized (getLst_chatMemberList()) {
-			for (ChatMember member : getLst_chatMemberList()) {
-				if (member == null || member.getCallSignRaw() == null) continue;
-				if (normalizeCallRaw(member.getCallSignRaw()).equals(normalizedTargetCall)) {
-					return member;
-				}
-			}
-		}
-		return null;
+
+		List<ChatMember> matchingMembers = findActiveChatMembersByRawCall(targetCallsignRaw);
+		return matchingMembers.isEmpty() ? null : matchingMembers.get(0);
 	}
 
 	private String resolveSkedTargetLocator(String targetCallsignRaw) {
@@ -976,21 +966,42 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			return null;
 		}
 
-		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
-		synchronized (getLst_chatMemberList()) {
-			for (ChatMember member : getLst_chatMemberList()) {
-				if (member == null || member.getCallSignRaw() == null) continue;
-				if (!normalizeCallRaw(member.getCallSignRaw()).equals(normalizedTargetCall)) continue;
-
-				String locator = member.getQra();
-				if (locator != null && !locator.isBlank()) {
-					return locator.trim().toUpperCase(Locale.ROOT);
-				}
+		for (ChatMember member : findActiveChatMembersByRawCall(targetCallsignRaw)) {
+			String locator = member.getQra();
+			if (locator != null && !locator.isBlank()) {
+				return locator.trim().toUpperCase(Locale.ROOT);
 			}
 		}
 
 		return null;
 	}
+
+//	private ChatMember resolveSkedTargetMember(String targetCallsignRaw) {
+//		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
+//			return null;
+//		}
+//
+//		List<ChatMember> matchingMembers = findActiveChatMembersByRawCall(targetCallsignRaw);
+//		return matchingMembers.isEmpty() ? null : matchingMembers.get(0);
+//
+//	}
+//
+//	private String resolveSkedTargetLocator(String targetCallsignRaw) {
+//		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
+//			return null;
+//		}
+//
+//		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
+//
+//		for (ChatMember member : findActiveChatMembersByRawCall(targetCallsignRaw)) {
+//			String locator = member.getQra();
+//			if (locator != null && !locator.isBlank()) {
+//				return locator.trim().toUpperCase(Locale.ROOT);
+//			}
+//		}
+//
+//		return null;
+//	}
 
 	public StationMetricsService getStationMetricsService() {
 		return stationMetricsService;
@@ -1014,10 +1025,14 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		return new HashMap<>(lastInboundCategoryByCallSignRaw);
 	}
 
+//	public List<ChatMember> snapshotChatMembers() {
+//		synchronized (getLst_chatMemberList()) {
+//			return new ArrayList<>(getLst_chatMemberList());
+//		}
+//	}
+
 	public List<ChatMember> snapshotChatMembers() {
-		synchronized (getLst_chatMemberList()) {
-			return new ArrayList<>(getLst_chatMemberList());
-		}
+		return new ArrayList<>(activeChatMembersByCallAndCategory.values());
 	}
 
 	public List<ContestSked> snapshotActiveSkeds() {
@@ -1126,13 +1141,27 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private ObservableList<ChatMember> chatMemberList = FXCollections.observableArrayList(); // List of active stations
 
 
-	private ObservableList<ChatMember> lst_chatMemberList = FXCollections.synchronizedObservableList(chatMemberList); // List
 																														// of active stn in chat
 	private FilteredList<ChatMember> lst_chatMemberListFiltered = new FilteredList<ChatMember>(chatMemberList);
 	private SortedList<ChatMember> lst_chatMemberSortedFilteredList = new SortedList<ChatMember>(lst_chatMemberListFiltered);
+
+	private ObservableList<ChatMember> lst_chatMemberList = FXCollections.synchronizedObservableList(chatMemberList); // List
 	private ObservableList<Predicate<ChatMember>> lst_chatMemberListFilterPredicates = FXCollections.observableArrayList();
 	private ObservableList<ClusterMessage> lst_clusterMemberList = FXCollections.observableArrayList();
 
+	/*
+	 * Thread-safe active-member model.
+	 *
+	 * MessageBusManagementThread must not use the JavaFX TableView backing list as
+	 * its primary data model. Otherwise every add/remove fires FilteredList,
+	 * SortedList and TableView selection listeners on the MessageBus thread and JavaFX
+	 * can throw "Not on FX application thread" or internal listener NPEs.
+	 *
+	 * This map is the worker-thread safe source of truth. The ObservableList below
+	 * remains a UI mirror and is mutated only on the JavaFX application thread.
+	 */
+	private final java.util.concurrent.ConcurrentMap<String, ChatMember> activeChatMembersByCallAndCategory =
+			new java.util.concurrent.ConcurrentHashMap<>();
 
 	/*
 	 * Message table update buffers.
@@ -1160,6 +1189,254 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 	// ******************************************************************************************************************************************
 
+
+	/**
+	 * Executes UI-bound work on the JavaFX application thread.
+	 *
+	 * Worker threads may call this safely. If the caller is already on the FX
+	 * thread, the action is executed immediately to preserve ordering.
+	 */
+	private void runOnFxThread(Runnable action) {
+		if (action == null) {
+			return;
+		}
+
+		if (Platform.isFxApplicationThread()) {
+			action.run();
+		} else {
+			Platform.runLater(action);
+		}
+	}
+
+	/**
+	 * Builds the active-member key. The raw/base callsign alone is not enough
+	 * because the same station can be logged into multiple ON4KST categories at
+	 * the same time. Therefore the category number is part of the key.
+	 */
+	private String buildActiveChatMemberKey(String callSign, ChatCategory category) {
+		String normalizedCallsign = ChatMember.normalizeCallSignToBaseCallSign(callSign);
+		if (normalizedCallsign == null || normalizedCallsign.isBlank()) {
+			return null;
+		}
+
+		int categoryNumber = category == null ? -1 : category.getCategoryNumber();
+		return normalizedCallsign.trim().toUpperCase(Locale.ROOT) + "|" + categoryNumber;
+	}
+
+	private String buildActiveChatMemberKey(ChatMember member) {
+		if (member == null) {
+			return null;
+		}
+
+		String callSign = member.getCallSignRaw() != null ? member.getCallSignRaw() : member.getCallSign();
+		return buildActiveChatMemberKey(callSign, member.getChatCategory());
+	}
+
+	/**
+	 * Adds or replaces an active chat member in the worker-thread model and mirrors
+	 * that change to the JavaFX list. This is the only supported path for ON4KST
+	 * user-enter events.
+	 */
+	public void addOrUpdateActiveChatMember(ChatMember member) {
+		String key = buildActiveChatMemberKey(member);
+		if (key == null) {
+			return;
+		}
+
+		activeChatMembersByCallAndCategory.put(key, member);
+
+		runOnFxThread(() -> {
+			int existingIndex = findChatMemberIndexInUiListByKey(key);
+			if (existingIndex >= 0) {
+				lst_chatMemberList.set(existingIndex, member);
+			} else {
+				lst_chatMemberList.add(member);
+			}
+		});
+	}
+
+	/**
+	 * Removes an active chat member from the worker-thread model and from the UI
+	 * mirror. Removal from the ObservableList is always performed on the FX thread
+	 * because the list is bound to FilteredList/SortedList/TableView.
+	 */
+	public boolean removeActiveChatMember(ChatMember member) {
+		String key = buildActiveChatMemberKey(member);
+		if (key == null) {
+			return false;
+		}
+
+		ChatMember removedMember = activeChatMembersByCallAndCategory.remove(key);
+		runOnFxThread(() -> lst_chatMemberList.removeIf(currentMember -> key.equals(buildActiveChatMemberKey(currentMember))));
+		return removedMember != null;
+	}
+
+	/**
+	 * Clears the active-member model and the JavaFX UI mirror. Use this instead of
+	 * getLst_chatMemberList().clear() from timers or worker threads.
+	 */
+	public void clearActiveChatMembers() {
+		activeChatMembersByCallAndCategory.clear();
+		runOnFxThread(() -> lst_chatMemberList.clear());
+	}
+
+	/**
+	 * Resolves a member from the thread-safe active model. This avoids reading the
+	 * TableView backing list from MessageBusManagementThread.
+	 */
+	public ChatMember findActiveChatMember(ChatMember lookForThis) {
+		String key = buildActiveChatMemberKey(lookForThis);
+		return key == null ? null : activeChatMembersByCallAndCategory.get(key);
+	}
+
+	public ChatMember findActiveChatMember(String callSign, ChatCategory category) {
+		String key = buildActiveChatMemberKey(callSign, category);
+		return key == null ? null : activeChatMembersByCallAndCategory.get(key);
+	}
+
+	public int getActiveChatMemberCount() {
+		return activeChatMembersByCallAndCategory.size();
+	}
+
+	/**
+	 * Returns all active category variants of a callsign. This is used when a QRG or
+	 * band hint should be propagated from one category instance to the same station
+	 * in another category.
+	 */
+	public List<ChatMember> findActiveChatMembersByRawCall(String callSignRaw) {
+		String normalizedCallsign = ChatMember.normalizeCallSignToBaseCallSign(callSignRaw);
+		if (normalizedCallsign == null || normalizedCallsign.isBlank()) {
+			return Collections.emptyList();
+		}
+
+		String normalizedKeyPart = normalizedCallsign.trim().toUpperCase(Locale.ROOT);
+		List<ChatMember> matchingMembers = new ArrayList<>();
+
+		for (ChatMember member : activeChatMembersByCallAndCategory.values()) {
+			if (member == null) {
+				continue;
+			}
+
+			String memberCall = member.getCallSignRaw() != null ? member.getCallSignRaw() : member.getCallSign();
+			String normalizedMemberCall = ChatMember.normalizeCallSignToBaseCallSign(memberCall);
+			if (normalizedMemberCall != null && normalizedMemberCall.equalsIgnoreCase(normalizedKeyPart)) {
+				matchingMembers.add(member);
+			}
+		}
+
+		return matchingMembers;
+	}
+
+	/**
+	 * Updates locator and derived direction values in the active model. The UI list
+	 * contains the same member object, but the user-list refresh is still triggered
+	 * on the JavaFX thread so TableView/map derived displays can repaint safely.
+	 */
+	public boolean updateActiveChatMemberLocator(ChatMember lookupMember, String newLocator) {
+		ChatMember activeMember = findActiveChatMember(lookupMember);
+		if (activeMember == null) {
+			return false;
+		}
+
+		activeMember.setQra(newLocator);
+		activeMember.setQrb(new Location().getDistanceKmByTwoLocatorStrings(chatPreferences.getStn_loginLocatorMainCat(), newLocator));
+		activeMember.setQTFdirection(new Location(chatPreferences.getStn_loginLocatorMainCat()).getBearing(new Location(newLocator)));
+		fireUserListUpdate("Locator changed");
+		return true;
+	}
+
+	public boolean updateActiveChatMemberState(ChatMember lookupMember, int newState) {
+		ChatMember activeMember = findActiveChatMember(lookupMember);
+		if (activeMember == null) {
+			return false;
+		}
+
+		activeMember.setState(newState);
+		fireUserListUpdate("User state changed");
+		return true;
+	}
+
+	/**
+	 * Applies a UM3-style user-info update only to an already active chat member.
+	 *
+	 * ON4KST may send UM3 messages for stations that are not logged into the
+	 * current channel, for example when a user changes locator/profile data on the
+	 * website. Such stations must not be added to the visible chat member list,
+	 * because they cannot be addressed in the channel. Their full information will
+	 * be delivered again with UA0/UA5/UA2 when they actually join.
+	 *
+	 * @return true if an active member was found and updated, false if the UM3
+	 *         information was intentionally ignored.
+	 */
+	public boolean updateActiveChatMemberInfoIfPresent(ChatMember updatedMember) {
+		String key = buildActiveChatMemberKey(updatedMember);
+		if (key == null) {
+			return false;
+		}
+
+		ChatMember activeMember = activeChatMembersByCallAndCategory.get(key);
+		if (activeMember == null) {
+			return false;
+		}
+
+		activeMember.setName(updatedMember.getName());
+		activeMember.setQra(updatedMember.getQra());
+		activeMember.setState(updatedMember.getState());
+		activeMember.setLastActivity(updatedMember.getLastActivity());
+		activeMember.setActivityTimeLastInEpoch(updatedMember.getActivityTimeLastInEpoch());
+		activeMember.setQrb(updatedMember.getQrb());
+		activeMember.setQTFdirection(updatedMember.getQTFdirection());
+		fireUserListUpdate("User info updated");
+		return true;
+	}
+
+	/**
+	 * Backward-compatible wrapper for older call sites. Despite the historic name,
+	 * this method no longer adds unknown UM3 users to the active member model.
+	 */
+	public boolean updateOrAddActiveChatMemberInfo(ChatMember updatedMember) {
+		return updateActiveChatMemberInfoIfPresent(updatedMember);
+	}
+
+	/**
+	 * Stores a newly detected QRG/band on all active category variants of a station.
+	 * The old StringProperty is still set for compatibility with existing TableView
+	 * columns and DXCluster code.
+	 */
+	public void applyDetectedFrequencyToActiveMembers(ChatMember sender, Band detectedBand, double detectedFrequencyMhz) {
+		if (sender == null || detectedBand == null || detectedFrequencyMhz <= 0) {
+			return;
+		}
+
+		String displayFrequency = String.valueOf(detectedFrequencyMhz);
+		String rawCall = sender.getCallSignRaw() != null ? sender.getCallSignRaw() : sender.getCallSign();
+
+		for (ChatMember member : findActiveChatMembersByRawCall(rawCall)) {
+			if (member == null) {
+				continue;
+			}
+			member.addKnownFrequency(detectedBand, detectedFrequencyMhz);
+			member.setFrequency(new SimpleStringProperty(displayFrequency));
+		}
+
+		// Also cover dummy senders that are not in the active model, e.g. [n/a] senders.
+		sender.addKnownFrequency(detectedBand, detectedFrequencyMhz);
+		sender.setFrequency(new SimpleStringProperty(displayFrequency));
+		fireUserListUpdate("Frequency detected");
+	}
+
+	private int findChatMemberIndexInUiListByKey(String key) {
+		if (key == null) {
+			return -1;
+		}
+
+		for (int i = 0; i < lst_chatMemberList.size(); i++) {
+			if (key.equals(buildActiveChatMemberKey(lst_chatMemberList.get(i)))) {
+				return i;
+			}
+		}
+		return -1;
+	}
 
 
 
@@ -2011,7 +2288,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 							socket.close();
 							
 							chatController.setConnectedAndLoggedIn(false);
-							chatController.getLst_chatMemberList().clear();
+							chatController.clearActiveChatMembers();
 
 							System.out.println("[Chatcontroller, Warning: ] Socket closed or disconnected");
 						
