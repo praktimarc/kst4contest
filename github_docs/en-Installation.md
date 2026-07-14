@@ -52,6 +52,7 @@ Multiple package formats are available from the releases page:
 | Debian package | `KST4Contest-v<version>-debian-amd64.deb` | Debian, Ubuntu, Linux Mint, … |
 | RPM package | `KST4Contest-v<version>-fedora-x86_64.rpm` | Fedora, RHEL, openSUSE, … |
 | Arch package | `KST4Contest-v<version>-archlinux-x86_64.pkg.tar.zst` | Arch Linux, Manjaro, … |
+| AUR | `kst4contest-bin` / `kst4contest` / `kst4contest-git` | Arch Linux, Manjaro, EndeavourOS, … |
 | Flatpak | `de.x08.KST4Contest.flatpakref` | All distributions with Flatpak |
 
 > **Recommended for Linux:** The Flatpak installation is the easiest way to stay up to date — `flatpak update` handles all future updates automatically. The repository is GPG-signed for security.
@@ -104,6 +105,20 @@ sudo dnf install ./KST4Contest-v<version>-fedora-x86_64.rpm
 ```
 
 #### Arch Linux
+
+**Via AUR (recommended)** — updates automatically with your system:
+
+```bash
+yay -S kst4contest-bin    # pre-built binary, fastest install
+# or
+yay -S kst4contest        # build from source
+# or
+yay -S kst4contest-git    # always latest git HEAD (1.42+)
+```
+
+Any AUR helper works (`paru`, `trizen`, etc.). `kst4contest-bin` is the easiest option since it installs the same pre-built binary as the release download.
+
+Or install the release package manually:
 
 ```bash
 sudo pacman -U KST4Contest-v<version>-archlinux-x86_64.pkg.tar.zst
@@ -195,7 +210,8 @@ The settings file (`preferences.xml`) is preserved because it is stored in the u
 - **AppImage**: Download the new AppImage, make it executable (`chmod +x`), optionally delete the old one.
 - **Debian/Ubuntu**: `sudo apt install ./KST4Contest-v<version>-debian-amd64.deb`
 - **Fedora/RHEL**: `sudo dnf upgrade ./KST4Contest-v<version>-fedora-x86_64.rpm`
-- **Arch Linux**: `sudo pacman -U KST4Contest-v<version>-archlinux-x86_64.pkg.tar.zst`
+- **Arch Linux (AUR)**: `yay -S kst4contest-bin`
+- **Arch Linux (manual)**: `sudo pacman -U KST4Contest-v<version>-archlinux-x86_64.pkg.tar.zst`
 - **Flatpak (repository)**: `flatpak update` – updates all Flatpak apps including KST4Contest.
 
 #### macOS
