@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
   <meta name="twitter:image" content="https://kst4contest.hamradioonline.de/assets/social/kst4contest-og.png">
 
-  <link rel="stylesheet" href="/assets/css/main.css?v=1783967730122">
+  <link rel="stylesheet" href="/assets/css/main.css?v=1784040883348">
   <link rel="alternate" type="application/rss+xml" title="KST4Contest News" href="/feed.xml">
 </head>
 
@@ -126,6 +126,11 @@
 <td>Arch Linux, Manjaro, …</td>
 </tr>
 <tr>
+<td>AUR</td>
+<td><code>kst4contest-bin</code> / <code>kst4contest</code> / <code>kst4contest-git</code></td>
+<td>Arch Linux, Manjaro, EndeavourOS, …</td>
+</tr>
+<tr>
 <td>Flatpak</td>
 <td><code>de.x08.KST4Contest.flatpakref</code></td>
 <td>Alle Distributionen mit Flatpak</td>
@@ -167,6 +172,15 @@
 <pre><code class="language-bash">sudo dnf install ./KST4Contest-v&lt;Version&gt;-fedora-x86_64.rpm
 </code></pre>
 <h4 id="arch-linux" tabindex="-1"><a class="header-anchor" href="#arch-linux">Arch Linux</a></h4>
+<p><strong>Über den AUR (empfohlen)</strong> — Updates laufen automatisch mit dem System:</p>
+<pre><code class="language-bash">yay -S kst4contest-bin    # vorgefertigtes Binary, schnellste Installation
+# oder
+yay -S kst4contest        # aus dem Quellcode bauen
+# oder
+yay -S kst4contest-git    # immer aktueller git-Stand (1.42+)
+</code></pre>
+<p>Jeder AUR-Helper funktioniert (<code>paru</code>, <code>trizen</code> usw.). <code>kst4contest-bin</code> ist die einfachste Option — es installiert dasselbe vorgefertigte Binary wie der Release-Download.</p>
+<p>Oder das Release-Paket manuell installieren:</p>
 <pre><code class="language-bash">sudo pacman -U KST4Contest-v&lt;Version&gt;-archlinux-x86_64.pkg.tar.zst
 </code></pre>
 <h4 id="flatpak" tabindex="-1"><a class="header-anchor" href="#flatpak">Flatpak</a></h4>
@@ -261,7 +275,8 @@ flatpak install kst4contest de.x08.KST4Contest//nightly
 <li><strong>AppImage</strong>: Neues AppImage herunterladen, ausführbar machen (<code>chmod +x</code>), altes optional löschen.</li>
 <li><strong>Debian/Ubuntu</strong>: <code>sudo apt install ./KST4Contest-v&lt;Version&gt;-debian-amd64.deb</code></li>
 <li><strong>Fedora/RHEL</strong>: <code>sudo dnf upgrade ./KST4Contest-v&lt;Version&gt;-fedora-x86_64.rpm</code></li>
-<li><strong>Arch Linux</strong>: <code>sudo pacman -U KST4Contest-v&lt;Version&gt;-archlinux-x86_64.pkg.tar.zst</code></li>
+<li><strong>Arch Linux (AUR)</strong>: <code>yay -S kst4contest-bin</code></li>
+<li><strong>Arch Linux (manuell)</strong>: <code>sudo pacman -U KST4Contest-v&lt;Version&gt;-archlinux-x86_64.pkg.tar.zst</code></li>
 <li><strong>Flatpak (Repository)</strong>: <code>flatpak update</code> – aktualisiert alle Flatpak-Apps einschließlich KST4Contest.</li>
 </ul>
 <h4 id="macos-2" tabindex="-1"><a class="header-anchor" href="#macos-2">macOS</a></h4>
