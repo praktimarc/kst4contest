@@ -4,7 +4,7 @@ pkgver=1.42.0.r145.gd885924
 pkgrel=1
 pkgdesc="ON4KST Chat Client for VHF/UHF contest operation (git)"
 arch=('x86_64')
-url="https://github.com/praktimarc/kst4contest"
+url="https://kst4contest.hamradioonline.de"
 license=('GPL-3.0-only')
 depends=('gst-plugins-base' 'gst-plugins-good')
 makedepends=('java-environment=21' 'maven' 'git')
