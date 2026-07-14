@@ -1,0 +1,177 @@
+name: Publish AUR Packages
+
+on:
+  workflow_run:
+    workflows: ["Tagged Release Build"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag (e.g. v1.41.1) — defaults to latest stable release"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run — skip AUR push and repo commit (for testing)"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  publish-aur:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Sy --noconfirm git openssh curl base-devel nodejs
+          useradd -m builder
+
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release version
+        id: ver
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ -n "${INPUT_VERSION}" ]]; then
+            TAG="${INPUT_VERSION}"
+          else
+            TAG=$(curl -sf \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+              | grep '"tag_name"' | sed 's/.*"tag_name": *"\([^"]*\)".*/\1/')
+          fi
+          PKGVER="${TAG#v}"
+          echo "tag=${TAG} → pkgver=${PKGVER}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "pkgver=${PKGVER}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute SHA256 checksums
+        id: sha
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          REPO="${{ github.repository }}"
+
+          echo "Hashing pre-built Arch package..."
+          SHA_BIN=$(curl -sfL \
+            "https://github.com/${REPO}/releases/download/${TAG}/KST4Contest-${TAG}-archlinux-x86_64.pkg.tar.zst" \
+            | sha256sum | awk '{print $1}')
+          echo "bin: ${SHA_BIN}"
+
+          echo "Hashing source tarball..."
+          SHA_SRC=$(curl -sfL \
+            "https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz" \
+            | sha256sum | awk '{print $1}')
+          echo "src: ${SHA_SRC}"
+
+          echo "bin=${SHA_BIN}" >> "$GITHUB_OUTPUT"
+          echo "src=${SHA_SRC}" >> "$GITHUB_OUTPUT"
+
+      - name: Update PKGBUILDs
+        env:
+          PKGVER: ${{ steps.ver.outputs.pkgver }}
+          SHA_BIN: ${{ steps.sha.outputs.bin }}
+          SHA_SRC: ${{ steps.sha.outputs.src }}
+        run: |
+          # kst4contest-bin
+          sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packaging/aur/kst4contest-bin/PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${SHA_BIN}')/" packaging/aur/kst4contest-bin/PKGBUILD
+
+          # kst4contest (source build)
+          sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packaging/aur/kst4contest/PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${SHA_SRC}')/" packaging/aur/kst4contest/PKGBUILD
+
+          # kst4contest-git: Basis aus pom.xml, Suffix aus git
+          BASE_VER=$(grep -m1 '<version>' pom.xml \
+            | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | sed 's/[-.]nightly//')
+          GIT_PKGVER="${BASE_VER}.r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+          sed -i "s/^pkgver=.*/pkgver=${GIT_PKGVER}/" packaging/aur/kst4contest-git/PKGBUILD
+
+          echo "=== Updated PKGBUILD versions ==="
+          grep -H '^pkgver=\|^sha256sums=' packaging/aur/*/PKGBUILD
+
+      - name: Generate .SRCINFO files
+        run: |
+          for pkg in kst4contest-bin kst4contest kst4contest-git; do
+            cp -r "packaging/aur/${pkg}" "/tmp/${pkg}"
+            chown -R builder:builder "/tmp/${pkg}"
+            su builder -c "cd /tmp/${pkg} && makepkg --printsrcinfo > .SRCINFO"
+            cp "/tmp/${pkg}/.SRCINFO" "packaging/aur/${pkg}/.SRCINFO"
+            echo "=== ${pkg}/.SRCINFO ==="
+            cat "packaging/aur/${pkg}/.SRCINFO"
+          done
+
+      - name: Commit updated PKGBUILDs to repo
+        if: inputs.dry_run != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+          git add packaging/aur/
+          git diff --cached --quiet && echo "No PKGBUILD changes to commit." && exit 0
+          git commit -m "chore: update AUR packages to ${{ steps.ver.outputs.tag }} [skip ci]"
+          git push
+
+      - name: Set up AUR SSH
+        if: inputs.dry_run != 'true'
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" > ~/.ssh/aur_ed25519
+          chmod 600 ~/.ssh/aur_ed25519
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+          cat >> ~/.ssh/config << 'EOF'
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur_ed25519
+            User aur
+          EOF
+
+      - name: Push to AUR
+        if: inputs.dry_run != 'true'
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          git config --global user.email "philipp@wagnersnetz.de"
+          git config --global user.name "Philipp Wagner"
+
+          push_to_aur() {
+            local pkg="$1"
+            local msg="$2"
+            local aur_dir="/tmp/aur/${pkg}"
+
+            git clone "ssh://aur@aur.archlinux.org/${pkg}.git" "${aur_dir}" 2>/dev/null || {
+              mkdir -p "${aur_dir}"
+              git -C "${aur_dir}" init
+              git -C "${aur_dir}" remote add origin "ssh://aur@aur.archlinux.org/${pkg}.git"
+            }
+
+            cp "packaging/aur/${pkg}/PKGBUILD" "${aur_dir}/"
+            cp "packaging/aur/${pkg}/.SRCINFO" "${aur_dir}/"
+            git -C "${aur_dir}" add PKGBUILD .SRCINFO
+            git -C "${aur_dir}" diff --cached --quiet \
+              && echo "${pkg}: no changes, skipping push" && return 0
+            git -C "${aur_dir}" commit -m "${msg}"
+            git -C "${aur_dir}" push origin HEAD:master
+            echo "${pkg}: pushed to AUR"
+          }
+
+          push_to_aur kst4contest-bin "Update to ${TAG}"
+          push_to_aur kst4contest     "Update to ${TAG}"
+          push_to_aur kst4contest-git \
+            "Update pkgver to $(grep '^pkgver=' packaging/aur/kst4contest-git/PKGBUILD | cut -d= -f2)"

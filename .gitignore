@@ -38,3 +38,6 @@ dist/
 
 # node Modules in website
 website/node_modules/
+
+# Local secrets for act testing
+.secrets
