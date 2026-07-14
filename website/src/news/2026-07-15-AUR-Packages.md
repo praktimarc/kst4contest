@@ -12,8 +12,8 @@ We now have uploaded kst4contest as multiple Arch User Repository Packages. This
 Before you use the AUR (if you did not use the AUR before) please read [this entry in the Arch wiki and the disclaimer](https://wiki.archlinux.org/title/Arch_User_Repository) about security in the AUR.
 
 ### Packages provided to the AUR:
-- [kst4contest](https://aur.archlinux.org/kst4contest.git): This is the latest Release Build. If you install this package, you will compile the source code on your own machine. We recommend an JDK21 Enviroment for doing this
-- [kst4contest-bin](https://aur.archlinux.org/kst4contest-bin.git): This is the precompiled Binary, which is the same as the binary on the Github release page.
-- [kstcontest-git](https://aur.archlinux.org/kst4contest-git.git): This is the latest devolopment state of kst4contest. This is recommend for testers only, as things might break.
+- [kst4contest](https://aur.archlinux.org/packages/kst4contest): This is the latest Release Build. If you install this package, you will compile the source code on your own machine. We recommend an JDK21 Enviroment for doing this
+- [kst4contest-bin](https://aur.archlinux.org/packages/kst4contest-bin): This is the precompiled Binary, which is the same as the binary on the Github release page.
+- [kstcontest-git](https://aur.archlinux.org/packages/kst4contest-git): This is the latest devolopment state of kst4contest. This is recommend for testers only, as things might break.
 
 Have fun with these packages. 73
