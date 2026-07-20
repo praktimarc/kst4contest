@@ -26,6 +26,14 @@ public class UserActualizationTask extends TimerTask {
 
 		Thread.currentThread().setName("UserActualizationTask");
 
+		/*
+		 * File-based log synchronization is optional. Do not create, open or parse the
+		 * configured file while the feature is disabled.
+		 */
+		if (!client.getChatPreferences().isLogsynch_fileBasedWkdCallInterpreterEnabled()) {
+			return;
+		}
+
 //		System.out.println("[Useract: ] Thread runned now");
 
 //		System.out.println("***********************Useract started");

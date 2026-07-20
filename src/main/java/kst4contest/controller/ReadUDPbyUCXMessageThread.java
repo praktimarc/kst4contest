@@ -319,6 +319,14 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			NodeList list = doc.getElementsByTagName("contactinfo");
 			if (list.getLength() != 0) {
 
+				/*
+				 * QSO and TRX information share the same UDP receiver. The log-sync
+				 * preference therefore controls processing, not ownership of the socket.
+				 */
+				if (!client.getChatPreferences().isLogsynch_ucxUDPWkdCallListenerEnabled()) {
+					return "";
+				}
+
 				for (int temp = 0; temp < list.getLength(); temp++) {
 
 					Node node = list.item(temp);
@@ -590,6 +598,15 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 				}
 			} else {
 				list = doc.getElementsByTagName("RadioInfo");
+
+				/*
+				 * RadioInfo packets may arrive on the shared UDP port even when automatic
+				 * QRG synchronization is disabled. Ignore them unless TRX sync is enabled.
+				 */
+				if (list.getLength() != 0
+						&& !client.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled()) {
+					return "";
+				}
 
 				for (int temp = 0; temp < list.getLength(); temp++) {
 

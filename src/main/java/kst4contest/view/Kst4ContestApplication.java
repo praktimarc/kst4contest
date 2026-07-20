@@ -9017,7 +9017,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlLog.setVgap(5);
 		grdPnlLog.setHgap(5);
 
-		Label lblEnableFileBased = new Label("Use universal File based callsign Interpreter (readOnly!)");
+		Label lblEnableFileBased = new Label(
+				"Read worked callsigns periodically from a log file (without band information)"
+		);
 		CheckBox chkBxEnableFileBasedInterpreterUCX = new CheckBox();
 		chkBxEnableFileBasedInterpreterUCX
 				.setSelected(this.chatcontroller.getChatPreferences().isLogsynch_fileBasedWkdCallInterpreterEnabled());
@@ -9033,7 +9035,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		Label lblWkdInterpreterPathToFileTitle = new Label("Worked stations will be read there: ");
+		Label lblWkdInterpreterPathToFileTitle = new Label("Log file to be monitored:");
 		Label lblWkdInterpreterPathToFile = new Label(
 				this.chatcontroller.getChatPreferences().getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
 
@@ -9041,7 +9043,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		Label lblUDPbyUCXLogBackupFilePathAndName = new Label(
 				this.chatcontroller.getChatPreferences().getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup());
 
-		Label lblEnableUDPbyUCX = new Label("Receive UCXLog network based UDP log messages");
+		Label lblEnableUDPbyUCX = new Label(
+				"Process QSO messages from N1MM+, QARTEST, UCXLog and DXLog.net"
+		);
 		CheckBox chkBxEnableUCXLogUDPReceiver = new CheckBox();
 		chkBxEnableUCXLogUDPReceiver
 				.setSelected(this.chatcontroller.getChatPreferences().isLogsynch_ucxUDPWkdCallListenerEnabled());
@@ -9056,7 +9060,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		Label lblUDPByUCX = new Label("UDP-Port for message-listener (default is 12060)");
+		Label lblUDPByUCX = new Label(
+				"Shared UDP port for QSO and TRX messages [default 12060]:"
+		);
 		TextField txtFldUDPPortforUCX = new TextField("");
 		txtFldUDPPortforUCX.setFocusTraversable(false);
 		txtFldUDPPortforUCX
@@ -9192,7 +9198,17 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlLog.add(lblWkdInterpreterPathToFileTitle, 0, 2);
 		grdPnlLog.add(lblWkdInterpreterPathToFile, 1, 2);
 		grdPnlLog.add(btn_changeFilePathAndName, 2, 2);
-		grdPnlLog.add(generateLabeledSeparator(100, "N1MM/QARTEST/UCXLog/DXLog.net Network-Listener"), 0, 3, 2, 1);
+//		grdPnlLog.add(generateLabeledSeparator(100, "N1MM/QARTEST/UCXLog/DXLog.net Network-Listener"), 0, 3, 2, 1);
+		grdPnlLog.add(
+				generateLabeledSeparator(
+						100,
+						"Network-based QSO synchronization (N1MM/QARTEST/UCXLog/DXLog)"
+				),
+				0,
+				3,
+				2,
+				1
+		);
 		grdPnlLog.add(lblEnableUDPbyUCX, 0, 4);
 		grdPnlLog.add(chkBxEnableUCXLogUDPReceiver, 1, 4);
 		grdPnlLog.add(lblUDPByUCX, 0, 5);
@@ -9310,16 +9326,18 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnltrx.setVgap(5);
 		grdPnltrx.setHgap(5);
 
-		Label lblEnableTRXMsgbyUCX = new Label("Receive UCXLog network based UDP trx messages at Port 12060");
+		Label lblEnableTRXMsgbyUCX = new Label(
+				"Update MYQRG from RadioInfo messages received on the shared log-sync port"
+		);
 		CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
-		CheckBox chkBxEnableXVTRUsage = new CheckBox();
-
-		Label lblXVTRRFQrg = new Label("XVTR RF QRG in kHz, e.g. \"144000\" for 144 MHz), default = 144000");
-		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your xvtr send?"));
-
-		Label lblTRXIFQrg = new Label("TRX IF QRG in kHz, e.g. \"28000\" for 28 MHz), default = 28000");
-		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your TRX IF be?"));
+//		CheckBox chkBxEnableXVTRUsage = new CheckBox();
+//
+//		Label lblXVTRRFQrg = new Label("XVTR RF QRG in kHz, e.g. \"144000\" for 144 MHz), default = 144000");
+//		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your xvtr send?"));
+//
+//		Label lblTRXIFQrg = new Label("TRX IF QRG in kHz, e.g. \"28000\" for 28 MHz), default = 28000");
+//		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your TRX IF be?"));
 
 //		Label lblRedultingLoQRG = new Label("The value of " + asd + " will be added to the readed QRG of your TRX to show correct QRG");
 
