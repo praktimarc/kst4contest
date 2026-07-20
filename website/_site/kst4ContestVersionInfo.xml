@@ -2,11 +2,11 @@
 <praktiKST>
     <latestVersion>
         <versionNumber>1.411</versionNumber>
-        <latestVersionPathOnWebserver>https://github.com/praktimarc/kst4contest/releases/tag/v1.41.1</latestVersionPathOnWebserver>
+        <semanticVersion>1.41.1</semanticVersion>
         <adminMessage></adminMessage>
         <majorChanges>- Score of Top-Priority Candidates in the user section
 - Broadcast Messages (To ALL Station in Contest) in seperate Window</majorChanges>
-        <latestVersionPathOnWebserver>https://github.com/praktimarc/kst4contest/releases/download/v1.41.1/praktiKST-v1.41.1-windows-x64.zip</latestVersionPathOnWebserver>
+        <latestVersionPathOnWebserver>https://github.com/praktimarc/kst4contest/releases/tag/v1.41.1</latestVersionPathOnWebserver>
     </latestVersion>
     <needUpdateSinceLastVersion>
         <filename>nothing</filename>
