@@ -8658,27 +8658,114 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		HBox hbxDemDirectoryActions = new HBox(8.0, btnUseDefaultDemDirectory, btnImportDemTiles);
 
-		Label lbl_station_pstRotatorEnabled = new Label("Enable PSTRotator interface (auto QTF):");
+		Label lbl_station_pstRotatorEnabled =
+				new Label("Enable PSTRotator interface (automatic QTF):");
+
+		TextField txtFld_station_pstRotatorHost = new TextField(
+				chatcontroller.getChatPreferences().getStn_pstRotatorHost()
+		);
+		txtFld_station_pstRotatorHost.setFocusTraversable(false);
+
+		TextField txtFld_station_pstRotatorPort = new TextField(
+				Integer.toString(
+						chatcontroller.getChatPreferences().getStn_pstRotatorPort()
+				)
+		);
+		txtFld_station_pstRotatorPort.setFocusTraversable(false);
+
 		CheckBox chkBx_station_pstRotatorEnabled = new CheckBox();
-		chkBx_station_pstRotatorEnabled.setSelected(chatcontroller.getChatPreferences().isStn_pstRotatorEnabled());
+		chkBx_station_pstRotatorEnabled.setSelected(
+				chatcontroller.getChatPreferences().isStn_pstRotatorEnabled()
+		);
 		chkBx_station_pstRotatorEnabled.setTooltip(new Tooltip(
-				"If disabled: no PSTRotator connection is started and antenna direction is ignored in priority scoring."
+				"When enabled, KST4Contest reads the antenna direction from PSTRotator.\n"
+						+ "The connection settings take effect on the next chat connection."
 		));
-		chkBx_station_pstRotatorEnabled.selectedProperty().addListener((obs, oldV, newV) -> {
-			chatcontroller.getChatPreferences().setStn_pstRotatorEnabled(newV);
-			if (newV) {
-				txt_myQTF.textProperty().bind(Bindings.createStringBinding(
-						() -> Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()),
-						chatcontroller.getChatPreferences().getActualQTF()));
-				txt_myQTF.setTooltip(new Tooltip("This is your current QTF, read out at PSTRotator"));
-				txt_myQTF.setFocusTraversable(false);
-			} else {
-				txt_myQTF.textProperty().unbind();
-				txt_myQTF.setText(Double.toString(chatcontroller.getChatPreferences().getActualQTF().get()));
-				txt_myQTF.setTooltip(new Tooltip("Enter your antenna heading (QTF) by hand - no rotator sync active"));
-				txt_myQTF.setFocusTraversable(true);
-			}
-		});
+
+		Runnable updatePstRotatorFields = () -> {
+			boolean disabled = !chkBx_station_pstRotatorEnabled.isSelected();
+			txtFld_station_pstRotatorHost.setDisable(disabled);
+			txtFld_station_pstRotatorPort.setDisable(disabled);
+		};
+
+		updatePstRotatorFields.run();
+
+		chkBx_station_pstRotatorEnabled.selectedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					chatcontroller.getChatPreferences().setStn_pstRotatorEnabled(newValue);
+					updatePstRotatorFields.run();
+
+					if (newValue) {
+						txt_myQTF.textProperty().bind(Bindings.createStringBinding(
+								() -> Double.toString(
+										chatcontroller.getChatPreferences().getActualQTF().get()
+								),
+								chatcontroller.getChatPreferences().getActualQTF()
+						));
+						txt_myQTF.setTooltip(
+								new Tooltip("Current QTF reported by PSTRotator")
+						);
+						txt_myQTF.setFocusTraversable(false);
+					} else {
+						txt_myQTF.textProperty().unbind();
+						txt_myQTF.setText(
+								Double.toString(
+										chatcontroller.getChatPreferences().getActualQTF().get()
+								)
+						);
+						txt_myQTF.setTooltip(
+								new Tooltip("Enter the current antenna direction manually")
+						);
+						txt_myQTF.setFocusTraversable(true);
+					}
+				}
+		);
+
+		txtFld_station_pstRotatorHost.focusedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					if (!newValue) {
+						chatcontroller.getChatPreferences().setStn_pstRotatorHost(
+								txtFld_station_pstRotatorHost.getText()
+						);
+						txtFld_station_pstRotatorHost.setText(
+								chatcontroller.getChatPreferences().getStn_pstRotatorHost()
+						);
+					}
+				}
+		);
+
+		txtFld_station_pstRotatorPort.focusedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					if (newValue) {
+						return;
+					}
+
+					try {
+						int configuredPort = Integer.parseInt(
+								txtFld_station_pstRotatorPort.getText().trim()
+						);
+
+						if (configuredPort < 1 || configuredPort > 65535) {
+							throw new NumberFormatException();
+						}
+
+						chatcontroller.getChatPreferences().setStn_pstRotatorPort(
+								configuredPort
+						);
+					} catch (NumberFormatException exception) {
+						showUserInputErrorWindow(
+								"\"" + txtFld_station_pstRotatorPort.getText()
+										+ "\" is not a valid UDP port. Enter a value between 1 and 65535."
+						);
+					}
+
+					txtFld_station_pstRotatorPort.setText(
+							Integer.toString(
+									chatcontroller.getChatPreferences().getStn_pstRotatorPort()
+							)
+					);
+				}
+		);
 
 
 		grdPnlStation.add(lblCallSign, 0, 0);
@@ -8722,6 +8809,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 12);
 		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 12);
 
+		grdPnlStation.add(new Label("PSTRotator host:"), 0, 13);
+		grdPnlStation.add(txtFld_station_pstRotatorHost, 1, 13);
+
+		grdPnlStation.add(new Label("PSTRotator UDP port:"), 0, 14);
+		grdPnlStation.add(txtFld_station_pstRotatorPort, 1, 14);
 
 
 		VBox vbxStation = new VBox();
@@ -8729,32 +8821,71 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
         GridPane grdPanelServerHostName = new GridPane();
 
-        TextField stn_txtServerDNS = new TextField(this.chatcontroller.getChatPreferences().getStn_on4kstServersDns());
-        stn_txtServerDNS.focusedProperty().addListener(new ChangeListener<Boolean>() {
-            @Override
-            public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
-
-                System.out.println("[Main.java, Info]: Set the Server DNS property by hand to: "
-                        + stn_txtServerDNS.getText());
-                chatcontroller.getChatPreferences().setStn_on4kstServersDns(stn_txtServerDNS.getText());
-            }
-        });
 
 
-        grdPanelServerHostName.add(new Label("ON4KST Server [www.on4kst.org]: "), 0,1);
-        grdPanelServerHostName.add(stn_txtServerDNS, 1,1);
+		TextField stn_txtServerDNS = new TextField(
+				this.chatcontroller.getChatPreferences().getStn_on4kstServersDns()
+		);
+		stn_txtServerDNS.setFocusTraversable(false);
+		stn_txtServerDNS.focusedProperty().addListener((observable, oldValue, newValue) -> {
+			if (!newValue) {
+				chatcontroller.getChatPreferences().setStn_on4kstServersDns(
+						stn_txtServerDNS.getText().trim()
+				);
+			}
+		});
 
-        TextField stn_txtServerPort = new TextField(this.chatcontroller.getChatPreferences().getStn_on4kstServersPort()+"");
+		grdPanelServerHostName.add(
+				new Label("ON4KST server [www.on4kst.org]:"),
+				0,
+				1
+		);
+		grdPanelServerHostName.add(stn_txtServerDNS, 1, 1);
 
-        grdPanelServerHostName.add(new Label(" Port [23001]: "), 2,1);
-        grdPanelServerHostName.add(stn_txtServerPort, 3,1);
+		TextField stn_txtServerPort = new TextField(
+				Integer.toString(
+						this.chatcontroller.getChatPreferences().getStn_on4kstServersPort()
+				)
+		);
+		stn_txtServerPort.setFocusTraversable(false);
+		stn_txtServerPort.focusedProperty().addListener((observable, oldValue, newValue) -> {
+			if (newValue) {
+				return;
+			}
+
+			try {
+				int configuredPort = Integer.parseInt(stn_txtServerPort.getText().trim());
+
+				if (configuredPort < 1 || configuredPort > 65535) {
+					throw new NumberFormatException();
+				}
+
+				chatcontroller.getChatPreferences().setStn_on4kstServersPort(
+						configuredPort
+				);
+			} catch (NumberFormatException exception) {
+				showUserInputErrorWindow(
+						"\"" + stn_txtServerPort.getText()
+								+ "\" is not a valid TCP port. Enter a value between 1 and 65535."
+				);
+
+				stn_txtServerPort.setText(
+						Integer.toString(
+								chatcontroller.getChatPreferences().getStn_on4kstServersPort()
+						)
+				);
+			}
+		});
+
+		grdPanelServerHostName.add(new Label("Port [23001]:"), 2, 1);
+		grdPanelServerHostName.add(stn_txtServerPort, 3, 1);
 
         vbxStation.getChildren().addAll(grdPanelServerHostName);
 
         vbxStation.getChildren().addAll(
 				generateLabeledSeparator(100, "Set your Login Credentials and Station Parameters here"), grdPnlStation);
-		vbxStation.getChildren().addAll(generateLabeledSeparator(50,
-				"! ! ! ! Don´t forget to reset the worked stations information before starting a new contest ! ! ! !"));
+//		vbxStation.getChildren().addAll(generateLabeledSeparator(50,
+//				"! ! ! ! Don´t forget to reset the worked stations information before starting a new contest ! ! ! !"));
 
 
 		CheckBox settings_chkbx_QRV144 = new CheckBox("My station uses 2m band");

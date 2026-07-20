@@ -159,6 +159,8 @@ public class ChatPreferences {
 	int stn_on4kstServersPort = 23001;
 
 	boolean stn_pstRotatorEnabled = false;
+	String stn_pstRotatorHost = "127.0.0.1";
+	int stn_pstRotatorPort = 12000;
 
 	boolean stn_loginAFKState = false; //always start as here
 	String stn_loginCallSign = "do5amf";
@@ -759,6 +761,30 @@ public class ChatPreferences {
 
 	public void setStn_pstRotatorEnabled(boolean stn_pstRotatorEnabled) {
 		this.stn_pstRotatorEnabled = stn_pstRotatorEnabled;
+	}
+
+	public String getStn_pstRotatorHost() {
+		return stn_pstRotatorHost;
+	}
+
+	public void setStn_pstRotatorHost(String stn_pstRotatorHost) {
+		if (stn_pstRotatorHost == null || stn_pstRotatorHost.isBlank()) {
+			this.stn_pstRotatorHost = "127.0.0.1";
+		} else {
+			this.stn_pstRotatorHost = stn_pstRotatorHost.trim();
+		}
+	}
+
+	public int getStn_pstRotatorPort() {
+		return stn_pstRotatorPort;
+	}
+
+	public void setStn_pstRotatorPort(int stn_pstRotatorPort) {
+		if (stn_pstRotatorPort < 1 || stn_pstRotatorPort > 65535) {
+			this.stn_pstRotatorPort = 12000;
+		} else {
+			this.stn_pstRotatorPort = stn_pstRotatorPort;
+		}
 	}
 
 	public SimpleStringProperty getNotify_optionalFrequencyPrefix() {
@@ -1418,6 +1444,13 @@ public class ChatPreferences {
 			stn_pstRotatorEnabled.setTextContent(this.stn_pstRotatorEnabled + "");
 			station.appendChild(stn_pstRotatorEnabled);
 
+			Element stn_pstRotatorHost = doc.createElement("stn_pstRotatorHost");
+			stn_pstRotatorHost.setTextContent(this.stn_pstRotatorHost);
+			station.appendChild(stn_pstRotatorHost);
+
+			Element stn_pstRotatorPort = doc.createElement("stn_pstRotatorPort");
+			stn_pstRotatorPort.setTextContent(Integer.toString(this.stn_pstRotatorPort));
+			station.appendChild(stn_pstRotatorPort);
 
 
 			/**
@@ -2091,6 +2124,22 @@ public class ChatPreferences {
 				stn_bandActive10G = getBoolean(stationEl, stn_bandActive10G, "stn_bandActive10G");
 
 				stn_pstRotatorEnabled = getBoolean(stationEl, stn_pstRotatorEnabled, "stn_pstRotatorEnabled");
+
+				setStn_pstRotatorHost(
+						getText(
+								stationEl,
+								stn_pstRotatorHost,
+								"stn_pstRotatorHost"
+						)
+				);
+
+				setStn_pstRotatorPort(
+						getInt(
+								stationEl,
+								stn_pstRotatorPort,
+								"stn_pstRotatorPort"
+						)
+				);
 
 			}
 

@@ -163,14 +163,16 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 
 
-    public void initRotor() {
-        // Beispiel: PSTRotator läuft lokal auf Port 12060
-        // Der Client wird automatisch auf 12061 hören.
-        rotatorClient = new PstRotatorClient("127.0.0.1", 12000, this, this); //TODO: IP anpassen, Port auch aus den prefs holen, default 12000
+	public void initRotor() {
+		rotatorClient = new PstRotatorClient(
+				chatPreferences.getStn_pstRotatorHost(),
+				chatPreferences.getStn_pstRotatorPort(),
+				this,
+				this
+		);
 
-        // Startet den Thread und das Polling
-        rotatorClient.start();
-    }
+		rotatorClient.start();
+	}
 
     /**
      * sets rotator to "AZ DEGREE" by button click <br/><br/>
@@ -2193,7 +2195,11 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			messageTXBus = new LinkedBlockingQueue<ChatMessage>();
 
 //			socket = new Socket(hostname, port);//socket for the on4kst chat server
-            socket = new Socket(chatController.chatPreferences.getStn_on4kstServersDns(), port);//socket for the on4kst chat server
+			socket = new Socket(
+					chatPreferences.getStn_on4kstServersDns(),
+					chatPreferences.getStn_on4kstServersPort()
+			);//socket for the on4kst chat server
+
 			System.out.println("Connected to the chat server: " + socket.isConnected());
 
 			ByteBuffer buffer = ByteBuffer.allocate(1024);
