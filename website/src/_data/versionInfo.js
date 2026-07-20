@@ -133,19 +133,34 @@ module.exports = async function () {
         parts.push("<praktiKST>");
 
         const latestTag = stable ? stable.tagName : null;
-        const winFilename = latestTag ? `praktiKST-${latestTag}-windows-x64.zip` : "";
 
         parts.push("    <latestVersion>");
         if (stable) {
-            const latestIssues = await getIssuesForRelease("1970-01-01T00:00:00Z", stable.publishedAt);
-            parts.push(`        <versionNumber>${escapeXml(toAppVersionNumber(latestTag))}</versionNumber>`);
+            const latestIssues = await getIssuesForRelease(
+                "1970-01-01T00:00:00Z",
+                stable.publishedAt
+            );
+
+            // Kept for application versions that still expect the old numeric format.
+            parts.push(
+                `        <versionNumber>${escapeXml(toAppVersionNumber(latestTag))}</versionNumber>`
+            );
+
+            // Used by current application versions for correct semantic comparison
+            // and display, for example 1.41.1 instead of 1.411.
+            parts.push(
+                `        <semanticVersion>${escapeXml(toSemanticVersion(latestTag))}</semanticVersion>`
+            );
+
+            parts.push("        <adminMessage></adminMessage>");
+            parts.push(
+                `        <majorChanges>${escapeXml(latestIssues.added.slice(0, 300))}</majorChanges>`
+            );
+
+            // The release page is deliberately platform-neutral. The application
+            // cannot know whether the user needs Windows, Linux or macOS packages.
             parts.push(
                 `        <latestVersionPathOnWebserver>https://github.com/${REPO}/releases/tag/${latestTag}</latestVersionPathOnWebserver>`
-            );
-            parts.push("        <adminMessage></adminMessage>");
-            parts.push(`        <majorChanges>${escapeXml(latestIssues.added.slice(0, 300))}</majorChanges>`);
-            parts.push(
-                `        <latestVersionPathOnWebserver>https://github.com/${REPO}/releases/download/${latestTag}/${winFilename}</latestVersionPathOnWebserver>`
             );
         }
         parts.push("    </latestVersion>");

@@ -8095,7 +8095,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		vbxUpdateWindow.getChildren().add(upd_gridPaneUpd);
 		upd_gridPaneUpd.add(lblUpdateInfo, 0,0,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfo2, 0,1,1,1);
-		upd_gridPaneUpd.add(new Label("kst4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION), 1,1,1,1);
+		upd_gridPaneUpd.add(new Label("KST4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION), 1,1,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfo3, 0,2,1,1);
 		upd_gridPaneUpd.add(new Label("KST4Contest " + chatcontroller.getUpdateInformation().getLatestVersionForDisplay()), 1,2,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfoChanges, 0,3,1,1);
