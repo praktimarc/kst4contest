@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
   <meta name="twitter:image" content="https://kst4contest.hamradioonline.de/assets/social/kst4contest-og.png">
 
-  <link rel="stylesheet" href="/assets/css/main.css?v=1784239128010">
+  <link rel="stylesheet" href="/assets/css/main.css?v=1784579686207">
   <link rel="alternate" type="application/rss+xml" title="KST4Contest News" href="/feed.xml">
 </head>
 
@@ -67,15 +67,61 @@
 <section class="section">
   <div class="card manual-content">
     <p><a href="/manual/en/">← Back to manual overview</a></p>
-    <h1>Home</h1>
-    <h1 id="kst4contest-%E2%80%93-wiki" tabindex="-1"><a class="header-anchor" href="#kst4contest-%E2%80%93-wiki">KST4Contest – Wiki</a></h1>
+    <h1>KST4Contest – User Manual</h1>
+    <h1 id="kst4contest-%E2%80%93-user-manual" tabindex="-1"><a class="header-anchor" href="#kst4contest-%E2%80%93-user-manual">KST4Contest – User Manual</a></h1>
 <blockquote>
-<p>🇬🇧 You are reading the English version | 🇩🇪 <a href="/manual/de/home/">Deutsche Version</a></p>
+<p>You are reading the English version | <a href="/manual/de/home/">Deutsche Version</a></p>
 </blockquote>
-<p><strong>KST4Contest</strong> (also known as <em>PraktiKST</em>) is a Java-based chat client for the <a href="http://www.on4kst.info/chat/">ON4KST Chat</a>, specifically designed for contest operation on the VHF/UHF/SHF bands (144 MHz and above).</p>
-<p>Developed by <strong>DO5AMF (Marc Fröhlich)</strong>, operator at DM5M.</p>
+<p>KST4Contest is a desktop client for the <a href="https://www.on4kst.org/chat/login.php">ON4KST Chat</a>, developed for VHF, UHF and SHF contest operation. It brings chat, candidate selection, sked planning, aircraft scatter data and external station software together in a single operating interface.</p>
+<p>KST4Contest is developed by <strong>DO5AMF (Marc Fröhlich)</strong>, operator at DM5M and (since May 2025) <strong>DN9APW (Philipp Wagner)</strong>. The source code is publicly available on <a href="https://github.com/praktimarc/kst4contest">GitHub</a>.</p>
 <hr>
-<h2 id="quick-navigation" tabindex="-1"><a class="header-anchor" href="#quick-navigation">Quick Navigation</a></h2>
+<h2 id="why-use-a-dedicated-on4kst-client%3F" tabindex="-1"><a class="header-anchor" href="#why-use-a-dedicated-on4kst-client%3F">Why use a dedicated ON4KST client?</a></h2>
+<p>During a contest, the ON4KST Chat provides a considerable amount of information: active stations, locators, frequencies, sked requests and indications of current activity. The actual problem is not seeing this data. It is turning it into the next useful contact in time.</p>
+<p>KST4Contest evaluates the available information, puts it into context and presents it as part of a contest-oriented workflow. This includes antenna direction, distance, known bands and frequencies, worked status, chat activity and aircraft scatter timing.</p>
+<p>The program does not decide which QSO is actually possible. Priority scores, the AP timeline and visual highlights are decision aids. The final judgement remains with the operator – not least because even a very convincing computer screen cannot complete a radio contact.</p>
+<hr>
+<h2 id="how-kst4contest-supports-contest-operation" tabindex="-1"><a class="header-anchor" href="#how-kst4contest-supports-contest-operation">How KST4Contest supports contest operation</a></h2>
+<ul>
+<li>
+<p><strong>Observe and organise chat activity:</strong> KST4Contest can display two ON4KST chat categories at the same time. Messages, frequency information and known band activity are assigned to the corresponding stations.</p>
+</li>
+<li>
+<p><strong>Reduce the station list:</strong> Direction, distance, worked and NOT-QRV filters help limit the user list to stations that are relevant to the current operating situation.</p>
+</li>
+<li>
+<p><strong>Prioritise candidates:</strong> The score system evaluates active chat members using several known criteria. The currently most relevant candidates are also shown in a separate priority list.</p>
+</li>
+<li>
+<p><strong>Prepare skeds and keep them visible:</strong> Sked reminders, automatic advance messages and the AP timeline help prevent scheduled contacts from disappearing somewhere between chat, logging and ongoing CQ operation.</p>
+</li>
+<li>
+<p><strong>Include aircraft scatter information:</strong> The AirScout interface brings suitable aircraft and expected reflection times into candidate evaluation and sked planning.</p>
+</li>
+<li>
+<p><strong>Connect the logger and station equipment:</strong> KST4Contest synchronises worked stations and frequency information with supported logging software. It also provides interfaces for Win-Test, PSTRotator and a built-in DX Cluster server.</p>
+</li>
+<li>
+<p><strong>Display stations and radio paths:</strong> The station map shows active chat members, locator squares, antenna directions and the path to the selected station. A terrain profile can also be calculated for selected paths.</p>
+</li>
+</ul>
+<p>These functions share information. A detected frequency can indicate an active band, worked status comes from the logger, aircraft scatter data adds timing information and the resulting score affects the priority list. Missing or outdated input data can therefore affect the result as well.</p>
+<hr>
+<h2 id="requirements" tabindex="-1"><a class="header-anchor" href="#requirements">Requirements</a></h2>
+<p>A registered ON4KST account is required. Registration and login are available from the <a href="https://www.on4kst.org/chat/login.php">official ON4KST login page</a>.</p>
+<p>English is the official language of the ON4KST Chat. This also applies when communicating with stations from your own country. Common amateur radio abbreviations such as <code>pse</code>, <code>agn</code>, <code>qrg</code>, <code>dir</code>, <code>rrr</code>, <code>tnx</code> and <code>73</code> are normal and usually considerably faster than carefully written prose.</p>
+<p>Downloads, supported operating systems and installation methods are described in <a href="/manual/en/installation/">Installation</a>.</p>
+<hr>
+<h2 id="manual-version" tabindex="-1"><a class="header-anchor" href="#manual-version">Manual version</a></h2>
+<p>This manual describes the stable release <strong>v1.41.1</strong>.</p>
+<p>Features or changes that are only available in the current development version are explicitly marked as <strong>Nightly / v1.42</strong>. If no such label is present, the description refers to the stable release.</p>
+<ul>
+<li><a href="https://github.com/praktimarc/kst4contest/releases/latest">Download the current stable release</a></li>
+<li><a href="https://github.com/praktimarc/kst4contest/actions">Nightly and automated builds</a></li>
+<li><a href="/manual/en/changelog/">Version history</a></li>
+</ul>
+<p>For contest operation, the stable release is generally the appropriate choice. Nightly builds contain newer fixes and features, but may change between builds. They are useful when a particular change needs testing. Trying one for the first time ten minutes before a contest is less useful.</p>
+<hr>
+<h2 id="quick-navigation" tabindex="-1"><a class="header-anchor" href="#quick-navigation">Quick navigation</a></h2>
 <table>
 <thead>
 <tr>
@@ -86,68 +132,67 @@
 <tbody>
 <tr>
 <td><a href="/manual/en/installation/">Installation</a></td>
-<td>Download, Java requirements, update</td>
+<td>ON4KST account, downloads, installation and updates</td>
 </tr>
 <tr>
 <td><a href="/manual/en/configuration/">Configuration</a></td>
-<td>All settings in detail</td>
+<td>Login, station, bands, user interface and external connections</td>
 </tr>
 <tr>
 <td><a href="/manual/en/log-sync/">Log Synchronisation</a></td>
-<td>UCXLog, N1MM+, QARTest, <a href="http://DXLog.net">DXLog.net</a>, WinTest</td>
+<td>Simplelogfile, UCXLog, N1MM+, QARTest, <a href="http://DXLog.net">DXLog.net</a> and Win-Test</td>
 </tr>
 <tr>
 <td><a href="/manual/en/airscout-integration/">AirScout Integration</a></td>
-<td>Aircraft scatter detection</td>
+<td>Connecting AirScout and evaluating aircraft scatter timing</td>
 </tr>
 <tr>
 <td><a href="/manual/en/dx-cluster-server/">DX Cluster Server</a></td>
-<td>Built-in DX cluster for your logging software</td>
+<td>Passing detected opportunities to logging software</td>
 </tr>
 <tr>
 <td><a href="/manual/en/features/">Features</a></td>
-<td>All features at a glance</td>
+<td>Operation, reasoning and limitations of individual functions</td>
 </tr>
 <tr>
 <td><a href="/manual/en/macros-and-variables/">Macros and Variables</a></td>
-<td>Text snippets, shortcuts, variables</td>
+<td>Reusable messages, shortcuts and automatically substituted values</td>
 </tr>
 <tr>
 <td><a href="/manual/en/user-interface/">User Interface</a></td>
-<td>UI explanation and operation</td>
+<td>Interface layout and operation during a contest</td>
 </tr>
 <tr>
 <td><a href="/manual/en/changelog/">Changelog</a></td>
-<td>Version history</td>
+<td>Releases, Nightly changes and resolved issues</td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h2 id="what-is-kst4contest%3F" tabindex="-1"><a class="header-anchor" href="#what-is-kst4contest%3F">What is KST4Contest?</a></h2>
-<p>The ON4KST Chat is the de-facto standard for skeds on the 144 MHz and higher bands. KST4Contest enhances the chat experience with contest-specific features:</p>
+<h2 id="contact-and-support" tabindex="-1"><a class="header-anchor" href="#contact-and-support">Contact and support</a></h2>
 <ul>
-<li><strong>Worked marking</strong>: Stations already worked are highlighted visually, synchronised directly from your logging software via UDP.</li>
-<li><strong>Sked direction detection</strong>: When a station calls another one from your direction, it is highlighted green and bold.</li>
-<li><strong>QRG detection</strong>: KST4Contest automatically reads frequencies from the chat traffic and shows them in the user list.</li>
-<li><strong>AirScout interface</strong>: Reflectable aircraft are shown directly in the user list.</li>
-<li><strong>Built-in DX cluster server</strong>: Spots are sent directly to your logging software.</li>
-<li><strong>Dark mode</strong> (from v1.26): Easy on the eyes during night-time operation.</li>
-<li><strong>Multi-channel login</strong> (from v1.26): Simultaneously logged into two chat categories.</li>
+<li><strong>Download:</strong> <a href="https://github.com/praktimarc/kst4contest/releases/latest">Current stable release</a></li>
+<li><strong>Source code:</strong> <a href="https://github.com/praktimarc/kst4contest">praktimarc/kst4contest</a></li>
+<li><strong>Bug reports and feature requests:</strong> <a href="https://github.com/praktimarc/kst4contest/issues">GitHub Issues</a></li>
+<li><strong>Email:</strong> <a href="mailto:praktimarc+kst4contest@gmail.com">praktimarc+kst4contest@gmail.com</a><br>
+Please use this address only for KST4Contest-related topics.</li>
 </ul>
-<hr>
-<h2 id="contact-%26-support" tabindex="-1"><a class="header-anchor" href="#contact-%26-support">Contact &amp; Support</a></h2>
-<ul>
-<li><strong>Email</strong>: <a href="mailto:praktimarc+kst4contest@gmail.com">praktimarc+kst4contest@gmail.com</a> <em>(for kst4contest topics only)</em></li>
-<li><strong>GitHub</strong>: <a href="https://github.com/praktimarc/kst4contest">https://github.com/praktimarc/kst4contest</a></li>
-<li><strong>Download</strong>: <a href="https://github.com/praktimarc/kst4contest/releases/latest">https://github.com/praktimarc/kst4contest/releases/latest</a></li>
-</ul>
-<h3 id="reporting-a-bug-(creating-an-issue)" tabindex="-1"><a class="header-anchor" href="#reporting-a-bug-(creating-an-issue)">Reporting a bug (creating an issue)</a></h3>
-<p>When reporting a bug, please <strong>always attach the log file</strong>. KST4Contest automatically writes an error log (error messages only, no personal data):</p>
+<h3 id="reporting-a-bug" tabindex="-1"><a class="header-anchor" href="#reporting-a-bug">Reporting a bug</a></h3>
+<p>A problem is considerably easier to reproduce when the report contains at least:</p>
+<ol>
+<li>the KST4Contest version,</li>
+<li>the operating system and installation method,</li>
+<li>the exact steps leading to the problem,</li>
+<li>the expected and observed behaviour,</li>
+<li>a screenshot where appropriate,</li>
+<li>the error log file.</li>
+</ol>
+<p>The error log is stored at:</p>
 <table>
 <thead>
 <tr>
 <th>Operating system</th>
-<th>Log file location</th>
+<th>Path</th>
 </tr>
 </thead>
 <tbody>
@@ -161,10 +206,12 @@
 </tr>
 </tbody>
 </table>
-<p>When opening an issue on GitHub, a template is provided that guides you through all relevant fields.</p>
+<p>Please inspect the file briefly before uploading it. An error log mainly contains technical information, but depending on the problem it may also include local file paths or other contextual data.</p>
+<p>Some file and directory names still use the technical name <code>praktiKST</code>. They refer to the same program.</p>
 <hr>
 <h2 id="acknowledgements" tabindex="-1"><a class="header-anchor" href="#acknowledgements">Acknowledgements</a></h2>
-<p>Special thanks to: Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), OM0AAO (Viliam Petrik, DX cluster idea), DC9DJ (Konrad Neitzel, project structure), DO5ALF (Andreas, webmaster <a href="http://funkerportal.de">funkerportal.de</a>), PE0WGA (Franz van Velzen, tester) and all other testers and contributors.</p>
+<p>KST4Contest has benefited considerably from feedback gathered during actual contest operation.</p>
+<p>Special thanks go to Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), Viliam Petrik (OM0AAO, DX Cluster idea), Konrad Neitzel (DC9DJ, project structure), Andreas (DO5ALF, webmaster of <a href="http://funkerportal.de">funkerportal.de</a>), Franz van Velzen (PE0WGA, testing), and all other testers and contributors.</p>
 
   </div>
 </section></main>
@@ -173,7 +220,7 @@
     <div class="footer-grid">
       <div>
         <strong>KST4Contest</strong>
-        <p>Contest-optimized ON4KST workflow for VHF/UHF/SHF operators.</p>
+        <p>ON4KST chat, candidate selection and sked planning for VHF, UHF and SHF contest operation.</p>
       </div>
       <div>
         <strong>Project</strong>
