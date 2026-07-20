@@ -8178,14 +8178,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 							> ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
 		}
 
-//		if (updateAvailable) {
+		if (updateAvailable) {
 			stage_updateStage.show();
-//		} else {
+		} else {
 
 //			stage_updateStage.show(); only for debugging check
 
 			//nothing to do
-//		}
+		}
 		} catch (Exception excOnUpdateFileProcessing) {
 			System.out.println("[KST4ContestApp, ERROR]: Problem on Updateservice! " + excOnUpdateFileProcessing.getMessage());
 			excOnUpdateFileProcessing.printStackTrace();
