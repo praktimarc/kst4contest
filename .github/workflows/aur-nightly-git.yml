@@ -6,15 +6,17 @@ on:
     types: [completed]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+permissions:
+  contents: write
 
 jobs:
   update-aur-git:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.workflow_run.conclusion == 'success'
+
     runs-on: ubuntu-latest
+
     container:
       image: archlinux:latest
 
@@ -24,76 +26,121 @@ jobs:
           pacman -Sy --noconfirm git openssh base-devel
           useradd -m builder
 
-      - name: Checkout
-        uses: actions/checkout@v4.1.7
+      - name: Checkout repository
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
+
+      - name: Mark workspace as safe Git directory
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Compute pkgver
         id: ver
         run: |
           BASE=$(grep -m1 '<version>' pom.xml \
-            | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | sed 's/[-.]nightly//')
+            | sed 's/.*<version>\(.*\)<\/version>.*/\1/' \
+            | sed 's/[-.]nightly//')
+
           GIT_PKGVER="${BASE}.r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+
+          echo "Computed pkgver: ${GIT_PKGVER}"
           echo "pkgver=${GIT_PKGVER}" >> "$GITHUB_OUTPUT"
 
       - name: Update PKGBUILD
         env:
           PKGVER: ${{ steps.ver.outputs.pkgver }}
         run: |
-          sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packaging/aur/kst4contest-git/PKGBUILD
+          sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" \
+            packaging/aur/kst4contest-git/PKGBUILD
 
       - name: Generate .SRCINFO
         run: |
           cp -r packaging/aur/kst4contest-git /tmp/kst4contest-git
           chown -R builder:builder /tmp/kst4contest-git
-          su builder -c "cd /tmp/kst4contest-git && makepkg --printsrcinfo > .SRCINFO"
-          cp /tmp/kst4contest-git/.SRCINFO packaging/aur/kst4contest-git/.SRCINFO
+
+          su builder -c \
+            "cd /tmp/kst4contest-git && makepkg --printsrcinfo > .SRCINFO"
+
+          cp /tmp/kst4contest-git/.SRCINFO \
+            packaging/aur/kst4contest-git/.SRCINFO
+
           cat packaging/aur/kst4contest-git/.SRCINFO
 
-      - name: Commit updated PKGBUILD to repo
+      - name: Commit updated PKGBUILD to repository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+
+          git remote set-url origin \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
+
           git add packaging/aur/kst4contest-git/
-          git diff --cached --quiet && echo "No changes to commit." && exit 0
-          git commit -m "chore: update kst4contest-git to ${{ steps.ver.outputs.pkgver }} [skip ci]"
-          git push
+
+          if git diff --cached --quiet; then
+            echo "No repository changes to commit."
+          else
+            git commit \
+              -m "chore: update kst4contest-git to ${{ steps.ver.outputs.pkgver }} [skip ci]"
+            git push
+          fi
 
       - name: Set up AUR SSH
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
           mkdir -p ~/.ssh
-          printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" > ~/.ssh/aur_ed25519
+
+          printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" \
+            > ~/.ssh/aur_ed25519
+
           chmod 600 ~/.ssh/aur_ed25519
-          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+
+          ssh-keyscan -t ed25519 aur.archlinux.org \
+            >> ~/.ssh/known_hosts
+
           cat >> ~/.ssh/config << 'EOF'
           Host aur.archlinux.org
             IdentityFile ~/.ssh/aur_ed25519
             User aur
           EOF
 
-      - name: Push to AUR
+      - name: Push package metadata to AUR
         run: |
           git config --global user.email "philipp@wagnersnetz.de"
           git config --global user.name "Philipp Wagner"
 
           AUR_DIR="/tmp/aur/kst4contest-git"
-          git clone "ssh://aur@aur.archlinux.org/kst4contest-git.git" "${AUR_DIR}" 2>/dev/null || {
-            mkdir -p "${AUR_DIR}"
-            git -C "${AUR_DIR}" init
-            git -C "${AUR_DIR}" remote add origin "ssh://aur@aur.archlinux.org/kst4contest-git.git"
-          }
 
-          cp packaging/aur/kst4contest-git/PKGBUILD "${AUR_DIR}/"
-          cp packaging/aur/kst4contest-git/.SRCINFO "${AUR_DIR}/"
+          mkdir -p "$(dirname "${AUR_DIR}")"
+
+          git clone \
+            "ssh://aur@aur.archlinux.org/kst4contest-git.git" \
+            "${AUR_DIR}" || {
+              mkdir -p "${AUR_DIR}"
+              git -C "${AUR_DIR}" init
+              git -C "${AUR_DIR}" remote add origin \
+                "ssh://aur@aur.archlinux.org/kst4contest-git.git"
+            }
+
+          cp packaging/aur/kst4contest-git/PKGBUILD \
+            "${AUR_DIR}/PKGBUILD"
+
+          cp packaging/aur/kst4contest-git/.SRCINFO \
+            "${AUR_DIR}/.SRCINFO"
+
           git -C "${AUR_DIR}" add PKGBUILD .SRCINFO
-          git -C "${AUR_DIR}" diff --cached --quiet \
-            && echo "kst4contest-git: no changes, skipping push" && exit 0
-          git -C "${AUR_DIR}" commit -m "Update pkgver to ${{ steps.ver.outputs.pkgver }}"
-          git -C "${AUR_DIR}" push origin HEAD:master
-          echo "kst4contest-git: pushed to AUR"
+
+          if git -C "${AUR_DIR}" diff --cached --quiet; then
+            echo "kst4contest-git: no changes, skipping AUR push."
+          else
+            git -C "${AUR_DIR}" commit \
+              -m "Update pkgver to ${{ steps.ver.outputs.pkgver }}"
+
+            git -C "${AUR_DIR}" push origin HEAD:master
+
+            echo "kst4contest-git: successfully pushed to AUR."
+          fi
