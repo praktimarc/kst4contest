@@ -18,8 +18,15 @@ public class ApplicationConstants {
     public static final String APPLICATION_NAME = "praktiKST";
 
     /**
-     * Name of file to store preferences in.
+     * Version shown to the user and used for semantic version comparison.
      */
+    public static final String APPLICATION_CURRENT_VERSION = "1.42";
+
+    /**
+     * Legacy numeric representation used only while older update feeds and
+     * application versions still exist.
+     */
+    @Deprecated
     public static final double APPLICATION_CURRENTVERSIONNUMBER = 1.42;
 
     public static final String VERSIONINFOURLFORUPDATES_KST4CONTEST = "https://kst4contest.hamradioonline.de/kst4ContestVersionInfo.xml";

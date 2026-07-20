@@ -3,7 +3,10 @@ package kst4contest.model;
 import java.util.ArrayList;
 
 public class UpdateInformation {
-    double latestVersionNumberOnServer = 1.26; //dummy value to prevent nullpointerexc
+//    double latestVersionNumberOnServer = 1.26; //dummy value to prevent nullpointerexc
+    double latestVersionNumberOnServer = 0.0;
+    String latestSemanticVersionOnServer = "";
+
     String adminMessage ="";
         String majorChanges ="";
         String latestVersionPathOnWebserver="";
@@ -36,6 +39,27 @@ public class UpdateInformation {
     public void setLatestVersionNumberOnServer(double latestVersionNumberOnServer) {
         this.latestVersionNumberOnServer = latestVersionNumberOnServer;
     }
+    public String getLatestSemanticVersionOnServer() {
+        return latestSemanticVersionOnServer;
+    }
+
+    public void setLatestSemanticVersionOnServer(String latestSemanticVersionOnServer) {
+        this.latestSemanticVersionOnServer =
+                latestSemanticVersionOnServer == null ? "" : latestSemanticVersionOnServer.trim();
+    }
+
+    public boolean hasSemanticVersion() {
+        return !latestSemanticVersionOnServer.isBlank();
+    }
+
+    public String getLatestVersionForDisplay() {
+        if (hasSemanticVersion()) {
+            return latestSemanticVersionOnServer;
+        }
+
+        return Double.toString(latestVersionNumberOnServer);
+    }
+
 
     public String getAdminMessage() {
         return adminMessage;

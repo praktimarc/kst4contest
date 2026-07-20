@@ -30,6 +30,13 @@ function toAppVersionNumber(tag) {
     return /^0*$/.test(patch) ? `${major}.${minor}` : `${major}.${minor}${patch}`;
 }
 
+function toSemanticVersion(tag) {
+    return tag
+        .replace(/^v/, "")
+        .split("-")[0]
+        .split("+")[0];
+}
+
 function escapeXml(value) {
     return String(value ?? "")
         .replace(/&/g, "&amp;")
@@ -132,6 +139,9 @@ module.exports = async function () {
         if (stable) {
             const latestIssues = await getIssuesForRelease("1970-01-01T00:00:00Z", stable.publishedAt);
             parts.push(`        <versionNumber>${escapeXml(toAppVersionNumber(latestTag))}</versionNumber>`);
+            parts.push(
+                `        <latestVersionPathOnWebserver>https://github.com/${REPO}/releases/tag/${latestTag}</latestVersionPathOnWebserver>`
+            );
             parts.push("        <adminMessage></adminMessage>");
             parts.push(`        <majorChanges>${escapeXml(latestIssues.added.slice(0, 300))}</majorChanges>`);
             parts.push(
@@ -158,7 +168,8 @@ module.exports = async function () {
             const issues = await getIssuesForRelease(since, until);
 
             parts.push("    <changeLog>");
-            parts.push(`        <changedVersionNumber>${escapeXml(toAppVersionNumber(rel.tagName))}</changedVersionNumber>`);
+
+            parts.push(`        <changedVersionNumber>${escapeXml(toSemanticVersion(rel.tagName))}</changedVersionNumber>`);
             parts.push(`        <date>${escapeXml(until.slice(0, 10))}</date>`);
             parts.push(`        <description>${escapeXml(rel.name)}</description>`);
             parts.push(`        <added>${escapeXml(issues.added)}</added>`);

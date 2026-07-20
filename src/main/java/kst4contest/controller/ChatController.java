@@ -2533,7 +2533,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 				String loginString = "";
 				loginString = "LOGINC|" + chatPreferences.getStn_loginCallSign() + "|" + chatPreferences.getStn_loginPassword()
-						+ "|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber() + "|praktiKST v" + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER
+						+ "|" + chatPreferences.getLoginChatCategoryMain().getCategoryNumber() + "|praktiKST v" + ApplicationConstants.APPLICATION_CURRENT_VERSION
 						+ "|25|0|1|" + "0" + "|0|";
 
 				// System.out.println(loginString);

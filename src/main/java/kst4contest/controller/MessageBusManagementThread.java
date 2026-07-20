@@ -829,7 +829,7 @@ public class MessageBusManagementThread extends Thread {
 
 											versionInfo.setSender(itsMe);
 											versionInfo.setReceiver(newMessageArrived.getSender());
-											versionInfo.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " " + ApplicationConstants.AUTOANSWER_PREFIX + " " + "KST4Contest " + " v" + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER + " by DO5AMF");
+											versionInfo.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " " + ApplicationConstants.AUTOANSWER_PREFIX + " " + "KST4Contest " + " v" + ApplicationConstants.APPLICATION_CURRENT_VERSION + " by DO5AMF");
 
 											this.client.getMessageTXBus().add(versionInfo);
 										}

@@ -1,4 +1,5 @@
 package kst4contest.view;
+import kst4contest.utils.VersionUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -5079,7 +5080,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				Alert a = new Alert(AlertType.INFORMATION);
 
 				a.setTitle("About kst4contest");
-				a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER + ": ON4KST Chatclient by DO5AMF");
+				a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION + ": ON4KST Chatclient by DO5AMF");
 				a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
 				a.show();
 			}
@@ -8070,12 +8071,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		stage_updateStage.setAlwaysOnTop(true);
 
-		Label lblUpdateInfo = new Label("Update aviable!");
-		Label lblUpdateInfo2 = new Label("Your Software version: ");
-		Label lblUpdateInfo3 = new Label("Newest Software version: ");
-		Label lblUpdateInfoChanges = new Label("Major Changes: ");
-		Label lblUpdateInfoAdminMessage = new Label("Admin Message: ");
-		Label lblUpdateInfoDownload = new Label("Downloadable here: " );
+		Label lblUpdateInfo = new Label("Update available!");
+		Label lblUpdateInfo2 = new Label("Installed version:");
+		Label lblUpdateInfo3 = new Label("Latest stable version:");
+		Label lblUpdateInfoChanges = new Label("Main changes:");
+		Label lblUpdateInfoAdminMessage = new Label("Additional information:");
+		Label lblUpdateInfoDownload = new Label("Download:");
 
 
 		TreeView treeView = new TreeView();
@@ -8094,16 +8095,16 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		vbxUpdateWindow.getChildren().add(upd_gridPaneUpd);
 		upd_gridPaneUpd.add(lblUpdateInfo, 0,0,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfo2, 0,1,1,1);
-		upd_gridPaneUpd.add(new Label("kst4Contest " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER+""), 1,1,1,1);
+		upd_gridPaneUpd.add(new Label("kst4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION), 1,1,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfo3, 0,2,1,1);
-		upd_gridPaneUpd.add(new Label("kst4Contest " + chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer()+""), 1,2,1,1);
+		upd_gridPaneUpd.add(new Label("KST4Contest " + chatcontroller.getUpdateInformation().getLatestVersionForDisplay()), 1,2,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfoChanges, 0,3,1,1);
 		upd_gridPaneUpd.add(new Label(chatcontroller.getUpdateInformation().getMajorChanges()), 1,3,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfoAdminMessage, 0,4,1,1);
 		upd_gridPaneUpd.add(new Label(chatcontroller.getUpdateInformation().getAdminMessage()), 1,4,1,1);
 		upd_gridPaneUpd.add(lblUpdateInfoDownload, 0,5,1,1);
 
-		Hyperlink link = new Hyperlink("Download here");
+		Hyperlink link = new Hyperlink("Open release page");
 		link.setOnAction(e -> {
 			getHostServices().showDocument(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
 //			System.out.println("The Hyperlink was clicked!");
@@ -8162,7 +8163,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		stage_updateStage.setScene(new Scene(vbxUpdateWindow, chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1]));
 
 
-		if (chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() > ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER) {
+//		if (chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() > ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER) {
+
+		boolean updateAvailable;
+
+		if (chatcontroller.getUpdateInformation().hasSemanticVersion()) {
+			updateAvailable = VersionUtils.compareStableVersions(
+					chatcontroller.getUpdateInformation().getLatestSemanticVersionOnServer(),
+					ApplicationConstants.APPLICATION_CURRENT_VERSION
+			) > 0;
+		} else {
+			updateAvailable =
+					chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer()
+							> ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
+		}
+
+		if (updateAvailable) {
 			stage_updateStage.show();
 		} else {
 

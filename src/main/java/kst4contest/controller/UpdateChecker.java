@@ -108,6 +108,16 @@ public class UpdateChecker {
 
                         Element element = (Element) node;
                         updateInfos.setLatestVersionNumberOnServer(Double.parseDouble(element.getElementsByTagName("versionNumber").item(0).getTextContent()));
+
+                        NodeList semanticVersionNodes =
+                                element.getElementsByTagName("semanticVersion");
+
+                        if (semanticVersionNodes.getLength() > 0) {
+                            updateInfos.setLatestSemanticVersionOnServer(
+                                    semanticVersionNodes.item(0).getTextContent()
+                            );
+                        }
+
                         updateInfos.setAdminMessage(element.getElementsByTagName("adminMessage").item(0).getTextContent());
                         updateInfos.setMajorChanges(element.getElementsByTagName("majorChanges").item(0)
                                 .getTextContent());

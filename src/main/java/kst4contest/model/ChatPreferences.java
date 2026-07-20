@@ -307,8 +307,8 @@ public class ChatPreferences {
 	String messageHandling_unworkedStnRequesterBeaconsText;
 	String messageHandling_beaconUnworkedstationsPrefix;
 
-	String messageHandling_autoAnswerTextMainCat = "Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
-	String messageHandling_autoAnswerTextSecondCat = "Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
+	String messageHandling_autoAnswerTextMainCat = "Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENT_VERSION;
+	String messageHandling_autoAnswerTextSecondCat = "Hi, sry I am not qrv, just testing new features of KST4Contest " +  ApplicationConstants.APPLICATION_CURRENT_VERSION;
 
 	boolean messageHandling_autoAnswerEnabled = false;
 	boolean messageHandling_autoAnswerEnabledSecondCat = false;
