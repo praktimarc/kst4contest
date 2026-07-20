@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
   <meta name="twitter:image" content="https://kst4contest.hamradioonline.de/assets/social/kst4contest-og.png">
 
-  <link rel="stylesheet" href="/assets/css/main.css?v=1784583635876">
+  <link rel="stylesheet" href="/assets/css/main.css?v=1784584189255">
   <link rel="alternate" type="application/rss+xml" title="KST4Contest News" href="/feed.xml">
 </head>
 
@@ -74,7 +74,7 @@
 </blockquote>
 <p>KST4Contest markiert gearbeitete Stationen automatisch in der Chat-Benutzerliste. Dafür gibt es zwei grundlegende Methoden:</p>
 <hr>
-<p><img src="client_settings_window_logsync.png" alt="Log-Synchronisation Einstellungsfenster"></p>
+<p><img src="/manual/assets/client_settings_window_logsync.png" alt="Log-Synchronisation Einstellungsfenster"></p>
 <h2 id="methode-1%3A-universal-file-based-callsign-interpreter-(simplelogfile)" tabindex="-1"><a class="header-anchor" href="#methode-1%3A-universal-file-based-callsign-interpreter-(simplelogfile)">Methode 1: Universal File Based Callsign Interpreter (Simplelogfile)</a></h2>
 <p>KST4Contest liest eine Log-Datei und sucht mittels regulärem Ausdruck nach Rufzeichen-Mustern. Dabei werden auch binäre Logdateien unterstützt – unlesbarer Binärinhalt wird einfach ignoriert.</p>
 <p><strong>Vorteil</strong>: Funktioniert mit nahezu jedem Logprogramm, das eine Datei schreibt.
@@ -93,7 +93,7 @@
 <hr>
 <h2 id="unterst%C3%BCtzte-logprogramme" tabindex="-1"><a class="header-anchor" href="#unterst%C3%BCtzte-logprogramme">Unterstützte Logprogramme</a></h2>
 <h3 id="ucxlog-(dl7ucx)" tabindex="-1"><a class="header-anchor" href="#ucxlog-(dl7ucx)">UCXLog (DL7UCX)</a></h3>
-<p><img src="ucxlog_logsync.png" alt="UCXLog Konfiguration"></p>
+<p><img src="/manual/assets/ucxlog_logsync.png" alt="UCXLog Konfiguration"></p>
 <p>UCXLog sendet QSO-UDP-Pakete und Transceiver-Frequenzpakete.</p>
 <p><strong>Einstellungen in UCXLog:</strong></p>
 <ul>
@@ -104,7 +104,7 @@
 <p>Grün markierte Felder in den UCXLog-Einstellungen beachten: IP und Port müssen eingetragen werden.</p>
 <p>Hinweis für Multi-Setup (2 Computer, 2 Radios, eine KST4Contest-Instanz): Beide Logprogramme müssen die QSO-Pakete an die IP des KST4Contest-Computers senden. Dann ist mindestens eine IP nicht <code>127.0.0.1</code>.</p>
 <h3 id="qartest-(ik3qar)" tabindex="-1"><a class="header-anchor" href="#qartest-(ik3qar)">QARTest (IK3QAR)</a></h3>
-<p><img src="qartest_logsync.png" alt="QARTest Konfiguration"></p>
+<p><img src="/manual/assets/qartest_logsync.png" alt="QARTest Konfiguration"></p>
 <p><strong>Besonderheit</strong>: QARTest kann das <strong>vollständige Log</strong> an KST4Contest senden (Schaltfläche „Invia log completo&quot; in den QARTest-Einstellungen). Damit werden auch QSOs erfasst, die vor dem Start von KST4Contest geloggt wurden.</p>
 <p><strong>Einstellungen in QARTest:</strong></p>
 <ul>
@@ -123,7 +123,7 @@
 </ul>
 <p>Für den integrierten DX-Cluster-Server: N1MM+ als DX-Cluster-Client konfigurieren (Server: <code>127.0.0.1</code>, Port wie in KST4Contest eingestellt).</p>
 <h3 id="dxlog.net" tabindex="-1"><a class="header-anchor" href="#dxlog.net"><a href="http://DXLog.net">DXLog.net</a></a></h3>
-<p><img src="dxlog_net_logsync.png" alt="DXLog.net Konfiguration"></p>
+<p><img src="/manual/assets/dxlog_net_logsync.png" alt="DXLog.net Konfiguration"></p>
 <p><strong>Einstellungen in <a href="http://DXLog.net">DXLog.net</a>:</strong></p>
 <ul>
 <li>UDP-Broadcast aktivieren</li>
@@ -165,7 +165,7 @@
 <hr>
 <h2 id="trx-frequenz-synchronisation" tabindex="-1"><a class="header-anchor" href="#trx-frequenz-synchronisation">TRX-Frequenz-Synchronisation</a></h2>
 <p>Neben der QSO-Synchronisation übertragen UCXLog und andere Programme auch die <strong>aktuelle Transceiverfrequenz</strong> via UDP. KST4Contest verarbeitet diese Information und stellt sie als Variable <code>MYQRG</code> bereit.</p>
-<p><img src="qrg_buttons.png" alt="FrequenzButtons"></p>
+<p><img src="/manual/assets/qrg_buttons.png" alt="FrequenzButtons"></p>
 <p><strong>Ergebnis</strong>: Die eigene QRG muss im Chat nie mehr manuell eingegeben werden – ein Klick auf den MYQRG-Button oder die Verwendung der Variable im Beacon genügt.</p>
 <p><strong>Quellen für die eigene QRG (MYQRG):</strong></p>
 <ul>

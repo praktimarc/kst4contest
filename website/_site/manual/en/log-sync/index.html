@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
   <meta name="twitter:image" content="https://kst4contest.hamradioonline.de/assets/social/kst4contest-og.png">
 
-  <link rel="stylesheet" href="/assets/css/main.css?v=1784583635876">
+  <link rel="stylesheet" href="/assets/css/main.css?v=1784584189255">
   <link rel="alternate" type="application/rss+xml" title="KST4Contest News" href="/feed.xml">
 </head>
 
@@ -74,7 +74,7 @@
 </blockquote>
 <p>KST4Contest automatically marks worked stations in the chat user list. Two basic methods are available:</p>
 <hr>
-<p><img src="client_settings_window_logsync.png" alt="Log Sync Settings Window"></p>
+<p><img src="/manual/assets/client_settings_window_logsync.png" alt="Log Sync Settings Window"></p>
 <h2 id="method-1%3A-universal-file-based-callsign-interpreter-(simplelogfile)" tabindex="-1"><a class="header-anchor" href="#method-1%3A-universal-file-based-callsign-interpreter-(simplelogfile)">Method 1: Universal File Based Callsign Interpreter (Simplelogfile)</a></h2>
 <p>KST4Contest reads a log file and searches for callsign patterns using a regular expression. Binary log files are also supported – unreadable binary content is simply ignored.</p>
 <p><strong>Advantage</strong>: Works with almost any logging program that writes a file.
@@ -93,7 +93,7 @@
 <hr>
 <h2 id="supported-logging-software" tabindex="-1"><a class="header-anchor" href="#supported-logging-software">Supported Logging Software</a></h2>
 <h3 id="ucxlog-(dl7ucx)" tabindex="-1"><a class="header-anchor" href="#ucxlog-(dl7ucx)">UCXLog (DL7UCX)</a></h3>
-<p><img src="ucxlog_logsync.png" alt="UCXLog Configuration"></p>
+<p><img src="/manual/assets/ucxlog_logsync.png" alt="UCXLog Configuration"></p>
 <p>UCXLog sends QSO UDP packets and transceiver frequency packets.</p>
 <p><strong>Settings in UCXLog:</strong></p>
 <ul>
@@ -104,7 +104,7 @@
 <p>Note the green-highlighted fields in the UCXLog settings: IP and port must be filled in.</p>
 <p>Note for multi-setup (2 computers, 2 radios, one KST4Contest instance): Both logging programs must send QSO packets to the IP of the KST4Contest computer. In this case, at least one IP is not <code>127.0.0.1</code>.</p>
 <h3 id="qartest-(ik3qar)" tabindex="-1"><a class="header-anchor" href="#qartest-(ik3qar)">QARTest (IK3QAR)</a></h3>
-<p><img src="qartest_logsync.png" alt="QARTest Configuration"></p>
+<p><img src="/manual/assets/qartest_logsync.png" alt="QARTest Configuration"></p>
 <p><strong>Special feature</strong>: QARTest can send the <strong>complete log</strong> to KST4Contest (button “Invia log completo” in the QARTest settings). This means QSOs logged before KST4Contest was started are also captured.</p>
 <p><strong>Settings in QARTest:</strong></p>
 <ul>
@@ -123,7 +123,7 @@
 </ul>
 <p>For the built-in DX cluster server: configure N1MM+ as a DX cluster client (server: <code>127.0.0.1</code>, port as set in KST4Contest).</p>
 <h3 id="dxlog.net" tabindex="-1"><a class="header-anchor" href="#dxlog.net"><a href="http://DXLog.net">DXLog.net</a></a></h3>
-<p><img src="dxlog_net_logsync.png" alt="DXLog.net Configuration"></p>
+<p><img src="/manual/assets/dxlog_net_logsync.png" alt="DXLog.net Configuration"></p>
 <p><strong>Settings in <a href="http://DXLog.net">DXLog.net</a>:</strong></p>
 <ul>
 <li>Enable UDP broadcast</li>
@@ -165,7 +165,7 @@
 <hr>
 <h2 id="trx-frequency-synchronisation" tabindex="-1"><a class="header-anchor" href="#trx-frequency-synchronisation">TRX Frequency Synchronisation</a></h2>
 <p>In addition to QSO synchronisation, UCXLog and other programs also transmit the <strong>current transceiver frequency</strong> via UDP. KST4Contest processes this information and makes it available as the <code>MYQRG</code> variable.</p>
-<p><img src="qrg_buttons.png" alt="Frequency Buttons"></p>
+<p><img src="/manual/assets/qrg_buttons.png" alt="Frequency Buttons"></p>
 <p><strong>Result</strong>: Your own QRG never needs to be typed manually in the chat – clicking the MYQRG button or using the variable in the beacon is sufficient.</p>
 <p><strong>Sources for your own QRG (MYQRG):</strong></p>
 <ul>
