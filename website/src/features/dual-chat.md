@@ -3,7 +3,6 @@ title: Dual Chat Categories
 icon: 💬
 category: ON4KST Chat
 since: "1.26"
-since: "1.26"
 summary: Log in to two ON4KST categories and handle both message streams in one station list and interface.
 description: KST4Contest combines two ON4KST chat categories while retaining the category required for messages and station context.
 tagsList:
