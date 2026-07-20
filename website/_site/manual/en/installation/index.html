@@ -23,7 +23,7 @@
   <meta name="twitter:description" content="KST4Contest manual page: {{ manual.title }}">
   <meta name="twitter:image" content="https://kst4contest.hamradioonline.de/assets/social/kst4contest-og.png">
 
-  <link rel="stylesheet" href="/assets/css/main.css?v=1784582309151">
+  <link rel="stylesheet" href="/assets/css/main.css?v=1784583635876">
   <link rel="alternate" type="application/rss+xml" title="KST4Contest News" href="/feed.xml">
 </head>
 
@@ -72,229 +72,400 @@
 <blockquote>
 <p>🇬🇧 You are reading the English version | 🇩🇪 <a href="/manual/de/installation/">Deutsche Version</a></p>
 </blockquote>
-<h2 id="prerequisites" tabindex="-1"><a class="header-anchor" href="#prerequisites">Prerequisites</a></h2>
-<p>An resolution of 1200px by 720px is recommended</p>
-<h3 id="on4kst-account" tabindex="-1"><a class="header-anchor" href="#on4kst-account">ON4KST Account</a></h3>
-<p>To use the chat, a registered account with the ON4KST chat service is required:</p>
+<p>KST4Contest is distributed as a ready-to-run application package for Windows, Linux and macOS. The official release packages do not require a separate Java installation: the required Java runtime is already included.</p>
+<p>In practical terms, you need a supported operating system, an internet connection and an ON4KST account. That sounds manageable—and usually it is.</p>
+<h2 id="requirements" tabindex="-1"><a class="header-anchor" href="#requirements">Requirements</a></h2>
+<h3 id="on4kst-account" tabindex="-1"><a class="header-anchor" href="#on4kst-account">ON4KST account</a></h3>
+<p>KST4Contest is an independent client for the ON4KST chat, but it does not replace the corresponding user account.</p>
+<p>If you do not have an account yet, you can create one on the official ON4KST website:</p>
 <ul>
-<li>Register at: <a href="http://www.on4kst.info/chat/register.php">http://www.on4kst.info/chat/register.php</a></li>
+<li><a href="https://www.on4kst.org/chat/login.php">ON4KST login and registration</a></li>
 </ul>
-<h3 id="chat-etiquette" tabindex="-1"><a class="header-anchor" href="#chat-etiquette">Chat Etiquette</a></h3>
-<p>The official language in the ON4KST Chat is <strong>English</strong>. Please use English even when communicating with stations from your own country. Common HAM abbreviations (agn, dir, pse, rrr, tnx, 73 …) are widely used and understood.</p>
-<h3 id="personal-messages" tabindex="-1"><a class="header-anchor" href="#personal-messages">Personal Messages</a></h3>
-<p>To send a private message to another station, always use the following format:</p>
-<pre><code>/CQ CALLSIGN message text
-</code></pre>
-<p>Example: <code>/CQ DL5ASG pse sked 144.205?</code></p>
-<p>During heavy chat traffic (5–6 messages per second in a contest), public messages directed at a specific callsign are easily missed. However, KST4Contest also catches such messages if they are accidentally posted publicly (see <a href="Features#catching-personal-messages">Features – PM Catching</a>).</p>
+<p>ON4KST specifies English as the common language for the chat. This also applies when both stations happen to share another language. During contests, the usual amateur radio abbreviations such as <code>pse</code>, <code>agn</code>, <code>qrg</code>, <code>dir</code>, <code>rrr</code>, <code>tnx</code> and <code>73</code> are widely used.</p>
+<p>Using the chat and sending personal messages are covered in the user interface chapter. For the installation, the only thing that matters at this point is that the account works.</p>
+<h3 id="screen-size" tabindex="-1"><a class="header-anchor" href="#screen-size">Screen size</a></h3>
+<p>A usable screen area of approximately <strong>1200 × 720 pixels</strong> or more is recommended.</p>
+<p>KST4Contest automatically adapts the main window to the available area of the primary screen. The application can therefore also be started on smaller displays. Less space is still less space, however: not all tables, filters and additional information can then be displayed at a useful size at the same time.</p>
+<h3 id="java" tabindex="-1"><a class="header-anchor" href="#java">Java</a></h3>
+<p>The ready-made packages from the <a href="https://github.com/praktimarc/kst4contest/releases/latest">GitHub Releases</a> do not require a separate Java installation. The required runtime is distributed with KST4Contest.</p>
+<p>A Java development environment is only required if you want to build KST4Contest from source. For the AUR packages <code>kst4contest</code> and <code>kst4contest-git</code>, Java 21 and Maven are handled as build dependencies by the package manager.</p>
 <hr>
-<h2 id="download" tabindex="-1"><a class="header-anchor" href="#download">Download</a></h2>
-<h3 id="windows" tabindex="-1"><a class="header-anchor" href="#windows">Windows</a></h3>
-<p>The latest version can be downloaded as a ZIP file:</p>
-<p><strong><a href="https://github.com/praktimarc/kst4contest/releases/latest">https://github.com/praktimarc/kst4contest/releases/latest</a></strong></p>
-<p>The filename has the format <code>praktiKST-v&lt;version_number&gt;-windows-x64.zip</code>.</p>
-<h3 id="linux" tabindex="-1"><a class="header-anchor" href="#linux">Linux</a></h3>
-<p>Multiple package formats are available from the releases page:</p>
-<p><strong><a href="https://github.com/praktimarc/kst4contest/releases/latest">https://github.com/praktimarc/kst4contest/releases/latest</a></strong></p>
-<table>
-<thead>
-<tr>
-<th>Format</th>
-<th>Filename</th>
-<th>Suitable for</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>AppImage</td>
-<td><code>KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage</code></td>
-<td>All distributions</td>
-</tr>
-<tr>
-<td>Debian package</td>
-<td><code>KST4Contest-v&lt;version&gt;-debian-amd64.deb</code></td>
-<td>Debian, Ubuntu, Linux Mint, …</td>
-</tr>
-<tr>
-<td>RPM package</td>
-<td><code>KST4Contest-v&lt;version&gt;-fedora-x86_64.rpm</code></td>
-<td>Fedora, RHEL, openSUSE, …</td>
-</tr>
-<tr>
-<td>Arch package</td>
-<td><code>KST4Contest-v&lt;version&gt;-archlinux-x86_64.pkg.tar.zst</code></td>
-<td>Arch Linux, Manjaro, …</td>
-</tr>
-<tr>
-<td>AUR</td>
-<td><code>kst4contest-bin</code> / <code>kst4contest</code> / <code>kst4contest-git</code></td>
-<td>Arch Linux, Manjaro, EndeavourOS, …</td>
-</tr>
-<tr>
-<td>Flatpak</td>
-<td><code>de.x08.KST4Contest.flatpakref</code></td>
-<td>All distributions with Flatpak</td>
-</tr>
-</tbody>
-</table>
-<blockquote>
-<p><strong>Recommended for Linux:</strong> The Flatpak installation is the easiest way to stay up to date — <code>flatpak update</code> handles all future updates automatically. The repository is GPG-signed for security.</p>
-</blockquote>
-<h3 id="macos" tabindex="-1"><a class="header-anchor" href="#macos">macOS</a></h3>
-<blockquote>
-<p>⚠️ <strong>Best-Effort Support:</strong> macOS builds are provided as a convenience but are <strong>not fully tested</strong>. We build and release macOS binaries with every release, but we cannot test every scenario on macOS. If you encounter issues, please report them – we will do our best to address them, but cannot guarantee the same level of support as for Windows and Linux.</p>
-</blockquote>
-<p>The latest version can be downloaded as a DMG disk image (available for both Apple Silicon and Intel Macs):</p>
-<p><strong><a href="https://github.com/praktimarc/kst4contest/releases/latest">https://github.com/praktimarc/kst4contest/releases/latest</a></strong></p>
-<p>The filename has the format <code>KST4Contest-v&lt;version_number&gt;-macos-&lt;arch&gt;.dmg</code>, where <code>&lt;arch&gt;</code> is <code>arm64</code> (Apple Silicon) or <code>x86_64</code> (Intel).</p>
-<hr>
-<h2 id="installation-1" tabindex="-1"><a class="header-anchor" href="#installation-1">Installation</a></h2>
-<h3 id="windows-1" tabindex="-1"><a class="header-anchor" href="#windows-1">Windows</a></h3>
-<ol>
-<li>Download the ZIP file.</li>
-<li>Unzip the ZIP file into a folder of your choice.</li>
-<li>Run <code>praktiKST.exe</code>.</li>
-</ol>
-<p>Settings are stored at <code>%USERPROFILE%\.praktikst\preferences.xml</code>.</p>
-<h3 id="linux-1" tabindex="-1"><a class="header-anchor" href="#linux-1">Linux</a></h3>
-<p>Settings are always stored at <code>~/.praktikst/preferences.xml</code>.</p>
-<h4 id="appimage" tabindex="-1"><a class="header-anchor" href="#appimage">AppImage</a></h4>
-<ol>
-<li>Download the AppImage.</li>
-<li>Make it executable: <code>chmod +x KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage</code></li>
-<li>Run it.</li>
-</ol>
-<h4 id="debian-%2F-ubuntu" tabindex="-1"><a class="header-anchor" href="#debian-%2F-ubuntu">Debian / Ubuntu</a></h4>
-<pre><code class="language-bash">sudo apt install ./KST4Contest-v&lt;version&gt;-debian-amd64.deb
-</code></pre>
-<p>Or double-click the <code>.deb</code> file in your file manager.</p>
-<h4 id="fedora-%2F-rhel" tabindex="-1"><a class="header-anchor" href="#fedora-%2F-rhel">Fedora / RHEL</a></h4>
-<pre><code class="language-bash">sudo dnf install ./KST4Contest-v&lt;version&gt;-fedora-x86_64.rpm
-</code></pre>
-<h4 id="arch-linux" tabindex="-1"><a class="header-anchor" href="#arch-linux">Arch Linux</a></h4>
-<p><strong>Via AUR (recommended)</strong> — updates automatically with your system:</p>
-<pre><code class="language-bash">yay -S kst4contest-bin    # pre-built binary, fastest install
-# or
-yay -S kst4contest        # build from source
-# or
-yay -S kst4contest-git    # always latest git HEAD (1.42+)
-</code></pre>
-<p>Any AUR helper works (<code>paru</code>, <code>trizen</code>, etc.). <code>kst4contest-bin</code> is the easiest option since it installs the same pre-built binary as the release download.</p>
-<p>Or install the release package manually:</p>
-<pre><code class="language-bash">sudo pacman -U KST4Contest-v&lt;version&gt;-archlinux-x86_64.pkg.tar.zst
-</code></pre>
-<h4 id="flatpak" tabindex="-1"><a class="header-anchor" href="#flatpak">Flatpak</a></h4>
-<p>Download <code>de.x08.KST4Contest.flatpakref</code> from the <a href="https://github.com/praktimarc/kst4contest/releases/latest">latest release</a> and open it, or run:</p>
-<pre><code class="language-bash">flatpak install de.x08.KST4Contest.flatpakref
-</code></pre>
-<p>Or add the remote manually (recommended for nightly/beta access):</p>
-<pre><code class="language-bash">flatpak remote-add --if-not-exists kst4contest https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
-flatpak install kst4contest de.x08.KST4Contest
-</code></pre>
-<h4 id="flatpak-channels-(nightly-%2F-beta-%2F-stable)" tabindex="-1"><a class="header-anchor" href="#flatpak-channels-(nightly-%2F-beta-%2F-stable)">Flatpak Channels (nightly / beta / stable)</a></h4>
-<p>The Flatpak repository provides three channels, all served from the same remote:</p>
+<h2 id="stable%2C-beta-or-nightly%3F" tabindex="-1"><a class="header-anchor" href="#stable%2C-beta-or-nightly%3F">Stable, Beta or Nightly?</a></h2>
+<p>KST4Contest is distributed through three development channels:</p>
 <table>
 <thead>
 <tr>
 <th>Channel</th>
-<th>Content</th>
-<th>Built on</th>
+<th>Intended use</th>
+<th>Classification</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>stable</code></td>
-<td>Current stable version</td>
-<td>Every normal release tag</td>
+<td><strong>Stable</strong></td>
+<td>Normal contest operation</td>
+<td>Published version intended for regular use</td>
 </tr>
 <tr>
-<td><code>beta</code></td>
-<td>Pre-release version</td>
-<td>Tags prefixed with <code>beta-</code></td>
+<td><strong>Beta</strong></td>
+<td>Focused testing before a Stable release</td>
+<td>Pre-release version with a largely defined feature set</td>
 </tr>
 <tr>
-<td><code>nightly</code></td>
-<td>Development build (main branch)</td>
-<td>Every push to main / daily</td>
+<td><strong>Nightly</strong></td>
+<td>Early testing of new features</td>
+<td>Current development state from the <code>main</code> branch</td>
 </tr>
 </tbody>
 </table>
-<p>Add the remote once, then install the channel you want:</p>
-<pre><code class="language-bash">flatpak remote-add --if-not-exists kst4contest https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
-
-# Stable (default)
-flatpak install kst4contest de.x08.KST4Contest
-
-# Beta
-flatpak install kst4contest de.x08.KST4Contest//beta
-
-# Nightly
+<p>The <strong>Stable version</strong> is recommended for normal operation.</p>
+<p>Beta and Nightly builds may contain features that are not yet available in the Stable release. They may also contain unfinished workflows, changed settings or new defects. That is not an unusual failure of the release process; it is the purpose of a development channel.</p>
+<p>If a function in this manual is explicitly marked as <strong>Nightly</strong>, it is not necessarily part of the current Stable release yet.</p>
+<hr>
+<h2 id="download" tabindex="-1"><a class="header-anchor" href="#download">Download</a></h2>
+<p>The current Stable version is available here:</p>
+<ul>
+<li><a href="https://github.com/praktimarc/kst4contest/releases/latest">Latest KST4Contest release</a></li>
+<li><a href="https://github.com/praktimarc/kst4contest/releases">All published releases</a></li>
+</ul>
+<p>The release page contains the application packages as well as the English and German PDF manuals.</p>
+<h3 id="which-package-do-i-need%3F" tabindex="-1"><a class="header-anchor" href="#which-package-do-i-need%3F">Which package do I need?</a></h3>
+<table>
+<thead>
+<tr>
+<th>Operating system</th>
+<th>Package</th>
+<th>Typical filename</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows x64</td>
+<td>ZIP package</td>
+<td><code>praktiKST-v&lt;version&gt;-windows-x64.zip</code></td>
+</tr>
+<tr>
+<td>Linux x86_64</td>
+<td>AppImage</td>
+<td><code>KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage</code></td>
+</tr>
+<tr>
+<td>Debian/Ubuntu amd64</td>
+<td>DEB package</td>
+<td><code>KST4Contest-v&lt;version&gt;-debian-amd64.deb</code></td>
+</tr>
+<tr>
+<td>Fedora/RPM x86_64</td>
+<td>RPM package</td>
+<td><code>KST4Contest-v&lt;version&gt;-fedora-x86_64.rpm</code></td>
+</tr>
+<tr>
+<td>Arch Linux x86_64</td>
+<td>Arch package</td>
+<td><code>KST4Contest-v&lt;version&gt;-archlinux-x86_64.pkg.tar.zst</code></td>
+</tr>
+<tr>
+<td>Linux with Flatpak</td>
+<td>Flatpak reference</td>
+<td><code>de.x08.KST4Contest.flatpakref</code></td>
+</tr>
+<tr>
+<td>macOS Apple Silicon</td>
+<td>DMG for ARM64</td>
+<td><code>KST4Contest-v&lt;version&gt;-macos-arm64.dmg</code></td>
+</tr>
+<tr>
+<td>macOS Intel</td>
+<td>DMG for x86_64</td>
+<td><code>KST4Contest-v&lt;version&gt;-macos-x86_64.dmg</code></td>
+</tr>
+</tbody>
+</table>
+<p>Only download application packages from the official GitHub Releases, the KST4Contest Flatpak repository or the linked AUR packages. Files from other sources may have been built differently, may be outdated or may have been modified.</p>
+<hr>
+<h2 id="installing-on-windows" tabindex="-1"><a class="header-anchor" href="#installing-on-windows">Installing on Windows</a></h2>
+<p>KST4Contest is distributed as a ZIP package for Windows. A conventional installer is not required.</p>
+<ol>
+<li>Download <code>praktiKST-v&lt;version&gt;-windows-x64.zip</code> from the latest release.</li>
+<li>Extract the ZIP file completely into a dedicated folder.</li>
+<li>Open the extracted folder.</li>
+<li>Start <code>praktiKST.exe</code>.</li>
+</ol>
+<p>Do not start the application directly from the compressed ZIP file. KST4Contest consists of several files and a bundled runtime. Windows can only use this structure reliably after the archive has been extracted completely.</p>
+<p>The application settings are not stored in the extracted program directory. They are stored in your user profile:</p>
+<pre><code class="language-text">%USERPROFILE%\.praktiKST\preferences.xml
+</code></pre>
+<p>This allows a new application version to be extracted into a different directory without losing the existing settings.</p>
+<hr>
+<h2 id="installing-on-linux" tabindex="-1"><a class="header-anchor" href="#installing-on-linux">Installing on Linux</a></h2>
+<p>Several Linux package formats are available. The appropriate choice depends less on KST4Contest itself than on your distribution and the way you prefer to manage updates.</p>
+<table>
+<thead>
+<tr>
+<th>Installation method</th>
+<th>Useful when …</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Flatpak</strong></td>
+<td>updates should be managed centrally and Flatpak is already in use</td>
+</tr>
+<tr>
+<td><strong>AppImage</strong></td>
+<td>KST4Contest should run as a portable file without package installation</td>
+</tr>
+<tr>
+<td><strong>DEB/RPM</strong></td>
+<td>the distribution’s native package manager should be used</td>
+</tr>
+<tr>
+<td><strong>Arch package/AUR</strong></td>
+<td>Arch Linux, Manjaro or EndeavourOS is being used</td>
+</tr>
+</tbody>
+</table>
+<h3 id="flatpak" tabindex="-1"><a class="header-anchor" href="#flatpak">Flatpak</a></h3>
+<p>For most Linux users, Flatpak is the simplest way to keep KST4Contest installed and manageable through the system’s update tools. The KST4Contest repository is GPG-signed and contains the Stable, Beta and Nightly channels.</p>
+<h4 id="installing-stable-from-the-release-file" tabindex="-1"><a class="header-anchor" href="#installing-stable-from-the-release-file">Installing Stable from the release file</a></h4>
+<p>Download <code>de.x08.KST4Contest.flatpakref</code> from the latest release and open it with the software manager provided by your desktop environment.</p>
+<p>Alternatively, install it from a terminal:</p>
+<pre><code class="language-bash">flatpak install ./de.x08.KST4Contest.flatpakref
+</code></pre>
+<h4 id="adding-the-kst4contest-repository" tabindex="-1"><a class="header-anchor" href="#adding-the-kst4contest-repository">Adding the KST4Contest repository</a></h4>
+<p>The repository only needs to be added once:</p>
+<pre><code class="language-bash">flatpak remote-add --if-not-exists kst4contest \
+https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
+</code></pre>
+<p>You can then install the Stable version:</p>
+<pre><code class="language-bash">flatpak install kst4contest de.x08.KST4Contest//stable
+</code></pre>
+<h4 id="installing-beta" tabindex="-1"><a class="header-anchor" href="#installing-beta">Installing Beta</a></h4>
+<pre><code class="language-bash">flatpak install kst4contest de.x08.KST4Contest//beta
+</code></pre>
+<h4 id="installing-nightly" tabindex="-1"><a class="header-anchor" href="#installing-nightly">Installing Nightly</a></h4>
+<pre><code class="language-bash">flatpak install kst4contest de.x08.KST4Contest//nightly
+</code></pre>
+<p>All three KST4Contest channels use the same application ID. Installing multiple KST4Contest channels in parallel is therefore not supported.</p>
+<p>For example, to switch from Stable to Nightly:</p>
+<pre><code class="language-bash">flatpak uninstall de.x08.KST4Contest//stable
 flatpak install kst4contest de.x08.KST4Contest//nightly
 </code></pre>
+<p>This does not automatically remove the personal settings stored in <code>~/.praktiKST</code>.</p>
+<p>Installed Flatpak applications can be updated with:</p>
+<pre><code class="language-bash">flatpak update de.x08.KST4Contest
+</code></pre>
+<p>Depending on the desktop environment, the graphical software manager may also display or automatically install available Flatpak updates. The <code>flatpak update</code> command itself performs an update; it does not promise to turn up and run by itself one day.</p>
+<h3 id="appimage" tabindex="-1"><a class="header-anchor" href="#appimage">AppImage</a></h3>
+<p>The AppImage does not require a conventional installation.</p>
+<ol>
+<li>Download <code>KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage</code>.</li>
+<li>Open a terminal in the download directory.</li>
+<li>Make the file executable:</li>
+</ol>
+<pre><code class="language-bash">chmod +x KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage
+</code></pre>
+<ol start="4">
+<li>Start KST4Contest:</li>
+</ol>
+<pre><code class="language-bash">./KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage
+</code></pre>
+<p>The AppImage can then be moved to another location, such as <code>~/Applications</code>.</p>
+<h3 id="debian-and-ubuntu" tabindex="-1"><a class="header-anchor" href="#debian-and-ubuntu">Debian and Ubuntu</a></h3>
+<p>Install the DEB package with:</p>
+<pre><code class="language-bash">sudo apt install ./KST4Contest-v&lt;version&gt;-debian-amd64.deb
+</code></pre>
+<p>Alternatively, open the file with a graphical package manager.</p>
+<h3 id="fedora-and-compatible-rpm-systems" tabindex="-1"><a class="header-anchor" href="#fedora-and-compatible-rpm-systems">Fedora and compatible RPM systems</a></h3>
+<p>Install the RPM package with:</p>
+<pre><code class="language-bash">sudo dnf install ./KST4Contest-v&lt;version&gt;-fedora-x86_64.rpm
+</code></pre>
+<h3 id="arch-linux%3A-installing-the-release-package" tabindex="-1"><a class="header-anchor" href="#arch-linux%3A-installing-the-release-package">Arch Linux: installing the release package</a></h3>
+<p>The Arch package downloaded from the GitHub Release can be installed directly:</p>
+<pre><code class="language-bash">sudo pacman -U KST4Contest-v&lt;version&gt;-archlinux-x86_64.pkg.tar.zst
+</code></pre>
+<h3 id="arch-linux%3A-installing-from-the-aur" tabindex="-1"><a class="header-anchor" href="#arch-linux%3A-installing-from-the-aur">Arch Linux: installing from the AUR</a></h3>
+<p>Three variants are available in the AUR:</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://aur.archlinux.org/packages/kst4contest-bin"><code>kst4contest-bin</code></a></td>
+<td>Pre-built package from the current Stable release</td>
+</tr>
+<tr>
+<td><a href="https://aur.archlinux.org/packages/kst4contest"><code>kst4contest</code></a></td>
+<td>Stable release built locally from source</td>
+</tr>
+<tr>
+<td><a href="https://aur.archlinux.org/packages/kst4contest-git"><code>kst4contest-git</code></a></td>
+<td>Current development state from the <code>main</code> branch</td>
+</tr>
+</tbody>
+</table>
+<p>For most users, <code>kst4contest-bin</code> is the straightforward option:</p>
+<pre><code class="language-bash">yay -S kst4contest-bin
+</code></pre>
+<p>To build the Stable release from source:</p>
+<pre><code class="language-bash">yay -S kst4contest
+</code></pre>
+<p>To build the current development state:</p>
+<pre><code class="language-bash">yay -S kst4contest-git
+</code></pre>
+<p>All three packages provide the same application and are therefore defined as conflicting with one another. Install only one variant at a time.</p>
+<p>AUR updates are included when the selected AUR helper checks for package updates, for example:</p>
+<pre><code class="language-bash">yay -Syu
+</code></pre>
+<p>They do not happen automatically merely because the package came from the AUR.</p>
+<hr>
+<h2 id="installing-on-macos" tabindex="-1"><a class="header-anchor" href="#installing-on-macos">Installing on macOS</a></h2>
 <blockquote>
-<p><strong>Note:</strong> Flatpak only allows one installed version per App-ID at a time. To switch channels, uninstall the current version first:</p>
-<pre><code class="language-bash">flatpak uninstall de.x08.KST4Contest
-flatpak install kst4contest de.x08.KST4Contest//nightly
-</code></pre>
+<p><strong>Best-effort support:</strong> The macOS packages are built together with the other releases, but they are not tested to the same extent as the Windows and Linux versions. Feedback is welcome; fully tested support for every macOS version and hardware variant cannot currently be guaranteed.</p>
 </blockquote>
-<p>Updates work as usual with <code>flatpak update</code>.</p>
-<p>The <code>flatpakref</code> files for beta and stable are attached to their respective <a href="https://github.com/praktimarc/kst4contest/releases">GitHub Releases</a>. The nightly <code>flatpakref</code> (<code>de.x08.KST4Contest.nightly.flatpakref</code>) is available as an artifact on the <a href="https://github.com/praktimarc/kst4contest/actions">GitHub Actions</a> tab (kept for 14 days) — for nightly builds, the manual remote approach above is usually more convenient.</p>
-<h3 id="macos-1" tabindex="-1"><a class="header-anchor" href="#macos-1">macOS</a></h3>
+<p>Apple Silicon Macs require the package marked <code>arm64</code>. Intel Macs require the package marked <code>x86_64</code>.</p>
 <ol>
-<li>Download the DMG file for your architecture (Apple Silicon or Intel).</li>
+<li>Download the appropriate DMG file.</li>
 <li>Open the DMG file.</li>
-<li>Drag <code>KST4Contest.app</code> into your <strong>Applications</strong> folder.</li>
-<li>On first launch, macOS may show a warning because the app is not notarised. To open it:
-<ul>
-<li>Right-click (or Control-click) on <code>KST4Contest.app</code> in Finder and choose <strong>Open</strong>.</li>
-<li>Alternatively, go to <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>.</li>
-</ul>
-</li>
-<li>Run KST4Contest from your Applications folder or Launchpad.</li>
+<li>Drag <code>KST4Contest.app</code> into the <strong>Applications</strong> folder.</li>
+<li>Start KST4Contest from the Applications folder or Launchpad.</li>
 </ol>
-<p>Settings are stored at <code>~/.praktikst/preferences.xml</code>.</p>
+<p>The application is not currently notarized by Apple. macOS may therefore block the first launch.</p>
+<p>If the application came from the official GitHub Release:</p>
+<ol>
+<li>Open the Applications folder in Finder.</li>
+<li>Right-click or Control-click <code>KST4Contest.app</code>.</li>
+<li>Select <strong>Open</strong>.</li>
+<li>Confirm the launch in the dialog that appears.</li>
+</ol>
+<p>Alternatively, macOS may provide an <strong>Open Anyway</strong> button under <strong>System Settings → Privacy &amp; Security</strong>.</p>
 <hr>
-<h2 id="updating" tabindex="-1"><a class="header-anchor" href="#updating">Updating</a></h2>
-<p>KST4Contest includes an <strong>automatic update notification service</strong>: as soon as a new version is available, a window will appear at startup with:</p>
-<ul>
-<li>information that a new version is available,</li>
-<li>a changelog,</li>
-<li>the download link for the new version.</li>
-</ul>
-<p><img src="update_window.png" alt="Example Update Window"></p>
-<h3 id="update-process" tabindex="-1"><a class="header-anchor" href="#update-process">Update Process</a></h3>
-<h4 id="windows-2" tabindex="-1"><a class="header-anchor" href="#windows-2">Windows</a></h4>
-<p>Currently, there is only one way to update:</p>
-<ol>
-<li>Delete the old folder.</li>
-<li>Unzip the new ZIP file.</li>
-</ol>
-<p>The settings file (<code>preferences.xml</code>) is preserved because it is stored in the user folder, not the program folder.</p>
-<h4 id="linux-2" tabindex="-1"><a class="header-anchor" href="#linux-2">Linux</a></h4>
-<ul>
-<li><strong>AppImage</strong>: Download the new AppImage, make it executable (<code>chmod +x</code>), optionally delete the old one.</li>
-<li><strong>Debian/Ubuntu</strong>: <code>sudo apt install ./KST4Contest-v&lt;version&gt;-debian-amd64.deb</code></li>
-<li><strong>Fedora/RHEL</strong>: <code>sudo dnf upgrade ./KST4Contest-v&lt;version&gt;-fedora-x86_64.rpm</code></li>
-<li><strong>Arch Linux (AUR)</strong>: <code>yay -S kst4contest-bin</code></li>
-<li><strong>Arch Linux (manual)</strong>: <code>sudo pacman -U KST4Contest-v&lt;version&gt;-archlinux-x86_64.pkg.tar.zst</code></li>
-<li><strong>Flatpak (repository)</strong>: <code>flatpak update</code> – updates all Flatpak apps including KST4Contest.</li>
-</ul>
-<h4 id="macos-2" tabindex="-1"><a class="header-anchor" href="#macos-2">macOS</a></h4>
-<ol>
-<li>Download the new DMG file.</li>
-<li>Open the DMG.</li>
-<li>Drag the new <code>KST4Contest.app</code> into your <strong>Applications</strong> folder, replacing the old version.</li>
-</ol>
+<h2 id="where-are-the-settings-stored%3F" tabindex="-1"><a class="header-anchor" href="#where-are-the-settings-stored%3F">Where are the settings stored?</a></h2>
+<p>KST4Contest stores its settings and other local working files in the user’s home directory. The application directory and the data directory are separate.</p>
+<table>
+<thead>
+<tr>
+<th>Operating system</th>
+<th>Data directory</th>
+<th>Settings file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Windows</td>
+<td><code>%USERPROFILE%\.praktiKST\</code></td>
+<td><code>%USERPROFILE%\.praktiKST\preferences.xml</code></td>
+</tr>
+<tr>
+<td>Linux</td>
+<td><code>~/.praktiKST/</code></td>
+<td><code>~/.praktiKST/preferences.xml</code></td>
+</tr>
+<tr>
+<td>macOS</td>
+<td><code>~/.praktiKST/</code></td>
+<td><code>~/.praktiKST/preferences.xml</code></td>
+</tr>
+</tbody>
+</table>
+<p>Note the spelling <code>.praktiKST</code> with an uppercase <code>KST</code>. Linux and macOS distinguish between uppercase and lowercase letters. <code>.praktikst</code> would simply be a different directory.</p>
+<p>An application update does not remove this directory. Even so, creating a backup before a major version change or extensive configuration work is sensible.</p>
 <hr>
-<h2 id="known-issues-at-startup" tabindex="-1"><a class="header-anchor" href="#known-issues-at-startup">Known Issues at Startup</a></h2>
-<h3 id="norton-360" tabindex="-1"><a class="header-anchor" href="#norton-360">Norton 360</a></h3>
-<p>Norton 360 classifies <code>praktiKST.exe</code> as dangerous (false positive). An exception must be created for the file:</p>
+<h2 id="updates" tabindex="-1"><a class="header-anchor" href="#updates">Updates</a></h2>
+<p>When KST4Contest starts, it checks whether a newer Stable release is available. If it finds one, it displays an information window containing:</p>
+<ul>
+<li>the installed version,</li>
+<li>the latest Stable version,</li>
+<li>a short overview of the main changes,</li>
+<li>the changelog,</li>
+<li>known issues,</li>
+<li>a link to the corresponding GitHub Release page.</li>
+</ul>
+<p><img src="update_window.png" alt="KST4Contest update notification"></p>
+<p>The update checker does not install anything. It reports the new version and opens the platform-neutral release page. From there, you must select the appropriate package for Windows, Linux or macOS.</p>
+<h3 id="updating-windows" tabindex="-1"><a class="header-anchor" href="#updating-windows">Updating Windows</a></h3>
 <ol>
-<li>Open Norton 360.</li>
-<li>Security → History → Find the corresponding event.</li>
-<li>Select “Restore &amp; Add Exception”.</li>
+<li>Close KST4Contest.</li>
+<li>Download the new Windows ZIP package.</li>
+<li>Extract it into a new or empty directory.</li>
+<li>Start the new version.</li>
+<li>Check that the existing settings have been loaded.</li>
+<li>Remove the old application directory only after that.</li>
 </ol>
-<p><em>(Reported by PE0WGA, Franz van Velzen – thank you!)</em></p>
+<p>The settings are preserved because they are stored under <code>%USERPROFILE%\.praktiKST</code>, not in the application directory.</p>
+<h3 id="updating-an-appimage" tabindex="-1"><a class="header-anchor" href="#updating-an-appimage">Updating an AppImage</a></h3>
+<ol>
+<li>Download the new AppImage.</li>
+<li>Make it executable.</li>
+<li>Start the new file.</li>
+<li>Remove the previous AppImage only after the new version works.</li>
+</ol>
+<h3 id="updating-debian-and-ubuntu" tabindex="-1"><a class="header-anchor" href="#updating-debian-and-ubuntu">Updating Debian and Ubuntu</a></h3>
+<pre><code class="language-bash">sudo apt install ./KST4Contest-v&lt;version&gt;-debian-amd64.deb
+</code></pre>
+<h3 id="updating-fedora" tabindex="-1"><a class="header-anchor" href="#updating-fedora">Updating Fedora</a></h3>
+<pre><code class="language-bash">sudo dnf upgrade ./KST4Contest-v&lt;version&gt;-fedora-x86_64.rpm
+</code></pre>
+<h3 id="updating-the-arch-package" tabindex="-1"><a class="header-anchor" href="#updating-the-arch-package">Updating the Arch package</a></h3>
+<pre><code class="language-bash">sudo pacman -U KST4Contest-v&lt;version&gt;-archlinux-x86_64.pkg.tar.zst
+</code></pre>
+<h3 id="updating-an-aur-package" tabindex="-1"><a class="header-anchor" href="#updating-an-aur-package">Updating an AUR package</a></h3>
+<p>Update the installed package through the selected AUR helper, for example:</p>
+<pre><code class="language-bash">yay -Syu
+</code></pre>
+<h3 id="updating-flatpak" tabindex="-1"><a class="header-anchor" href="#updating-flatpak">Updating Flatpak</a></h3>
+<pre><code class="language-bash">flatpak update de.x08.KST4Contest
+</code></pre>
+<h3 id="updating-macos" tabindex="-1"><a class="header-anchor" href="#updating-macos">Updating macOS</a></h3>
+<ol>
+<li>Download the new DMG file for the appropriate architecture.</li>
+<li>Close KST4Contest.</li>
+<li>Open the DMG file.</li>
+<li>Replace <code>KST4Contest.app</code> in the Applications folder.</li>
+<li>Start the new version and check the existing settings.</li>
+</ol>
+<p>The configuration under <code>~/.praktiKST</code> is not affected.</p>
+<hr>
+<h2 id="problems-during-the-first-launch" tabindex="-1"><a class="header-anchor" href="#problems-during-the-first-launch">Problems during the first launch</a></h2>
+<h3 id="windows-reports-an-unknown-application" tabindex="-1"><a class="header-anchor" href="#windows-reports-an-unknown-application">Windows reports an unknown application</a></h3>
+<p>KST4Contest is not currently signed with a commercial Windows code-signing certificate. Windows or an additional security product may therefore warn about an unknown or rarely downloaded application.</p>
+<p>Check the following first:</p>
+<ul>
+<li>Did the file come from the <a href="https://github.com/praktimarc/kst4contest/releases/latest">official KST4Contest release</a>?</li>
+<li>Does the filename match the published release?</li>
+<li>Was the file downloaded completely?</li>
+<li>Does the security product report a specific detection name or only a general reputation warning?</li>
+</ul>
+<p>A warning alone is neither reliable proof of malware nor automatically a false positive. If the origin of the file is unclear, do not run it or restore it from quarantine.</p>
+<p>Some users have reported quarantine messages from Norton 360 in particular. If the warning can be reproduced, please create a <a href="https://github.com/praktimarc/kst4contest/issues">GitHub issue</a> and include:</p>
+<ul>
+<li>the KST4Contest version,</li>
+<li>the complete filename,</li>
+<li>the security product and its version,</li>
+<li>the reported detection name,</li>
+<li>a screenshot of the warning, if possible.</li>
+</ul>
+<h3 id="the-appimage-does-not-start" tabindex="-1"><a class="header-anchor" href="#the-appimage-does-not-start">The AppImage does not start</a></h3>
+<p>Check the executable permission first:</p>
+<pre><code class="language-bash">chmod +x KST4Contest-v&lt;version&gt;-linux-x86_64.AppImage
+</code></pre>
+<p>Then start the file from a terminal. Error messages shown there are usually more useful than a double-click that simply produces no visible result.</p>
+<h3 id="macos-blocks-the-application" tabindex="-1"><a class="header-anchor" href="#macos-blocks-the-application">macOS blocks the application</a></h3>
+<p>Use the <strong>Open</strong> function described under <a href="#installing-on-macos">Installing on macOS</a>. Before doing so, verify that the DMG file came from the official GitHub Release.</p>
+<h3 id="the-problem-remains" tabindex="-1"><a class="header-anchor" href="#the-problem-remains">The problem remains</a></h3>
+<p>First check whether the problem has already been reported under <a href="https://github.com/praktimarc/kst4contest/issues">GitHub Issues</a>. If it has not, create a new issue containing:</p>
+<ul>
+<li>the operating system and version,</li>
+<li>the KST4Contest version,</li>
+<li>the installation method,</li>
+<li>the exact error message,</li>
+<li>the steps required to reproduce the problem.</li>
+</ul>
+<p>“It does not work” usually describes the situation accurately, but it is of limited value during diagnosis.</p>
 
   </div>
 </section></main>
