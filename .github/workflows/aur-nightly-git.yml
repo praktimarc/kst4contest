@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  AUR_SSH_DIR: /tmp/aur-ssh
+
 jobs:
   update-aur-git:
     if: >-
@@ -68,30 +71,58 @@ jobs:
           echo "Generated .SRCINFO:"
           cat packaging/aur/kst4contest-git/.SRCINFO
 
-      - name: Set up AUR SSH
+      - name: Set up and verify AUR SSH
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/.ssh
+          mkdir -p "${AUR_SSH_DIR}"
 
           printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" \
-            > ~/.ssh/aur_ed25519
+            > "${AUR_SSH_DIR}/aur_ed25519"
 
-          chmod 600 ~/.ssh/aur_ed25519
+          sed -i 's/\r$//' "${AUR_SSH_DIR}/aur_ed25519"
+          chmod 600 "${AUR_SSH_DIR}/aur_ed25519"
 
-          ssh-keyscan -t ed25519 aur.archlinux.org \
-            >> ~/.ssh/known_hosts
+          ssh-keygen -y \
+            -f "${AUR_SSH_DIR}/aur_ed25519" \
+            > /dev/null
 
-          cat >> ~/.ssh/config << 'EOF'
-          Host aur.archlinux.org
-            IdentityFile ~/.ssh/aur_ed25519
-            User aur
-          EOF
+          ssh-keyscan \
+            -T 10 \
+            -t ed25519 \
+            aur.archlinux.org \
+            > "${AUR_SSH_DIR}/known_hosts"
 
-          chmod 600 ~/.ssh/config
-          chmod 600 ~/.ssh/known_hosts
+          if [ ! -s "${AUR_SSH_DIR}/known_hosts" ]; then
+            echo "::error::No SSH host key was received from aur.archlinux.org."
+            exit 1
+          fi
+
+          echo "Received AUR host-key fingerprint:"
+          ssh-keygen -lf "${AUR_SSH_DIR}/known_hosts"
+
+          if ! ssh-keygen -lf "${AUR_SSH_DIR}/known_hosts" \
+            | grep -Fq "SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4"; then
+            echo "::error::The AUR SSH host-key fingerprint does not match the official fingerprint."
+            exit 1
+          fi
+
+          printf '%s\n' \
+            "Host aur.archlinux.org" \
+            "  HostName aur.archlinux.org" \
+            "  User aur" \
+            "  IdentityFile ${AUR_SSH_DIR}/aur_ed25519" \
+            "  IdentitiesOnly yes" \
+            "  StrictHostKeyChecking yes" \
+            "  UserKnownHostsFile ${AUR_SSH_DIR}/known_hosts" \
+            > "${AUR_SSH_DIR}/config"
+
+          chmod 600 "${AUR_SSH_DIR}/config"
+          chmod 600 "${AUR_SSH_DIR}/known_hosts"
 
       - name: Push package metadata to AUR
+        env:
+          GIT_SSH_COMMAND: ssh -F /tmp/aur-ssh/config
         run: |
           git config --global user.email "philipp@wagnersnetz.de"
           git config --global user.name "Philipp Wagner"
@@ -100,15 +131,9 @@ jobs:
 
           mkdir -p "$(dirname "${AUR_DIR}")"
 
-          git clone \
+          git -c init.defaultBranch=master clone \
             "ssh://aur@aur.archlinux.org/kst4contest-git.git" \
-            "${AUR_DIR}" || {
-              echo "AUR repository could not be cloned; initializing it locally."
-              mkdir -p "${AUR_DIR}"
-              git -C "${AUR_DIR}" init
-              git -C "${AUR_DIR}" remote add origin \
-                "ssh://aur@aur.archlinux.org/kst4contest-git.git"
-            }
+            "${AUR_DIR}"
 
           cp packaging/aur/kst4contest-git/PKGBUILD \
             "${AUR_DIR}/PKGBUILD"
