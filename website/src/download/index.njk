@@ -1,14 +1,15 @@
 ---
 layout: base.njk
 title: Download KST4Contest
-description: Download KST4Contest releases for Windows, Linux and macOS.
+description: Download the latest stable KST4Contest packages for Windows, Linux and macOS. The required Java runtime is included.
 ---
 
 <section class="hero">
-  <p class="badge">Download</p>
-  <h1>Get KST4Contest</h1>
+  <p class="badge">Stable release</p>
+  <h1>Download KST4Contest</h1>
   <p class="lead">
-    Choose the package for your operating system. Official builds are published through GitHub Releases.
+    Choose the package for your operating system. Official builds are published through GitHub Releases,
+    and the required Java runtime is already included.
   </p>
 
   <div class="actions">
@@ -19,8 +20,8 @@ description: Download KST4Contest releases for Windows, Linux and macOS.
 
 <section class="section">
   <div class="section-heading">
-    <p class="eyebrow">Recommended downloads</p>
-    <h2>Pick your platform</h2>
+    <p class="eyebrow">Packages by platform</p>
+    <h2>Choose the format that fits your system</h2>
   </div>
 
   <div class="grid">
@@ -29,7 +30,7 @@ description: Download KST4Contest releases for Windows, Linux and macOS.
         <div class="feature-icon">{{ item.icon }}</div>
 
         {% if item.recommended %}
-          <p class="badge">Recommended</p>
+          <p class="badge">Default choice</p>
         {% endif %}
 
         <h3>{{ item.os }}</h3>
@@ -44,44 +45,36 @@ description: Download KST4Contest releases for Windows, Linux and macOS.
 
 <section class="section">
   <div class="cta-panel">
-    <p class="eyebrow">Not sure?</p>
+    <p class="eyebrow">Choosing a package</p>
     <h2>Which file should I use?</h2>
     <p>
-      Windows users usually want the ZIP package. Linux users are best served by the Flatpak,
-      which auto-updates and works across distributions; the AppImage or a native DEB/RPM/Arch
-      package are alternatives if preferred. The PDF manuals are attached to the same GitHub release.
+      Windows users normally need the x64 ZIP package. On Linux, Flatpak is the practical choice when
+      updates should be managed through the desktop software centre or the Flatpak command line. The
+      AppImage is useful when a portable file is preferred, while DEB, RPM and Arch packages integrate
+      with their respective package managers.
+    </p>
+    <p>
+      macOS packages are provided for Apple Silicon and Intel systems on a best-effort basis. They are
+      not currently notarized by Apple. The installation guide covers the first launch, updates, the
+      Stable, Beta and Nightly channels, and the location of the settings directory.
     </p>
     <div class="actions">
-      <a class="button" href="/manual/en/installation/">Installation guide</a>
-      <a class="button secondary" href="/faq/">FAQ</a>
+      <a class="button" href="/manual/en/installation/">Read the installation guide</a>
+      <a class="button secondary" href="/faq/">Open the FAQ</a>
     </div>
   </div>
 </section>
 
 <section class="section">
-
-    <div class="card content-card">
-
-        <h2>Enjoying KST4Contest?</h2>
-
-        <p>
-
-            If KST4Contest makes contesting easier for you,
-            please consider supporting future development.
-
-        </p>
-
-        <div class="actions">
-
-            <a class="button"
-               href="/support/">
-
-                ❤️ Support Development
-
-            </a>
-
-        </div>
-
+  <div class="card content-card">
+    <h2>Development and infrastructure</h2>
+    <p>
+      KST4Contest is developed independently. If it is useful in your contest workflow and you want to
+      help cover continued development, testing and infrastructure costs, the support page explains
+      what project contributions are used for.
+    </p>
+    <div class="actions">
+      <a class="button" href="/support/">Support the project</a>
     </div>
-
+  </div>
 </section>
