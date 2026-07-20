@@ -2,6 +2,7 @@
 <praktiKST>
     <latestVersion>
         <versionNumber>1.411</versionNumber>
+        <latestVersionPathOnWebserver>https://github.com/praktimarc/kst4contest/releases/tag/v1.41.1</latestVersionPathOnWebserver>
         <adminMessage></adminMessage>
         <majorChanges>- Score of Top-Priority Candidates in the user section
 - Broadcast Messages (To ALL Station in Contest) in seperate Window</majorChanges>
@@ -136,7 +137,7 @@ But Reset works all time</bugdescription>
         </bug>
     </bugsReported>
     <changeLog>
-        <changedVersionNumber>1.411</changedVersionNumber>
+        <changedVersionNumber>1.41.1</changedVersionNumber>
         <date>2026-07-08</date>
         <description>Release v1.41.1</description>
         <added></added>
@@ -145,7 +146,7 @@ But Reset works all time</bugdescription>
         <removed></removed>
     </changeLog>
     <changeLog>
-        <changedVersionNumber>1.41</changedVersionNumber>
+        <changedVersionNumber>1.41.0</changedVersionNumber>
         <date>2026-07-01</date>
         <description>Release v1.41.0</description>
         <added>- Score of Top-Priority Candidates in the user section
