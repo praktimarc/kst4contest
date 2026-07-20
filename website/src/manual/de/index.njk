@@ -15,7 +15,9 @@ description: Deutsches Benutzerhandbuch für KST4Contest.
       {% if manual.lang == "de" %}
         <div class="card">
           <h3><a href="/manual/de/{{ manual.slug }}/">{{ manual.title }}</a></h3>
-          <p>Handbuchseite „{{ manual.title }}“ öffnen.</p>
+          {% if manual.summary %}
+            <p>{{ manual.summary }}</p>
+          {% endif %}
         </div>
       {% endif %}
     {% endfor %}

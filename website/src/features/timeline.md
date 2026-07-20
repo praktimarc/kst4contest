@@ -3,8 +3,8 @@ title: Timeline View
 icon: ⏱️
 category: Contest Awareness
 since: "1.40"
-summary: See upcoming AP windows and candidate timing in a compact contest timeline.
-description: The timeline view helps operators understand short propagation windows and candidate timing during active contest operation.
+summary: Show AP-based priority candidates and scheduled contacts on a shared timeline.
+description: The Timeline View places upcoming aircraft scatter candidates and planned skeds into a common time-based overview.
 tagsList:
   - timeline
   - AP windows

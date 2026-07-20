@@ -3,8 +3,8 @@ title: AirScout Integration
 icon: ✈️
 category: Aircraft Scatter
 since: "1.26"
-summary: Use aircraft scatter awareness directly inside your ON4KST contest workflow.
-description: AirScout information helps operators evaluate AP windows, aircraft scatter timing and candidate stations during VHF/UHF/SHF contests.
+summary: Use AirScout AP predictions in candidate evaluation, the timeline and sked planning.
+description: KST4Contest receives aircraft scatter information from AirScout and relates AP timing to active ON4KST stations.
 tagsList:
   - AirScout
   - airplane scatter

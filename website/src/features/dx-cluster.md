@@ -3,8 +3,8 @@ title: DXCluster Server
 icon: 📡
 category: Radio Workflow
 since: "1.23"
-summary: Use DXCluster information as part of the wider contest operating workflow.
-description: KST4Contest includes DXCluster functionality to support situational awareness during contest operation.
+summary: Send direction warnings as DX Cluster spots to compatible logging software when a usable QRG is known.
+description: The built-in DX Cluster server forwards KST4Contest direction warnings and known frequency information to compatible contest loggers.
 tagsList:
   - DXCluster
   - ham radio
@@ -13,6 +13,7 @@ related:
   - log-sync
   - priority-score
 ---
+
 
 ## More situational awareness
 

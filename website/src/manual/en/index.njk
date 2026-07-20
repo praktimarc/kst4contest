@@ -15,7 +15,9 @@ description: English user manual for KST4Contest.
       {% if manual.lang == "en" %}
         <div class="card">
           <h3><a href="/manual/en/{{ manual.slug }}/">{{ manual.title }}</a></h3>
-          <p>Open the {{ manual.title }} manual page.</p>
+          {% if manual.summary %}
+            <p>{{ manual.summary }}</p>
+          {% endif %}
         </div>
       {% endif %}
     {% endfor %}

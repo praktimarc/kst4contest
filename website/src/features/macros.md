@@ -3,8 +3,8 @@ title: Macros and Variables
 icon: ⚡
 category: Operator Speed
 since: "1.0"
-summary: Send recurring contest messages faster with configurable macros and variables.
-description: Macros reduce repetitive typing and help operators respond quickly during active ON4KST contest sessions.
+summary: Build recurring chat messages from configurable text blocks and variables such as the current QRG or locator.
+description: KST4Contest macros combine reusable message text with values taken from the current station, frequency and operating context.
 tagsList:
   - macros
   - ON4KST

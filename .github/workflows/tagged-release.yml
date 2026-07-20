@@ -435,12 +435,14 @@ jobs:
           FLATPAK_GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
           echo "FLATPAK_GPG_KEY_ID=$FLATPAK_GPG_KEY_ID" >> "$GITHUB_ENV"
 
-      - name: Determine OSTree branch
+      - name: Determine OSTree branch and flatpakref filename
         run: |
           if [[ "${{ github.ref_name }}" == beta-* ]]; then
             echo "OSTREE_BRANCH=beta" >> "$GITHUB_ENV"
+            echo "FLATPAKREF_NAME=de.x08.KST4Contest.beta.flatpakref" >> "$GITHUB_ENV"
           else
             echo "OSTREE_BRANCH=stable" >> "$GITHUB_ENV"
+            echo "FLATPAKREF_NAME=de.x08.KST4Contest.flatpakref" >> "$GITHUB_ENV"
           fi
 
       - name: Build Flatpak repo
@@ -454,7 +456,7 @@ jobs:
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
           PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
           GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
-          cat > "dist/de.x08.KST4Contest.${OSTREE_BRANCH}.flatpakref" << EOF
+          cat > "dist/${FLATPAKREF_NAME}" << EOF
           [Flatpak Ref]
           Name=de.x08.KST4Contest
           Branch=${OSTREE_BRANCH}
@@ -469,7 +471,7 @@ jobs:
         uses: actions/upload-artifact@v4.3.4
         with:
           name: flatpakref
-          path: dist/de.x08.KST4Contest.*.flatpakref
+          path: dist/*.flatpakref
 
       - name: Upload Flatpak OSTree repo
         uses: actions/upload-artifact@v4.3.4
@@ -747,7 +749,7 @@ jobs:
             release-assets/debian/KST4Contest-${{ github.ref_name }}-debian-amd64.deb,
             release-assets/fedora/KST4Contest-${{ github.ref_name }}-fedora-x86_64.rpm,
             release-assets/archlinux/KST4Contest-${{ github.ref_name }}-archlinux-*.pkg.tar.zst,
-            release-assets/flatpakref/de.x08.KST4Contest.flatpakref,
+            release-assets/flatpakref/*.flatpakref,
             release-assets/macos/KST4Contest-${{ github.ref_name }}-macos-*.dmg,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-en.pdf,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-de.pdf

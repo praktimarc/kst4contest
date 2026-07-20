@@ -3,8 +3,8 @@ title: Priority Score System
 icon: 🎯
 category: Contest Workflow
 since: "1.40"
-summary: Find the most promising stations faster using contest-aware candidate scoring.
-description: KST4Contest ranks stations by activity, direction, sked context, band information, QRG hints and operator workflow signals.
+summary: Rank active stations from known context such as direction, activity, band, QRG, AP and sked information.
+description: The Priority Score System combines available contest information to populate a separate list of currently relevant candidates.
 tagsList:
   - ON4KST
   - VHF

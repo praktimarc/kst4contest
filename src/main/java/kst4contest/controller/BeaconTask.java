@@ -48,7 +48,8 @@ public class BeaconTask extends TimerTask {
 		replaceVariables = replaceVariables.replaceAll("MYCALL", this.chatController.getChatPreferences().getStn_loginCallSign());
 		replaceVariables = replaceVariables.replaceAll("MYLOCATOR", this.chatController.getChatPreferences().getStn_loginLocatorMainCat());
 		replaceVariables = replaceVariables.replaceAll("MYQTF", this.chatController.getChatPreferences().getActualQTF().getValue() + "");
-		replaceVariables = replaceVariables.replaceAll("SECONDQRG", this.chatController.getChatPreferences().getActualQTF().getValue() + "");
+		replaceVariables = replaceVariables.replaceAll("SECONDQRG", this.chatController.getChatPreferences().getMYQRGSecondCat().getValue() + "");
+
 
 		
 		beaconMSG.setMessageText(

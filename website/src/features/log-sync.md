@@ -3,8 +3,8 @@ title: Log Synchronization
 icon: 🔄
 category: Logger Integration
 since: "1.31"
-summary: Connect ON4KST chat workflow with Win-Test, UCXLog and contest logging state.
-description: Log synchronization helps KST4Contest understand worked stations, active bands and contest context.
+summary: Import worked stations and current frequencies from supported contest loggers so filters and band information follow the log.
+description: KST4Contest receives worked-station and, where supported, frequency data from UCXLog, N1MM+, QARTest, DXLog.net and Win-Test through file and UDP interfaces.
 tagsList:
   - Win-Test
   - UCXLog

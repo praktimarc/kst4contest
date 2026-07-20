@@ -3,8 +3,8 @@ title: Sked Reminder
 icon: 🔔
 category: Sked Management
 since: "1.40"
-summary: Keep scheduled contacts visible and avoid missing time-critical skeds.
-description: KST4Contest keeps skeds in focus while the operator handles chat traffic, logging, bands and aircraft scatter timing.
+summary: Store planned contacts and issue configurable chat messages plus local alerts before the agreed time.
+description: Sked Reminder keeps scheduled contacts visible and provides automatic advance messages together with acoustic and visual operator alerts.
 tagsList:
   - sked
   - ON4KST

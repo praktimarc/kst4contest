@@ -3,8 +3,9 @@ title: Dual Chat Categories
 icon: 💬
 category: ON4KST Chat
 since: "1.26"
-summary: Operate in two ON4KST categories at once, for example VHF/UHF and microwave.
-description: Dual category support gives contest operators better overview when working across multiple ON4KST chat rooms.
+since: "1.26"
+summary: Log in to two ON4KST categories and handle both message streams in one station list and interface.
+description: KST4Contest combines two ON4KST chat categories while retaining the category required for messages and station context.
 tagsList:
   - ON4KST
   - dual chat

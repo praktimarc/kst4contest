@@ -1,62 +1,117 @@
-# KST4Contest – Wiki
+# KST4Contest – User Manual
 
-> 🇬🇧 You are reading the English version | 🇩🇪 [Deutsche Version](de-Home)
+> You are reading the English version | [Deutsche Version](de-Home)
 
-**KST4Contest** (also known as *PraktiKST*) is a Java-based chat client for the [ON4KST Chat](http://www.on4kst.info/chat/), specifically designed for contest operation on the VHF/UHF/SHF bands (144 MHz and above).
+KST4Contest is a desktop client for the [ON4KST Chat](https://www.on4kst.org/chat/login.php), developed for VHF, UHF and SHF contest operation. It brings chat, candidate selection, sked planning, aircraft scatter data and external station software together in a single operating interface.
 
-Developed by **DO5AMF (Marc Fröhlich)**, operator at DM5M.
+KST4Contest is developed by **DO5AMF (Marc Fröhlich)**, operator at DM5M and (since May 2025) **DN9APW (Philipp Wagner)**. The source code is publicly available on [GitHub](https://github.com/praktimarc/kst4contest).
 
 ---
 
-## Quick Navigation
+## Why use a dedicated ON4KST client?
+
+During a contest, the ON4KST Chat provides a considerable amount of information: active stations, locators, frequencies, sked requests and indications of current activity. The actual problem is not seeing this data. It is turning it into the next useful contact in time.
+
+KST4Contest evaluates the available information, puts it into context and presents it as part of a contest-oriented workflow. This includes antenna direction, distance, known bands and frequencies, worked status, chat activity and aircraft scatter timing.
+
+The program does not decide which QSO is actually possible. Priority scores, the AP timeline and visual highlights are decision aids. The final judgement remains with the operator – not least because even a very convincing computer screen cannot complete a radio contact.
+
+---
+
+## How KST4Contest supports contest operation
+
+- **Observe and organise chat activity:** KST4Contest can display two ON4KST chat categories at the same time. Messages, frequency information and known band activity are assigned to the corresponding stations.
+
+- **Reduce the station list:** Direction, distance, worked and NOT-QRV filters help limit the user list to stations that are relevant to the current operating situation.
+
+- **Prioritise candidates:** The score system evaluates active chat members using several known criteria. The currently most relevant candidates are also shown in a separate priority list.
+
+- **Prepare skeds and keep them visible:** Sked reminders, automatic advance messages and the AP timeline help prevent scheduled contacts from disappearing somewhere between chat, logging and ongoing CQ operation.
+
+- **Include aircraft scatter information:** The AirScout interface brings suitable aircraft and expected reflection times into candidate evaluation and sked planning.
+
+- **Connect the logger and station equipment:** KST4Contest synchronises worked stations and frequency information with supported logging software. It also provides interfaces for Win-Test, PSTRotator and a built-in DX Cluster server.
+
+- **Display stations and radio paths:** The station map shows active chat members, locator squares, antenna directions and the path to the selected station. A terrain profile can also be calculated for selected paths.
+
+These functions share information. A detected frequency can indicate an active band, worked status comes from the logger, aircraft scatter data adds timing information and the resulting score affects the priority list. Missing or outdated input data can therefore affect the result as well.
+
+---
+
+## Requirements
+
+A registered ON4KST account is required. Registration and login are available from the [official ON4KST login page](https://www.on4kst.org/chat/login.php).
+
+English is the official language of the ON4KST Chat. This also applies when communicating with stations from your own country. Common amateur radio abbreviations such as `pse`, `agn`, `qrg`, `dir`, `rrr`, `tnx` and `73` are normal and usually considerably faster than carefully written prose.
+
+Downloads, supported operating systems and installation methods are described in [Installation](en-Installation).
+
+---
+
+## Manual version
+
+This manual describes the stable release **v1.41.1**.
+
+Features or changes that are only available in the current development version are explicitly marked as **Nightly / v1.42**. If no such label is present, the description refers to the stable release.
+
+- [Download the current stable release](https://github.com/praktimarc/kst4contest/releases/latest)
+- [Nightly and automated builds](https://github.com/praktimarc/kst4contest/actions)
+- [Version history](en-Changelog)
+
+For contest operation, the stable release is generally the appropriate choice. Nightly builds contain newer fixes and features, but may change between builds. They are useful when a particular change needs testing. Trying one for the first time ten minutes before a contest is less useful.
+
+---
+
+## Quick navigation
 
 | Page | Contents |
 |---|---|
-| [Installation](en-Installation) | Download, Java requirements, update |
-| [Configuration](en-Configuration) | All settings in detail |
-| [Log Synchronisation](en-Log-Sync) | UCXLog, N1MM+, QARTest, DXLog.net, WinTest |
-| [AirScout Integration](en-AirScout-Integration) | Aircraft scatter detection |
-| [DX Cluster Server](en-DX-Cluster-Server) | Built-in DX cluster for your logging software |
-| [Features](en-Features) | All features at a glance |
-| [Macros and Variables](en-Macros-and-Variables) | Text snippets, shortcuts, variables |
-| [User Interface](en-User-Interface) | UI explanation and operation |
-| [Changelog](en-Changelog) | Version history |
+| [Installation](en-Installation) | ON4KST account, downloads, installation and updates |
+| [Configuration](en-Configuration) | Login, station, bands, user interface and external connections |
+| [Log Synchronisation](en-Log-Sync) | Simplelogfile, UCXLog, N1MM+, QARTest, DXLog.net and Win-Test |
+| [AirScout Integration](en-AirScout-Integration) | Connecting AirScout and evaluating aircraft scatter timing |
+| [DX Cluster Server](en-DX-Cluster-Server) | Passing detected opportunities to logging software |
+| [Features](en-Features) | Operation, reasoning and limitations of individual functions |
+| [Macros and Variables](en-Macros-and-Variables) | Reusable messages, shortcuts and automatically substituted values |
+| [User Interface](en-User-Interface) | Interface layout and operation during a contest |
+| [Changelog](en-Changelog) | Releases, Nightly changes and resolved issues |
 
 ---
 
-## What is KST4Contest?
+## Contact and support
 
-The ON4KST Chat is the de-facto standard for skeds on the 144 MHz and higher bands. KST4Contest enhances the chat experience with contest-specific features:
+- **Download:** [Current stable release](https://github.com/praktimarc/kst4contest/releases/latest)
+- **Source code:** [praktimarc/kst4contest](https://github.com/praktimarc/kst4contest)
+- **Bug reports and feature requests:** [GitHub Issues](https://github.com/praktimarc/kst4contest/issues)
+- **Email:** praktimarc+kst4contest@gmail.com  
+  Please use this address only for KST4Contest-related topics.
 
-- **Worked marking**: Stations already worked are highlighted visually, synchronised directly from your logging software via UDP.
-- **Sked direction detection**: When a station calls another one from your direction, it is highlighted green and bold.
-- **QRG detection**: KST4Contest automatically reads frequencies from the chat traffic and shows them in the user list.
-- **AirScout interface**: Reflectable aircraft are shown directly in the user list.
-- **Built-in DX cluster server**: Spots are sent directly to your logging software.
-- **Dark mode** (from v1.26): Easy on the eyes during night-time operation.
-- **Multi-channel login** (from v1.26): Simultaneously logged into two chat categories.
+### Reporting a bug
 
----
+A problem is considerably easier to reproduce when the report contains at least:
 
-## Contact & Support
+1. the KST4Contest version,
+2. the operating system and installation method,
+3. the exact steps leading to the problem,
+4. the expected and observed behaviour,
+5. a screenshot where appropriate,
+6. the error log file.
 
-- **Email**: praktimarc+kst4contest@gmail.com *(for kst4contest topics only)*
-- **GitHub**: https://github.com/praktimarc/kst4contest
-- **Download**: https://github.com/praktimarc/kst4contest/releases/latest
+The error log is stored at:
 
-### Reporting a bug (creating an issue)
-
-When reporting a bug, please **always attach the log file**. KST4Contest automatically writes an error log (error messages only, no personal data):
-
-| Operating system | Log file location |
+| Operating system | Path |
 |---|---|
 | Linux / macOS | `~/.praktiKST/kst4contest-errors.log` |
 | Windows | `C:\Users\<YourName>\.praktiKST\kst4contest-errors.log` |
 
-When opening an issue on GitHub, a template is provided that guides you through all relevant fields.
+Please inspect the file briefly before uploading it. An error log mainly contains technical information, but depending on the problem it may also include local file paths or other contextual data.
+
+Some file and directory names still use the technical name `praktiKST`. They refer to the same program.
 
 ---
 
 ## Acknowledgements
 
-Special thanks to: Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), OM0AAO (Viliam Petrik, DX cluster idea), DC9DJ (Konrad Neitzel, project structure), DO5ALF (Andreas, webmaster funkerportal.de), PE0WGA (Franz van Velzen, tester) and all other testers and contributors.
+KST4Contest has benefited considerably from feedback gathered during actual contest operation.
+
+Special thanks go to Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), Viliam Petrik (OM0AAO, DX Cluster idea), Konrad Neitzel (DC9DJ, project structure), Andreas (DO5ALF, webmaster of funkerportal.de), Franz van Velzen (PE0WGA, testing), and all other testers and contributors.

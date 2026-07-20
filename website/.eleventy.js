@@ -3,6 +3,74 @@ const path = require("path");
 const markdownIt = require("markdown-it");
 const markdownItAnchor = require("markdown-it-anchor");
 
+const MANUAL_PAGE_ORDER = {
+    de: [
+        "home",
+        "installation",
+        "konfiguration",
+        "log-synchronisation",
+        "airscout-integration",
+        "dx-cluster-server",
+        "funktionen",
+        "makros-und-variablen",
+        "benutzeroberflaeche",
+        "changelog"
+    ],
+    en: [
+        "home",
+        "installation",
+        "configuration",
+        "log-sync",
+        "airscout-integration",
+        "dx-cluster-server",
+        "features",
+        "macros-and-variables",
+        "user-interface",
+        "changelog"
+    ]
+};
+
+function markdownToPlainText(value) {
+    return (value || "")
+        .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/<[^>]+>/g, "")
+        .replace(/[*_~`]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function extractManualTitle(raw, fallbackTitle) {
+    const heading = (raw || "").match(/^#\s+(.+)$/m);
+    return heading ? markdownToPlainText(heading[1]) : fallbackTitle;
+}
+
+function extractManualSummary(raw) {
+    const blocks = (raw || "").split(/\r?\n\s*\r?\n/);
+
+    for (const block of blocks) {
+        const trimmed = block.trim();
+
+        if (!trimmed
+            || /^(#|>|\||---|```|!\[)/.test(trimmed)
+            || /^[-*+]\s/.test(trimmed)
+            || /^\d+[.)]\s/.test(trimmed)) {
+            continue;
+        }
+
+        return markdownToPlainText(trimmed);
+    }
+
+    return "";
+}
+
+function getManualPageOrder(lang, slug) {
+    const configuredOrder = MANUAL_PAGE_ORDER[lang] || [];
+    const index = configuredOrder.indexOf(slug);
+
+    return index >= 0 ? index : 999;
+}
+
 function rewriteManualLinks(content, lang) {
     return (content || "")
         // GitHub-Wiki-Links im Stil [[de-Installation]] oder [[en-Installation]]
@@ -96,19 +164,28 @@ module.exports = function (eleventyConfig) {
                     .replace(/\.md$/, "")
                     .toLowerCase();
 
-                const title = file
+                const fallbackTitle = file
                     .replace(/^en-/, "")
                     .replace(/^de-/, "")
                     .replace(/\.md$/, "")
                     .replace(/-/g, " ");
+
+                const title = extractManualTitle(raw, fallbackTitle);
 
                 return {
                     file,
                     lang,
                     slug,
                     title,
+                    summary: extractManualSummary(raw),
+                    order: getManualPageOrder(lang, slug),
                     content: rewriteManualLinks(raw, lang)
                 };
+            })
+            .sort((a, b) => {
+                return a.lang.localeCompare(b.lang)
+                    || a.order - b.order
+                    || a.title.localeCompare(b.title);
             });
     });
 
