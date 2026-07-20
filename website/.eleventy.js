@@ -73,6 +73,20 @@ function getManualPageOrder(lang, slug) {
 
 function rewriteManualLinks(content, lang) {
     return (content || "")
+
+        // Manual images are stored next to the Markdown sources in github_docs.
+        // The website publishes them from one shared, language-neutral directory.
+        .replace(
+            /!\[([^\]]*)\]\((?!https?:\/\/|\/)([^)\s]+\.(?:png|jpe?g|gif|svg|webp))\)/gi,
+            (match, altText, imagePath) => {
+                const fileName = path.posix.basename(
+                    imagePath.replace(/\\/g, "/")
+                );
+
+                return `![${altText}](/manual/assets/${fileName})`;
+            }
+        )
+
         // GitHub-Wiki-Links im Stil [[de-Installation]] oder [[en-Installation]]
         .replace(/\[\[(en|de)-([^\]|]+)\]\]/g, (match, linkLang, slug) => {
             return `[${slug.replace(/-/g, " ")}](/manual/${linkLang}/${slug.toLowerCase()}/)`;
@@ -131,6 +145,10 @@ module.exports = function (eleventyConfig) {
     });
 
     eleventyConfig.addPassthroughCopy({ "src/assets": "assets" });
+
+    eleventyConfig.addPassthroughCopy({
+        "../github_docs/*.{png,jpg,jpeg,gif,svg,webp}": "manual/assets"
+    });
 
     const md = markdownIt({
         html: true,
