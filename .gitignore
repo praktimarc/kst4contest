@@ -39,5 +39,8 @@ dist/
 # node Modules in website
 website/node_modules/
 
+# built website output (rebuilt on the server)
+website/_site/
+
 # Local secrets for act testing
 .secrets
