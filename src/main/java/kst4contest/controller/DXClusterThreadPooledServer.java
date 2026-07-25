@@ -1,238 +1,363 @@
 package kst4contest.controller;
 
 import kst4contest.model.ChatMember;
-import kst4contest.model.ChatPreferences;
 import kst4contest.model.ThreadStateMessage;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class DXClusterThreadPooledServer implements Runnable{
+public class DXClusterThreadPooledServer implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(DXClusterThreadPooledServer.class.getName());
-    private List<Socket> clientSockets = Collections.synchronizedList(new ArrayList<>()); //list of all connected clients
+    private static final Logger LOGGER =
+            Logger.getLogger(DXClusterThreadPooledServer.class.getName());
+    private static final String THREAD_NICKNAME = "DXCluster-Server";
 
-    private ThreadStatusCallback callBackToController;
-    private String ThreadNickName = "DXCluster-Server";
-    ChatController chatController = null;
-    protected int          serverPort   = 8080;
-    protected ServerSocket serverSocket = null;
-    protected boolean      isStopped    = false;
-    protected Thread       runningThread= null;
-    protected ExecutorService threadPool =
+    private final List<Socket> clientSockets =
+            Collections.synchronizedList(new ArrayList<>());
+
+    private final ChatController chatController;
+    private final ThreadStatusCallback callBackToController;
+    private final int serverPort;
+
+    private final ExecutorService threadPool =
             Executors.newFixedThreadPool(10);
-    Socket clientSocket;
 
-    public DXClusterThreadPooledServer(int port, ChatController chatController, ThreadStatusCallback callback){
+    private final ScheduledExecutorService keepAliveExecutor =
+            Executors.newSingleThreadScheduledExecutor();
+
+    private volatile boolean stopped;
+    private ServerSocket serverSocket;
+
+    public DXClusterThreadPooledServer(
+            int port,
+            ChatController chatController,
+            ThreadStatusCallback callback
+    ) {
         this.serverPort = port;
         this.chatController = chatController;
         this.callBackToController = callback;
     }
 
-    public void run(){
+    @Override
+    public void run() {
+        Thread.currentThread().setName("DXCluster-thread-pooled-server");
 
-        ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
-        callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+        try {
+            serverSocket = new ServerSocket(serverPort);
 
-        synchronized(this){
-            this.runningThread = Thread.currentThread();
-            runningThread.setName("DXCluster-thread-pooled-server");
-        }
-        openServerSocket();
-        while(! isStopped()){
-            clientSocket = null;
-            try {
-                clientSocket = this.serverSocket.accept();
-
-                synchronized(clientSockets) {
-                    clientSockets.add(clientSocket);  // add dx cluster client to the "clients list" for broadcasting
-                }
-
-            } catch (IOException e) {
-                if(isStopped()) {
-                    System.out.println("Server Stopped.") ;
-                    break;
-                }
-                throw new RuntimeException(
-                        "Error accepting client connection", e);
+            if (stopped) {
+                return;
             }
 
-            DXClusterServerWorkerRunnable worker = new DXClusterServerWorkerRunnable(clientSocket, "Thread Pooled DXCluster Server ", chatController, clientSockets, chatController);
+            callBackToController.onThreadStatus(
+                    THREAD_NICKNAME,
+                    new ThreadStateMessage(
+                            THREAD_NICKNAME,
+                            true,
+                            "Listening on TCP port " + serverPort,
+                            false
+                    )
+            );
 
-            this.threadPool.execute(worker);
+            keepAliveExecutor.scheduleAtFixedRate(
+                    this::sendKeepAlive,
+                    30,
+                    30,
+                    TimeUnit.SECONDS
+            );
 
-        }
-        this.threadPool.shutdown();
-        System.out.println("Server Stopped.") ;
-    }
+            while (!stopped) {
+                try {
+                    Socket clientSocket = serverSocket.accept();
+                    clientSockets.add(clientSocket);
 
-    private synchronized boolean isStopped() {
-        return this.isStopped;
-    }
-
-    public synchronized void stop(){
-        this.isStopped = true;
-        try {
-            this.serverSocket.close();
-            synchronized(clientSockets) {
-                for (Socket socket : clientSockets) {
-                    socket.close();  // close all client connections
+                    threadPool.execute(
+                            new DXClusterServerWorkerRunnable(
+                                    clientSocket,
+                                    clientSockets
+                            )
+                    );
+                } catch (IOException exception) {
+                    if (!stopped) {
+                        LOGGER.log(
+                                Level.SEVERE,
+                                "Error accepting DX Cluster client connection",
+                                exception
+                        );
+                    }
                 }
             }
-        } catch (IOException e) {
-            throw new RuntimeException("DXCCSERVER Error closing server", e);
+        } catch (IOException exception) {
+            if (!stopped) {
+                LOGGER.log(
+                        Level.SEVERE,
+                        "Cannot open DX Cluster TCP port " + serverPort,
+                        exception
+                );
+
+                callBackToController.onThreadStatus(
+                        THREAD_NICKNAME,
+                        new ThreadStateMessage(
+                                THREAD_NICKNAME,
+                                false,
+                                "Cannot open TCP port "
+                                        + serverPort
+                                        + ": "
+                                        + exception.getMessage(),
+                                true
+                        )
+                );
+            }
+        } finally {
+            closeServerSocket();
+            closeClientSockets();
+            keepAliveExecutor.shutdownNow();
+            threadPool.shutdownNow();
         }
     }
 
-    private void openServerSocket() {
-        try {
-            this.serverSocket = new ServerSocket(this.serverPort);
-        } catch (IOException e) {
-            throw new RuntimeException("DXCCSERVER Cannot open port ", e);
+    public synchronized void stop() {
+        stopped = true;
+        closeServerSocket();
+        closeClientSockets();
+        keepAliveExecutor.shutdownNow();
+        threadPool.shutdownNow();
+    }
+
+    public boolean hasConnectedClients() {
+        synchronized (clientSockets) {
+            removeClosedClients();
+            return !clientSockets.isEmpty();
         }
     }
 
     /**
-     * Sends a DX cluster message to ALL connected log programs via telnet, returns true if sent
+     * Sends one DX Cluster spot to all currently connected clients.
      *
-     * @param aChatMember
-     * @return boolean true if message had been sent
+     * @return true if the spot was delivered to at least one client
      */
-    public boolean broadcastSingleDXClusterEntryToLoggers(ChatMember aChatMember) {
-        synchronized(clientSockets) {
+    public boolean broadcastSingleDXClusterEntryToLoggers(
+            ChatMember chatMember
+    ) {
+        final String clusterMessage;
 
-            System.out.println("DXClusterSrvr: broadcasting message to clients: " + clientSockets.size());
+        try {
+            String frequency = Utils4KST.normalizeFrequencyString(
+                    chatMember.getFrequency().getValue(),
+                    chatController
+                            .getChatPreferences()
+                            .getNotify_optionalFrequencyPrefix()
+            );
 
-            try {
+            clusterMessage =
+                    "DX de "
+                            + chatController
+                            .getChatPreferences()
+                            .getNotify_DXCSrv_SpottersCallSign()
+                            .getValue()
+                            + ":   "
+                            + frequency
+                            + "  "
+                            + chatMember.getCallSign().toUpperCase()
+                            + "             "
+                            + chatMember.getQra().toUpperCase()
+                            + "  "
+                            + new Utils4KST()
+                            .time_generateCurrenthhmmZTimeStringForClusterMessage()
+                            + ((char) 7)
+                            + ((char) 7)
+                            + "\r\n";
+        } catch (Exception exception) {
+            LOGGER.log(
+                    Level.SEVERE,
+                    "Cannot build DX Cluster message",
+                    exception
+            );
+            return false;
+        }
 
-                System.out.println("-------------> ORIGINALEE VAL: " + aChatMember.getFrequency().getValue());
-                System.out.println("-------------> NORMALIZED VAL: " + Utils4KST.normalizeFrequencyString(aChatMember.getFrequency().getValue(), chatController.getChatPreferences().getNotify_optionalFrequencyPrefix()) + " ");
-            } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "DXCThPooledServer: Error accessing value in chatmember object", e);
-            }
+        int deliveredClients = 0;
 
-            for (Socket socket : clientSockets) {
+        synchronized (clientSockets) {
+            Iterator<Socket> iterator = clientSockets.iterator();
+
+            while (iterator.hasNext()) {
+                Socket socket = iterator.next();
+
+                if (socket == null || socket.isClosed()) {
+                    iterator.remove();
+                    continue;
+                }
 
                 try {
+                    OutputStream output = socket.getOutputStream();
+                    output.write(
+                            clusterMessage.getBytes(
+                                    StandardCharsets.US_ASCII
+                            )
+                    );
+                    output.flush();
+                    deliveredClients++;
+                } catch (IOException exception) {
+                    LOGGER.log(
+                            Level.WARNING,
+                            "DX Cluster client disconnected while sending a spot",
+                            exception
+                    );
 
-                OutputStream output = socket.getOutputStream();
-
-                    String singleDXClusterMessage = "DX de ";
-
-//                    singleDXClusterMessage += chatController.getChatPreferences().getLoginCallSign() + ":   ";
-
-
-
-
-                    singleDXClusterMessage += this.chatController.getChatPreferences().getNotify_DXCSrv_SpottersCallSign().getValue() + ":   ";
-                    singleDXClusterMessage += Utils4KST.normalizeFrequencyString(aChatMember.getFrequency().getValue(), chatController.getChatPreferences().getNotify_optionalFrequencyPrefix()) + "  ";
-                    singleDXClusterMessage += aChatMember.getCallSign().toUpperCase() + "             "; //we need such an amount of spaces for n1mm to work, otherwise bullshit happens
-                    singleDXClusterMessage += aChatMember.getQra().toUpperCase() + "  ";
-                    singleDXClusterMessage += new Utils4KST().time_generateCurrenthhmmZTimeStringForClusterMessage() + ((char)7) + ((char)7) + "\r\n";
-
-//                    singleDXClusterMessage += chatController.getChatPreferences().getLoginCallSign() + ":   ";
-//                    singleDXClusterMessage += Utils4KST.normalizeFrequencyString(aChatMember.getFrequency().getValue(), chatController.getChatPreferences().getNotify_optionalFrequencyPrefix()) + "  ";
-//                    singleDXClusterMessage += aChatMember.getCallSign().toUpperCase() + " ";
-//                    singleDXClusterMessage += aChatMember.getQra().toUpperCase() + "  ";
-//                    singleDXClusterMessage += new Utils4KST().time_generateCurrenthhmmZTimeStringForClusterMessage() + ((char)7) + ((char)7) + "\r\n";
-
-                    output.write((singleDXClusterMessage).getBytes());
-
-                    ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "Last msg to " + clientSockets.size() + " Cluster Clients:\n" + singleDXClusterMessage, false);
-                    callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
-
-                } catch (IOException e) {
-                    LOGGER.log(Level.SEVERE, "[DXClusterSrvr] broadcasting DXC-message to clients went wrong", e);
-                    return false;
+                    closeSocket(socket);
+                    iterator.remove();
                 }
             }
         }
-        return true; //if message had been sent, return true for "ok"
+
+        if (deliveredClients > 0) {
+            callBackToController.onThreadStatus(
+                    THREAD_NICKNAME,
+                    new ThreadStateMessage(
+                            THREAD_NICKNAME,
+                            true,
+                            "Last spot sent to "
+                                    + deliveredClients
+                                    + " DX Cluster client(s):\n"
+                                    + clusterMessage,
+                            false
+                    )
+            );
+        }
+
+        return deliveredClients > 0;
     }
 
+    private void sendKeepAlive() {
+        synchronized (clientSockets) {
+            Iterator<Socket> iterator = clientSockets.iterator();
+
+            while (iterator.hasNext()) {
+                Socket socket = iterator.next();
+
+                if (socket == null || socket.isClosed()) {
+                    iterator.remove();
+                    continue;
+                }
+
+                try {
+                    OutputStream output = socket.getOutputStream();
+                    output.write(
+                            "\r\n".getBytes(StandardCharsets.US_ASCII)
+                    );
+                    output.flush();
+                } catch (IOException exception) {
+                    closeSocket(socket);
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    private void removeClosedClients() {
+        clientSockets.removeIf(
+                socket -> socket == null || socket.isClosed()
+        );
+    }
+
+    private synchronized void closeServerSocket() {
+        if (serverSocket == null || serverSocket.isClosed()) {
+            return;
+        }
+
+        try {
+            serverSocket.close();
+        } catch (IOException exception) {
+            LOGGER.log(
+                    Level.WARNING,
+                    "Error closing DX Cluster server socket",
+                    exception
+            );
+        }
+    }
+
+    private void closeClientSockets() {
+        synchronized (clientSockets) {
+            for (Socket socket : clientSockets) {
+                closeSocket(socket);
+            }
+
+            clientSockets.clear();
+        }
+    }
+
+    private static void closeSocket(Socket socket) {
+        if (socket == null || socket.isClosed()) {
+            return;
+        }
+
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+            // The connection is already unusable.
+        }
+    }
 }
 
-class DXClusterServerWorkerRunnable implements Runnable{
+class DXClusterServerWorkerRunnable implements Runnable {
 
-    private static final Logger LOGGER = Logger.getLogger(DXClusterServerWorkerRunnable.class.getName());
-    protected Socket clientSocket = null;
-    protected String serverText = null;
-    private ChatController client = null;
-    private List<Socket> dxClusterClientSocketsConnectedList;
-    private ThreadStatusCallback callBackToController;
-    private String ThreadNickName = "DXCluster-Server";
+    private static final Logger LOGGER =
+            Logger.getLogger(DXClusterServerWorkerRunnable.class.getName());
 
-    public DXClusterServerWorkerRunnable(Socket clientSocket, String serverText, ChatController chatController, List<Socket> clientSockets, ThreadStatusCallback callback) {
+    private final Socket clientSocket;
+    private final List<Socket> clientSockets;
+
+    DXClusterServerWorkerRunnable(
+            Socket clientSocket,
+            List<Socket> clientSockets
+    ) {
         this.clientSocket = clientSocket;
-        this.serverText = serverText;
-        this.client = chatController;
-        this.dxClusterClientSocketsConnectedList = clientSockets;
-        this.callBackToController = callback;
-
+        this.clientSockets = clientSockets;
     }
 
+    @Override
     public void run() {
         try {
             OutputStream output = clientSocket.getOutputStream();
-            dxClusterClientSocketsConnectedList.add(clientSocket);
+            output.write(
+                    "login: ".getBytes(StandardCharsets.US_ASCII)
+            );
+            output.flush();
 
-            Timer dXCkeepAliveTimer = new Timer();
-            dXCkeepAliveTimer.schedule(new TimerTask() {
+            System.out.println(
+                    "[DXClusterServer] New client connected: "
+                            + clientSocket.getInetAddress()
+            );
+        } catch (IOException exception) {
+            LOGGER.log(
+                    Level.WARNING,
+                    "Cannot initialise DX Cluster client connection",
+                    exception
+            );
 
-                @Override
-                public void run() {
+            synchronized (clientSockets) {
+                clientSockets.remove(clientSocket);
+            }
 
-                    StringBuilder connectedClients = new StringBuilder(); //only for statistics
-
-                    for (Socket socket : dxClusterClientSocketsConnectedList) {
-
-                        connectedClients.append(socket.getInetAddress()).append("\n");
-
-                        try {
-                            OutputStream output = socket.getOutputStream();
-                            output.write(("\r\n").getBytes());
-
-                        } catch (IOException e) {
-                            LOGGER.log(Level.SEVERE, "[DXClusterSrvr] keep-alive broadcast to client failed", e);
-                            dXCkeepAliveTimer.purge();
-
-                            try {
-                                socket.close();
-                            } catch (IOException ex) {
-                                LOGGER.log(Level.SEVERE, "[DXClusterSrvr] error closing client socket", ex);
-                            }
-                            finally {
-                                this.cancel();
-                            }
-                            dxClusterClientSocketsConnectedList.remove(socket); //if socket is closed by client, remove it from the broadcast list and close it
-                        }
-                    }
-
-//                    ThreadStateMessage threadStateMessage = new ThreadStateMessage(ThreadNickName, true, "Connected clients: " + connectedClients.toString(), false);
-//                    callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
-
-                }
-            }, 30000, 30000);
-
-
-            output.write(("login: ").getBytes()); //say hello to the client, it will answer with a callsign
-            System.out.println("[DXClusterThreadPooledServer, Info:] New cluster client connected! "); //TODO: maybe integrate non blocking reader for client identification
-
-        } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "[DXClusterSrvr] error in worker runnable", e);
-        } finally {
-            synchronized(dxClusterClientSocketsConnectedList) {
-                dxClusterClientSocketsConnectedList.remove(clientSocket); // Entferne den Client nach Verarbeitung
+            try {
+                clientSocket.close();
+            } catch (IOException ignored) {
+                // The connection is already unusable.
             }
         }
     }
-
-
-
 }

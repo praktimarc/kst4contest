@@ -50,7 +50,7 @@ public class ChatPreferences {
 	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
 	 */
 //	private static final int CONFIG_VERSION = 2;
-	public static final int CONFIG_VERSION = 3;
+	public static final int CONFIG_VERSION = 4;
 
 	// Prefer writing tag names that mirror variable names (human readable). Keep legacy tags for compatibility.
 	private static final String TAG_CONFIG_VERSION = "configVersion";
@@ -240,9 +240,11 @@ public class ChatPreferences {
 	/**
 	 * AirScout prefs
 	 */
-	boolean AirScout_asUDPListenerEnabled;
-	String AirScout_asServerNameString, AirScout_asClientNameString, AirScout_asBandString;
-	int AirScout_asCommunicationPort;
+	boolean AirScout_asUDPListenerEnabled = true;
+	String AirScout_asServerNameString = "AS";
+	String AirScout_asClientNameString = "KST";
+	String AirScout_asBandString = "1440000";
+	int AirScout_asCommunicationPort = 9872;
 
 	/**
 	 * Notification prefs
@@ -265,6 +267,9 @@ public class ChatPreferences {
 	boolean notify_DXClusterServerTriggerBearing;
 	boolean notify_DXClusterServerTriggerOnQRGDetect;
 
+	ObservableList<String>
+			lstNotify_QSOSniffer_sniffedCallSignList =
+			FXCollections.observableArrayList();
 	//    ObservableList<String> lstNotify_QSOSniffer_sniffedCallSignList = FXCollections.observableArrayList();
 	ObservableList<String> lstNotify_QSOSniffer_sniffedWordsList = FXCollections.observableArrayList();
 	ObservableList<String> lstNotify_QSOSniffer_sniffedPrefixLocList = FXCollections.observableArrayList();
@@ -451,6 +456,11 @@ public class ChatPreferences {
 
 	public void setStn_on4kstServersDns(String stn_on4kstServersDns) {
 		this.stn_on4kstServersDns = stn_on4kstServersDns;
+	}
+
+	public ObservableList<String>
+	getLstNotify_QSOSniffer_sniffedCallSignList() {
+		return lstNotify_QSOSniffer_sniffedCallSignList;
 	}
 
 	public ObservableList<String> getLstNotify_QSOSniffer_sniffedWordsList() {
@@ -799,8 +809,16 @@ public class ChatPreferences {
 		return notify_dxclusterServerPort;
 	}
 
-	public void setNotify_dxclusterServerPort(int notify_dxclusterServerPort) {
-		this.notify_dxclusterServerPort = notify_dxclusterServerPort;
+	public void setNotify_dxclusterServerPort(
+			int notify_dxclusterServerPort
+	) {
+		if (notify_dxclusterServerPort < 1
+				|| notify_dxclusterServerPort > 65535) {
+			this.notify_dxclusterServerPort = 8000;
+		} else {
+			this.notify_dxclusterServerPort =
+					notify_dxclusterServerPort;
+		}
 	}
 
 	public double[] getGUIscn_ChatwindowMainSceneSizeHW() {
@@ -921,35 +939,100 @@ public class ChatPreferences {
 		return stn_loginCallSignRaw;
 	}
 
+
+	/**
+	 * Normalizes an AirScout routing identifier.
+	 *
+	 * AirScout encloses the identifiers in quotation marks. Empty identifiers,
+	 * quotation marks and line breaks would therefore produce an invalid protocol
+	 * message and are replaced with the supplied default value.
+	 *
+	 * @param identifier configured identifier
+	 * @param defaultIdentifier fallback value
+	 * @return normalized identifier
+	 */
+	private String normalizeAirScoutIdentifier(
+			String identifier,
+			String defaultIdentifier
+	) {
+		if (identifier == null) {
+			return defaultIdentifier;
+		}
+
+		String normalizedIdentifier = identifier.trim();
+
+		if (normalizedIdentifier.isEmpty()
+				|| normalizedIdentifier.contains("\"")
+				|| normalizedIdentifier.contains("\r")
+				|| normalizedIdentifier.contains("\n")) {
+			return defaultIdentifier;
+		}
+
+		return normalizedIdentifier;
+	}
+
 	public String getAirScout_asBandString() {
 		return AirScout_asBandString;
 	}
 
 	public void setAirScout_asBandString(String airScout_asBandString) {
-		AirScout_asBandString = airScout_asBandString;
+		if (airScout_asBandString == null) {
+			AirScout_asBandString = "1440000";
+			return;
+		}
+
+		try {
+			long parsedBandValue = Long.parseLong(
+					airScout_asBandString.trim()
+			);
+
+			AirScout_asBandString = parsedBandValue > 0
+					? Long.toString(parsedBandValue)
+					: "1440000";
+		} catch (NumberFormatException exception) {
+			AirScout_asBandString = "1440000";
+		}
 	}
 
 	public String getAirScout_asServerNameString() {
 		return AirScout_asServerNameString;
 	}
 
-	public void setAirScout_asServerNameString(String airScout_asServerNameString) {
-		AirScout_asServerNameString = airScout_asServerNameString;
+	public void setAirScout_asServerNameString(
+			String airScout_asServerNameString
+	) {
+		AirScout_asServerNameString = normalizeAirScoutIdentifier(
+				airScout_asServerNameString,
+				"AS"
+		);
 	}
 
 	public String getAirScout_asClientNameString() {
 		return AirScout_asClientNameString;
 	}
 
-	public void setAirScout_asClientNameString(String airScout_asClientNameString) {
-		AirScout_asClientNameString = airScout_asClientNameString;
+	public void setAirScout_asClientNameString(
+			String airScout_asClientNameString
+	) {
+		AirScout_asClientNameString = normalizeAirScoutIdentifier(
+				airScout_asClientNameString,
+				"KST"
+		);
 	}
 
 	public int getAirScout_asCommunicationPort() {
 		return AirScout_asCommunicationPort;
 	}
 
-	public void setAirScout_asCommunicationPort(int airScout_asCommunicationPort) {
+	public void setAirScout_asCommunicationPort(
+			int airScout_asCommunicationPort
+	) {
+		if (airScout_asCommunicationPort < 1
+				|| airScout_asCommunicationPort > 65535) {
+			AirScout_asCommunicationPort = 9872;
+			return;
+		}
+
 		AirScout_asCommunicationPort = airScout_asCommunicationPort;
 	}
 
@@ -957,9 +1040,12 @@ public class ChatPreferences {
 		return AirScout_asUDPListenerEnabled;
 	}
 
-	public void setAirScout_asUDPListenerEnabled(boolean airScout_asUDPListenerEnabled) {
+	public void setAirScout_asUDPListenerEnabled(
+			boolean airScout_asUDPListenerEnabled
+	) {
 		AirScout_asUDPListenerEnabled = airScout_asUDPListenerEnabled;
 	}
+
 
 	public String getChatState() {
 		return chatState;
@@ -1667,6 +1753,18 @@ public class ChatPreferences {
 				snifferWords.appendChild(temp);
 			}
 
+			Element snifferCallSigns =
+					doc.createElement("snifferCallSigns");
+			rootElement.appendChild(snifferCallSigns);
+
+			for (String callSign
+					: lstNotify_QSOSniffer_sniffedCallSignList) {
+				Element temp = doc.createElement("callSign");
+				temp.setTextContent(callSign);
+				snifferCallSigns.appendChild(temp);
+			}
+
+
 			Element snifferPrefixes = doc.createElement("snifferPrefixes");
 			rootElement.appendChild(snifferPrefixes);
 
@@ -2265,7 +2363,13 @@ public class ChatPreferences {
 				notify_dxClusterServerEnabled = getBoolean(notificationsEl, notify_dxClusterServerEnabled, "notify_dxClusterServerEnabled");
 				notify_DXClusterServerTriggerBearing = getBoolean(notificationsEl, notify_DXClusterServerTriggerBearing, "notify_DXClusterServerTriggerBearing");
 				notify_DXClusterServerTriggerOnQRGDetect = getBoolean(notificationsEl, notify_DXClusterServerTriggerOnQRGDetect, "notify_DXClusterServerTriggerOnQRGDetect");
-				notify_dxclusterServerPort = getInt(notificationsEl, notify_dxclusterServerPort, "notify_dxclusterServerPort");
+				setNotify_dxclusterServerPort(
+						getInt(
+								notificationsEl,
+								notify_dxclusterServerPort,
+								"notify_dxclusterServerPort"
+						)
+				);
 
 				String spotter = getText(notificationsEl, null, "notify_DXCSrv_SpottersCallSign");
 				if (spotter != null) {
@@ -2316,15 +2420,58 @@ public class ChatPreferences {
 
 			Element airScoutEl = getFirstElement(doc, "AirScoutQuerier");
 			if (airScoutEl != null) {
-				AirScout_asUDPListenerEnabled = getBoolean(airScoutEl, AirScout_asUDPListenerEnabled, "asQry_airScoutCommunicationEnabled");
-				AirScout_asServerNameString = getText(airScoutEl, AirScout_asServerNameString, "asQry_airScoutServerName");
-				AirScout_asClientNameString = getText(airScoutEl, AirScout_asClientNameString, "asQry_airScoutClientName");
-				AirScout_asCommunicationPort = getInt(airScoutEl, AirScout_asCommunicationPort, "asQry_airScoutUDPPort");
-				AirScout_asBandString = getText(airScoutEl, AirScout_asBandString, "asQry_airScoutBandValue");
+				setAirScout_asUDPListenerEnabled(
+						getBoolean(
+								airScoutEl,
+								AirScout_asUDPListenerEnabled,
+								"asQry_airScoutCommunicationEnabled"
+						)
+				);
+
+				setAirScout_asServerNameString(
+						getText(
+								airScoutEl,
+								AirScout_asServerNameString,
+								"asQry_airScoutServerName"
+						)
+				);
+
+				setAirScout_asClientNameString(
+						getText(
+								airScoutEl,
+								AirScout_asClientNameString,
+								"asQry_airScoutClientName"
+						)
+				);
+
+				setAirScout_asCommunicationPort(
+						getInt(
+								airScoutEl,
+								AirScout_asCommunicationPort,
+								"asQry_airScoutUDPPort"
+						)
+				);
+
+				setAirScout_asBandString(
+						getText(
+								airScoutEl,
+								AirScout_asBandString,
+								"asQry_airScoutBandValue"
+						)
+				);
 
 				System.out.println(
-						"[ChatPreferences, info]: AirScout querier enabled=" + AirScout_asUDPListenerEnabled
-								+ ", band=" + AirScout_asBandString);
+						"[ChatPreferences, info]: AirScout integration enabled="
+								+ AirScout_asUDPListenerEnabled
+								+ ", server identifier="
+								+ AirScout_asServerNameString
+								+ ", client identifier="
+								+ AirScout_asClientNameString
+								+ ", port="
+								+ AirScout_asCommunicationPort
+								+ ", band="
+								+ AirScout_asBandString
+				);
 			}
 
 			/**
@@ -2374,6 +2521,45 @@ public class ChatPreferences {
 			/**
 			 * Case QSO-sniffer lists (added later; older configs won't have them)
 			 */
+
+			list = doc.getElementsByTagName("snifferCallSigns");
+
+			if (list != null && list.getLength() != 0) {
+				lstNotify_QSOSniffer_sniffedCallSignList.clear();
+
+				for (int temp = 0; temp < list.getLength(); temp++) {
+					Node node = list.item(temp);
+
+					if (node.getNodeType() == Node.ELEMENT_NODE) {
+						NodeList children = node.getChildNodes();
+
+						for (int i = 0; i < children.getLength(); i++) {
+							Node child = children.item(i);
+
+							if (child.getNodeType()
+									== Node.ELEMENT_NODE) {
+								String callSign =
+										child.getTextContent();
+
+								if (callSign != null
+										&& !callSign.isBlank()) {
+									String normalizedCallSign =
+											callSign
+													.trim()
+													.toUpperCase();
+
+									if (!lstNotify_QSOSniffer_sniffedCallSignList
+											.contains(normalizedCallSign)) {
+										lstNotify_QSOSniffer_sniffedCallSignList
+												.add(normalizedCallSign);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
 			list = doc.getElementsByTagName("snifferWords");
 			if (list != null && list.getLength() != 0) {
 				// reset to avoid duplicates when reloading

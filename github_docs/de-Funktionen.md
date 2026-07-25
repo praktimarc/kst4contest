@@ -34,7 +34,13 @@ Die Berechnung berücksichtigt keine topografischen Wegberechnungen – das ist 
 
 ## Sked-Richtungs-Spots (Integrierter DX-Cluster)
 
-Ab **v1.23**: Richtungs-Warnungen werden als DX-Cluster-Spots an das Logprogramm weitergeleitet, wenn eine QRG bekannt ist. Details: [DX-Cluster-Server](de-DX-Cluster-Server).
+Seit Version 1.23 kann KST4Contest erkannte Richtungsgelegenheiten als DX-Cluster-Spots an ein verbundenes Logprogramm weitergeben.
+
+Aus einer gerichteten Chat-Nachricht wird zunächst die wahrscheinliche Antennenrichtung des Absenders hergeleitet. Liegt die eigene Station innerhalb des konfigurierten Öffnungswinkels und ist eine Frequenz bekannt, erscheint die Station als Spot in der Bandmap des Logprogramms.
+
+KST4Contest überträgt damit nicht jede gefundene Frequenz, sondern nur Situationen, die für die eigene Station geometrisch plausibel sind.
+
+Details: [Integrierter DX-Cluster-Server](de-DX-Cluster-Server).
 
 ---
 
@@ -149,9 +155,11 @@ Aktivierung: FurtherInfo-Panel der entsprechenden Station.
 
 ---
 
-## QSO-Sniffer (ab v1.31)
+## QSO-Monitoring (ab v1.31)
 
-Der QSO-Sniffer überwacht den Chat auf Nachrichten von einer konfigurierbaren Rufzeichen-Liste und leitet diese automatisch in das **PM-Fenster** weiter. So gehen keine relevanten Nachrichten im allgemeinen Chat-Rauschen unter.
+Für ausgewählte Rufzeichen kann KST4Contest gerichtete Nachrichten zusätzlich in der PM-Tabelle anzeigen. Dabei werden sowohl Nachrichten berücksichtigt, die das überwachte Rufzeichen sendet, als auch Nachrichten, die an dieses Rufzeichen gerichtet sind.
+
+Die Nachricht bleibt gleichzeitig in ihrer ursprünglichen Tabelle erhalten und wird im PM-Fenster mit Absender und Empfänger als überwachte Kommunikation gekennzeichnet.
 
 Konfiguration: [Konfiguration – Sniffer-Einstellungen](de-Konfiguration#sniffer-einstellungen-ab-v131)
 

@@ -2,75 +2,202 @@
 
 > 🇬🇧 [English version](en-DX-Cluster-Server) | 🇩🇪 Du liest gerade die deutsche Version
 
-Ab **Version 1.23** enthält KST4Contest einen integrierten DX-Cluster-Server. Dieser sendet Spots direkt an das Logprogramm, wenn eine Richtungs-Warnung ausgelöst wird.
+Seit Version 1.23 enthält KST4Contest einen lokalen DX-Cluster-Server. Er übergibt erkannte Richtungsgelegenheiten und die dazugehörige Frequenz an den DX-Cluster-Client eines Logprogramms.
 
-*(Idee von OM0AAO, Viliam Petrik – danke!)*
-
----
-
-## Wozu dient der integrierte DX-Cluster-Server?
-
-Wenn KST4Contest erkennt, dass eine Station aus der eigenen Richtung ein Sked anfragt und gleichzeitig eine QRG bekannt ist, wird **automatisch ein DX-Cluster-Spot generiert** und an den Cluster-Client des Logprogramms gesendet.
-
-Das Logprogramm zeigt den Spot in der Bandkarte an. Ein Klick auf den Spot stellt Frequenz und Mode des Transceivers direkt ein – ohne manuelles Eintippen.
+Die Idee dazu stammt von OM0AAO, Viliam Petrik. Vielen Dank!
 
 ---
 
-## Einrichtung
+## Warum überhaupt ein eigener DX-Cluster-Server?
 
-### In KST4Contest
+Eine interessante Frequenz im Chat zu erkennen ist nur der erste Schritt. Im Contest muss diese Information dort ankommen, wo sie unmittelbar verwendet werden kann: im Logprogramm und dessen Bandmap.
 
-In den Preferences → **DX-Cluster-Server-Einstellungen**:
+KST4Contest verbindet deshalb zwei bereits vorhandene Informationen:
 
-1. **Port** des internen Servers eintragen (z. B. 7300 oder 8000 – muss mit dem Logprogramm übereinstimmen).
-2. **Spotter-Rufzeichen** eintragen – **unbedingt ein anderes Rufzeichen als das Contest-Rufzeichen verwenden!**
-   - Grund: Logprogramme filtern Spots, die vom eigenen Rufzeichen stammen, als „gearbeitet" heraus. Wenn der Spotter dasselbe Rufzeichen hat, werden die Spots nicht angezeigt.
-3. **Angenommene MHz** eintragen: Bei Frequenzangaben wie „.205" im Chat muss KST4Contest entscheiden, ob 144.205, 432.205 oder 1296.205 gemeint ist. Bei Einband-Contests einfach die entsprechende Bandmitte eintragen. Vollständige Frequenzangaben wie „144.205" oder „1296.338" im Chat werden immer korrekt erkannt.
+1. Aus einer gerichteten Chat-Nachricht lässt sich abschätzen, in welche Richtung die sendende Station ihre Antenne wahrscheinlich ausgerichtet hat.
+2. Aus derselben oder einer vorherigen Nachricht kann eine Frequenz der Station bekannt sein.
 
-### In UCXLog
+Treffen beide Informationen zusammen, erzeugt KST4Contest einen lokalen DX-Cluster-Spot. Der Logger kann diesen Spot in seiner Bandmap anzeigen und – abhängig von seiner eigenen Konfiguration – den Transceiver nach einem Klick auf die entsprechende Frequenz einstellen.
 
-- Verbindung zu einem DX-Cluster-Server konfigurieren:
-  - Host: `127.0.0.1` (oder IP des KST4Contest-Computers)
-  - Port: Wie in KST4Contest konfiguriert
-  - Passwort: kann leer bleiben
-- Über die Schaltfläche **„Send a test message to your log"** kann die Verbindung getestet werden.
-
-### In N1MM+
-
-Ähnliche Einstellungen:
-- Host: `127.0.0.1` (oder IP des KST4Contest-Computers)
-- Port: Wie in KST4Contest konfiguriert
+Im Klartext: Die Information muss nicht erst im Chat gefunden, gelesen, gemerkt und anschließend erneut in den Logger eingetragen werden. Genau diese kleinen Unterbrechungen kosten im Contest überraschend viel Aufmerksamkeit.
 
 ---
 
-## Funktionsweise
+## Wie wird eine Richtungsgelegenheit hergeleitet?
 
-Ein Spot wird generiert, wenn **beide** Bedingungen erfüllt sind:
+Angenommen, Station A schreibt eine gerichtete Nachricht an Station B. KST4Contest geht in diesem Fall davon aus, dass Station A ihre Antenne zumindest ungefähr in Richtung von Station B ausgerichtet hat.
 
-1. Eine **Richtungs-Warnung** wurde ausgelöst (Station macht ein Sked in die eigene Richtung).
-2. **QRG der Station ist bekannt** (aus dem Chat ausgelesen oder manuell eingetragen).
+Anschließend werden zwei Richtungen verglichen:
 
-Der generierte Spot enthält:
-- Rufzeichen der Station
-- Frequenz
-- Spotterzeit
+- die Richtung von Station A zu Station B,
+- die Richtung von Station A zur eigenen Station.
 
-Das Logprogramm kann den Spot dann in der Bandkarte anzeigen und den TRX per Mausklick auf die Frequenz abstimmen.
+Liegt die eigene Station innerhalb des konfigurierten Antennen-Öffnungswinkels und befindet sich Station A innerhalb des eingestellten maximalen QRB, wird die Situation als Richtungsgelegenheit behandelt.
+
+Ein DX-Cluster-Spot wird nur erzeugt, wenn alle folgenden Bedingungen erfüllt sind:
+
+1. Die Nachricht ist an eine konkrete andere Station gerichtet.
+2. Für Absender und Empfänger sind gültige Locator bekannt.
+3. Der Absender liegt innerhalb des konfigurierten maximalen QRB.
+4. Die eigene Station liegt aus Sicht des Absenders innerhalb des konfigurierten Antennen-Öffnungswinkels.
+5. Für den Absender ist eine verwertbare Frequenz bekannt.
+6. Der lokale DX-Cluster-Server ist aktiviert.
+
+Das Verfahren ist bewusst eine geometrische Herleitung. Es beweist weder, dass die Gegenstation tatsächlich mit genau dieser Antennenrichtung arbeitet, noch ersetzt es eine Ausbreitungsberechnung. Es erkennt eine plausible Gelegenheit. Mehr sollte man aus einer Chat-Nachricht auch nicht herauslesen.
 
 ---
 
-## Multi-Computer-Setup
+## Welche Frequenz wird verwendet?
 
-Wenn KST4Contest auf einem separaten Computer läuft (nicht auf dem Log-Computer):
+Vollständige Frequenzangaben können direkt verarbeitet werden, beispielsweise:
 
-- Host im Logprogramm: IP des KST4Contest-Computers (nicht `127.0.0.1`)
-- Entspricht der Konfiguration der QSO-UDP-Broadcast-Pakete (siehe [Log-Synchronisation](de-Log-Synchronisation))
+```text
+144.205
+432.088
+1296.338
+```
+
+Im Chat werden jedoch häufig nur relative Angaben geschrieben:
+
+```text
+205
+.205
+338
+```
+
+In diesem Fall fehlt das Band. KST4Contest ergänzt deshalb das unter **Fallback band in MHz** konfigurierte Bandpräfix.
+
+Beispiel:
+
+```text
+Fallback-Band: 144
+Chat-Frequenz: .205
+DX-Cluster-Frequenz: 144205.0 kHz
+```
+
+Bei einem Einband-Contest ist diese Annahme normalerweise eindeutig. Bei gleichzeitigem Betrieb mehrerer Bänder kann sie falsch sein. Das Fallback-Band sollte deshalb zu dem Band passen, das in der betreffenden Chat-Kategorie überwiegend verwendet wird.
+
+Die weitergehende Frage, ob sich das Band künftig aus der konkreten Arbeitsfrequenz oder dem Stationskontext ableiten lässt, wird nach Abschluss des Manuals gesondert geprüft.
+
+---
+
+## Einrichtung in KST4Contest
+
+Öffne den Reiter **Notification** in den Preferences.
+
+![Benachrichtigungen und lokaler DX-Cluster-Server](client_settings_window_notification.png)
+
+Konfiguriere anschließend:
+
+1. **Enable the local DX Cluster server …** aktivieren.
+2. Einen freien **TCP port** eintragen. Standard ist `8000`.
+3. Das passende **Fallback band in MHz** eintragen.
+4. Ein **Spotter callsign** festlegen.
+
+Für das Spotter-Rufzeichen sollte nach Möglichkeit ein anderes Rufzeichen als das Contest-Rufzeichen verwendet werden. Einige Logger filtern Spots, die scheinbar von der eigenen Station stammen. Das Ergebnis wäre technisch korrekt erzeugt, aber in der Bandmap trotzdem unsichtbar – eine besonders unproduktive Art von Erfolg.
+
+Änderungen am Aktivierungsstatus und am TCP-Port werden während einer laufenden Chat-Verbindung sofort angewendet. Bei einem Portwechsel werden vorhandene DX-Cluster-Verbindungen getrennt und müssen vom Logger neu aufgebaut werden.
+
+Die Einstellungen werden erst mit **Save Settings** dauerhaft in der `preferences.xml` gespeichert.
+
+---
+
+## Einrichtung im Logprogramm
+
+Das Logprogramm wird als DX-Cluster-Client mit KST4Contest verbunden.
+
+| Einstellung | KST4Contest und Logger auf demselben Computer | Logger auf einem anderen Computer |
+|---|---|---|
+| Host | `127.0.0.1` | IP-Adresse des KST4Contest-Computers |
+| Port | In KST4Contest konfigurierter TCP-Port | In KST4Contest konfigurierter TCP-Port |
+| Login | Beliebiges Rufzeichen, falls der Logger eines verlangt | Beliebiges Rufzeichen, falls der Logger eines verlangt |
+| Passwort | Nicht erforderlich | Nicht erforderlich |
+
+KST4Contest wertet den vom Logger gesendeten Login nicht zur Authentifizierung aus. Die Verbindung ist für ein lokales oder vertrauenswürdiges Stationsnetz vorgesehen.
+
+Wenn der Logger auf einem anderen Computer läuft, muss dessen Verbindung durch die lokale Firewall des KST4Contest-Computers zugelassen werden. Der Port sollte nicht ohne weiteren Schutz aus dem Internet erreichbar sein.
+
+Mehrere DX-Cluster-Clients können gleichzeitig verbunden werden. Ein erzeugter Spot wird an alle aktuell verbundenen Clients gesendet.
+
+---
+
+## Verbindung testen
+
+Die Schaltfläche **Send test spot** erzeugt einen neutralen Testeintrag:
+
+```text
+Spotted callsign: DO5AMF
+Comment: KST4CONTEST TEST
+Frequency: .300 des konfigurierten Fallback-Bandes
+```
+
+Bei einem Fallback-Band von `144` erscheint der Spot daher auf ungefähr `144.300 MHz`.
+
+Vor dem Test müssen drei Bedingungen erfüllt sein:
+
+1. KST4Contest ist mit dem ON4KST-Chat verbunden.
+2. Der lokale DX-Cluster-Server ist aktiviert.
+3. Der DX-Cluster-Client des Logprogramms ist mit KST4Contest verbunden.
+
+Fehlt die Client-Verbindung, zeigt KST4Contest eine entsprechende Meldung an. Ein erfolgreich ausgeführter Test bedeutet damit tatsächlich, dass mindestens ein Client den Spot erhalten hat.
+
+---
+
+## Inhalt eines erzeugten Spots
+
+Ein Spot enthält:
+
+- das konfigurierte Spotter-Rufzeichen,
+- die normalisierte Frequenz,
+- das Rufzeichen der erkannten Station,
+- den Locator,
+- Flugzeug-Scatter-Informationen, falls vorhanden,
+- die aktuelle UTC-Zeit.
+
+Wenn für die Station aktuelle Aircraft-Scatter-Informationen vorliegen, kann KST4Contest diese als zusätzliche AP-Information in den Kommentar des Spots aufnehmen.
+
+---
+
+## Wenn kein Spot erscheint
+
+### Der Testspot kommt nicht im Logger an
+
+Prüfe:
+
+- Ist KST4Contest mit dem Chat verbunden?
+- Ist der lokale DX-Cluster-Server aktiviert?
+- Verwendet der Logger denselben TCP-Port?
+- Verwendet der Logger bei lokalem Betrieb `127.0.0.1`?
+- Blockiert eine Firewall die Verbindung?
+- Ist im Logger das DX-Cluster-Fenster beziehungsweise die Bandmap aktiviert?
+
+### Testspot funktioniert, aber reale Spots fehlen
+
+Dann funktioniert die Verbindung grundsätzlich. Für die betreffende Chat-Situation war wahrscheinlich mindestens eine fachliche Bedingung nicht erfüllt:
+
+- kein gerichteter Nachrichtenaustausch,
+- fehlender Locator,
+- Station außerhalb des maximalen QRB,
+- Richtung außerhalb des konfigurierten Öffnungswinkels,
+- keine erkannte Frequenz.
+
+KST4Contest sendet absichtlich nicht jede gefundene Frequenz an den Logger. Andernfalls würde aus einer Arbeitserleichterung sehr schnell eine lokale Spot-Schleuder.
+
+### Der Spot erscheint auf dem falschen Band
+
+Prüfe zuerst das konfigurierte **Fallback band in MHz**. Es wird nur benötigt, wenn im Chat keine vollständige Frequenz angegeben wurde.
+
+### Der Spot wird vom Logger ausgeblendet
+
+Verwende ein Spotter-Rufzeichen, das nicht mit dem eigenen Contest-Rufzeichen identisch ist. Abhängig vom Logger können eigene Spots gefiltert oder besonders behandelt werden.
 
 ---
 
 ## Getestete Logprogramme
 
-- **UCXLog** ✓
-- **N1MM+** ✓
+Die Schnittstelle wurde mit folgenden Logprogrammen verwendet:
 
-Weitere Testergebnisse sind willkommen – bitte per E-Mail an DO5AMF melden.
+- UCXLog
+- N1MM+
+
+Weitere Logger können funktionieren, wenn sie eine normale TCP-Verbindung zu einem DX-Cluster-Server unterstützen.

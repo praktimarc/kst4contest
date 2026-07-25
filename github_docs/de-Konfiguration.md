@@ -14,7 +14,7 @@ Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist de
 
 ### Login und Chat-Kategorien
 
-Hier werden die Zugangsdaten für den ON4KST-Chat eingetragen (Rufzeichen und Passwort). 
+Hier werden die Zugangsdaten für den ON4KST-Chat eingetragen (Rufzeichen und Passwort).
 Zudem wird die **primäre Chat-Kategorie** (z. B. IARU Region 1 VHF/Microwave) ausgewählt.
 
 Mit der Option für einen **zweiten Chat** (Multi-Channel-Login) kann man sich gleichzeitig in eine weitere Kategorie (z. B. UHF/SHF) einloggen. Beide Chats werden dann parallel überwacht. Hier kann optional auch ein abweichender Login-Name für den zweiten Chat vergeben werden (nützlich für Opposite Station Multi-Callsign Logging).
@@ -87,11 +87,77 @@ Konfiguration der Schnittstelle zu AirScout für die Flugzeug-Scatter-Erkennung.
 
 ## Notification Settings (Benachrichtigungen)
 
-Drei Benachrichtigungstypen stehen zur Wahl:
+![Benachrichtigungen, DX-Cluster-Ausgabe und QSO-Monitoring](client_settings_window_notification.png)
 
-1. **Einfache Sounds**: TADA-Sound für eingehende Nachrichten, Tick für Sked-Richtungserkennung usw.
-2. **CW-Ansage**: Das Rufzeichen einer Station, die eine Privatnachricht sendet, wird als CW-Signal ausgegeben.
-3. **Phonetische Ansage**: Das Rufzeichen wird phonetisch ausgesprochen.
+Im Reiter **Notification** werden nicht nur akustische Hinweise konfiguriert. Hier befinden sich auch die Einstellungen für den lokalen DX-Cluster-Server, den Band-Upgrade-Hinweis und das QSO-Monitoring.
+
+### Akustische Hinweise
+
+Die drei Audiofunktionen arbeiten unabhängig voneinander:
+
+- **Play notification sounds …** aktiviert kurze Hinweistöne für neue Privatnachrichten, erkannte Richtungsgelegenheiten, Sked-Erinnerungen und Band-Upgrade-Hinweise.
+- **Spell the sender's callsign in CW …** gibt das Rufzeichen des Absenders einer neuen Privatnachricht als CW-Signal aus.
+- **Speak the sender's callsign phonetically …** spricht das Rufzeichen des Absenders phonetisch aus.
+
+CW- und Sprachausgabe können gleichzeitig aktiviert werden. Das ist technisch möglich, im Contest aber nicht zwingend hilfreich. In der Praxis sollte nur die Ausgabe eingeschaltet werden, die im eigenen Stationsbetrieb tatsächlich wahrgenommen werden kann, ohne den Operator dauerhaft zu beschäftigen.
+
+### Local DX Cluster output
+
+KST4Contest kann erkannte Richtungsgelegenheiten als DX-Cluster-Spots an ein Logprogramm weitergeben. Der praktische Nutzen liegt auf der Hand: Eine im Chat erkannte Frequenz erscheint direkt in der Bandmap des Logprogramms und muss nicht erst von Hand übertragen werden.
+
+Die Checkbox **Enable the local DX Cluster server …** startet beziehungsweise beendet den lokalen TCP-Server. Bei einer laufenden Chat-Verbindung wird die Änderung sofort wirksam.
+
+Folgende Einstellungen sind erforderlich:
+
+- **TCP port**: Port, auf dem KST4Contest Verbindungen von DX-Cluster-Clients annimmt. Der Standardwert ist `8000`. Wird der Port während einer laufenden Verbindung geändert, startet KST4Contest den Server auf dem neuen Port neu. Der Logger muss sich anschließend ebenfalls mit dem neuen Port verbinden.
+- **Fallback band in MHz**: Bandpräfix für relative Frequenzangaben. Aus `205` oder `.205` wird bei einem Fallback-Band von `144` die Frequenz `144.205 MHz`. Vollständige Angaben wie `432.205` oder `1296.338` benötigen diesen Fallback nicht.
+- **Spotter callsign**: Rufzeichen, das im erzeugten DX-Cluster-Spot als Spotter erscheint. Hier sollte ein anderes Rufzeichen als das im Contest verwendete Stationsrufzeichen eingetragen werden. Einige Logprogramme filtern Spots des eigenen Rufzeichens oder behandeln sie anders als fremde Spots.
+- **Send test spot**: Sendet einen Testspot für `DL0TEST` auf `.300` des eingestellten Fallback-Bandes. Der Test funktioniert nur, wenn KST4Contest mit dem Chat verbunden, der lokale DX-Cluster-Server aktiviert und mindestens ein DX-Cluster-Client verbunden ist.
+
+KST4Contest erzeugt nicht bei jeder im Chat gefundenen Frequenz automatisch einen Spot. Ein Spot entsteht nur dann, wenn eine gerichtete Nachricht zwischen zwei Stationen auf eine für die eigene Station interessante Antennenrichtung schließen lässt und für den Absender eine nutzbare Frequenz bekannt ist.
+
+Die vollständige Herleitung und die Einrichtung des Logprogramms sind im Kapitel [Integrierter DX-Cluster-Server](de-DX-Cluster-Server) beschrieben.
+
+### Band-Upgrade-Hinweis nach einem Logeintrag
+
+Nach einem über UCXLog oder Win-Test empfangenen Logeintrag kann KST4Contest prüfen, ob die gerade gearbeitete Station auf einem weiteren gemeinsamen, aber noch nicht gearbeiteten Band aktiv ist.
+
+Dafür werden drei Informationen miteinander verglichen:
+
+1. die in den Stationseinstellungen aktivierten eigenen Bänder,
+2. die innerhalb der letzten 30 Minuten erkannten Bänder der Gegenstation,
+3. die bereits pro Band gespeicherten Worked-Markierungen.
+
+Bleibt danach mindestens ein gemeinsames, noch nicht gearbeitetes Band übrig, erscheint im Hauptfenster ein blinkender **BAND+**-Hinweis. Ist die allgemeine Soundausgabe aktiviert, wird zusätzlich ein Hinweiston abgespielt.
+
+Die beiden Optionen haben unterschiedliche Aufgaben:
+
+- **Blink + sound …** aktiviert den eigentlichen Band-Upgrade-Hinweis.
+- **Priority boost …** erhöht zusätzlich die Priorität entsprechender Stationen, damit sie in den Kandidatenlisten besser sichtbar bleiben. Der Boost garantiert keinen bestimmten Listenplatz; er ist nur ein zusätzlicher Faktor innerhalb der gesamten Prioritätsberechnung.
+
+Der Hinweis setzt eine Log-Synchronisation mit Bandinformation voraus. Der einfache dateibasierte Callsign-Interpreter kann nur Rufzeichen erkennen und liefert deshalb keine ausreichende Grundlage für diese Prüfung.
+
+### Sniffer-Einstellungen (ab v1.31)
+
+Das QSO-Monitoring ist für Stationen gedacht, deren Kommunikation man gezielt verfolgen möchte. Das kann beispielsweise eine seltene Station, eine DXpedition oder eine andere Station des eigenen Contest-Teams sein.
+
+Für jedes eingetragene Rufzeichen zeigt KST4Contest Nachrichten zusätzlich in der PM-Tabelle an, wenn das Rufzeichen entweder Absender oder Empfänger der Nachricht ist. Die ursprüngliche Nachricht wird dabei nicht aus ihrer normalen Tabelle entfernt.
+
+Überwachte Nachrichten werden in der PM-Tabelle eindeutig gekennzeichnet:
+
+```text
+Sniffed: (SENDER > RECEIVER) Nachrichtentext
+```
+
+So wird sichtbar, dass die Nachricht nicht an die eigene Station gerichtet war.
+
+Rufzeichen werden folgendermaßen verwaltet:
+
+1. Mit **Add monitored callsign** ein neues Rufzeichen hinzufügen.
+2. Ein vorhandenes Rufzeichen per Doppelklick bearbeiten und die Änderung mit `Enter` übernehmen.
+3. Zum Entfernen den Inhalt einer Tabellenzelle löschen und mit `Enter` bestätigen.
+
+Doppelte oder syntaktisch ungültige Rufzeichen werden nicht übernommen. Die Liste wird mit **Save Settings** in der `preferences.xml` gespeichert und beim nächsten Programmstart wiederhergestellt.
 
 ---
 
@@ -160,17 +226,6 @@ Einstellungen:
 - **Port**: Kommunikationsport von PSTRotator.
 
 > **Hinweis**: Nach einem Klick auf den Richtungs-Button wartet KST4Contest kurz auf die Rotatorantwort. Bei langsamen Rotoren (z. B. SPID) kann es zu einer kleinen Verzögerung kommen.
-
----
-
-## Sniffer-Einstellungen (ab v1.31)
-
-Der QSO-Sniffer filtert Chat-Nachrichten von konfigurierbaren Rufzeichen und leitet sie ins PM-Fenster weiter.
-
-Einstellungen:
-- **Rufzeichen-Liste**: Kommagetrennte Liste von Rufzeichen, deren Nachrichten immer in das PM-Fenster weitergeleitet werden sollen.
-
-Anwendungsfall: Wichtige Stationen (z. B. DX-Peditionen oder feste Verbündete im Contest) im Auge behalten, ohne den Haupt-Chat ständig zu beobachten.
 
 ---
 

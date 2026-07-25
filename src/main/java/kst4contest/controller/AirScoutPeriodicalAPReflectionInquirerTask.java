@@ -1,150 +1,198 @@
 package kst4contest.controller;
 
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.NoRouteToHostException;
-import java.net.SocketException;
-import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.TimerTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javafx.collections.ObservableList;
-import kst4contest.locatorUtils.Location;
 import kst4contest.model.ChatMember;
 
-
+/**
+ * Sends periodical path requests and an AirScout watchlist for the currently
+ * active ON4KST stations.
+ */
 public class AirScoutPeriodicalAPReflectionInquirerTask extends TimerTask {
 
-	private static final Logger LOGGER = Logger.getLogger(AirScoutPeriodicalAPReflectionInquirerTask.class.getName());
-	private ChatController client;
+	private static final Logger LOGGER = Logger.getLogger(
+			AirScoutPeriodicalAPReflectionInquirerTask.class.getName()
+	);
 
-	public AirScoutPeriodicalAPReflectionInquirerTask(ChatController client) {
+	private static final String BROADCAST_ADDRESS = "255.255.255.255";
 
+	private final ChatController client;
+
+	public AirScoutPeriodicalAPReflectionInquirerTask(
+			ChatController client
+	) {
 		this.client = client;
-
 	}
 
 	@Override
 	public void run() {
-		
-		Thread.currentThread().setName("AirscoutPeriodicalReflectionInquirierTask");
+		Thread.currentThread().setName(
+				"AirscoutPeriodicalReflectionInquirerTask"
+		);
 
-		String KSTClientsNameForQuery = this.client.getChatPreferences().getAirScout_asClientNameString();
-		String ASServerNameStringForAnswer = this.client.getChatPreferences().getAirScout_asServerNameString();
-
-		//TODO: Manage prefixes kst and as via preferences file and instance
-		//TODO: Check if locator is changeable via the preferences object, need to be correct if it changes
-		DatagramSocket dsocket;
-		
-//		String prefix_asSetpath ="ASSETPATH: \"KST\" \"AS\" "; //working original
-//		String prefix_asWatchList  = "ASWATCHLIST: \"KST\" \"AS\" "; //working original
-
-		String prefix_asSetpath ="ASSETPATH: \"" + this.client.getChatPreferences().getAirScout_asClientNameString() + "\" \"" + this.client.getChatPreferences().getAirScout_asServerNameString() + "\" ";
-		String prefix_asWatchList  = "ASWATCHLIST: \""+ this.client.getChatPreferences().getAirScout_asClientNameString()+ "\" \"" + this.client.getChatPreferences().getAirScout_asServerNameString() + "\" ";
-
-		String bandString = "1440000"; //TODO: this must variable in case of higher bands! ... default: 1440000
-//		String myCallAndMyLocString = this.client.getChatPreferences().getStn_loginCallSign() + "," + this.client.getChatPreferences().getStn_loginLocatorMainCat(); //before fix 1.266
-
-
-        String ownCallSign = this.client.getChatPreferences().getStn_loginCallSign();
-        try {
-            if (this.client.getChatPreferences().getStn_loginCallSign().contains("-")) {
-                ownCallSign = this.client.getChatPreferences().getStn_loginCallSign().split("-")[0];
-            } else {
-                ownCallSign = this.client.getChatPreferences().getStn_loginCallSign();
-            }
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "[ASPERIODICAL] Error parsing callsign", e);
-        }
-        String myCallAndMyLocString = ownCallSign + "," + this.client.getChatPreferences().getStn_loginLocatorMainCat(); //bugfix, Airscout do not process 9A1W-2 but 9A1W like formatted calls
-
-
-		String suffix = ""; //"FOREIGNCALL,FOREIGNLOC " -- dont forget the space at the end!!!
-		String asWatchListString = prefix_asWatchList + bandString + "," + myCallAndMyLocString;
-		String asWatchListStringSuffix = asWatchListString;
-
-		String host = "255.255.255.255";
-//		int port = 9872;
-
-		int port = client.getChatPreferences().getAirScout_asCommunicationPort();
-//		byte[] message = "ASSETPATH: \"KST\" \"AS\" 1440000,DO5AMF,JN49GL,OK1MZM,JN89IW ".getBytes(); Original, ging
-		InetAddress address;
-		
-
-		/**
-		 * Iterate over chatmemberlist and asking airscout for plane reflection information		
-		 * To avoid a concurrentmodifyexception, we have to convert the original list to an array at first
-		 * since the iterator brakes if the list changing during the iteration time
+		/*
+		 * Keep the scheduled task installed so that AirScout can be enabled at
+		 * runtime, but do not send anything while the integration is disabled.
 		 */
-		ObservableList<ChatMember> praktiKSTActiveUserList = this.client.getLst_chatMemberList();
-		
-		
-		ChatMember[] ary_threadSafeChatMemberArray = new ChatMember[praktiKSTActiveUserList.size()]; 
-		praktiKSTActiveUserList.toArray(ary_threadSafeChatMemberArray);
-		
-		for (ChatMember i : ary_threadSafeChatMemberArray) {
+		if (!client.getChatPreferences().isAirScout_asUDPListenerEnabled()) {
+			return;
+		}
 
-			if (i.getQrb() < this.client.getChatPreferences().getStn_maxQRBDefault())
-			//Here: check if maximum distance to the chatmember is reached, only ask AS if distance is lower!
-                //this counts for AS request and Aswatchlist
-			{
-					suffix = i.getCallSign() + "," + i.getQra() + " ";
+		String clientIdentifier =
+				client.getChatPreferences().getAirScout_asClientNameString();
+		String serverIdentifier =
+				client.getChatPreferences().getAirScout_asServerNameString();
+		String bandValue =
+				client.getChatPreferences().getAirScout_asBandString();
 
-				String queryStringToAirScout = "";
+		String ownCallSign = normalizeOwnCallSign(
+				client.getChatPreferences().getStn_loginCallSign()
+		);
+		String ownLocator =
+				client.getChatPreferences().getStn_loginLocatorMainCat();
 
-				queryStringToAirScout += prefix_asSetpath + bandString + "," + myCallAndMyLocString + "," + suffix;
+		if (ownCallSign == null
+				|| ownCallSign.isBlank()
+				|| ownLocator == null
+				|| ownLocator.isBlank()) {
+			LOGGER.warning(
+					"AirScout queries were skipped because the own callsign "
+							+ "or locator is missing."
+			);
+			return;
+		}
 
-				byte[] queryStringToAirScoutMSG = queryStringToAirScout.getBytes();
+		String setPathPrefix =
+				"ASSETPATH: \"" + clientIdentifier
+						+ "\" \"" + serverIdentifier + "\" ";
 
-				try {
-					address = InetAddress.getByName("255.255.255.255");
-					DatagramPacket packet = new DatagramPacket(queryStringToAirScoutMSG, queryStringToAirScoutMSG.length, address, port);
-					dsocket = new DatagramSocket();
-					dsocket.setBroadcast(true);
-					dsocket.send(packet);
-					dsocket.close();
-				} catch (UnknownHostException e1) {
-					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] Unknown host", e1);
-				} catch (NoRouteToHostException e) {
-					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] No route to host", e);
-				} catch (SocketException e) {
-					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] Socket error", e);
-				} catch (IOException e) {
-					LOGGER.log(Level.SEVERE, "[ASPERIODICAL] IO error sending query", e);
+		String watchListPrefix =
+				"ASWATCHLIST: \"" + clientIdentifier
+						+ "\" \"" + serverIdentifier + "\" ";
+
+		String ownStation = ownCallSign + "," + ownLocator;
+		StringBuilder watchListMessage = new StringBuilder(
+				watchListPrefix
+						+ bandValue
+						+ ","
+						+ ownStation
+		);
+
+		List<ChatMember> activeMembers = client.snapshotChatMembers();
+		int port = client.getChatPreferences()
+				.getAirScout_asCommunicationPort();
+
+		try (
+				DatagramSocket socket = new DatagramSocket()
+		) {
+			socket.setBroadcast(true);
+			InetAddress broadcastAddress =
+					InetAddress.getByName(BROADCAST_ADDRESS);
+
+			for (ChatMember member : activeMembers) {
+				if (!isUsableAirScoutTarget(member)) {
+					continue;
 				}
-				//			System.out.println("[ASUDPTask, info:] sent query " + queryStringToAirScout);
 
-				asWatchListStringSuffix += "," + i.getCallSign() + "," + i.getQra();
+				if (member.getQrb()
+						>= client.getChatPreferences().getStn_maxQRBDefault()) {
+					continue;
+				}
+
+				String targetStation =
+						member.getCallSign() + "," + member.getQra();
+
+				String pathQuery =
+						setPathPrefix
+								+ bandValue
+								+ ","
+								+ ownStation
+								+ ","
+								+ targetStation
+								+ " ";
+
+				sendPacket(
+						socket,
+						broadcastAddress,
+						port,
+						pathQuery
+				);
+
+				watchListMessage
+						.append(",")
+						.append(targetStation);
 			}
+
+			watchListMessage.append(" ");
+
+			sendPacket(
+					socket,
+					broadcastAddress,
+					port,
+					watchListMessage.toString()
+			);
+		} catch (IOException exception) {
+			LOGGER.log(
+					Level.WARNING,
+					"Could not send the periodical AirScout queries.",
+					exception
+			);
 		}
-
-		/**
-		 * As next we will set the ASWatchlist. All stations in chat will be watched by airscout causing following code.\n\n
-		 * ASWATCHLIST: "KST" "AS" 4320000,DO5AMF,JN49GL,DF9QX,JO42HD,DG2KBC,JN58MI,DJ0PY,JO32MF,DL1YDI,JO42FA,DL6BF,JO32QI,F1NZC,JN15MR,F4TXU,JN23CX,F5GHP,IN96LE,F6HTJ,JN12KQ,G0GGG,IO81VE,G0JCC,IO82MA,G0JDL,JO02SI,G0MBL,JO01QH,G4AEP,IO91MB,G4CLA,IO92JL,G4DCV,IO91OF,G4LOH,IO70JC,G4MKF,IO91HJ,G4TRA,IO81WN,G8GXP,IO93FQ,G8VHI,IO92FM,GW0RHC,IO71UN,HA4ND,JN97MJ,I5/HB9SJV/P,JN52JS,IW2DAL,JN45NN,OK1FPR,JO80CE,OK6M,JN99CR,OV3T,JO46CM,OZ2M,JO65FR,PA0V,JO33II,PA2RU,JO32LT,PA3DOL,JO22MT,PA9R,JO22JK,PE1EVX,JO22MP,S51AT,JN75GW,SM7KOJ,JO66ND,SP9TTG,JO90KW�
-		 * The watchlist-String is bult by the for loop which builds the AP queries
-		 */
-		asWatchListStringSuffix += " ";
-		
-		byte[] queryStringToAirScoutMSG = asWatchListStringSuffix.getBytes();
-
-		try {
-			address = InetAddress.getByName("255.255.255.255");
-			DatagramPacket packet = new DatagramPacket(queryStringToAirScoutMSG, queryStringToAirScoutMSG.length, address, port);
-			dsocket = new DatagramSocket();
-			dsocket.setBroadcast(true);
-			dsocket.send(packet);
-			dsocket.close();
-		} catch (IOException e) {
-			LOGGER.log(Level.SEVERE, "[ASPERIODICAL] IO error sending watchlist", e);
-		}
-
-//		System.out.println("[ASUDPTask, info:] set watchlist: " + asWatchListStringSuffix);
-
-		
 	}
 
+	/**
+	 * Removes the ON4KST login suffix because AirScout expects the actual
+	 * station callsign, for example 9A1W instead of 9A1W-2.
+	 *
+	 * @param callSign configured ON4KST login callsign
+	 * @return callsign without an ON4KST login suffix
+	 */
+	private String normalizeOwnCallSign(String callSign) {
+		if (callSign == null) {
+			return null;
+		}
+
+		String normalizedCallSign = callSign.trim();
+		int suffixSeparator = normalizedCallSign.indexOf("-");
+
+		if (suffixSeparator > 0) {
+			return normalizedCallSign.substring(0, suffixSeparator);
+		}
+
+		return normalizedCallSign;
+	}
+
+	private boolean isUsableAirScoutTarget(ChatMember member) {
+		return member != null
+				&& member.getCallSign() != null
+				&& !member.getCallSign().isBlank()
+				&& member.getQra() != null
+				&& !member.getQra().isBlank();
+	}
+
+	private void sendPacket(
+			DatagramSocket socket,
+			InetAddress address,
+			int port,
+			String message
+	) throws IOException {
+		byte[] payload = message.getBytes(StandardCharsets.UTF_8);
+
+		DatagramPacket packet = new DatagramPacket(
+				payload,
+				payload.length,
+				address,
+				port
+		);
+
+		socket.send(packet);
+	}
 }

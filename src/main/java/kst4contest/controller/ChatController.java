@@ -32,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.nio.charset.StandardCharsets;
 
 
 
@@ -472,66 +473,106 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
      * @param remoteChatMember with callsign of the foreign station
      */
 
-    public void airScout_SendAsShowPathPacket(ChatMember remoteChatMember) {
+	/**
+	 * Requests AirScout to display the path between the own station and the
+	 * selected remote station.
+	 *
+	 * The configured server identifier, client identifier, band and UDP port are
+	 * used for every request. This allows several AirScout servers or clients to
+	 * coexist in the same network.
+	 *
+	 * @param remoteChatMember selected remote station
+	 */
+	public void airScout_SendAsShowPathPacket(
+			ChatMember remoteChatMember
+	) {
+		if (!chatPreferences.isAirScout_asUDPListenerEnabled()) {
+			System.out.println(
+					"[AirScout, info]: Show-path request ignored because "
+							+ "the AirScout integration is disabled."
+			);
+			return;
+		}
 
-		DatagramSocket dsocket;
+		if (remoteChatMember == null
+				|| remoteChatMember.getCallSign() == null
+				|| remoteChatMember.getCallSign().isBlank()
+				|| remoteChatMember.getQra() == null
+				|| remoteChatMember.getQra().isBlank()) {
+			System.out.println(
+					"[AirScout, warning]: Show-path request ignored because "
+							+ "the selected station has no usable callsign or locator."
+			);
+			return;
+		}
 
-		String prefix_asSetpath ="ASSHOWPATH: \""+ this.getChatPreferences().getAirScout_asClientNameString()+ "\" \"" + this.getChatPreferences().getAirScout_asServerNameString() + "\" ";
+		String ownCallSign = chatPreferences.getStn_loginCallSign();
+		if (ownCallSign == null || ownCallSign.isBlank()) {
+			return;
+		}
 
-//		String prefix_asSetpath ="ASSHOWPATH: \"KST\" \"AS\" "; Old hard coded
-		String bandString = "1440000";
-//        String myCallAndMyLocString = chatPreferences.getStn_loginCallSign() + "," + chatPreferences.getStn_loginLocatorMainCat(); // original b4 bugfix 1266
-		String remoteCallAndLocString = remoteChatMember.getCallSign() +"," + remoteChatMember.getQra();
+		int suffixSeparator = ownCallSign.indexOf("-");
+		if (suffixSeparator > 0) {
+			ownCallSign = ownCallSign.substring(0, suffixSeparator);
+		}
 
-        String ownCallSign="";
-        try {
-            if (chatPreferences.getStn_loginCallSign().contains("-")) {
-                ownCallSign = chatPreferences.getStn_loginCallSign().split("-")[0];
-            } else {
-                ownCallSign = chatPreferences.getStn_loginCallSign();
-            }
-        } catch (Exception e) {
-            System.out.println("[ASPERIODICAL, Error]: " + e.getMessage());
-        }
+		String ownLocator =
+				chatPreferences.getStn_loginLocatorMainCat();
 
-		String myCallAndMyLocString = ownCallSign + "," + chatPreferences.getStn_loginLocatorMainCat(); // original b4 bugfix 1266
+		if (ownLocator == null || ownLocator.isBlank()) {
+			return;
+		}
 
-		String host = "255.255.255.255";
-//		int port = 9872;
-		int port = chatPreferences.getAirScout_asCommunicationPort();
-//		System.out.println("<<<<<<<<<<<<<<<<<<<<ASPERI: " + port);
+		String clientIdentifier =
+				chatPreferences.getAirScout_asClientNameString();
+		String serverIdentifier =
+				chatPreferences.getAirScout_asServerNameString();
+		String bandValue =
+				chatPreferences.getAirScout_asBandString();
+		int port =
+				chatPreferences.getAirScout_asCommunicationPort();
 
-//		byte[] message = "ASSETPATH: \"KST\" \"AS\" 1440000,DO5AMF,JN49GL,OK1MZM,JN89IW ".getBytes(); Original, ging
-		InetAddress address;
+		String query =
+				"ASSHOWPATH: \""
+						+ clientIdentifier
+						+ "\" \""
+						+ serverIdentifier
+						+ "\" "
+						+ bandValue
+						+ ","
+						+ ownCallSign
+						+ ","
+						+ ownLocator
+						+ ","
+						+ remoteChatMember.getCallSign()
+						+ ","
+						+ remoteChatMember.getQra()
+						+ " ";
 
-			String queryStringToAirScout = "";
+		byte[] payload = query.getBytes(StandardCharsets.UTF_8);
 
-			queryStringToAirScout += prefix_asSetpath + bandString + "," + myCallAndMyLocString + "," + remoteCallAndLocString+ "Å";
+		try (
+				DatagramSocket socket = new DatagramSocket()
+		) {
+			socket.setBroadcast(true);
 
-			byte[] queryStringToAirScoutMSG = queryStringToAirScout.getBytes();
+			InetAddress address =
+					InetAddress.getByName("255.255.255.255");
 
-			try {
-				address = InetAddress.getByName("255.255.255.255");
-				DatagramPacket packet = new DatagramPacket(queryStringToAirScoutMSG, queryStringToAirScoutMSG.length, address, port);
-				dsocket = new DatagramSocket();
-				dsocket.setBroadcast(true);
-				dsocket.send(packet);
-				dsocket.close();
-			} catch (UnknownHostException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (NoRouteToHostException e) {
-				e.printStackTrace();
-			}
-			catch (SocketException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			DatagramPacket packet = new DatagramPacket(
+					payload,
+					payload.length,
+					address,
+					port
+			);
 
-
+			socket.send(packet);
+		} catch (IOException exception) {
+			System.out.println(
+					"[AirScout, error]: Could not send show-path request: "
+							+ exception.getMessage()
+			);
+		}
 	}
 
 	/**
@@ -582,7 +623,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
 		stopScoreScheduler();
 
-		this.dxClusterServer.stop();
+		stopDxClusterServer();
 
 		this.setDisconnectionPerformedByUser(true);
 
@@ -691,8 +732,6 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			airScoutUDPReaderThread.interrupt();
 			
 			dbHandler.closeDBConnection();
-
-			dxClusterServer.stop();
 
             rotatorClient.stopRotor();
             rotatorClient.stop();
@@ -1132,7 +1171,9 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 																										// mine
 	private FilteredList<ChatMessage> lst_toOtherMessageList = new FilteredList<>(lst_globalChatMessageList);
 
-    private ObservableList<String> lstNotify_QSOSniffer_sniffedCallSignList = FXCollections.observableArrayList();
+//    private ObservableList<String> lstNotify_QSOSniffer_sniffedCallSignList = FXCollections.observableArrayList();
+private ObservableList<String>
+		lstNotify_QSOSniffer_sniffedCallSignList;
 	/**
 	 * we do some trick here with the chatmemberlist to not make it neccessary to change all boolean properties if the
 	 * chatmember object to observables. We trigger the list for changes on an object which we change whenever a list
@@ -1864,6 +1905,9 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
         chatPreferences = new ChatPreferences();
         chatPreferences.readPreferencesFromXmlFile();
 //        this.statusListener = listener;
+		lstNotify_QSOSniffer_sniffedCallSignList =
+				chatPreferences
+						.getLstNotify_QSOSniffer_sniffedCallSignList();
 
         String dnsFromPrefs = chatPreferences.getStn_on4kstServersDns();
         if (dnsFromPrefs != null && !dnsFromPrefs.isEmpty()) {
@@ -2004,7 +2048,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 
         });
 
-        lstNotify_QSOSniffer_sniffedCallSignList.add("DF0GEB");
+//        lstNotify_QSOSniffer_sniffedCallSignList.add("DF0GEB");
 
 
         lst_toMeMessageList.setPredicate(chatFilterPredicate); //sniffed callsign filter predicate is here!
@@ -2147,6 +2191,38 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		return dxClusterServer;
 	}
 
+	public synchronized void startDxClusterServerIfEnabled() {
+		if (!chatPreferences.isNotify_dxClusterServerEnabled()
+				|| dxClusterServer != null) {
+			return;
+		}
+
+		dxClusterServer = new DXClusterThreadPooledServer(
+				chatPreferences.getNotify_dxclusterServerPort(),
+				this,
+				this
+		);
+
+		Thread serverThread = new Thread(dxClusterServer);
+		serverThread.setName("DXCluster-thread-pooled-server");
+		serverThread.setDaemon(true);
+		serverThread.start();
+	}
+
+	public synchronized void stopDxClusterServer() {
+		DXClusterThreadPooledServer serverToStop = dxClusterServer;
+		dxClusterServer = null;
+
+		if (serverToStop != null) {
+			serverToStop.stop();
+		}
+	}
+
+	public synchronized void restartDxClusterServerIfEnabled() {
+		stopDxClusterServer();
+		startDxClusterServerIfEnabled();
+	}
+
 	//	public void setChatMemberTable(Hashtable<String, ChatMember> chatMemberTable) {
 //		this.chatMemberTable = chatMemberTable;
 //	}
@@ -2230,7 +2306,11 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			messageProcessor.setName("messagebusManagementThread");
 			messageProcessor.start();
 
-			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(chatPreferences.getAirScout_asCommunicationPort(), this, this.getChatPreferences().getAirScout_asServerNameString(), this.getChatPreferences().getAirScout_asServerNameString(), this); //working original
+			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(
+					chatPreferences.getAirScout_asCommunicationPort(),
+					this,
+					this
+			);
 			airScoutUDPReaderThread.setName("airscoutudpreaderThread");
 			airScoutUDPReaderThread.start();
 
@@ -2249,8 +2329,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			/**
 			 * DX cluster service running config
 			 */
-			dxClusterServer = new DXClusterThreadPooledServer(this.getChatPreferences().getNotify_dxclusterServerPort(), this, this);
-			new Thread(dxClusterServer).start();
+			startDxClusterServerIfEnabled();
 
 
 			this.setConnectedAndLoggedIn(true);

@@ -4407,57 +4407,93 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	private TableView<String> initNotifyAtCallSignTable() {
 
-        TableView<String> tbl_notifyTxtCallSign = new TableView<String>();
-        tbl_notifyTxtCallSign.setTooltip(new Tooltip("Add Callsigns which you want to observe. Their Communcation will added to your PM Table"));
+		TableView<String> table = new TableView<>();
 
+		table.setTooltip(new Tooltip(
+				"Messages sent by or addressed to a monitored "
+						+ "callsign are also shown in the PM table."
+		));
 
+		TableColumn<String, String> callSignColumn =
+				new TableColumn<>("Monitored callsign");
 
-        TableColumn<String, String> callSignCol = new TableColumn<String, String>("Sniff QSO of Callsign");
-        callSignCol.setCellValueFactory(new Callback<CellDataFeatures<String, String>, ObservableValue<String>>() {
+		callSignColumn.setCellValueFactory(
+				cellData ->
+						new SimpleStringProperty(
+								cellData.getValue()
+						)
+		);
 
-            @Override
-            public ObservableValue<String> call(CellDataFeatures<String, String> cellDataFeatures) {
-                SimpleStringProperty callSign = new SimpleStringProperty();
-                callSign.setValue(cellDataFeatures.getValue());
-                return callSign;
-            }
-        });
-        callSignCol.setCellFactory(TextFieldTableCell.forTableColumn());
+		callSignColumn.setCellFactory(
+				TextFieldTableCell.forTableColumn()
+		);
 
-        callSignCol.setOnEditCommit(new EventHandler<CellEditEvent<String, String>>() {
-            @Override
-            public void handle(CellEditEvent<String, String> t) {
+		callSignColumn.setOnEditCommit(event -> {
+			int row = event.getTablePosition().getRow();
 
-                String newValue = t.getNewValue().toUpperCase(); //its better as all callsigns in the chat are uppercase
+			String newValue =
+					event.getNewValue() == null
+							? ""
+							: event.getNewValue()
+							  .trim()
+							  .toUpperCase(Locale.ROOT);
 
+			if (newValue.isBlank()) {
+				event.getTableView()
+						.getItems()
+						.remove(row);
+				return;
+			}
 
-                t.getTableView().getItems().set(t.getTablePosition().getRow(), newValue);
+			if (!GuiUtils.isCallSignSyntax(newValue)) {
+				alertWindowEvent(
+						"Please enter a valid callsign."
+				);
+				event.getTableView().refresh();
+				return;
+			}
 
-                if (newValue == "") { // delete lines which had been cleared
-                    t.getTableView().getItems().remove(t.getTablePosition().getRow());
-                } else {
-                    if (GuiUtils.isCallSignSyntax(newValue)) {
+			boolean duplicate = false;
 
-                    } else {
-                        alertWindowEvent("Please try again with correct callsign syntax");
-                        t.getTableView().getItems().remove(t.getTablePosition().getRow());
-                    }
-                }
+			for (int i = 0;
+			     i < event.getTableView().getItems().size();
+			     i++) {
 
-                //TODO: Observe logic - add to the filters list!
-//                flwPane_textSnippets.getChildren().clear();
-//                flwPane_textSnippets.getChildren()
-//                        .addAll(buttonFactory(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()));
-            }
-        });
+				if (i == row) {
+					continue;
+				}
 
-        tbl_notifyTxtCallSign.getColumns().addAll(callSignCol);
+				String existing =
+						event.getTableView()
+								.getItems()
+								.get(i);
 
-        tbl_notifyTxtCallSign.setEditable(true);
-//        tbl_notifyTxtCallSign.setItems(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()); //TODO: Init aus Speicher muss noch her
+				if (existing != null
+						&& existing.equalsIgnoreCase(newValue)) {
+					duplicate = true;
+					break;
+				}
+			}
 
-        return tbl_notifyTxtCallSign;
-    } // TODO: Callsign sniffer table
+			if (duplicate) {
+				alertWindowEvent(
+						"This callsign is already "
+								+ "in the monitoring list."
+				);
+				event.getTableView().refresh();
+				return;
+			}
+
+			event.getTableView()
+					.getItems()
+					.set(row, newValue);
+		});
+
+		table.getColumns().add(callSignColumn);
+		table.setEditable(true);
+
+		return table;
+	}
 
 	private TableView<String> initTextSnippetsTable() {
 
@@ -9407,141 +9443,242 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlAirScout.setVgap(5);
 		grdPnlAirScout.setHgap(5);
 
-		Label lblASEnableUDPMsgbyAS = new Label("Enable Airscout integration (needs AirScout >= V 0.9.9.5)");
-		Label lblASServerName = new Label("Servername (AS options>network>UDP Server settings) [AS]:");
-		Label lblASChatClientName = new Label("ChatClient name for returning server answers [KST]:");
-		Label lblASUdpPort = new Label("Network-UDP-Port for Airscout-Server communication [9872]:");
-		Label lblASBandName = new Label("Band-Setting for Airscout-Queries [1440000]:");
+		Label lblASEnableUDPMsgbyAS =
+				new Label(
+						"Enable AirScout UDP integration "
+								+ "(AirScout 0.9.9.5 or newer)"
+				);
+
+		Label lblASServerName =
+				new Label("AirScout server identifier [AS]:");
+
+		Label lblASChatClientName =
+				new Label("KST4Contest client identifier [KST]:");
+
+		Label lblASUdpPort =
+				new Label("AirScout UDP port [9872] — reconnect after changing:");
+
+		Label lblASBandName =
+				new Label("AirScout band value [1440000 = 144 MHz]:");
 
 		CheckBox chkBxEnableUDPMsgbyAS = new CheckBox();
-		chkBxEnableUDPMsgbyAS.setSelected(this.chatcontroller.getChatPreferences().isAirScout_asUDPListenerEnabled());
-
-		chkBxEnableUDPMsgbyAS.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
+		chkBxEnableUDPMsgbyAS.setSelected(
 				chatcontroller.getChatPreferences()
-						.setAirScout_asUDPListenerEnabled(chkBxEnableUDPMsgbyAS.isSelected());
-				System.out.println("[Main.java, Info]: AS communication enabled: " + newValue);
-			}
-		});
+						.isAirScout_asUDPListenerEnabled()
+		);
+		chkBxEnableUDPMsgbyAS.setTooltip(
+				new Tooltip(
+						"When disabled, KST4Contest neither sends AirScout queries "
+								+ "nor processes AirScout responses."
+				)
+		);
+		chkBxEnableUDPMsgbyAS.selectedProperty().addListener(
+				(observable, oldValue, newValue) ->
+						chatcontroller.getChatPreferences()
+								.setAirScout_asUDPListenerEnabled(newValue)
+		);
 
 		TextField txtFld_asServerNameString = new TextField(
-				chatcontroller.getChatPreferences().getAirScout_asServerNameString());
+				chatcontroller.getChatPreferences()
+						.getAirScout_asServerNameString()
+		);
 		txtFld_asServerNameString.setFocusTraversable(false);
-		txtFld_asServerNameString.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-//					if (GuiUtils.isNumeric(txtFldUDPPortforUCX.getText())) {
+		txtFld_asServerNameString.setTooltip(
+				new Tooltip(
+						"Logical identifier of the target AirScout server. "
+								+ "Use different identifiers if several AirScout "
+								+ "servers share the network."
+				)
+		);
+		txtFld_asServerNameString.focusedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					if (newValue) {
+						return;
+					}
 
-					System.out.println(
-							"[Main.java, Info]: AS server name reset to: " + txtFld_asServerNameString.getText());
-					chatcontroller.getChatPreferences()
-							.setAirScout_asServerNameString(txtFld_asServerNameString.getText());
+					String enteredIdentifier =
+							txtFld_asServerNameString.getText().trim();
 
-//					} else {
-//						txtFldUDPPortforUCX.setText(txtFldUDPPortforUCX.getText() + " is an invalid Port");
-//					}
+					if (isValidAirScoutIdentifier(enteredIdentifier)) {
+						chatcontroller.getChatPreferences()
+								.setAirScout_asServerNameString(
+										enteredIdentifier
+								);
+					} else {
+						showUserInputErrorWindow(
+								"The AirScout server identifier must not be empty "
+										+ "and must not contain quotation marks "
+										+ "or line breaks."
+						);
 
+						txtFld_asServerNameString.setText(
+								chatcontroller.getChatPreferences()
+										.getAirScout_asServerNameString()
+						);
+					}
 				}
-			}
-		});
+		);
 
 		TextField txtFld_asClientNameString = new TextField(
-				chatcontroller.getChatPreferences().getAirScout_asClientNameString());
+				chatcontroller.getChatPreferences()
+						.getAirScout_asClientNameString()
+		);
 		txtFld_asClientNameString.setFocusTraversable(false);
-		txtFld_asClientNameString.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-//					if (GuiUtils.isNumeric(txtFldUDPPortforUCX.getText())) {
+		txtFld_asClientNameString.setTooltip(
+				new Tooltip(
+						"Identifier of this KST4Contest instance. Assign a unique "
+								+ "identifier to every client in a multi-client setup."
+				)
+		);
+		txtFld_asClientNameString.focusedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					if (newValue) {
+						return;
+					}
 
-					System.out.println(
-							"[Main.java, Info]: AS client name reset to: " + txtFld_asClientNameString.getText());
-//					chatcontroller.getChatPreferences()
-//							.setAirScout_asServerNameString(txtFld_asClientNameString.getText());
-					chatcontroller.getChatPreferences()
-							.setAirScout_asClientNameString(txtFld_asClientNameString.getText());//TODO Hotfix caused g1ybb
+					String enteredIdentifier =
+							txtFld_asClientNameString.getText().trim();
 
-//					} else {
-//						txtFldUDPPortforUCX.setText(txtFldUDPPortforUCX.getText() + " is an invalid Port");
-//					}
+					if (isValidAirScoutIdentifier(enteredIdentifier)) {
+						chatcontroller.getChatPreferences()
+								.setAirScout_asClientNameString(
+										enteredIdentifier
+								);
+					} else {
+						showUserInputErrorWindow(
+								"The AirScout client identifier must not be empty "
+										+ "and must not contain quotation marks "
+										+ "or line breaks."
+						);
 
+						txtFld_asClientNameString.setText(
+								chatcontroller.getChatPreferences()
+										.getAirScout_asClientNameString()
+						);
+					}
 				}
-			}
-		});
+		);
 
 		TextField txtFld_asUDPPortInt = new TextField(
-				chatcontroller.getChatPreferences().getAirScout_asCommunicationPort() + "");
+				Integer.toString(
+						chatcontroller.getChatPreferences()
+								.getAirScout_asCommunicationPort()
+				)
+		);
 		txtFld_asUDPPortInt.setFocusTraversable(false);
-		txtFld_asUDPPortInt.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isNumeric(txtFld_asUDPPortInt.getText())) {
-
-						System.out.println("[Main.java, Info]: AS port reset to: " + txtFld_asUDPPortInt.getText());
-						chatcontroller.getChatPreferences()
-								.setAirScout_asCommunicationPort((Integer.parseInt(txtFld_asUDPPortInt.getText())));
-
-					} else {
-						txtFld_asUDPPortInt.setText(txtFld_asUDPPortInt.getText() + " is an invalid Port");
+		txtFld_asUDPPortInt.setTooltip(
+				new Tooltip(
+						"The UDP port must match the AirScout network settings. "
+								+ "Reconnect KST4Contest after changing it."
+				)
+		);
+		txtFld_asUDPPortInt.focusedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					if (newValue) {
+						return;
 					}
 
-				}
-			}
-		});
+					try {
+						int configuredPort = Integer.parseInt(
+								txtFld_asUDPPortInt.getText().trim()
+						);
 
-		TextField txtFld_asQRGInt = new TextField(chatcontroller.getChatPreferences().getAirScout_asBandString() + "");
+						if (configuredPort < 1 || configuredPort > 65535) {
+							throw new NumberFormatException();
+						}
+
+						chatcontroller.getChatPreferences()
+								.setAirScout_asCommunicationPort(
+										configuredPort
+								);
+					} catch (NumberFormatException exception) {
+						showUserInputErrorWindow(
+								"\"" + txtFld_asUDPPortInt.getText()
+										+ "\" is not a valid UDP port. "
+										+ "Enter a value between 1 and 65535."
+						);
+
+						txtFld_asUDPPortInt.setText(
+								Integer.toString(
+										chatcontroller.getChatPreferences()
+												.getAirScout_asCommunicationPort()
+								)
+						);
+					}
+				}
+		);
+
+		TextField txtFld_asQRGInt = new TextField(
+				chatcontroller.getChatPreferences()
+						.getAirScout_asBandString()
+		);
 		txtFld_asQRGInt.setFocusTraversable(false);
-		txtFld_asQRGInt.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isNumeric(txtFld_asQRGInt.getText())) {
-
-						System.out.println("[Main.java, Info]: AS qrg reset to: " + txtFld_asQRGInt.getText());
-						chatcontroller.getChatPreferences()
-								.setAirScout_asBandString(((Integer.parseInt(txtFld_asQRGInt.getText()))) + "");
-						;
-
-					} else {
-						txtFld_asQRGInt.setText(txtFld_asQRGInt.getText() + " is an invalid bandvalue");
+		txtFld_asQRGInt.setTooltip(
+				new Tooltip(
+						"AirScout protocol band value, for example 1440000 for "
+								+ "144 MHz or 4320000 for 432 MHz."
+				)
+		);
+		txtFld_asQRGInt.focusedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					if (newValue) {
+						return;
 					}
 
-				}
-			}
-		});
+					try {
+						long configuredBandValue = Long.parseLong(
+								txtFld_asQRGInt.getText().trim()
+						);
 
-		grdPnlAirScout.add(generateLabeledSeparator(100, "Settings for Airscout-network-communication"), 0, 0, 2, 1);
+						if (configuredBandValue <= 0) {
+							throw new NumberFormatException();
+						}
+
+						chatcontroller.getChatPreferences()
+								.setAirScout_asBandString(
+										Long.toString(configuredBandValue)
+								);
+					} catch (NumberFormatException exception) {
+						showUserInputErrorWindow(
+								"\"" + txtFld_asQRGInt.getText()
+										+ "\" is not a valid AirScout band value."
+						);
+
+						txtFld_asQRGInt.setText(
+								chatcontroller.getChatPreferences()
+										.getAirScout_asBandString()
+						);
+					}
+				}
+		);
+
+		Label lblASChangeNote = new Label(
+				"Server identifier, client identifier and band are applied "
+						+ "immediately. Reconnect after changing the UDP port."
+		);
+		lblASChangeNote.setWrapText(true);
+
+		grdPnlAirScout.add(
+				generateLabeledSeparator(
+						100,
+						"AirScout UDP communication"
+				),
+				0,
+				0,
+				2,
+				1
+		);
 		grdPnlAirScout.add(lblASEnableUDPMsgbyAS, 0, 1);
 		grdPnlAirScout.add(chkBxEnableUDPMsgbyAS, 1, 1);
 		grdPnlAirScout.add(lblASServerName, 0, 2);
 		grdPnlAirScout.add(txtFld_asServerNameString, 1, 2);
 		grdPnlAirScout.add(lblASChatClientName, 0, 3);
 		grdPnlAirScout.add(txtFld_asClientNameString, 1, 3);
-
 		grdPnlAirScout.add(lblASUdpPort, 0, 4);
 		grdPnlAirScout.add(txtFld_asUDPPortInt, 1, 4);
 		grdPnlAirScout.add(lblASBandName, 0, 5);
 		grdPnlAirScout.add(txtFld_asQRGInt, 1, 5);
+		grdPnlAirScout.add(lblASChangeNote, 0, 6, 2, 1);
 
 		VBox vbxAirScout = new VBox();
 		vbxAirScout.setPadding(new Insets(10, 10, 10, 10));
@@ -9561,9 +9698,21 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //				"Switch bands, prefix worked by others alert, direction notifications, notification pattern matchers");
 //        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
-		Label lblNotifyEnableSimpleSounds = new Label("Enable simple audio notifications at: new personal message, new sked in ur dir, other");
-		Label lblNotifyEnableCWSounds = new Label("Enable CW callsign spelling for new personal messages");
-		Label lblNotifyEnableVoiceSounds = new Label("Enable phonetic callsign spelling for new personal messages");
+		Label lblNotifyEnableSimpleSounds = new Label(
+				"Play notification sounds for pm, "
+						+ "directional opportunities, sked reminders "
+						+ "and band hints"
+		);
+
+		Label lblNotifyEnableCWSounds = new Label(
+				"Spell the sender's callsign in CW "
+						+ "for new private messages"
+		);
+
+		Label lblNotifyEnableVoiceSounds = new Label(
+				"Speak the sender's callsign phonetically "
+						+ "for new private messages"
+		);
 
 
 		CheckBox chkBxEnableNotifySimpleSounds = new CheckBox();
@@ -9606,211 +9755,296 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		Label lblNotifyEnableDXClusterServer = new Label("Enable DXCluster server");
+		Label lblNotifyEnableDXClusterServer = new Label(
+				"Enable the local DX Cluster server and forward "
+						+ "detected directional opportunities"
+		);
 
-		CheckBox chkBxNotifyEnableDXClusterServer = new CheckBox();
+		CheckBox chkBxNotifyEnableDXClusterServer =
+				new CheckBox();
+
+		chkBxNotifyEnableDXClusterServer.setSelected(
+				this.chatcontroller
+						.getChatPreferences()
+						.isNotify_dxClusterServerEnabled()
+		);
+
 		chkBxNotifyEnableDXClusterServer
-				.setSelected(this.chatcontroller.getChatPreferences().isLogsynch_ucxUDPWkdCallListenerEnabled());
-		chkBxNotifyEnableDXClusterServer.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-//                chk2.setSelected(!newValue);
-				chatcontroller.getChatPreferences()
-						.setNotify_dxClusterServerEnabled(chkBxNotifyEnableDXClusterServer.isSelected());
-				System.out.println("[Main.java, Info]: setted the DXCluster server to: "
-						+ chatcontroller.getChatPreferences().isNotify_dxClusterServerEnabled());
-			}
-		});
+				.selectedProperty()
+				.addListener(
+						(observable, oldValue, newValue) -> {
+							chatcontroller
+									.getChatPreferences()
+									.setNotify_dxClusterServerEnabled(
+											newValue
+									);
 
-		TextField txtFld_notify_DXclusterServerPortSetting = new TextField();
-		txtFld_notify_DXclusterServerPortSetting.setText(this.chatcontroller.getChatPreferences().getNotify_dxclusterServerPort() + "");
+							if (chatcontroller
+									.isConnectedAndLoggedIn()) {
+								if (newValue) {
+									chatcontroller
+											.startDxClusterServerIfEnabled();
+								} else {
+									chatcontroller
+											.stopDxClusterServer();
+								}
+							}
 
-		txtFld_notify_DXclusterServerPortSetting.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-								Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isNumeric(txtFld_notify_DXclusterServerPortSetting.getText())) {
+							System.out.println(
+									"[Kst4ContestApplication] "
+											+ "DX Cluster server enabled: "
+											+ newValue
+							);
+						}
+				);
 
-//		            chatcontroller.getChatPreferences().setMYQRGasd(txt_ownqrg.getText());
-						chatcontroller.getChatPreferences()
-								.setNotify_dxclusterServerPort((Integer.parseInt(txtFld_notify_DXclusterServerPortSetting.getText())));
-						System.out.println("[Main.java, Info]: setted DXCluster server port to: "
-								+ txtFld_notify_DXclusterServerPortSetting.getText());
+		TextField txtFld_notify_DXclusterServerPortSetting =
+				new TextField(
+						Integer.toString(
+								this.chatcontroller
+										.getChatPreferences()
+										.getNotify_dxclusterServerPort()
+						)
+				);
 
-					} else {
-						txtFld_notify_DXclusterServerPortSetting.setText(txtFld_notify_DXclusterServerPortSetting.getText() + " is an invalid port value");
+		txtFld_notify_DXclusterServerPortSetting
+				.focusedProperty()
+				.addListener(
+						(observable, oldValue, focused) -> {
+							if (focused) {
+								return;
+							}
+
+							String enteredPort =
+									txtFld_notify_DXclusterServerPortSetting
+											.getText()
+											.trim();
+
+							int previousPort =
+									chatcontroller
+											.getChatPreferences()
+											.getNotify_dxclusterServerPort();
+
+							try {
+								int port =
+										Integer.parseInt(enteredPort);
+
+								if (port < 1 || port > 65535) {
+									throw new NumberFormatException(
+											"Port outside valid range"
+									);
+								}
+
+								chatcontroller
+										.getChatPreferences()
+										.setNotify_dxclusterServerPort(
+												port
+										);
+
+								txtFld_notify_DXclusterServerPortSetting
+										.setText(
+												Integer.toString(port)
+										);
+
+								if (port != previousPort
+										&& chatcontroller
+										.isConnectedAndLoggedIn()
+										&& chatcontroller
+										.getChatPreferences()
+										.isNotify_dxClusterServerEnabled()) {
+									chatcontroller
+											.restartDxClusterServerIfEnabled();
+								}
+							} catch (NumberFormatException exception) {
+								showUserInputErrorWindow(
+										"\""
+												+ enteredPort
+												+ "\" is not a valid TCP port. "
+												+ "Enter a value from 1 to 65535."
+								);
+
+								txtFld_notify_DXclusterServerPortSetting
+										.setText(
+												Integer.toString(
+														previousPort
+												)
+										);
+							}
+						}
+				);
+
+		TextField txtFld_notify_DXclusterServerFrequencyPrefix =
+				new TextField(
+						this.chatcontroller
+								.getChatPreferences()
+								.getNotify_optionalFrequencyPrefix()
+								.getValue()
+				);
+
+		txtFld_notify_DXclusterServerFrequencyPrefix
+				.focusedProperty()
+				.addListener(
+						(observable, oldValue, focused) -> {
+							if (focused) {
+								return;
+							}
+
+							String bandInMHz =
+									txtFld_notify_DXclusterServerFrequencyPrefix
+											.getText()
+											.trim();
+
+							if (bandInMHz.matches(
+									"[1-9]\\d{1,4}"
+							)) {
+								chatcontroller
+										.getChatPreferences()
+										.setNotify_optionalFrequencyPrefix(
+												bandInMHz
+										);
+
+								txtFld_notify_DXclusterServerFrequencyPrefix
+										.setText(bandInMHz);
+							} else {
+								showUserInputErrorWindow(
+										"\""
+												+ bandInMHz
+												+ "\" is not a valid fallback band. "
+												+ "Enter the MHz part as an integer, "
+												+ "for example 144, 432 or 1296."
+								);
+
+								txtFld_notify_DXclusterServerFrequencyPrefix
+										.setText(
+												chatcontroller
+														.getChatPreferences()
+														.getNotify_optionalFrequencyPrefix()
+														.getValue()
+										);
+							}
+						}
+				);
+
+		TextField txtFld_notify_DXclusterServerSpottersCallSign =
+				new TextField(
+						this.chatcontroller
+								.getChatPreferences()
+								.getNotify_DXCSrv_SpottersCallSign()
+								.getValue()
+				);
+
+		txtFld_notify_DXclusterServerSpottersCallSign
+				.focusedProperty()
+				.addListener(
+						(observable, oldValue, focused) -> {
+							if (focused) {
+								return;
+							}
+
+							String spotterCallSign =
+									txtFld_notify_DXclusterServerSpottersCallSign
+											.getText()
+											.trim()
+											.toUpperCase(Locale.ROOT);
+
+							if (GuiUtils.isCallSignSyntax(
+									spotterCallSign
+							)) {
+								chatcontroller
+										.getChatPreferences()
+										.setNotify_DXCSrv_SpottersCallSign(
+												spotterCallSign
+										);
+
+								txtFld_notify_DXclusterServerSpottersCallSign
+										.setText(spotterCallSign);
+							} else {
+								showUserInputErrorWindow(
+										"\""
+												+ spotterCallSign
+												+ "\" is not a valid "
+												+ "spotter callsign."
+								);
+
+								txtFld_notify_DXclusterServerSpottersCallSign
+										.setText(
+												chatcontroller
+														.getChatPreferences()
+														.getNotify_DXCSrv_SpottersCallSign()
+														.getValue()
+										);
+							}
+						}
+				);
+
+		Button btn_notify_clusterServerTestMessage =
+				new Button("Send test spot");
+
+		btn_notify_clusterServerTestMessage.setOnAction(
+				event -> {
+					var dxClusterServer =
+							chatcontroller.getDxClusterServer();
+
+					if (!chatcontroller.isConnectedAndLoggedIn()
+							|| dxClusterServer == null) {
+						Alert alert =
+								new Alert(AlertType.INFORMATION);
+
+						alert.setTitle("DX Cluster test");
+						alert.setHeaderText(
+								"Connect KST4Contest and enable "
+										+ "the local DX Cluster server first."
+						);
+						alert.show();
+						return;
 					}
 
-				}
-			}
-		});
+					if (!dxClusterServer.hasConnectedClients()) {
+						Alert alert =
+								new Alert(AlertType.INFORMATION);
 
-		TextField txtFld_notify_DXclusterServerFrequencyPrefix = new TextField();
-		txtFld_notify_DXclusterServerFrequencyPrefix.setDisable(false);
-		txtFld_notify_DXclusterServerFrequencyPrefix.setText(this.chatcontroller.getChatPreferences().getNotify_optionalFrequencyPrefix().getValue() + "");
-
-		txtFld_notify_DXclusterServerFrequencyPrefix.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-								Boolean newPropertyValue) {
-				if (newPropertyValue) {
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isNumeric(txtFld_notify_DXclusterServerFrequencyPrefix.getText())) {
-
-//		            chatcontroller.getChatPreferences().setMYQRGasd(txt_ownqrg.getText());
-						chatcontroller.getChatPreferences()
-								.setNotify_optionalFrequencyPrefix(new SimpleStringProperty(txtFld_notify_DXclusterServerFrequencyPrefix.getText()));
-						System.out.println("[Main.java, Info]: setted QRG prefix value to: "
-								+ txtFld_notify_DXclusterServerFrequencyPrefix.getText());
-
-					} else {
-						showUserInputErrorWindow("\"" + txtFld_notify_DXclusterServerFrequencyPrefix.getText() + "\""+ " is an invalid Band prefix! Try again.");
-						txtFld_notify_DXclusterServerFrequencyPrefix.setText(chatcontroller.getChatPreferences().getNotify_optionalFrequencyPrefix().getValue());
+						alert.setTitle("DX Cluster test");
+						alert.setHeaderText(
+								"No DX Cluster client is connected "
+										+ "to KST4Contest."
+						);
+						alert.setContentText(
+								"Connect the logger to TCP port "
+										+ chatcontroller
+										.getChatPreferences()
+										.getNotify_dxclusterServerPort()
+										+ " and try again."
+						);
+						alert.show();
+						return;
 					}
 
-				}
-			}
-		});
+					ChatMember testSpot = new ChatMember();
+					testSpot.setFrequency(
+							new SimpleStringProperty("300")
+					);
+					testSpot.setQra("Congrats, you donated $100");
+					testSpot.setCallSign("DO5AMF");
 
+					if (!dxClusterServer
+							.broadcastSingleDXClusterEntryToLoggers(
+									testSpot
+							)) {
+						Alert alert =
+								new Alert(AlertType.INFORMATION);
 
-		TextField txtFld_notify_DXclusterServerSpottersCallSign = new TextField();
-		txtFld_notify_DXclusterServerSpottersCallSign.setDisable(false);
-		txtFld_notify_DXclusterServerSpottersCallSign.setText(this.chatcontroller.getChatPreferences().getNotify_DXCSrv_SpottersCallSign().getValue());
-
-		txtFld_notify_DXclusterServerSpottersCallSign.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-								Boolean newPropertyValue) {
-				if (newPropertyValue) {
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isCallSignSyntax(txtFld_notify_DXclusterServerSpottersCallSign.getText())) {
-
-//		            chatcontroller.getChatPreferences().setMYQRGasd(txt_ownqrg.getText());
-						chatcontroller.getChatPreferences()
-								.setNotify_DXCSrv_SpottersCallSign(new SimpleStringProperty(txtFld_notify_DXclusterServerSpottersCallSign.getText()));
-						System.out.println("[Main.java, Info]: setted Spotters Callsign value to: "
-								+ txtFld_notify_DXclusterServerSpottersCallSign.getText());
-
-					} else {
-						showUserInputErrorWindow("\"" + txtFld_notify_DXclusterServerSpottersCallSign.getText() + "\""+ " is an invalid CallSign-Value! Try again.");
-						txtFld_notify_DXclusterServerSpottersCallSign.setText(chatcontroller.getChatPreferences().getNotify_DXCSrv_SpottersCallSign().getValue());
+						alert.setTitle("DX Cluster test");
+						alert.setHeaderText(
+								"The test spot could not be delivered."
+						);
+						alert.setContentText(
+								"Check the logger connection "
+										+ "and try again."
+						);
+						alert.show();
 					}
-
 				}
-			}
-		});
-
-
-		Button btn_notify_clusterServerTestMessage = new Button("Send a testmessage to your log");
-		btn_notify_clusterServerTestMessage.setOnAction(new EventHandler<ActionEvent>() {
-				@Override
-				public void handle(ActionEvent event) {
-
-//                    ChatMember dummyCopy = new ChatMember();
-//                    dummyCopy.setCallSign(selectedCallSignInfoStageChatMember.getCallSign());
-//                    dummyCopy.setFrequency(new SimpleStringProperty("144300"));
-//                    dummyCopy.setQra(selectedCallSignInfoStageChatMember.getQra() + " AP: " +
-//                            selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(0).getPotential() + "%, " +
-//                            selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(0).getArrivingDurationMinutes() + "min" +
-//                            ", " +
-//                                    selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(1).getPotential() + "%, " +
-//                                    selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(1).getArrivingDurationMinutes() + "min");
-
-					ChatMember dummyCopy = new ChatMember();
-                    dummyCopy.setFrequency(new SimpleStringProperty("144300"));
-                    dummyCopy.setQra("Congrats, you donated $100");
-                    dummyCopy.setCallSign("DO5AMF");
-
-					try {
-
-						chatcontroller.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(dummyCopy);
-
-//						dummy = new ChatMember();
-//						dummy.setFrequency(new SimpleStringProperty("144366"));
-//						dummy.setQra("IO02XX");
-//						dummy.setCallSign("G9XYL");
-//
-//						chatcontroller.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(dummy);
-//
-//						dummy = new ChatMember();
-//						dummy.setFrequency(new SimpleStringProperty("144277"));
-//						dummy.setQra("IO02AA");
-//						dummy.setCallSign("G3M");
-//
-//						chatcontroller.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(dummy);
-//
-//						dummy = new ChatMember();
-//						dummy.setFrequency(new SimpleStringProperty("144244"));
-//						dummy.setQra("JO50KQ");
-//						dummy.setCallSign("DL200BIER");
-//
-//						chatcontroller.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(dummy);
-
-
-					} catch (Exception ex) {
-
-						System.out.println("DXC sending failed");
-						Alert a = new Alert(AlertType.INFORMATION);
-
-						a.setTitle("Testmessage");
-						a.setHeaderText("Something went wrong, maybe you did not click connect first? --> \n\n" + ex.getMessage());
-						a.show();
-					}
-
-				};
-		});
-
-		Label lblNotifyDXClusterServerTriggerBearing = new Label("Trigger DXCluster message if someone is bearing to me");
-
-
-
-		CheckBox chkBxNotifyDXClusterServerTriggerBearing = new CheckBox(); //TODO: maybe implement
-		chkBxNotifyDXClusterServerTriggerBearing.setSelected(true);
-//		chkBxNotifyDXClusterServerTriggerBearing.setDisable(true);
-
-
-
-		Label lblNotifyDXClusterServerTriggerOnEveryQRGDetect = new Label("Trigger DXCluster message on every frequency detect (SPAMMY!)");
-
-		CheckBox chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect = new CheckBox();
-		chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect.setSelected(false);
-		chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect.setDisable(true);
-
-		chkBxNotifyDXClusterServerTriggerBearing.selectedProperty().addListener(new ChangeListener<Boolean>() { //build a toggle group by hand
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				if (!newValue) {
-
-					chatcontroller.getChatPreferences().setNotify_DXClusterServerTriggerBearing(true);
-					chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect.setSelected(true);
-				} else {
-					chatcontroller.getChatPreferences().setNotify_DXClusterServerTriggerBearing(false);
-					chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect.setSelected(false);
-				}
-
-			}
-		});
-
-		chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect.selectedProperty().addListener(new ChangeListener<Boolean>() {//build a toggle group by hand part 2
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				if (!newValue) {
-
-					chatcontroller.getChatPreferences().setNotify_DXClusterServerTriggerOnQRGDetect(true);
-					chkBxNotifyDXClusterServerTriggerBearing.setSelected(true);
-				} else {
-					chatcontroller.getChatPreferences().setNotify_DXClusterServerTriggerOnQRGDetect(false);
-					chkBxNotifyDXClusterServerTriggerBearing.setSelected(false);
-				}
-
-			}
-		});
+		);
 
 
 		grdPnlNotify.add(lblNotifyEnableSimpleSounds, 0, 1);
@@ -9824,28 +10058,90 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		grdPnlNotify.add(new Label(""), 0, 4); //placeholder before seperator
 
-		grdPnlNotify.add(generateLabeledSeparator(100, "KST4Contest DXCluster Server settings (sending detected QRG to your log)"), 0, 5, 2, 1); //seperator for cluster notify
 
-		grdPnlNotify.add(lblNotifyEnableDXClusterServer, 0, 6);
-		grdPnlNotify.add(chkBxNotifyEnableDXClusterServer, 1, 6);
+		grdPnlNotify.add(
+				generateLabeledSeparator(
+						100,
+						"Local DX Cluster output"
+				),
+				0,
+				5,
+				2,
+				1
+		);
 
-		grdPnlNotify.add(new Label("DXCluster Server port [default 8000]: "), 0, 7);
-		grdPnlNotify.add(txtFld_notify_DXclusterServerPortSetting, 1, 7);
+		grdPnlNotify.add(
+				lblNotifyEnableDXClusterServer,
+				0,
+				6
+		);
+		grdPnlNotify.add(
+				chkBxNotifyEnableDXClusterServer,
+				1,
+				6
+		);
 
-		grdPnlNotify.add(new Label("DXCluster Band MHz-value if unknown [default 144]: "), 0, 8);
-		grdPnlNotify.add(txtFld_notify_DXclusterServerFrequencyPrefix, 1, 8);
+		grdPnlNotify.add(
+				new Label("TCP port [default: 8000]:"),
+				0,
+				7
+		);
+		grdPnlNotify.add(
+				txtFld_notify_DXclusterServerPortSetting,
+				1,
+				7
+		);
 
-		grdPnlNotify.add(new Label("DXCluster Spotters CallSign [default DO5AMF], should not be the contest callsign!: "), 0, 9);
-		grdPnlNotify.add(txtFld_notify_DXclusterServerSpottersCallSign, 1, 9);
+		grdPnlNotify.add(
+				new Label(
+						"Fallback band in MHz for relative "
+								+ "frequencies [default: 144]:"
+				),
+				0,
+				8
+		);
+		grdPnlNotify.add(
+				txtFld_notify_DXclusterServerFrequencyPrefix,
+				1,
+				8
+		);
 
+		grdPnlNotify.add(
+				new Label(
+						"Spotter callsign — use a callsign "
+								+ "different from the contest callsign:"
+				),
+				0,
+				9
+		);
+		grdPnlNotify.add(
+				txtFld_notify_DXclusterServerSpottersCallSign,
+				1,
+				9
+		);
 
-		grdPnlNotify.add(btn_notify_clusterServerTestMessage, 1, 10);
+		Label lblNotifyDXClusterTriggerExplanation =
+				new Label(
+						"Spots are generated only for detected "
+								+ "directional opportunities "
+								+ "with a known frequency."
+				);
 
-		grdPnlNotify.add(lblNotifyDXClusterServerTriggerBearing, 0, 11);
-		grdPnlNotify.add(chkBxNotifyDXClusterServerTriggerBearing, 1, 11);
+		lblNotifyDXClusterTriggerExplanation.setWrapText(true);
 
-		grdPnlNotify.add(lblNotifyDXClusterServerTriggerOnEveryQRGDetect, 0, 12);
-		grdPnlNotify.add(chkBxNotifyDXClusterServerTriggerOnEveryQRGDetect, 1, 12);
+		grdPnlNotify.add(
+				lblNotifyDXClusterTriggerExplanation,
+				0,
+				10,
+				2,
+				1
+		);
+
+		grdPnlNotify.add(
+				btn_notify_clusterServerTestMessage,
+				1,
+				11
+		);
 
 		grdPnlNotify.add(generateLabeledSeparator(100, "Band-upgrade hint (after log entry)"), 0, 13, 2, 1);
 
@@ -9871,31 +10167,100 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 //        grdPnlNotify.add(generateLabeledSeparator(100, "QSO Sniffing tool"), 0, 14, 2, 1);
-		grdPnlNotify.add(generateLabeledSeparator(100, "QSO Sniffing tool"), 0, 17, 2, 1);
+		grdPnlNotify.add(
+				generateLabeledSeparator(
+						100,
+						"QSO monitoring"
+				),
+				0,
+				17,
+				2,
+				1
+		);
 
+		TableView<String> tblVw_notify_sniffCallSigns =
+				initNotifyAtCallSignTable();
 
-        TableView<String> tblVw_notify_sniffCallSigns = new TableView<String>();
-        tblVw_notify_sniffCallSigns = initNotifyAtCallSignTable();
-        tblVw_notify_sniffCallSigns.setItems(this.chatcontroller.getLstNotify_QSOSniffer_sniffedCallSignList());
+		tblVw_notify_sniffCallSigns.setItems(
+				this.chatcontroller
+						.getLstNotify_QSOSniffer_sniffedCallSignList()
+		);
 
-        Button btn_notifySniffCall_addLine = new Button("Add new CallSign");
-        btn_notifySniffCall_addLine.setOnAction(new EventHandler<ActionEvent>() {
-            @Override
-            public void handle(ActionEvent event) {
-                String newTextSnippet = "Pse change (DOUBLECLICK)";
-                chatcontroller.getLstNotify_QSOSniffer_sniffedCallSignList().add(0, newTextSnippet);
-            }
-        });
+		Button btn_notifySniffCall_addLine =
+				new Button("Add monitored callsign");
 
-//        grdPnlNotify.add(tblVw_notify_sniffCallSigns,0,15);
-//        grdPnlNotify.add(btn_notifySniffCall_addLine, 0, 16);
+		btn_notifySniffCall_addLine.setOnAction(
+				event -> {
+					TextInputDialog dialog =
+							new TextInputDialog();
 
-		grdPnlNotify.add(tblVw_notify_sniffCallSigns,0,18);
-		grdPnlNotify.add(btn_notifySniffCall_addLine, 0, 19);
+					dialog.setTitle("QSO monitoring");
+					dialog.setHeaderText(
+							"Add a callsign to the monitoring list"
+					);
+					dialog.setContentText("Callsign:");
+
+					dialog.showAndWait().ifPresent(
+							input -> {
+								String callSign =
+										input
+												.trim()
+												.toUpperCase(
+														Locale.ROOT
+												);
+
+								if (!GuiUtils.isCallSignSyntax(
+										callSign
+								)) {
+									alertWindowEvent(
+											"Please enter "
+													+ "a valid callsign."
+									);
+									return;
+								}
+
+								boolean duplicate =
+										chatcontroller
+												.getLstNotify_QSOSniffer_sniffedCallSignList()
+												.stream()
+												.anyMatch(
+														existing ->
+																existing
+																		.equalsIgnoreCase(
+																				callSign
+																		)
+												);
+
+								if (duplicate) {
+									alertWindowEvent(
+											"This callsign is already "
+													+ "in the monitoring list."
+									);
+									return;
+								}
+
+								chatcontroller
+										.getLstNotify_QSOSniffer_sniffedCallSignList()
+										.add(callSign);
+							}
+					);
+				}
+		);
+
+		grdPnlNotify.add(
+				tblVw_notify_sniffCallSigns,
+				0,
+				18
+		);
+		grdPnlNotify.add(
+				btn_notifySniffCall_addLine,
+				0,
+				19
+		);
 
 		VBox vbxNotify = new VBox();
 		vbxNotify.setPadding(new Insets(10, 10, 10, 10));
-		vbxNotify.getChildren().addAll(grdPnlNotify);
+		vbxNotify.getChildren().add(grdPnlNotify);
 
 		/*************************************************************************************
 		 * shorts & snippets tab
@@ -11236,6 +11601,30 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			// Keep configured value if no interface can be detected
 		}
 		return null;
+	}
+
+
+	/**
+	 * Checks whether a value can safely be used as an AirScout routing
+	 * identifier.
+	 *
+	 * Spaces are allowed because AirScout encloses the identifier in quotation
+	 * marks. Quotation marks and line breaks would break the protocol message.
+	 *
+	 * @param identifier entered server or client identifier
+	 * @return true if the identifier can be used
+	 */
+	private boolean isValidAirScoutIdentifier(String identifier) {
+		if (identifier == null) {
+			return false;
+		}
+
+		String normalizedIdentifier = identifier.trim();
+
+		return !normalizedIdentifier.isEmpty()
+				&& !normalizedIdentifier.contains("\"")
+				&& !normalizedIdentifier.contains("\r")
+				&& !normalizedIdentifier.contains("\n");
 	}
 
 	/**

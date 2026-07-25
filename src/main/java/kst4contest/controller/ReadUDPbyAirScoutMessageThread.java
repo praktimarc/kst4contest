@@ -1,9 +1,13 @@
 package kst4contest.controller;
 
-import java.io.*;
-import java.net.*;
-import java.util.ArrayList;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.util.Comparator;
+import java.util.List;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -21,188 +25,245 @@ import kst4contest.model.ThreadStateMessage;
  * @author www.codejava.net
  */
 public class ReadUDPbyAirScoutMessageThread extends Thread {
-	private BufferedReader reader;
-	private Socket socket;
-	private ChatController client;
-	private int localPort;
-	private String ASIdentificator, ChatClientIdentificator;
-    private ThreadStatusCallback callBackToController;
-    private String ThreadNickName = "AirScout msg";
-//	public ReadUDPbyAirScoutMessageThread(int localPort) {
-//		this.localPort = localPort;
-//	}
 
-	public ReadUDPbyAirScoutMessageThread(int localPort, ChatController client, String ASIdentificator,
-			String ChatClientIdentificator, ThreadStatusCallback callback) {
+	private final ChatController client;
+	private final int localPort;
+	private final ThreadStatusCallback callBackToController;
 
-        this.callBackToController = callback;
+	private final String threadNickName = "AirScout msg";
+
+	private DatagramSocket socket;
+
+	public ReadUDPbyAirScoutMessageThread(
+			int localPort,
+			ChatController client,
+			ThreadStatusCallback callback
+	) {
 		this.localPort = localPort;
 		this.client = client;
-		this.ASIdentificator = ASIdentificator;
-		this.ChatClientIdentificator = ChatClientIdentificator;
+		this.callBackToController = callback;
 	}
 
 	@Override
 	public void interrupt() {
-		System.out.println("ReadUDP");
 		super.interrupt();
-		try {
-			if (this.socket != null) {
-				
-				this.socket.close();
-			}
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+
+		if (socket != null && !socket.isClosed()) {
+			socket.close();
 		}
 	}
 
-    private void callThreadStateToUi (ThreadStateMessage threadStateMessage) {
-        if (callBackToController != null) {
-            //update the visual control of running thread
-            callBackToController.onThreadStatus("AirScout", threadStateMessage);
-        }
-    }
+	/**
+	 * Checks whether an AirScout response is addressed to the currently
+	 * configured server and client identifiers.
+	 *
+	 * Outgoing message:
+	 * ASSETPATH: "client" "server" ...
+	 *
+	 * Corresponding response:
+	 * ASNEAREST: "server" "client" ...
+	 *
+	 * The comparison is deliberately case-sensitive. In a setup with several
+	 * clients, KST-A and kst-a must not silently become the same destination.
+	 *
+	 * @param message received UDP message
+	 * @return true if the response belongs to this KST4Contest instance
+	 */
+	private boolean isMessageForConfiguredClient(String message) {
+		if (message == null || !message.startsWith("ASNEAREST:")) {
+			return false;
+		}
 
-	
+		String[] quotedParts = message.split("\"");
+		if (quotedParts.length < 4) {
+			return false;
+		}
+
+		String receivedServerIdentifier = quotedParts[1].trim();
+		String receivedClientIdentifier = quotedParts[3].trim();
+
+		String configuredServerIdentifier =
+				client.getChatPreferences()
+						.getAirScout_asServerNameString();
+		String configuredClientIdentifier =
+				client.getChatPreferences()
+						.getAirScout_asClientNameString();
+
+		if (configuredServerIdentifier == null
+				|| configuredClientIdentifier == null) {
+			return false;
+		}
+
+		return configuredServerIdentifier.equals(
+				receivedServerIdentifier
+		) && configuredClientIdentifier.equals(
+				receivedClientIdentifier
+		);
+	}
+
+	@Override
 	public void run() {
-		Thread.currentThread().setName("ReadUDPByAirScoutThread");
-
-		DatagramSocket socket = null;
-		boolean running;
-		byte[] buf = new byte[1777];
-		DatagramPacket packet;
-//		DatagramPacket packet = new DatagramPacket(buf, buf.length); //changed due to save memory
-		packet = new DatagramPacket(buf, buf.length);
+		Thread.currentThread().setName(
+				"ReadUDPByAirScoutThread"
+		);
 
 		try {
-
 			socket = new DatagramSocket(null);
 			socket.setReuseAddress(true);
 			socket.bind(new InetSocketAddress(localPort));
-			socket.receive(packet);
 			socket.setSoTimeout(3000);
 
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-//			e.printStackTrace();
-		} 
-		
-
-		while (true) {
-//			packet = new DatagramPacket(buf, buf.length);
-//    		 DatagramPacket packet  = new DatagramPacket(SRPDefinitions.BYTE_BUFFER_MAX_LENGTH);
-			try {
-				if (this.client.isDisconnectionPerformedByUser()) {
-					break;//TODO: what if it´s not the finally closage but a band channel change?
+			while (!Thread.currentThread().isInterrupted()) {
+				if (client.isDisconnectionPerformedByUser()) {
+					break;
 				}
-				
-				socket.receive(packet);
 
+				byte[] buffer = new byte[1777];
+				DatagramPacket packet = new DatagramPacket(
+						buffer,
+						buffer.length
+				);
 
-
-
-
-
-			} catch (SocketTimeoutException e2) {
-				// this will catch the repeating Sockettimeoutexception...nothing to do
-//				e2.printStackTrace();
-			} 
-			catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			InetAddress address = packet.getAddress();
-			int port = packet.getPort();
-//			packet = new DatagramPacket(buf, buf.length, address, port);
-			String received = new String(packet.getData(), packet.getOffset(), packet.getLength());
-			received = received.trim();
-
-			if (received.contains(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
-				System.out.println("ReadUdpByASMsgTh, Info: got poison, now dieing....");
 				try {
-					terminateConnection();
-				} catch (Exception e) {
-					System.out.println("ASUDPRDR: catched error " + e.getMessage());
-				}
-				break;
-			}
-
-
-			if (received.contains("ASSETPATH") || received.contains("ASWATCHLIST")) {
-				// do nothing, that is your own message
-			} else if (received.contains("ASNEAREST:")) { //answer by airscout
-
-//				processASUDPMessage(received); //TODO: 2025-11-Zeile deaktiviert. Fand hier Doppelberechnung statt?!
-
-				AirPlaneReflectionInfo apReflectInfoForChatMember;
-
-				apReflectInfoForChatMember = processASUDPMessage(received);
-				if (!this.client.getLst_chatMemberList().isEmpty()) {
-
-					try {
-
-//						this.client.getLst_chatMemberList()
-//								.get(this.client.checkListForChatMemberIndexByCallSign(
-//										apReflectInfoForChatMember.getReceiver()))
-//								.setAirPlaneReflectInfo(apReflectInfoForChatMember); // TODO: here we set the ap info at
-//																						// the central instance of
-//																						// chatmember list .... -1 is a
-//																						// problem!
-
-                        ArrayList<Integer> addApInfoToThese = this.client.checkListForChatMemberIndexesByCallSign(apReflectInfoForChatMember.getReceiver());
-                        addApInfoToThese.forEach((integerIndex) -> {this.client.getLst_chatMemberList().get(integerIndex).setAirPlaneReflectInfo(apReflectInfoForChatMember); });
-
-						// AirScout availability strongly affects priority => request recompute the score of the chatmember
-						this.client.getScoreService().requestRecompute("airscout-update");
-
-						/**
-						 * CK| MSGBUS BGFX Listactualizer Exception in thread "Thread-10"
-						 * java.util.ConcurrentModificationException at
-						 * java.base/java.util.AbstractList$Itr.checkForComodification(AbstractList.java:399)
-						 * at java.base/java.util.AbstractList$Itr.next(AbstractList.java:368) at
-						 * kst4contest.controller.ChatController.checkListForChatMemberIndexByCallSign(ChatController.java:173)
-						 * at
-						 * kst4contest.controller.ReadUDPbyAirScoutMessageThread.run(ReadUDPbyAirScoutMessageThread.java:93)
-						 * 
-						 */
-//                        System.out.println("[ReadUdpByASth, AP-Info catched: ] " + apReflectInfoForChatMember.toString());
-//					}
-					} catch (Exception e) {
-
-						System.out.println("ReadUdpByAsMsgTh, Warning:"
-								+ apReflectInfoForChatMember.getReceiver().getCallSign()
-								+ " is not in the Chatmemberlist or the Chatmemberlist is modified by another Thread");
-						// TODO: handle exception
-					}
-
-//                    String[] newState = new String[3];
-//                    newState[0] = "On";
-//                    newState[1] = "received line";
-//                    newState[2] = apReflectInfoForChatMember.toString();
-//                    callThreadStateToUi(newState);
-                    ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "received line\n" + apReflectInfoForChatMember.toString(), false);
-                    callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
+					socket.receive(packet);
+				} catch (SocketTimeoutException timeoutException) {
+					/*
+					 * AirScout may remain silent for some time. Continue with a
+					 * new packet instead of processing the previous packet again.
+					 */
+					continue;
 				}
 
-			}
-//			packet = null; //reset packet
-			buf = new byte[1777]; // reset buffer for future smaller packets
+				String received = new String(
+						packet.getData(),
+						packet.getOffset(),
+						packet.getLength()
+				).trim();
 
+				if (received.contains(
+						ApplicationConstants.DISCONNECT_RDR_POISONPILL
+				)) {
+					System.out.println(
+							"[AirScout UDP, info]: Received shutdown packet."
+					);
+					break;
+				}
+
+				/*
+				 * The socket remains bound so that AirScout can be enabled
+				 * without reconnecting. Disabled means that received data is
+				 * discarded and no station state is changed.
+				 */
+				if (!client.getChatPreferences()
+						.isAirScout_asUDPListenerEnabled()) {
+					continue;
+				}
+
+				if (!isMessageForConfiguredClient(received)) {
+					continue;
+				}
+
+				processAirScoutResponse(received);
+			}
+		} catch (SocketException exception) {
+			if (!Thread.currentThread().isInterrupted()) {
+				System.out.println(
+						"[AirScout UDP, error]: Could not use UDP port "
+								+ localPort
+								+ ": "
+								+ exception.getMessage()
+				);
+			}
+		} catch (IOException exception) {
+			if (!Thread.currentThread().isInterrupted()) {
+				System.out.println(
+						"[AirScout UDP, error]: Communication failed: "
+								+ exception.getMessage()
+				);
+			}
+		} finally {
+			if (socket != null && !socket.isClosed()) {
+				socket.close();
+			}
+
+			socket = null;
 		}
-
 	}
 
+	/**
+	 * Parses an AirScout response and applies it to every active category
+	 * instance of the reported station.
+	 *
+	 * @param received received ASNEAREST message
+	 */
+	private void processAirScoutResponse(String received) {
+		try {
+			AirPlaneReflectionInfo reflectionInfo =
+					processASUDPMessage(received);
+
+			if (reflectionInfo == null
+					|| reflectionInfo.getReceiver() == null) {
+				return;
+			}
+
+			String receiverCallSign =
+					reflectionInfo.getReceiver().getCallSignRaw();
+
+			if (receiverCallSign == null
+					|| receiverCallSign.isBlank()) {
+				receiverCallSign =
+						reflectionInfo.getReceiver().getCallSign();
+			}
+
+			if (receiverCallSign == null
+					|| receiverCallSign.isBlank()) {
+				return;
+			}
+
+			List<ChatMember> matchingMembers =
+					client.findActiveChatMembersByRawCall(
+							receiverCallSign
+					);
+
+			for (ChatMember matchingMember : matchingMembers) {
+				matchingMember.setAirPlaneReflectInfo(
+						reflectionInfo
+				);
+			}
+
+			if (!matchingMembers.isEmpty()) {
+				client.getScoreService().requestRecompute(
+						"airscout-update"
+				);
+			}
+
+			if (callBackToController != null) {
+				ThreadStateMessage threadStateMessage =
+						new ThreadStateMessage(
+								threadNickName,
+								true,
+								"Received AirScout response\n"
+										+ reflectionInfo,
+								false
+						);
+
+				callBackToController.onThreadStatus(
+						threadNickName,
+						threadStateMessage
+				);
+			}
+		} catch (RuntimeException exception) {
+			System.out.println(
+					"[AirScout UDP, warning]: Could not process response: "
+							+ exception.getMessage()
+			);
+		}
+	}
 	public AirPlaneReflectionInfo processASUDPMessage(String udpStringToProcess) {
 
 //		System.out.println("RDUDPAS RECV: " + udpStringToProcess);
 
-		// TODO: filter messages which are directed to another client
+
 
 		/*
 		 * Example mesage: ASNEAREST: "AS" "KST"
@@ -304,11 +365,8 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 	}
 
 	public boolean terminateConnection() {
-
-		try {
-			this.socket.close();
-		} catch (Exception e) {
-			System.out.println("udpbyas: catched " + e.getMessage());
+		if (socket != null && !socket.isClosed()) {
+			socket.close();
 		}
 
 		return true;
