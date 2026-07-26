@@ -33,6 +33,7 @@ import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import kst4contest.ApplicationConstants;
 import kst4contest.controller.ChatController;
+import kst4contest.controller.MessageVariableResolver;
 import kst4contest.controller.StatusUpdateListener;
 import kst4contest.controller.Utils4KST;
 import javafx.application.Application;
@@ -156,6 +157,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	String chatState;
 	ChatController chatcontroller;
+	MessageVariableResolver messageVariableResolver;
 
 
 	Button MYQRGButton; // TODO: clean code? Got the myqrg button out of the factory method to modify
@@ -2555,10 +2557,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			String string = (String) iterator.next();
 			final MenuItem menuItem = new MenuItem(string);
 			menuItem.setOnAction(new EventHandler<ActionEvent>() {
+				@Override
 				public void handle(ActionEvent event) {
-					txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText() + menuItem.getText());
-					txt_chatMessageUserInput.requestFocus();
-					txt_chatMessageUserInput.selectEnd();
+					appendResolvedMessageText(menuItem.getText());
 				}
 			});
 
@@ -3852,15 +3853,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public void handle(CellEditEvent<String, String> t) {
 
 				String newValue = t.getNewValue();
-				t.getTableView().getItems().set(t.getTablePosition().getRow(), newValue);
-
-				if (newValue == "") { // delete lines which had been cleared
+				if (newValue == null || newValue.isBlank()) {
 					t.getTableView().getItems().remove(t.getTablePosition().getRow());
+				} else {
+					t.getTableView().getItems().set(t.getTablePosition().getRow(), newValue);
 				}
 
-				flwPane_textSnippets.getChildren().clear();
-				flwPane_textSnippets.getChildren()
-						.addAll(buttonFactory(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()));
+				refreshShortcutButtons();
 			}
 		});
 
@@ -4500,18 +4499,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		TableView<String> tbl_txtSnips = new TableView<String>();
 		tbl_txtSnips.setTooltip(new Tooltip("Personalize your textsnippets here"));
 
-//		TableColumn<Integer, String> idCol = new TableColumn<Integer, String>("Index");
-//		idCol.setCellValueFactory(new Callback<CellDataFeatures<Integer, String>, ObservableValue<Integer>>() {
-//
-//			@Override
-//			public ObservableValue<String> call(CellDataFeatures<Integer, String> cellDataFeatures) {
-//				int index = 0;
-//
-////				index.setValue(cellDataFeatures.getValue().);
-//
-//				return (index);
-//			}
-//		});
 
 		TableColumn<String, String> snipCol = new TableColumn<String, String>("Snippet");
 		snipCol.setCellValueFactory(new Callback<CellDataFeatures<String, String>, ObservableValue<String>>() {
@@ -4533,21 +4520,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public void handle(CellEditEvent<String, String> t) {
 
 				String newValue = t.getNewValue();
-				t.getTableView().getItems().set(t.getTablePosition().getRow(), newValue);
-
-				if (newValue == "") { // delete lines which had been cleared
+				if (newValue == null || newValue.isBlank()) {
 					t.getTableView().getItems().remove(t.getTablePosition().getRow());
+				} else {
+					t.getTableView().getItems().set(t.getTablePosition().getRow(), newValue);
 				}
 
-				chatMessageContextMenu = initChatMemberTableContextMenu(
-						chatcontroller.getChatPreferences().getLst_txtSnipList()); // TODO: thats not
-				// clean, there had
-				// to be a listener
-				// triggered update
-				// method
-				chatMemberContextMenu = initChatMemberTableContextMenu(
-						chatcontroller.getChatPreferences().getLst_txtSnipList());
-
+				refreshTextSnippetContextMenus();
 			}
 		});
 
@@ -4562,6 +4541,140 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		return tbl_txtSnips;
 	}
+
+	/**
+	 * Rebuilds the shortcut button row after a shortcut was edited or moved.
+	 */
+	private void refreshShortcutButtons() {
+		if (flwPane_textSnippets == null) {
+			return;
+		}
+
+		flwPane_textSnippets.getChildren().setAll(
+				buttonFactory(chatcontroller.getChatPreferences().getLst_txtShortCutBtnList())
+		);
+	}
+
+	/**
+	 * Rebuilds every context menu which exposes the configured text snippets.
+	 */
+	private void refreshTextSnippetContextMenus() {
+		ObservableList<String> snippets = chatcontroller.getChatPreferences().getLst_txtSnipList();
+		chatMessageContextMenu = initChatMemberTableContextMenu(snippets);
+		chatMemberContextMenu = initChatMemberTableContextMenu(snippets);
+	}
+
+	/**
+	 * Moves the selected table entry by one position.
+	 *
+	 * @param tableView table that owns the ordered list
+	 * @param offset {@code -1} for up or {@code 1} for down
+	 * @return {@code true} if an item was moved
+	 */
+	private boolean moveSelectedTableEntry(TableView<String> tableView, int offset) {
+		int currentIndex = tableView.getSelectionModel().getSelectedIndex();
+		int targetIndex = currentIndex + offset;
+
+		if (currentIndex < 0 || targetIndex < 0 || targetIndex >= tableView.getItems().size()) {
+			return false;
+		}
+
+		String selectedEntry = tableView.getItems().remove(currentIndex);
+		tableView.getItems().add(targetIndex, selectedEntry);
+		tableView.getSelectionModel().clearAndSelect(targetIndex);
+		tableView.scrollTo(targetIndex);
+		return true;
+	}
+
+
+	/**
+	 * Validates and stores one beacon text.
+	 *
+	 * <p>The final text is checked after global variables have been resolved.
+	 * Otherwise a template with at most 120 characters could still exceed the
+	 * server limit after values such as MYQRG or MYLOCATOR were inserted.</p>
+	 *
+	 * @param textField field containing the configured beacon template
+	 * @param mainCategory {@code true} for the main category, {@code false} for
+	 *                     the optional second category
+	 */
+	private void applyBeaconTextSetting(TextField textField, boolean mainCategory) {
+		String configuredText = textField.getText() == null ? "" : textField.getText();
+		String resolvedText = messageVariableResolver.resolveGlobalVariables(configuredText);
+
+		if (resolvedText != null
+				&& resolvedText.length() <= ChatController.MAX_BEACON_TEXT_LENGTH) {
+			if (mainCategory) {
+				chatcontroller.getChatPreferences().setBcn_beaconTextMainCat(configuredText);
+			} else {
+				chatcontroller.getChatPreferences().setBcn_beaconTextSecondCat(configuredText);
+			}
+			return;
+		}
+
+		String previousText = mainCategory
+				? chatcontroller.getChatPreferences().getBcn_beaconTextMainCat()
+				: chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat();
+
+		textField.setText(previousText);
+		alertWindowEvent(
+				"The resolved beacon message must not exceed "
+						+ ChatController.MAX_BEACON_TEXT_LENGTH
+						+ " characters."
+		);
+	}
+
+	/**
+	 * Validates and applies the shared interval used by both beacon categories.
+	 *
+	 * <p>Only whole minutes are accepted. If the application is connected, changing
+	 * the value restarts the shared timer and begins a new countdown with the
+	 * selected interval.</p>
+	 *
+	 * @param intervalField field containing the interval in minutes
+	 */
+	private void applySharedBeaconInterval(TextField intervalField) {
+		String enteredValue =
+				intervalField.getText() == null ? "" : intervalField.getText().trim();
+
+		try {
+			int intervalMinutes = Integer.parseInt(enteredValue);
+
+			if (intervalMinutes < ChatController.MIN_BEACON_INTERVAL_MINUTES) {
+				throw new NumberFormatException("Beacon interval below minimum");
+			}
+
+			chatcontroller.getChatPreferences()
+					.setBcn_beaconIntervalInMinutesMainCat(intervalMinutes);
+
+			/*
+			 * Preserve the legacy second-category XML value, but keep it synchronized
+			 * with the one shared interval.
+			 */
+			chatcontroller.getChatPreferences()
+					.setBcn_beaconIntervalInMinutesSecondCat(intervalMinutes);
+
+			intervalField.setText(Integer.toString(intervalMinutes));
+			chatcontroller.restartBeaconTimer();
+
+			System.out.println("[Main.java, Info]: Shared beacon interval set to "
+					+ intervalMinutes + " minute(s).");
+		} catch (NumberFormatException exception) {
+			int currentInterval = Math.max(
+					ChatController.MIN_BEACON_INTERVAL_MINUTES,
+					chatcontroller.getChatPreferences()
+							.getBcn_beaconIntervalInMinutesMainCat()
+			);
+
+			intervalField.setText(Integer.toString(currentInterval));
+			alertWindowEvent(
+					"Enter a whole beacon interval of at least "
+							+ ChatController.MIN_BEACON_INTERVAL_MINUTES
+							+ " minute."
+			);
+		}
+	}
+
 
 	private TableView<ChatMember> initWkdStnTable() {
 
@@ -5476,10 +5589,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					} else {
 
 //						System.out.println("Button clicked " + ((Button) arg0.getSource()).getText());
-						txt_chatMessageUserInput.setText(
-								txt_chatMessageUserInput.getText() + ((Button) arg0.getSource()).getText() + " ");
+					appendResolvedMessageText(
+							((Button) arg0.getSource()).getText() + " "
+					);
 
-					}
+				}
 
 				}
 			});
@@ -5935,7 +6049,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		ChatMember ownChatMemberObject = new ChatMember();
 
 		chatcontroller = new ChatController(ownChatMemberObject, this); // instantiate the Chatcontroller with the user object
-        chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
+		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
+		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
 
 		// 1. Timeline an die Sked-Liste binden
 		chatcontroller.getActiveSkeds().addListener((ListChangeListener<ContestSked>) c -> {
@@ -6087,86 +6202,31 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				}
 			});
 
-			scn_ChatwindowMainScene.setOnKeyPressed(new EventHandler<KeyEvent>() {
-				KeyCombination keyComboSTRGplus1 = new KeyCodeCombination(KeyCode.DIGIT1, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus2 = new KeyCodeCombination(KeyCode.DIGIT2, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus3 = new KeyCodeCombination(KeyCode.DIGIT3, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus4 = new KeyCodeCombination(KeyCode.DIGIT4, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus5 = new KeyCodeCombination(KeyCode.DIGIT5, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus6 = new KeyCodeCombination(KeyCode.DIGIT6, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus7 = new KeyCodeCombination(KeyCode.DIGIT7, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus8 = new KeyCodeCombination(KeyCode.DIGIT8, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus9 = new KeyCodeCombination(KeyCode.DIGIT9, KeyCombination.CONTROL_DOWN);
-				KeyCombination keyComboSTRGplus0 = new KeyCodeCombination(KeyCode.DIGIT0, KeyCombination.CONTROL_DOWN);
-
-
-				@Override
-				public void handle(KeyEvent keyEvent) {
-					try {
-
-//					System.out.println(keyEvent.getCode());
-
-						/**
-						 * if a macro is set by hitting strg+Nr, it should be possible to send the message by hit the enter key
-						 */
-					if (keyEvent.getCode() == KeyCode.ENTER) {
-
-						sendButton.fire();
-
-					} else if (keyEvent.getCode() == KeyCode.ESCAPE) {
-						txt_chatMessageUserInput.clear();
-					} else
-
-						if (selectedCallSignInfoStageChatMember.getCallSign() != null) {
-
-							if (keyComboSTRGplus1.match(keyEvent)) {
-
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(0));
-
-							} else if (keyComboSTRGplus2.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(1));
-
-							} else if (keyComboSTRGplus3.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(2));
-
-							} else if (keyComboSTRGplus4.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(3));
-
-							} else if (keyComboSTRGplus5.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(4));
-
-							} else if (keyComboSTRGplus6.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(5));
-
-							} else if (keyComboSTRGplus7.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(6));
-
-							} else if (keyComboSTRGplus8.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(7));
-
-							} else if (keyComboSTRGplus9.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(8));
-
-							} else if (keyComboSTRGplus0.match(keyEvent)) {
-								txt_chatMessageUserInput.setText("/cq " + selectedCallSignInfoStageChatMember.getCallSign() + " " + chatcontroller.getChatPreferences().getLst_txtSnipList().get(9));
-
-							}
-							txt_chatMessageUserInput.requestFocus(); //in every case, focus the textfield for further edits
-							txt_chatMessageUserInput.selectEnd();
-						}
-					} catch (Exception nullPointerExc) {
-						System.out.println("There are no predifined textsnippets for this keycombo! -> " + nullPointerExc.getMessage());
-					}
+			scn_ChatwindowMainScene.setOnKeyPressed(keyEvent -> {
+				if (keyEvent.getCode() == KeyCode.ENTER) {
+					sendButton.fire();
+					keyEvent.consume();
+					return;
 				}
+
+				if (keyEvent.getCode() == KeyCode.ESCAPE) {
+					txt_chatMessageUserInput.clear();
+					keyEvent.consume();
+					return;
+				}
+
+				int snippetIndex = resolveSnippetIndex(keyEvent);
+				if (snippetIndex < 0) {
+					return;
+				}
+
+				insertTextSnippet(snippetIndex);
+				keyEvent.consume();
 			});
 
 
-//			primaryStage.setTitle(this.chatcontroller.getChatPreferences().getChatState());
-
-//			scene.getStylesheets().add(getClass().getResource("application.css").toExternalForm());
 
 			MenuBar mainScreenMenuBar = initMenuBar();
-//            HPane hbxNorthForStatusBar = new HBox();
             flwpne_StatusBar = new FlowPane();
 
             flwpne_StatusBar.getChildren().add(mainScreenMenuBar);
@@ -6308,6 +6368,36 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						effectiveSelectedMember = tbl_chatMember.getSelectionModel().getSelectedItem();
 					}
 
+					/*
+					 * Resolve variables only after the key or mouse event that edited the
+					 * TextField has finished. This also supports variables entered manually
+					 * instead of through a shortcut or snippet.
+					 */
+					String resolvedOutgoingText =
+							messageVariableResolver.resolveForSelectedStation(
+									txt_chatMessageUserInput.getText(),
+									effectiveSelectedMember
+							);
+
+					/*
+					 * A variable may legitimately resolve to an empty string. In that case
+					 * there is no message to send.
+					 */
+					if (resolvedOutgoingText == null || resolvedOutgoingText.isBlank()) {
+						txt_chatMessageUserInput.clear();
+						return;
+					}
+
+					/*
+					 * Keep the existing protection against private messages to the local
+					 * callsign, but perform the check at the controlled send boundary.
+					 */
+					if (isMessageAddressedToOwnCallsign(resolvedOutgoingText)) {
+						txt_chatMessageUserInput.clear();
+						return;
+					}
+
+
 					if (effectiveSelectedMember == null
 							&& chatcontroller != null
 							&& chatcontroller.getScoreService() != null) {
@@ -6326,7 +6416,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					 * /cq message into another channel.
 					 */
 					ChatCategory sendMeInThisCat = resolveOutgoingChatCategory(
-							txt_chatMessageUserInput.getText(),
+							resolvedOutgoingText,
 							effectiveSelectedMember
 					);
 
@@ -6368,7 +6458,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					 * - or the main category as fallback.
 					 */
 					sendMe.setChatCategory(sendMeInThisCat);
-					sendMe.setMessageText(txt_chatMessageUserInput.getText());
+					sendMe.setMessageText(resolvedOutgoingText);
 
 					/*
 					 * If operator sends "/cq CALL ..." then update the station metrics.
@@ -6427,160 +6517,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						event.consume();
 						sendButton.fire();
-					}
-				}
-			});
-			txt_chatMessageUserInput.textProperty().addListener(new ChangeListener<String>() {
-				@Override
-				public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-
-
-					if (txt_chatMessageUserInput.getText().contains("MYQRGSHORT")) {
-						System.out.println("MYQRGSHORT erkannt");
-
-						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYQRGSHORT",
-								chatcontroller.getChatPreferences().getMYQRGFirstCat().getValue().substring(0,7)));
-					}
-
-					if (txt_chatMessageUserInput.getText().contains("MYQRG") && !txt_chatMessageUserInput.getText().contains("MYQRGSHORT")) {
-						System.out.println("MYQRG erkannt");
-
-						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYQRG",
-								chatcontroller.getChatPreferences().getMYQRGFirstCat().getValue()));
-					}
-
-//					if (txt_chatMessageUserInput.getText().contains("SECONDQRGSHORT")) {
-//						System.out.println("SECONDQRGSHORT erkannt");
-// 						if (chatcontroller.getChatPreferences().getMYQRGSecondCat().getValue().length()  >= 6 && chatcontroller.getChatPreferences().getMYQRGSecondCat().getValue().length()  <= 8) {
-//
-//							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDQRGSHORT",
-//									chatcontroller.getChatPreferences().getMYQRGSecondCat().getValue().substring(0,7)));
-//						} else {
-//							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDQRGSHORT",
-//									chatcontroller.getChatPreferences().getMYQRGSecondCat().getValue()));
-//						}
-//					}
-
-					if (txt_chatMessageUserInput.getText().contains("SECONDQRG")) {
-						System.out.println("MYQRG2 erkannt");
-
-						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDQRG",
-								chatcontroller.getChatPreferences().getMYQRGSecondCat().getValue()));
-					}
-
-
-					if (txt_chatMessageUserInput.getText().contains("MYLOCATORSHORT")) {
-						System.out.println("MYLOCATORSHORT erkannt");
-
-//						txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG());
-						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYLOCATORSHORT",
-								chatcontroller.getChatPreferences().getStn_loginLocatorMainCat().substring(0,4))); //JO51 instead of JO51JL
-					}
-
-					if (txt_chatMessageUserInput.getText().contains("MYLOCATOR") && !txt_chatMessageUserInput.getText().contains("MYLOCATORSHORT")) {
-						System.out.println("MYLOCATOR erkannt");
-
-//						txt_chatMessageUserInput.getText().replaceAll("MYQRG", chatcontroller.getChatPreferences().getMYQRG());
-						txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("MYLOCATOR",
-								chatcontroller.getChatPreferences().getStn_loginLocatorMainCat()));
-					}
-
-
-					boolean noAirplaneHere = false;
-
-					if (txt_chatMessageUserInput.getText().contains("FIRSTAP")) {
-
-						if (selectedCallSignInfoStageChatMember != null) {
-
-							if (selectedCallSignInfoStageChatMember.getCallSign() != chatcontroller.getChatPreferences().getStn_loginCallSign()) {
-
-								if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo() != null) {
-
-									if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes() != null) {
-
-										if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().size() != 0) {
-											noAirplaneHere = false;
-											AirPlane airPlane = selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(0);
-											txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("FIRSTAP", "a " + airPlane.getPotencialDescriptionAsWord() +
-													" in " + airPlane.getArrivingDurationMinutes() + " min"));
-										}  else noAirplaneHere = true;
-									} else noAirplaneHere = true;
-								}
-								else noAirplaneHere = true;
-							}
-						}
-
-						if (noAirplaneHere) {
-							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("FIRSTAP",
-									"no ap available"));
-						}
-					}
-
-					if (txt_chatMessageUserInput.getText().contains("SECONDAP")) {
-
-						if (selectedCallSignInfoStageChatMember != null) {
-
-							if (selectedCallSignInfoStageChatMember.getCallSign() != chatcontroller.getChatPreferences().getStn_loginCallSign()) {
-
-								if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo() != null) {
-
-									if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes() != null) {
-
-										if (selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().size() >= 2) {
-											System.out.println("RISINGAP : " + selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().size());
-											AirPlane airPlane = selectedCallSignInfoStageChatMember.getAirPlaneReflectInfo().getRisingAirplanes().get(1);
-
-											if (!airPlane.getPotencialDescriptionAsWord().isEmpty()) {
-											noAirplaneHere = false;
-											txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDAP", "Next " + airPlane.getPotencialDescriptionAsWord() +
-													" in " + airPlane.getArrivingDurationMinutes() + " min"));
-
-											} else noAirplaneHere = true;
-
-										}  else noAirplaneHere = true;
-									} else noAirplaneHere = true;
-								}
-								else noAirplaneHere = true;
-							}
-						}
-
-						if (noAirplaneHere) {
-							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("SECONDAP",
-									""));
-						}
-					}
-
-					if (txt_chatMessageUserInput.getText().contains("QRZNAME")) {
-
-						if (selectedCallSignInfoStageChatMember != null) {
-
-							/**
-							 * for any reason there is a (not critical) exception if i use String[] here, so I
-							 * decided to use the whole name
-							 */
-//							try {
-//
-//							String[] firstName = selectedCallSignInfoStageChatMember.getName().split(" ");
-//							String splitFirst ="";
-//
-//							if (firstName.length > 1) {
-//								splitFirst = firstName[0];
-//							} else splitFirst = selectedCallSignInfoStageChatMember.getName();
-//
-//							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("QRZNAME",
-//									splitFirst)); //only first word of name field will be inserted
-//							} catch (Exception jfxBugExc) {
-//
-//							}
-
-							txt_chatMessageUserInput.setText(txt_chatMessageUserInput.getText().replaceAll("QRZNAME",
-									selectedCallSignInfoStageChatMember.getName()));
-						}
-
-					}
-
-					if (txt_chatMessageUserInput.getText().startsWith("/cq " + chatcontroller.getChatPreferences().getStn_loginCallSign())) {
-						txt_chatMessageUserInput.setText(" "); //prevent user sends a message to himself, that will cause errors
 					}
 				}
 			});
@@ -8695,7 +8631,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		HBox hbxDemDirectoryActions = new HBox(8.0, btnUseDefaultDemDirectory, btnImportDemTiles);
 
 		Label lbl_station_pstRotatorEnabled =
-				new Label("Enable PSTRotator interface (automatic QTF):");
+				new Label("Enable PSTRotator (auto QTF):");
 
 		TextField txtFld_station_pstRotatorHost = new TextField(
 				chatcontroller.getChatPreferences().getStn_pstRotatorHost()
@@ -8872,7 +8808,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 		grdPanelServerHostName.add(
-				new Label("ON4KST server [www.on4kst.org]:"),
+				new Label("ON4KST server [www.on4kst.info]:"),
 				0,
 				1
 		);
@@ -10265,78 +10201,121 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		/*************************************************************************************
 		 * shorts & snippets tab
 		 *************************************************************************************/
-
 		GridPane grdPnlShorts = new GridPane();
 		grdPnlShorts.setPadding(new Insets(10, 10, 10, 10));
 		grdPnlShorts.setVgap(5);
 		grdPnlShorts.setHgap(5);
 
-//        Label lblEnableTRXMsgbyUCX = new Label("Receive UCXLog network based UDP trx messages");
-//        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
+		grdPnlShorts.add(
+				generateLabeledSeparator(100, "Shortcut buttons above the message field"),
+				0,
+				0,
+				2,
+				1
+		);
 
-		grdPnlShorts.add(generateLabeledSeparator(100, "Set the shortcut-Buttons (above Sendtext-field)"), 0, 0, 2, 1);
+		TableView<String> tblVw_shortcuts = initShortcutTable();
+		tblVw_shortcuts.setItems(
+				this.chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()
+		);
 
-		TableView<String> tblVw_shortcuts = new TableView<String>();
-		tblVw_shortcuts = initShortcutTable();
-		tblVw_shortcuts.setItems(this.chatcontroller.getChatPreferences().getLst_txtShortCutBtnList());
-
-
-		Button btn_Short_addLine = new Button("Add new shorcut-button");
+		Button btn_Short_addLine = new Button("Add shortcut");
 		btn_Short_addLine.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-
-				String newTextSnippet = "CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key";
-				chatcontroller.getChatPreferences().getLst_txtShortCutBtnList().add(0, newTextSnippet);
+				String newShortcut =
+						"CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key";
+				chatcontroller.getChatPreferences()
+						.getLst_txtShortCutBtnList()
+						.add(0, newShortcut);
+				tblVw_shortcuts.getSelectionModel().clearAndSelect(0);
+				tblVw_shortcuts.scrollTo(0);
+				tblVw_shortcuts.edit(0, tblVw_shortcuts.getColumns().get(0));
 			}
 		});
 
-		Button btn_Short_changePosPlus = new Button("move marked down");
-		btn_Short_changePosPlus.setDisable(true);
-		Button btn_Short_changePosMinus = new Button("move marked up");
-		btn_Short_changePosMinus.setDisable(true);
+		Button btn_Short_changePosPlus = new Button("Move selected down");
+		btn_Short_changePosPlus.setOnAction(event -> {
+			if (moveSelectedTableEntry(tblVw_shortcuts, 1)) {
+				refreshShortcutButtons();
+			}
+		});
+
+		Button btn_Short_changePosMinus = new Button("Move selected up");
+		btn_Short_changePosMinus.setOnAction(event -> {
+			if (moveSelectedTableEntry(tblVw_shortcuts, -1)) {
+				refreshShortcutButtons();
+			}
+		});
 
 		HBox hbxTxtShortBtnBox = new HBox();
-
-		grdPnlShorts.add(hbxTxtShortBtnBox, 0, 2, 2, 1);
-		hbxTxtShortBtnBox.getChildren().addAll(btn_Short_addLine, btn_Short_changePosPlus, btn_Short_changePosMinus);
+		hbxTxtShortBtnBox.getChildren().addAll(
+				btn_Short_addLine,
+				btn_Short_changePosPlus,
+				btn_Short_changePosMinus
+		);
 
 		grdPnlShorts.add(tblVw_shortcuts, 0, 1, 2, 1);
+		grdPnlShorts.add(hbxTxtShortBtnBox, 0, 2, 2, 1);
 
-		TableView<String> tblVw_textsnippets = new TableView<String>();
-		tblVw_textsnippets = initTextSnippetsTable();
-		tblVw_textsnippets.setItems(this.chatcontroller.getChatPreferences().getLst_txtSnipList());
+		grdPnlShorts.add(
+				generateLabeledSeparator(
+						100,
+						"Text snippets (the first 10 use Ctrl+1 through Ctrl+0)"
+				),
+				0,
+				3,
+				2,
+				1
+		);
 
-		grdPnlShorts.add(tblVw_textsnippets, 0, 4, 2, 1);
+		TableView<String> tblVw_textsnippets = initTextSnippetsTable();
+		tblVw_textsnippets.setItems(
+				this.chatcontroller.getChatPreferences().getLst_txtSnipList()
+		);
 
 		Button btn_Snip_addLine = new Button("Add new snippet");
 		btn_Snip_addLine.setOnAction(new EventHandler<ActionEvent>() {
 			@Override
 			public void handle(ActionEvent event) {
-
-				String newTextSnippet = "CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key";
-				chatcontroller.getChatPreferences().getLst_txtSnipList().add(0, newTextSnippet);
+				String newTextSnippet =
+						"CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key";
+				chatcontroller.getChatPreferences()
+						.getLst_txtSnipList()
+						.add(0, newTextSnippet);
+				tblVw_textsnippets.getSelectionModel().clearAndSelect(0);
+				tblVw_textsnippets.scrollTo(0);
+				tblVw_textsnippets.edit(0, tblVw_textsnippets.getColumns().get(0));
 			}
 		});
 
-		Button btn_Snbip_changePosPlus = new Button("move marked down");
-		btn_Snbip_changePosPlus.setDisable(true);
-		Button btn_Snip_changePosMinus = new Button("move marked up");
-		btn_Snip_changePosMinus.setDisable(true);
+		Button btn_Snip_changePosPlus = new Button("Move selected down");
+		btn_Snip_changePosPlus.setOnAction(event -> {
+			if (moveSelectedTableEntry(tblVw_textsnippets, 1)) {
+				refreshTextSnippetContextMenus();
+			}
+		});
+
+		Button btn_Snip_changePosMinus = new Button("Move selected up");
+		btn_Snip_changePosMinus.setOnAction(event -> {
+			if (moveSelectedTableEntry(tblVw_textsnippets, -1)) {
+				refreshTextSnippetContextMenus();
+			}
+		});
 
 		HBox hbxTxtSnipBtnBox = new HBox();
+		hbxTxtSnipBtnBox.getChildren().addAll(
+				btn_Snip_addLine,
+				btn_Snip_changePosPlus,
+				btn_Snip_changePosMinus
+		);
 
+		grdPnlShorts.add(tblVw_textsnippets, 0, 4, 2, 1);
 		grdPnlShorts.add(hbxTxtSnipBtnBox, 0, 5, 2, 1);
-		hbxTxtSnipBtnBox.getChildren().addAll(btn_Snip_addLine, btn_Snbip_changePosPlus, btn_Snip_changePosMinus);
-
-//        grdPnlShorts.add(lblEnableTRXMsgbyUCX, 0, 1);
-//        grdPnlShorts.add(chkBxEnableTRXMsgbyUCX, 1, 1);
-		grdPnlShorts.add(generateLabeledSeparator(100, "Set the Text-snippets (First 10 are accessible by pressing <strg> + <nr>!)"), 0,
-				3, 2, 1);
 
 		VBox vbxShorts = new VBox();
 		vbxShorts.setPadding(new Insets(10, 10, 10, 10));
-		vbxShorts.getChildren().addAll(grdPnlShorts);
+		vbxShorts.getChildren().add(grdPnlShorts);
 
 		/*************************************************************************************
 		 * Beacons / CQ messages
@@ -10347,161 +10326,138 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlBeacon.setVgap(5);
 		grdPnlBeacon.setHgap(5);
 
-//        Label lblEnableTRXMsgbyUCX = new Label("Receive UCXLog network based UDP trx messages");
-//        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
+		grdPnlBeacon.add(
+				generateLabeledSeparator(100, "CQ beacons for the public chat"),
+				0,
+				0,
+				2,
+				1
+		);
 
-		grdPnlBeacon.add(generateLabeledSeparator(100, "Set the Beacon (autointervalled CQ messages to public chat)"),
-				0, 0, 2, 1);
-		grdPnlBeacon.add(new Label("[" + this.chatcontroller.getChatCategoryMain().getChatCategoryName(this.chatcontroller.getChatCategoryMain().getCategoryNumber())+ "] Enable CQ-like beacons:"), 0, 1);
+		ChatCategory mainBeaconCategory = chatcontroller.getChatCategoryMain();
+		ChatCategory secondBeaconCategory = chatcontroller.getChatCategorySecondChat();
 
-		grdPnlBeacon.add(new Label("[" + this.chatcontroller.getChatCategoryMain().getChatCategoryName(this.chatcontroller.getChatCategorySecondChat().getCategoryNumber())+ "] Enable CQ-like beacons:"), 0, 4);
+		String mainBeaconCategoryName =
+				mainBeaconCategory.getChatCategoryName(mainBeaconCategory.getCategoryNumber());
+		String secondBeaconCategoryName = secondBeaconCategory == null
+				? "Second chat category"
+				: secondBeaconCategory.getChatCategoryName(secondBeaconCategory.getCategoryNumber());
+
+		grdPnlBeacon.add(
+				new Label("[" + mainBeaconCategoryName + "] Enable CQ beacon:"),
+				0,
+				1
+		);
 
 		CheckBox chkBxBeaconsEnabledMainCategory = new CheckBox();
-		chkBxBeaconsEnabledMainCategory.setSelected(this.chatcontroller.getChatPreferences().isBcn_beaconsEnabledMainCat());
-
-		chkBxBeaconsEnabledMainCategory.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences().setBcn_beaconsEnabledMainCat(chkBxBeaconsEnabledMainCategory.isSelected());
-				System.out.println("[Main.java, Info]: Beacons 1st category turned on: " + newValue);
-			}
-		});
+		chkBxBeaconsEnabledMainCategory.setSelected(
+				chatcontroller.getChatPreferences().isBcn_beaconsEnabledMainCat()
+		);
+		chkBxBeaconsEnabledMainCategory.selectedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					chatcontroller.getChatPreferences()
+							.setBcn_beaconsEnabledMainCat(newValue);
+					System.out.println("[Main.java, Info]: Main-category beacon enabled: "
+							+ newValue);
+				}
+		);
 
 		grdPnlBeacon.add(chkBxBeaconsEnabledMainCategory, 1, 1);
 
-		CheckBox chkBxBeaconsEnabledSecondCategory = new CheckBox();
-		chkBxBeaconsEnabledSecondCategory.setSelected(this.chatcontroller.getChatPreferences().isBcn_beaconsEnabledSecondCat());
+		grdPnlBeacon.add(
+				new Label("Beacon message [max. "
+						+ ChatController.MAX_BEACON_TEXT_LENGTH
+						+ " characters]:"),
+				0,
+				2
+		);
 
-		chkBxBeaconsEnabledSecondCategory.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+		TextField txtFldBeaconText = new TextField(
+				chatcontroller.getChatPreferences().getBcn_beaconTextMainCat()
+		);
 
-				chatcontroller.getChatPreferences().setBcn_beaconsEnabledSecondCat(chkBxBeaconsEnabledSecondCategory.isSelected());
-				System.out.println("[Main.java, Info]: Beacons 2st category turned on: " + newValue);
-			}
-		});
-
-		grdPnlBeacon.add(chkBxBeaconsEnabledSecondCategory, 1, 4);
-
-
-		grdPnlBeacon.add(new Label("Beacon message [<100 Chars]:"), 0, 2);
-
-		TextField txtFldBeaconText = new TextField(this.chatcontroller.getChatPreferences().getBcn_beaconTextMainCat());
+		txtFldBeaconText.setPrefWidth(400);
 		txtFldBeaconText.setFocusTraversable(false);
 		grdPnlBeacon.add(txtFldBeaconText, 1, 2);
-		txtFldBeaconText.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					System.out.println("[Main.java, Info]: Set the 1st cat beacon text to: "
-							+ chatcontroller.getChatPreferences().getBcn_beaconTextMainCat());
-
-					if (txtFldBeaconText.getText().length() <= 120) {
-						chatcontroller.getChatPreferences().setBcn_beaconTextMainCat(txtFldBeaconText.getText());
-					} else {
-						txtFldBeaconText.setText(
-								"That was too long, setting " + chatcontroller.getChatPreferences().getBcn_beaconTextMainCat());
+		txtFldBeaconText.focusedProperty().addListener(
+				(observable, oldValue, focused) -> {
+					if (!focused) {
+						applyBeaconTextSetting(txtFldBeaconText, true);
 					}
-//		            MYQRGButton.setText(txt_ownqrg.getText());
 				}
-			}
-		});
+		);
 
-		grdPnlBeacon.add(new Label("Beacon-interval [minutes, >=5]:"), 0, 3);
+		grdPnlBeacon.add(
+				new Label("[" + secondBeaconCategoryName + "] Enable CQ beacon:"),
+				0,
+				3
+		);
 
-		TextField txtFldBeaconInterval = new TextField();
-		txtFldBeaconInterval.setText(this.chatcontroller.getChatPreferences().getBcn_beaconIntervalInMinutesMainCat() + "");
-
-		txtFldBeaconInterval.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isNumeric(txtFldBeaconInterval.getText())) {
-
-//		            chatcontroller.getChatPreferences().setMYQRG(txt_ownqrg.getText());
-						chatcontroller.getChatPreferences()
-								.setBcn_beaconIntervalInMinutesMainCat((Integer.parseInt(txtFldBeaconInterval.getText())));
-						System.out.println("[Main.java, Info]: reset the beacon-interval to: "
-								+ txtFldBeaconInterval.getText());
-
-					} else {
-						txtFldBeaconInterval.setText(txtFldBeaconInterval.getText() + " is an invalid time value");
-					}
-
+		CheckBox chkBxBeaconsEnabledSecondCategory = new CheckBox();
+		chkBxBeaconsEnabledSecondCategory.setSelected(
+				chatcontroller.getChatPreferences().isBcn_beaconsEnabledSecondCat()
+		);
+		chkBxBeaconsEnabledSecondCategory.selectedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					chatcontroller.getChatPreferences()
+							.setBcn_beaconsEnabledSecondCat(newValue);
+					System.out.println("[Main.java, Info]: Second-category beacon enabled: "
+							+ newValue);
 				}
-			}
-		});
+		);
 
-		grdPnlBeacon.add(txtFldBeaconInterval, 1, 3);
+		grdPnlBeacon.add(chkBxBeaconsEnabledSecondCategory, 1, 3);
 
-		grdPnlBeacon.add(new Label("Beacon message [<100 Chars]:"), 0, 5);
+		grdPnlBeacon.add(
+				new Label("Beacon message [max. "
+						+ ChatController.MAX_BEACON_TEXT_LENGTH
+						+ " characters]:"),
+				0,
+				4
+		);
 
-		TextField txtFldBeaconTextSecondCat = new TextField(this.chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat());
+		TextField txtFldBeaconTextSecondCat = new TextField(
+				chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat()
+		);
 		txtFldBeaconTextSecondCat.setFocusTraversable(false);
-		grdPnlBeacon.add(txtFldBeaconTextSecondCat, 1, 5);
-		txtFldBeaconTextSecondCat.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-								Boolean newPropertyValue) {
-				if (newPropertyValue) {
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					System.out.println("[Main.java, Info]: Set the 2nd cat beacon text to: "
-							+ chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat());
-
-					if (txtFldBeaconTextSecondCat.getText().length() <= 120) {
-						chatcontroller.getChatPreferences().setBcn_beaconTextSecondCat((txtFldBeaconTextSecondCat.getText()));
-					} else {
-						txtFldBeaconTextSecondCat.setText(
-								"That was too long, setting " + chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat());
+		grdPnlBeacon.add(txtFldBeaconTextSecondCat, 1, 4);
+		txtFldBeaconTextSecondCat.focusedProperty().addListener(
+				(observable, oldValue, focused) -> {
+					if (!focused) {
+						applyBeaconTextSetting(txtFldBeaconTextSecondCat, false);
 					}
-//		            MYQRGButton.setText(txt_ownqrg.getText());
 				}
-			}
-		});
+		);
 
+		grdPnlBeacon.add(
+				new Label("Shared beacon interval [minutes, min. "
+						+ ChatController.MIN_BEACON_INTERVAL_MINUTES
+						+ "]:"),
+				0,
+				5
+		);
 
-		grdPnlBeacon.add(new Label("Beacon-interval [minutes, >=5]:"), 0, 6);
-
-		TextField txtFldBeaconIntervalSecondCat = new TextField();
-		txtFldBeaconIntervalSecondCat.setText(this.chatcontroller.getChatPreferences().getBcn_beaconIntervalInMinutesSecondCat() + "");
-
-		txtFldBeaconIntervalSecondCat.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-								Boolean newPropertyValue) {
-				if (newPropertyValue) {
-
-				} else {
-					if (GuiUtils.isNumeric(txtFldBeaconIntervalSecondCat.getText())) {
-
-						chatcontroller.getChatPreferences()
-								.setBcn_beaconIntervalInMinutesSecondCat((Integer.parseInt(txtFldBeaconIntervalSecondCat.getText())));
-						System.out.println("[Main.java, Info]: reset the beacon-interval (2nd) to: "
-								+ txtFldBeaconIntervalSecondCat.getText());
-
-					} else {
-						txtFldBeaconIntervalSecondCat.setText(txtFldBeaconIntervalSecondCat.getText() + " is an invalid time value");
+		TextField txtFldBeaconInterval = new TextField(
+				Integer.toString(
+						Math.max(
+								ChatController.MIN_BEACON_INTERVAL_MINUTES,
+								chatcontroller.getChatPreferences()
+										.getBcn_beaconIntervalInMinutesMainCat()
+						)
+				)
+		);
+		txtFldBeaconInterval.focusedProperty().addListener(
+				(observable, oldValue, focused) -> {
+					if (!focused) {
+						applySharedBeaconInterval(txtFldBeaconInterval);
 					}
-
 				}
-			}
-		});
-
-		grdPnlBeacon.add(txtFldBeaconIntervalSecondCat, 1, 6);
-
+		);
+		grdPnlBeacon.add(txtFldBeaconInterval, 1, 5);
 
 		VBox vbxBeacon = new VBox();
 		vbxBeacon.setPadding(new Insets(10, 10, 10, 10));
-		vbxBeacon.getChildren().addAll(grdPnlBeacon);
+		vbxBeacon.getChildren().add(grdPnlBeacon);
 
 		/*************************************************************************************
 		 * Messagehandling ex Unworked station PM
@@ -11431,6 +11387,113 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		return null;
 	}
+
+
+	/**
+	 * Maps Ctrl+1 through Ctrl+0 to snippet list indices 0 through 9.
+	 *
+	 * @param keyEvent keyboard event from the main scene
+	 * @return snippet index or {@code -1} if the event is not a snippet shortcut
+	 */
+	private int resolveSnippetIndex(KeyEvent keyEvent) {
+		if (!keyEvent.isControlDown()) {
+			return -1;
+		}
+
+		return switch (keyEvent.getCode()) {
+			case DIGIT1 -> 0;
+			case DIGIT2 -> 1;
+			case DIGIT3 -> 2;
+			case DIGIT4 -> 3;
+			case DIGIT5 -> 4;
+			case DIGIT6 -> 5;
+			case DIGIT7 -> 6;
+			case DIGIT8 -> 7;
+			case DIGIT9 -> 8;
+			case DIGIT0 -> 9;
+			default -> -1;
+		};
+	}
+
+	/**
+	 * Resolves variables in a shortcut or snippet and appends the result to the
+	 * message field.
+	 *
+	 * <p>The replacement is performed by the action that inserts the text. It is
+	 * deliberately not performed by a text-property listener because changing a
+	 * JavaFX TextField while the same key event is still being processed can leave
+	 * invalid selection bounds behind.</p>
+	 *
+	 * @param template shortcut or snippet text to append
+	 */
+	private void appendResolvedMessageText(String template) {
+		String resolvedText = messageVariableResolver.resolveForSelectedStation(
+				template,
+				getEffectiveSelectedChatMember()
+		);
+
+		if (resolvedText == null || resolvedText.isBlank()) {
+			return;
+		}
+
+		String currentText = txt_chatMessageUserInput.getText();
+		txt_chatMessageUserInput.setText(
+				(currentText == null ? "" : currentText) + resolvedText
+		);
+		txt_chatMessageUserInput.requestFocus();
+		txt_chatMessageUserInput.selectEnd();
+	}
+
+	/**
+	 * Checks whether an outgoing private message targets the local callsign.
+	 *
+	 * @param messageText outgoing message text
+	 * @return {@code true} if the /cq target is the local station
+	 */
+	private boolean isMessageAddressedToOwnCallsign(String messageText) {
+		String targetCallsign = extractCqTargetCallsign(messageText);
+
+		if (targetCallsign == null
+				|| chatcontroller == null
+				|| chatcontroller.getChatPreferences() == null) {
+			return false;
+		}
+
+		String ownCallsign = chatcontroller.getChatPreferences().getStn_loginCallSign();
+		return ownCallsign != null && targetCallsign.equalsIgnoreCase(ownCallsign.trim());
+	}
+
+	/**
+	 * Inserts one configured snippet as a private message to the selected station.
+	 *
+	 * <p>Missing selections and unassigned snippet positions are valid operator
+	 * states. They are checked explicitly and no longer handled through a generic
+	 * exception.</p>
+	 *
+	 * @param snippetIndex zero-based index in the configured snippet list
+	 */
+	private void insertTextSnippet(int snippetIndex) {
+		ChatMember selectedStation = getEffectiveSelectedChatMember();
+		ObservableList<String> snippets = chatcontroller.getChatPreferences().getLst_txtSnipList();
+
+		if (selectedStation == null || selectedStation.getCallSign() == null) {
+			System.out.println("[Main.java, Info]: Text snippet ignored because no station is selected.");
+			return;
+		}
+
+		if (snippetIndex < 0 || snippetIndex >= snippets.size()) {
+			System.out.println("[Main.java, Info]: No text snippet is configured for index " + snippetIndex + ".");
+			return;
+		}
+
+		String preparedMessage = "/cq " + selectedStation.getCallSign() + " " + snippets.get(snippetIndex);
+		txt_chatMessageUserInput.setText(
+				messageVariableResolver.resolveForSelectedStation(preparedMessage, selectedStation)
+		);
+		txt_chatMessageUserInput.requestFocus();
+		txt_chatMessageUserInput.selectEnd();
+	}
+
 
 	/**
 	 * Resolves the chat category for an outgoing operator message.

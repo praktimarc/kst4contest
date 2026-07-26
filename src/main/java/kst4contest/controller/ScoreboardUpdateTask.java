@@ -14,8 +14,8 @@ import java.util.TimerTask;
  * The task will be runned out of the singleton ChatController instance in an
  * intervall as specified by the Chatpreferences-instance (typically as
  * configured in the xml file.
- * 
- * 
+ *
+ *
  * @author prakt
  *
  */
@@ -34,22 +34,20 @@ public class ScoreboardUpdateTask extends TimerTask {
 		Thread.currentThread().setName("BeaconTask");
 
 		ChatMessage beaconMSG = new ChatMessage();
-		
-		String replaceVariables = this.chatController.getChatPreferences().getBcn_beaconTextMainCat();
-//		replaceVariables = bcn_beaconText;
-		
-		replaceVariables = replaceVariables.replaceAll("MYQRG", this.chatController.getChatPreferences().getMYQRGFirstCat().getValue());
-		replaceVariables = replaceVariables.replaceAll("MYCALL", this.chatController.getChatPreferences().getStn_loginCallSign());
-		replaceVariables = replaceVariables.replaceAll("MYLOCATOR", this.chatController.getChatPreferences().getStn_loginLocatorMainCat());
-		replaceVariables = replaceVariables.replaceAll("MYQTF", this.chatController.getChatPreferences().getActualQTF().getValue() + "");
 
-		
+		MessageVariableResolver variableResolver =
+				new MessageVariableResolver(this.chatController.getChatPreferences());
+		String replaceVariables = variableResolver.resolveGlobalVariables(
+				this.chatController.getChatPreferences().getBcn_beaconTextMainCat()
+		);
+
+
 		beaconMSG.setMessageText(
 				"MSG|" + this.chatController.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber() + "|0|" + replaceVariables + "|0|");
 		beaconMSG.setMessageDirectedToServer(true);
-		
+
 //		System.out.println("########### " + replaceVariables);
-		
+
 		if (this.chatController.getChatPreferences().isBcn_beaconsEnabledMainCat() ) {
 
 			System.out.println(new Utils4KST().time_generateCurrentMMDDhhmmTimeString()
@@ -58,7 +56,7 @@ public class ScoreboardUpdateTask extends TimerTask {
 		} else {
 			//do nothing, CQ is disabled
 		}
-		
+
 
 	}
 

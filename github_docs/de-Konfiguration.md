@@ -183,10 +183,45 @@ Wenn in der Benutzerliste ein Rufzeichen ausgewählt ist, wird der Snippet als D
 
 ## Beacon Settings (Automatischer Beacon)
 
-Konfiguration eines automatischen Intervall-Beacons im öffentlichen Chat-Kanal. Empfohlen: Variable `MYQRG` im Text verwenden, damit die aktuelle Frequenz immer aktuell ist. Intervall und Text sind frei konfigurierbar.
+![Beacon-Einstellungen](client_settings_window_beacon.png)
 
-> **Tipp**: Beacon beim CQ-Rufen aktivieren und im Einstellungsfenster schnell deaktivieren, wenn kein CQ gerufen wird.
+Ein Beacon sendet in regelmäßigen Abständen eine öffentliche CQ-Nachricht. Er ist für Betriebssituationen gedacht, in denen die eigene Station über längere Zeit auf einer festen Frequenz ruft. Andere Stationen erhalten dadurch eine aktuelle QRG-Information, ohne dass der Operator denselben Text wiederholt von Hand in den Chat schreiben muss.
 
+KST4Contest verwendet einen gemeinsamen Timer für beide Chat-Kategorien. Aktivierung und Nachrichtentext werden trotzdem getrennt konfiguriert:
+
+- **Enable CQ beacon** aktiviert den Beacon der betreffenden Kategorie.
+- **Beacon message** enthält den öffentlichen Nachrichtentext dieser Kategorie.
+- **Shared beacon interval** legt das gemeinsame Intervall für beide Kategorien fest.
+
+Sind beide Beacons aktiviert, werden sie beim selben Timer-Lauf nacheinander in ihren jeweiligen Kategorien gesendet. Der zweite Beacon wird nur berücksichtigt, wenn auch der zweite Chat aktiviert und verbunden ist.
+
+### Intervall und Timer-Verhalten
+
+Das Intervall wird in ganzen Minuten angegeben. Der kleinste zulässige Wert ist eine Minute.
+
+Nach dem Aufbau der Chat-Verbindung prüft KST4Contest die Beacons erstmals nach ungefähr zehn Sekunden. Anschließend gilt das eingestellte Intervall. Wird der Wert während einer laufenden Verbindung geändert, beginnt der Countdown mit dem neuen Intervall erneut. Die Änderung selbst löst keine sofortige Nachricht aus.
+
+### Nachrichtentext und Variablen
+
+Ein Beacon darf nach der Variablenauflösung höchstens 120 Zeichen enthalten. KST4Contest prüft deshalb nicht nur das eingetragene Template, sondern den tatsächlich zu sendenden Text.
+
+Im Beacon können alle [globalen Variablen](de-Makros-und-Variablen#variablen-im-beacon) verwendet werden, beispielsweise:
+
+```text
+calling cq at MYQRG, ant MYQTF deg, loc MYLOCATOR
+```
+
+Die Variablen werden bei jedem Timer-Lauf neu aufgelöst. Ändert die Logsoftware zwischenzeitlich die in `MYQRG` gespeicherte Frequenz, verwendet bereits der nächste Beacon den neuen Wert.
+
+Stationsbezogene Variablen wie `QRZNAME`, `FIRSTAP` oder `SECONDAP` benötigen dagegen eine ausgewählte Gegenstation. Da ein öffentlicher Beacon keine Gegenstation adressiert, werden diese Variablen im Beacon nicht aufgelöst.
+
+### Wann sollte der Beacon ausgeschaltet werden?
+
+Der Beacon ist nur dann hilfreich, wenn seine QRG-Angabe zum tatsächlichen Betrieb passt. Bleibt er beim Absuchen oder häufigen Wechseln von Frequenzen aktiviert, können andere Stationen auf einer inzwischen falschen Frequenz nach der eigenen Station suchen.
+
+Im Klartext: Solange auf einer festen QRG CQ gerufen wird, spart der Beacon Arbeit. Beim „Schleichen“ über das Band sollte er ausgeschaltet werden.
+
+Änderungen wirken während der laufenden Verbindung. Damit Aktivierung, Texte und Intervall auch nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
 ---
 
 ## Messagehandling Settings (ab v1.25)

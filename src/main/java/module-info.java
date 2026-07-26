@@ -10,6 +10,8 @@ module praktiKST {
     requires java.net.http;
     requires java.desktop;
 	requires jdk.crypto.ec;
+    requires org.junit.jupiter.api;
+    requires org.mockito;
     exports kst4contest.controller.interfaces;
     exports kst4contest.controller;
 	exports kst4contest.locatorUtils;

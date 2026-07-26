@@ -59,6 +59,10 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private static final boolean DEBUG_BAND_UPGRADE_HINT = true; //for new band hint
 
 
+		public static final int MIN_BEACON_INTERVAL_MINUTES = 1;
+	public static final int MAX_BEACON_TEXT_LENGTH = 120;
+	private static final long INITIAL_BEACON_DELAY_MILLIS = 10_000L;
+
 	private PstRotatorClient rotatorClient;
     private Consumer<Double> viewRotorCallback;
 
@@ -708,8 +712,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 //			writeThread.interrupt();
 //			readThread.interrupt();
 
-			beaconTimer.purge();
-			beaconTimer.cancel();
+			stopBeaconTimer();
 			ASQueryTimer.purge();
 			ASQueryTimer.cancel();
 			socketCheckTimer.purge();
@@ -2240,6 +2243,78 @@ private ObservableList<String>
 	}
 
 	/**
+	 * Starts the shared beacon timer with the interval currently stored in the
+	 * preferences.
+	 *
+	 * <p>Both chat categories deliberately use the same timer. The task checks the
+	 * individual enable flag and text for each category every time it runs.</p>
+	 *
+	 * @param initialDelayMillis delay before the next beacon run
+	 */
+	private synchronized void scheduleBeaconTimer(long initialDelayMillis) {
+		stopBeaconTimer();
+
+		int configuredInterval =
+				chatPreferences.getBcn_beaconIntervalInMinutesMainCat();
+		int effectiveInterval =
+				Math.max(MIN_BEACON_INTERVAL_MINUTES, configuredInterval);
+
+		/*
+		 * Keep both legacy XML values synchronized. The second value remains in the
+		 * configuration for backward compatibility, but no longer represents an
+		 * independent timer.
+		 */
+		chatPreferences.setBcn_beaconIntervalInMinutesMainCat(effectiveInterval);
+		chatPreferences.setBcn_beaconIntervalInMinutesSecondCat(effectiveInterval);
+
+		long intervalMillis = TimeUnit.MINUTES.toMillis(effectiveInterval);
+		long safeInitialDelay = Math.max(0L, initialDelayMillis);
+
+		beaconTimer = new Timer("BeaconTimer");
+		beaconTimer.schedule(
+				new BeaconTask(this, this),
+				safeInitialDelay,
+				intervalMillis
+		);
+
+		System.out.println("[ChatController, Info]: Shared beacon timer scheduled every "
+				+ effectiveInterval + " minute(s).");
+	}
+
+	/**
+	 * Applies a changed beacon interval while the chat connection is running.
+	 *
+	 * <p>The countdown starts again with the new interval. No beacon is sent
+	 * immediately merely because the setting was changed.</p>
+	 */
+	public synchronized void restartBeaconTimer() {
+		if (!isConnectedAndLoggedIn()) {
+			return;
+		}
+
+		long intervalMillis = TimeUnit.MINUTES.toMillis(
+				Math.max(
+						MIN_BEACON_INTERVAL_MINUTES,
+						chatPreferences.getBcn_beaconIntervalInMinutesMainCat()
+				)
+		);
+		scheduleBeaconTimer(intervalMillis);
+	}
+
+	/**
+	 * Stops the shared beacon timer if it is currently running.
+	 */
+	private synchronized void stopBeaconTimer() {
+		if (beaconTimer == null) {
+			return;
+		}
+
+		beaconTimer.cancel();
+		beaconTimer.purge();
+		beaconTimer = null;
+	}
+
+	/**
 	 * execute is the main entry point where the application starts.
 	 * @throws InterruptedException
 	 * @throws IOException
@@ -2338,11 +2413,7 @@ private ObservableList<String>
 			 * The CQ-beacon-Task will be executed every time but checks for itself whether
 			 * CQ messages are enabled or not
 			 */
-//			Timer beaconTimer;
-			beaconTimer = new Timer();
-			beaconTimer.schedule(new BeaconTask(this, this), 10000,
-					this.getChatPreferences().getBcn_beaconIntervalInMinutesMainCat() * 60000);
-			// 60000 * intervalInMinutes = IntervalInMillis
+			scheduleBeaconTimer(INITIAL_BEACON_DELAY_MILLIS);
 
 			/**
 			 * The AS querier task will be executed every time but checks for itself whether

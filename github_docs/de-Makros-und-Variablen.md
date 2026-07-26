@@ -139,17 +139,33 @@ Wird durch die aktuelle Antennenrichtung in Worten ersetzt (z. B. `north`, `nort
 ---
 
 ## Variablen im Beacon
+## Variablen im Beacon
 
-Alle Variablen können auch im **automatischen Beacon** (Intervall-Nachrichten) verwendet werden. Empfohlene Beacon-Konfiguration:
+Ein öffentlicher Beacon besitzt keine ausgewählte Gegenstation. Deshalb können hier ausschließlich Variablen verwendet werden, die nur von der eigenen Station und ihrer aktuellen Konfiguration abhängen:
+
+| Variable | Wert im Beacon |
+|---|---|
+| `MYQRG` | aktuelle QRG der ersten Chat-Kategorie |
+| `MYQRGSHORT` | auf sieben Zeichen gekürzte QRG der ersten Kategorie |
+| `SECONDQRG` | aktuelle QRG der zweiten Chat-Kategorie |
+| `MYLOCATOR` | eigener vollständiger Locator |
+| `MYLOCATORSHORT` | eigener vierstelliger Locator |
+| `MYCALL` | eigenes Rufzeichen |
+| `MYQTF` | aktuelle Antennenrichtung |
+
+`QRZNAME`, `FIRSTAP` und `SECONDAP` benötigen eine ausgewählte Station. In einem öffentlichen Beacon werden sie daher nicht aufgelöst.
+
+Eine zweckmäßige Konfiguration ist beispielsweise:
 
 ```
 calling cq at MYQRG, loc MYLOCATOR, GL all!
 ```
 
-Da KST4Contest QRG-Daten automatisch aus Chat-Nachrichten ausliest: Wenn andere Stationen ebenfalls KST4Contest nutzen, sehen sie die eigene QRG sofort in der QRG-Spalte der Benutzerliste.
+Die globalen Variablen werden bei jedem Timer-Lauf neu ausgewertet. Dadurch kann eine vom Logprogramm aktualisierte QRG bereits in der nächsten Beacon-Nachricht erscheinen.
+
+Der vollständig aufgelöste Nachrichtentext darf höchstens 120 Zeichen enthalten. Weitere Angaben zum gemeinsamen Intervall und zum Verhalten beider Chat-Kategorien stehen unter [Konfiguration – Beacon Settings](de-Konfiguration#beacon-settings-automatischer-beacon).
 
 ---
-
 ## Beispiel-Workflow mit Makros im Contest
 
 1. Station in der Benutzerliste auswählen → Rufzeichen ist nun vorausgewählt.
