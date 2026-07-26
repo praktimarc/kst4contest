@@ -115,6 +115,22 @@ KST4Contest erkennt solche Nachrichten, die das eigene Rufzeichen enthalten, und
 
 ---
 
+## Automatische Antworten auf Privatnachrichten (ab v1.25)
+
+Nicht jede im ON4KST-Chat eingeloggte Station nimmt am gerade laufenden Contest teil. Trotzdem werden Sked-Anfragen während größerer Contests teilweise unkoordiniert und in großer Zahl an erreichbare Rufzeichen verteilt. Ohne automatische Antwort müssten diese Stationen immer wieder von Hand erklären, dass sie nicht mitfunken oder keine Skeds fahren.
+
+KST4Contest kann darauf mit einem vorher festgelegten Text reagieren. Die eingehende Privatnachricht bleibt dabei sichtbar; sie wird weder blockiert noch verworfen. Davon getrennt lässt sich eine QRG-Antwort aktivieren, die auf typische Fragen wie `qrg?`, `freq?` oder `pse qrg` reagiert.
+
+Bei zwei gleichzeitig geöffneten Chat-Kategorien bleibt der Zusammenhang erhalten: Die Antwort wird in der Kategorie der eingegangenen Nachricht gesendet. Eine QRG-Anfrage erhält außerdem nur die QRG dieser Kategorie und nicht eine Liste aller konfigurierten Frequenzen.
+
+Automatische Antworten benötigen Grenzen. KST4Contest versieht sie daher mit `[KST4C Automsg]`, ignoriert entsprechend gekennzeichnete Nachrichten bei der allgemeinen und QRG-bezogenen Antwort und begrenzt weitere Antworten an dieselbe Station in derselben Kategorie auf eine Nachricht innerhalb von zwei Minuten. Der Schutz gilt gemeinsam für beide Antwortarten.
+
+Im Klartext: Die Funktion verhindert keine Massenanfragen. Sie verhindert aber, dass der Empfänger jede davon einzeln mit derselben Absage beantworten muss. Sie soll keine Unterhaltung simulieren und erst recht keine endlose Diskussion mit einem zweiten automatischen Client beginnen.
+
+Konfiguration, erkannte QRG-Anfragen und genaue Kategorienzuordnung: [Konfiguration – Messagehandling Settings](de-Konfiguration#messagehandling-settings-ab-v125).
+
+---
+
 ## Multi-Channel-Login (ab v1.26)
 
 Gleichzeitiger Login in **zwei Chat-Kategorien** (z. B. 144 MHz und 432 MHz). Beide Chats werden parallel überwacht.

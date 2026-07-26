@@ -43,7 +43,7 @@ public class ApplicationConstants {
 
     public static final String DISCONNECT_RDR_POISONPILL = "UNKNOWN: KST4C KILL POISONPILL_KILLTHREAD=: " + sessionRuntimeUniqueId; //whereever a (blocking) udp or tcp reader in an infinite loop gets this message, it will break this loop
 
-    public static final String AUTOANSWER_PREFIX = "[KST4C Automsg] ";   // hard-coded marker (user can't remove it)
+    public static final String AUTOANSWER_PREFIX = "[KST4C Automsg]";   // hard-coded marker (user cannot remove it)
 
     /**
      * UI message retention limits.

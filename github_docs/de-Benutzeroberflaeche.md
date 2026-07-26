@@ -64,9 +64,18 @@ Die Filter-Leiste (ab v1.21 als Flowpane für kleine Bildschirme):
 
 ## Stationsinfo-Panel (Further Info)
 
-Rechts unten: Zeigt alle Nachrichten einer ausgewählten Station (CQ-Nachrichten und PMs in einem Panel). Ein Nachrichtenfilter lässt sich über den Standard-Filter in den Preferences vorbelegen.
+Rechts unten werden die Nachrichten der ausgewählten Station zusammengeführt. Dazu gehören öffentliche Nachrichten, Privatnachrichten an die eigene Station und – soweit im Chat sichtbar – Privatnachrichten an andere Stationen.
 
-Hier können auch **Sked-Erinnerungen** aktiviert werden.
+Der im Panel gewählte Filter bestimmt, welche dieser Nachrichten angezeigt werden. Unter **Settings → GUI** lässt sich festlegen, welcher Filter beim Öffnen einer Stationsinformation vorausgewählt ist:
+
+- alle Nachrichten,
+- Privatnachrichten an die eigene Station,
+- Privatnachrichten an andere Stationen oder
+- öffentliche Nachrichten.
+
+Die Einstellung verändert nur die Darstellung im Stationsinfo-Panel. Nachrichten werden dadurch weder verworfen noch aus den übrigen Nachrichtentabellen entfernt. Der Filter kann im Panel jederzeit für die aktuell betrachtete Station gewechselt werden.
+
+Hier können auch **Sked-Erinnerungen / Wecker** für beide Skkedpartner aktiviert werden.
 
 ---
 

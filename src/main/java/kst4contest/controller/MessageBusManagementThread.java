@@ -47,13 +47,12 @@ public class MessageBusManagementThread extends Thread {
 	private final String PTRN_QRG_CAT3 = "(([0-9]{3,5}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
 
 
-	// ==== Autoanswer Flood/Pingpong Protection ====
-	private static final String AUTOANSWER_PREFIX = ApplicationConstants.AUTOANSWER_PREFIX;   // hard-coded marker (user can't remove it)
-	private static final long AUTOANSWER_COOLDOWN_MS = 45_000L;            //  45_000L = 45s
+	// ==== Auto-answer flood/ping-pong protection ====
+	private static final String AUTOANSWER_PREFIX = ApplicationConstants.AUTOANSWER_PREFIX;
+	private static final long AUTOANSWER_COOLDOWN_MS = 120_000L; // two minutes
 
-	// Cooldown per opponent station (and ChatCategory) – only setted if this client sends
+	// Cooldown per remote station and chat category; updated only after this client sends.
 	private final Hashtable<String, Long> lastLocalAutoAnswerPerRemoteMs = new Hashtable<>();
-
 //	BufferedWriter bufwrtrDBGMSGOut;
 
 //	    private String text;
@@ -829,7 +828,11 @@ public class MessageBusManagementThread extends Thread {
 
 											versionInfo.setSender(itsMe);
 											versionInfo.setReceiver(newMessageArrived.getSender());
-											versionInfo.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " " + ApplicationConstants.AUTOANSWER_PREFIX + " " + "KST4Contest " + " v" + ApplicationConstants.APPLICATION_CURRENT_VERSION + " by DO5AMF");
+											versionInfo.setChatCategory(newMessageArrived.getChatCategory());
+											versionInfo.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign()
+													+ " " + AUTOANSWER_PREFIX
+													+ " KST4Contest v" + ApplicationConstants.APPLICATION_CURRENT_VERSION
+													+ " by DO5AMF");
 
 											this.client.getMessageTXBus().add(versionInfo);
 										}
@@ -876,11 +879,11 @@ public class MessageBusManagementThread extends Thread {
 //								}
 //							}
 
-										// ==== Unified Autoanswer (Generic + QRG) with Pingpong-Guard + per-Remote Cooldown ====
+										// ==== Unified auto-answer (generic + QRG) with ping-pong guard and per-remote cooldown ====
 										final String incomingText = newMessageArrived.getMessageText();
 										final String incomingLower = (incomingText == null) ? "" : incomingText.toLowerCase(Locale.ROOT);
 
-										// 1) Pingpong-security: never ever react to auto generated messages
+										// Never answer another automatically generated message.
 										if (!isAutoMessage(newMessageArrived)) {
 
 											boolean qrgRequested = false;
@@ -896,24 +899,17 @@ public class MessageBusManagementThread extends Thread {
 
 											boolean genericEnabled = this.client.getChatPreferences().isMsgHandling_autoAnswerEnabled();
 
-											// 2) Entscheide, ob überhaupt geantwortet wird (QRG hat Vorrang vor Generic)
+											// A QRG reply takes precedence over the generic reply.
 											String payload = null;
 
 											if (qrgRequested) {
-
-												if (this.client.getChatPreferences().isLoginToSecondChatEnabled()) {
-													payload = "QRGs: " + this.client.getChatPreferences().getMYQRGFirstCat().getValue()
-															+ " / " + this.client.getChatPreferences().getMYQRGSecondCat().getValue();
-												} else {
-													payload = "QRG is: " + this.client.getChatPreferences().getMYQRGFirstCat().getValue();
-												}
-
+												payload = "QRG is: " + getAutoAnswerQrgForCategory(newMessageArrived.getChatCategory());
 											} else if (genericEnabled) {
 
 												payload = this.client.getChatPreferences().getMessageHandling_autoAnswerTextMainCat();
 											}
 
-											// 3) Cooldown pro Gegenstation: nur wenn DIESER Client jetzt wirklich sendet
+											// Apply the cooldown only when this client is about to send a reply.
 											if (payload != null && isAutoAnswerAllowedNow(newMessageArrived)) {
 
 												ChatMessage automaticAnswer = new ChatMessage();
@@ -922,15 +918,15 @@ public class MessageBusManagementThread extends Thread {
 
 												automaticAnswer.setSender(itsMe);
 												automaticAnswer.setReceiver(newMessageArrived.getSender());
+												automaticAnswer.setChatCategory(newMessageArrived.getChatCategory());
 
-												// Prefix fest + nicht entfernbar, damit Auto↔Auto nicht pingpongt
+												// The fixed prefix prevents automatic clients from answering each other.
 												automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign()
 														+ " " + AUTOANSWER_PREFIX + " " + payload);
 
 												this.client.getMessageTXBus().add(automaticAnswer);
 
-												// Cooldown wird NUR hier gesetzt (nicht bei 'message sent by me' Echo),
-												// damit nur lokale Auto-Sends zählen.
+												// Record only locally generated replies, not the later server echo.
 												markLocalAutoAnswerSent(newMessageArrived);
 											}
 										}
@@ -1544,14 +1540,28 @@ public class MessageBusManagementThread extends Thread {
 
 
 	/**
-	 * check if message had been auto generated
-	 * @param msg
-	 * @return
+	 * Returns whether a message carries the fixed marker used for automatic replies.
 	 */
 	private boolean isAutoMessage(ChatMessage msg) {
 		return msg != null
 				&& msg.getMessageText() != null
 				&& msg.getMessageText().contains(AUTOANSWER_PREFIX);
+	}
+
+	/**
+	 * Returns the configured QRG for the category in which the request was received.
+	 * If the category cannot be resolved, the main category remains the safe fallback.
+	 */
+	private String getAutoAnswerQrgForCategory(ChatCategory incomingCategory) {
+		ChatCategory secondCategory = this.client.getChatCategorySecondChat();
+
+		if (incomingCategory != null
+				&& secondCategory != null
+				&& incomingCategory.getCategoryNumber() == secondCategory.getCategoryNumber()) {
+			return this.client.getChatPreferences().getMYQRGSecondCat().getValue();
+		}
+
+		return this.client.getChatPreferences().getMYQRGFirstCat().getValue();
 	}
 
 	private String autoAnswerCooldownKey(ChatMessage incoming) {
@@ -1561,13 +1571,16 @@ public class MessageBusManagementThread extends Thread {
 			remoteCall = incoming.getSender().getCallSign().toUpperCase();
 		}
 
-		int cat = 0; // fallback
-		if (incoming != null && incoming.getSender() != null && incoming.getSender().getChatCategory() != null) {
-			cat = incoming.getSender().getChatCategory().getCategoryNumber();
+		int categoryNumber = 0;
+		if (incoming != null && incoming.getChatCategory() != null) {
+			categoryNumber = incoming.getChatCategory().getCategoryNumber();
+		} else if (incoming != null
+				&& incoming.getSender() != null
+				&& incoming.getSender().getChatCategory() != null) {
+			categoryNumber = incoming.getSender().getChatCategory().getCategoryNumber();
 		}
 
-		// pro Gegenstation + pro Chat-Kategorie (falls derselbe Call in Cat2/Cat3 PMs macht)
-		return remoteCall + "|" + cat;
+		return remoteCall + "|" + categoryNumber;
 	}
 
 	private boolean isAutoAnswerAllowedNow(ChatMessage incoming) {

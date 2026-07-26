@@ -10472,38 +10472,37 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
 		grdPnlMessageHandlingBeacon.add(generateLabeledSeparator(100,
-				"Set the unworked penetrator Beacons (intervalled PM to unworked stations)"), 0, 0, 2, 1);
-
-		grdPnlMessageHandlingBeacon.add(generateLabeledSeparator(100,
-				"Automatic answering options)"), 0, 1, 2, 1);
+				"Automatic answering options"), 0, 0, 2, 1);
 
 //		Label lbl_unwkd_autoAnswerDescriptor = new Label("Auto-answer Text:");
 //		grdPnlMessageHandlingBeacon.add(lbl_unwkd_autoAnswerDescriptor,0,3);
 
-		CheckBox chkbx_msgHandlingAutoAnswerEnabled = new CheckBox("Auto-reply (to all queries): ");
-		chkbx_msgHandlingAutoAnswerEnabled.setTooltip(new Tooltip("KST4Contest will answer for you with your pre-definied text to all PMs"));
+		CheckBox chkbx_msgHandlingAutoAnswerEnabled = new CheckBox("Enable automatic reply to all private messages");
+		chkbx_msgHandlingAutoAnswerEnabled.setTooltip(new Tooltip(
+				"KST4Contest replies with the configured text in the chat category from which the private message was received.\n"
+						+ "The same station can receive one automatic reply per chat category every two minutes."));
 		chkbx_msgHandlingAutoAnswerEnabled.setSelected(this.chatcontroller.getChatPreferences().isMsgHandling_autoAnswerEnabled());
 		chkbx_msgHandlingAutoAnswerEnabled.selectedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
 			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
 
 				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerEnabled(chkbx_msgHandlingAutoAnswerEnabled.isSelected());
+				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerEnabledSecondCat(chkbx_msgHandlingAutoAnswerEnabled.isSelected());
 				System.out.println("[Main.java, Info]: Autoreply turned on: " + newValue);
 			}
 		});
 
-		CheckBox chkbx_messageHandlingAutoQRGInfoEnabled = new CheckBox("Enable auto-reply with my QRG on QRG-request");
+		CheckBox chkbx_messageHandlingAutoQRGInfoEnabled = new CheckBox("Enable automatic QRG replies");
 
-		String changeMeToPreferences = "";
-		changeMeToPreferences += ("ur qrg?\n");
-		changeMeToPreferences += ("your qrg?\n");
-		changeMeToPreferences += ("qrg?\n");
-		changeMeToPreferences += ("freq?\n");
-		changeMeToPreferences += ("pse QRG\n");
+		String qrgRequestExamples = "ur qrg?\n"
+				+ "your qrg?\n"
+				+ "qrg?\n"
+				+ "freq?\n"
+				+ "pse qrg";
 
-		chkbx_messageHandlingAutoQRGInfoEnabled.setTooltip(new Tooltip("KST4Contest can answer with your QRG automatically. Following Strings causing reaction: \n " + changeMeToPreferences));
-
-
+		chkbx_messageHandlingAutoQRGInfoEnabled.setTooltip(new Tooltip(
+				"KST4Contest replies with the QRG configured for the chat category in which the request was received.\n"
+						+ "Recognized text:\n" + qrgRequestExamples));
 		chkbx_messageHandlingAutoQRGInfoEnabled.setSelected(this.chatcontroller.getChatPreferences().isMessageHandling_autoAnswerToQRGRequestEnabled());
 		chkbx_messageHandlingAutoQRGInfoEnabled.selectedProperty().addListener(new ChangeListener<Boolean>() {
 			@Override
@@ -10515,22 +10514,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 		TextField txtFld_messageHandlingAutoAnswer = new TextField();
+		txtFld_messageHandlingAutoAnswer.setPrefWidth(400);
 		txtFld_messageHandlingAutoAnswer.setText(this.chatcontroller.getChatPreferences().getMessageHandling_autoAnswerTextMainCat());
 		txtFld_messageHandlingAutoAnswer.textProperty().addListener(new ChangeListener<String>() {
 
 			@Override
 			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-				System.out.println("[Main.java, Info]: Setted the autoanswer: " + txtFld_messageHandlingAutoAnswer.getText().toUpperCase());
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextMainCat(txtFld_messageHandlingAutoAnswer.getText().toUpperCase());
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextSecondCat(txtFld_messageHandlingAutoAnswer.getText().toUpperCase());
+				System.out.println("[Main.java, Info]: Set the auto-answer text: " + newString);
+				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextMainCat(newString);
+				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextSecondCat(newString);
 			}
 		});
 
+		grdPnlMessageHandlingBeacon.add(chkbx_msgHandlingAutoAnswerEnabled, 0, 1);
+		grdPnlMessageHandlingBeacon.add(txtFld_messageHandlingAutoAnswer, 1, 1);
 
-		grdPnlMessageHandlingBeacon.add(txtFld_messageHandlingAutoAnswer,1,2);
-		grdPnlMessageHandlingBeacon.add(chkbx_msgHandlingAutoAnswerEnabled,0,2);
-
-		grdPnlMessageHandlingBeacon.add(chkbx_messageHandlingAutoQRGInfoEnabled,0,4, 2,1);
+		grdPnlMessageHandlingBeacon.add(chkbx_messageHandlingAutoQRGInfoEnabled, 0, 2, 2, 1);
 
 		VBox vbxMsgHandlBeacon = new VBox();
 		vbxMsgHandlBeacon.setPadding(new Insets(10, 10, 10, 10));

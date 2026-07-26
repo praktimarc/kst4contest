@@ -226,11 +226,68 @@ Im Klartext: Solange auf einer festen QRG CQ gerufen wird, spart der Beacon Arbe
 
 ## Messagehandling Settings (ab v1.25)
 
-Neuer Einstellungsbereich mit folgenden Optionen:
+![Automatische Antworten](client_settings_window_messagehandling.png)
 
-- **Auto-Antwort auf alle eingehenden Nachrichten**: Automatische Antwort auf Privatnachrichten konfigurierbar.
-- **Auto-Antwort mit eigener CQ-QRG**: Wenn jemand nach der eigenen QRG fragt, antwortet KST4Contest automatisch mit dem Inhalt der `MYQRG`-Variable.
-- **Standard-Filter für das Userinfo-Fenster**: Voreingestellter Nachrichtenfilter für das Stationsinfo-Fenster konfigurierbar *(für Gianluca :-) )*.
+Die wichtigste Anwendung der allgemeinen automatischen Antwort betrifft Stationen, die zwar im ON4KST-Chat eingeloggt sind, den laufenden Contest aber nicht mitfunken. Gerade während größerer Contests werden Sked-Anfragen teilweise unkoordiniert und in großer Zahl an eingeloggte Stationen verteilt, ohne vorher zu prüfen, ob sie überhaupt teilnehmen. Die Empfänger müssten sonst immer wieder dieselbe Absage schreiben.
+
+KST4Contest kann darauf mit einem vorher festgelegten Text reagieren. Davon getrennt steht eine gezielte QRG-Auskunft zur Verfügung. Beide Funktionen können unabhängig voneinander aktiviert werden.
+
+### Allgemeine automatische Antwort
+
+**Enable automatic reply to all private messages** beantwortet eingehende Privatnachrichten mit dem Text im Feld rechts daneben. Es gibt einen gemeinsamen Text für beide Chat-Kategorien. Die beim Eingeben verwendete Groß- und Kleinschreibung bleibt erhalten.
+
+Eine zweckmäßige Nachricht ist beispielsweise:
+
+```text
+Sri, I am not taking part in this contest. No skeds.
+```
+
+Die eingegangene Privatnachricht bleibt sichtbar. Die Funktion blockiert oder verwirft keine Anfrage, sondern erspart lediglich die wiederholte manuelle Antwort.
+
+Die Antwort wird in derselben Chat-Kategorie gesendet, in der die Privatnachricht eingegangen ist. Das ist bei einem parallelen Login in zwei Kategorien entscheidend: Eine Nachricht aus dem Microwave-Chat darf nicht versehentlich im VHF/UHF-Chat beantwortet werden.
+
+### Automatische QRG-Antwort
+
+**Enable automatic QRG replies** reagiert auf typische QRG-Anfragen. Die Erkennung unterscheidet nicht zwischen Groß- und Kleinschreibung und sucht nach folgenden Textbestandteilen:
+
+```text
+ur qrg?
+your qrg?
+qrg?
+freq?
+pse qrg
+```
+
+Die Antwort enthält nur die QRG der Kategorie, in der die Anfrage eingegangen ist:
+
+| Eingegangene Privatnachricht | Verwendete QRG |
+|---|---|
+| Hauptkategorie | aktuelle QRG der Hauptkategorie |
+| zweite Chat-Kategorie | aktuelle QRG der zweiten Kategorie |
+
+Die Werte stammen aus denselben QRG-Feldern, die auch von `MYQRG` und `SECONDQRG` verwendet werden. Die Haupt-QRG kann manuell eingetragen oder durch die [TRX-Synchronisation](#trx-sync-einstellungen) aktualisiert werden. Für die zweite Kategorie wird der dort konfigurierte beziehungsweise manuell eingetragene Wert verwendet.
+
+Sind die allgemeine und die QRG-bezogene Antwort gleichzeitig aktiviert, hat die QRG-Antwort Vorrang. Eine erkannte QRG-Anfrage erzeugt daher nicht zusätzlich den allgemeinen Antworttext.
+
+### Schutz vor wiederholten Antworten
+
+Jede automatisch erzeugte Nachricht trägt das feste Präfix:
+
+```text
+[KST4C Automsg]
+```
+
+Die allgemeine und die QRG-bezogene Antwort reagieren nicht auf Nachrichten, die dieses Präfix bereits enthalten. Dadurch beantworten sich zwei entsprechend arbeitende Clients nicht gegenseitig in einer Schleife.
+
+Zusätzlich gilt eine gemeinsame Sperrzeit von zwei Minuten für beide Antwortarten. Die Sperre wird getrennt je Rufzeichen und Chat-Kategorie geführt. Hat eine Station gerade in der Hauptkategorie eine automatische Antwort erhalten, kann sie deshalb weiterhin eine Antwort in der zweiten Kategorie erhalten. Weitere Nachrichten derselben Station in derselben Kategorie lösen während der folgenden zwei Minuten dagegen keine neue automatische Antwort aus.
+
+Die Sperrzeit beginnt nur, wenn KST4Contest tatsächlich eine Antwort sendet.
+
+> **Hinweis**: Der Antworttext sollte den tatsächlichen Status eindeutig benennen. Wer den Contest nur beobachtet und keine Skeds fahren möchte, sollte genau das mitteilen. Eine vage Nachricht erzeugt im Zweifel nur die nächste Rückfrage – und damit exakt die Arbeit, welche die Funktion vermeiden soll.
+
+Änderungen wirken während der laufenden Verbindung. Damit Aktivierung und Text nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
+
+Weitere Hintergründe: [Automatische Antworten auf Privatnachrichten](de-Funktionen#automatische-antworten-auf-privatnachrichten-ab-v125).
 
 ---
 

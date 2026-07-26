@@ -2692,6 +2692,14 @@ public class ChatPreferences {
 						messageHandling_autoAnswerEnabledSecondCat,
 						"messageHandling_autoAnswerEnabledSecondCat",
 						"autoAnswerEnabledSecondCat");
+
+				/*
+				 * The user interface intentionally exposes one shared generic auto-answer
+				 * setting for both chat categories. Keep the legacy second-category XML
+				 * fields synchronized so existing configuration files remain compatible.
+				 */
+				messageHandling_autoAnswerTextSecondCat = messageHandling_autoAnswerTextMainCat;
+				messageHandling_autoAnswerEnabledSecondCat = messageHandling_autoAnswerEnabled;
 			}
 
 
