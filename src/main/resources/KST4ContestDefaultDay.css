@@ -199,3 +199,19 @@
   -fx-text-fill: #fa9f66;
   -fx-font-weight: bold;
 }
+
+
+/*
+ * Clickable web links inside message-table cells.
+ * Text fragments keep the current table-cell color; links remain visible.
+ */
+.message-table-link {
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+    -fx-underline: true;
+    -fx-text-fill: #005eb8;
+}
+
+.message-table-link:visited {
+    -fx-text-fill: #6b3fa0;
+}

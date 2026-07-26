@@ -51,15 +51,37 @@ Eingabefeld für die aktuelle Antennenrichtung. Wird für die geplante `MYQTF`-V
 
 ---
 
+## Nachrichtentabellen
+
+KST4Contest zeigt Nachrichtentexte bewusst einzeilig an. So bleiben auch bei hohem Chat-Aufkommen viele Einträge gleichzeitig sichtbar. Der Nachteil liegt auf der Hand: Bei einer schmalen **Message**-Spalte passt nicht jede Nachricht vollständig in die Zeile.
+
+Ist ein Nachrichtentext breiter als die sichtbare Zelle, zeigt KST4Contest den vollständigen Inhalt als Tooltip an. Dazu die Maus kurz über die betreffende **Message**-Zelle halten. Passt der Text vollständig in die Spalte, wird kein zusätzlicher Volltext-Tooltip eingeblendet.
+
+Webadressen mit `http://`, `https://` oder dem Präfix `www.` werden innerhalb des Nachrichtentextes als Links dargestellt. Ein Klick öffnet die Adresse im Standardbrowser des Betriebssystems. Andere Protokolle werden nicht als Link behandelt.
+
+![Abgeschnittener Nachrichtentext mit Volltext-Tooltip und Link](message_tooltip_and_link.png)
+
+Damit muss der Divider nicht allein deshalb verschoben werden, um eine einzelne längere Nachricht zu lesen. Für einen dauerhaft breiteren Nachrichtenbereich kann er selbstverständlich weiterhin angepasst werden.
+
+---
+
 ## Filter
 
-Die Filter-Leiste (ab v1.21 als Flowpane für kleine Bildschirme):
+Die Filterleiste befindet sich oberhalb der Chatmember-Tabelle. Sie ist in mehrere logisch zusammengehörige Bereiche gegliedert:
 
-- **Show only QTF**: Richtungsfilter aktivieren (Buttons N/NE/E/… oder Grad-Eingabe)
-- **Show only QRB [km] <=**: Entfernungsfilter aktivieren (Toggle-Button)
-- **Hide Worked [Band]**: Gearbeitete Stationen pro Band ausblenden (je ein Toggle pro Band)
-- **Hide NOT-QRV [Band]**: NOT-QRV-markierte Stationen pro Band ausblenden
+- **Show only QTF** begrenzt die Liste auf eine gewählte Antennenrichtung.
+- **Show only QRB [km] <=** setzt eine maximale Entfernung.
+- **Find** sucht nach einem Rufzeichen.
+- **Hide worked** und die Band-Schaltflächen blenden bereits gearbeitete beziehungsweise nicht verfügbare Stationen aus.
+- **Reachability**, **Only new grids**, **Tropo >=0dB**, **New bands** und **AS next 5m** unterstützen die Auswahl technisch interessanter Kandidaten.
 
+Die Filterleiste besitzt keine feste Breite. QTF sowie die Worked- und Reachability-Filter nutzen zunächst den gesamten Platz ihrer jeweiligen Zeile. Wird der horizontale Divider nach rechts verschoben und die Chatmember-Ansicht dadurch schmaler, wechseln die Controls erst dann in die nächste Zeile, wenn ihre tatsächlich benötigte Breite nicht mehr zur Verfügung steht.
+
+![Umgebrochene Filterleiste bei schmaler Chatmember-Ansicht](filter_bar_wrapped.png)
+
+Im Klartext: Die Filter bestimmen weiterhin den Inhalt der Tabelle, aber nicht mehr die Mindestbreite der gesamten rechten Programmseite. In der normalen Ansicht bleibt die Leiste kompakt. Erst bei einer tatsächlich schmalen Ansicht benötigt sie mehr Höhe. Der Divider kann anschließend wieder nach links verschoben werden; die Controls ordnen sich unmittelbar neu an.
+
+---
 ---
 
 ## Stationsinfo-Panel (Further Info)

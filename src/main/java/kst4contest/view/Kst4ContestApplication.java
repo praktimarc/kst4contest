@@ -617,19 +617,43 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		HBox skedRow = new HBox(10,
+		HBox skedTimeGroup = new HBox(
+				4,
 				new Label("Sked in"),
 				cbSkedMinutes,
-				new Label("min"),
+				new Label("min")
+		);
+		skedTimeGroup.setAlignment(Pos.CENTER_LEFT);
+
+		HBox skedModeGroup = new HBox(
+				4,
 				new Label("Mode"),
-				cbSkedMode,
-				btnCreateSked,
+				cbSkedMode
+		);
+		skedModeGroup.setAlignment(Pos.CENTER_LEFT);
+
+		HBox skedReminderGroup = new HBox(
+				4,
 				chkPmReminders,
 				cbReminderOffsets
 		);
-		skedRow.setAlignment(Pos.CENTER_LEFT);
+		skedReminderGroup.setAlignment(Pos.CENTER_LEFT);
 
-		selectedCallSignDownerSiteGridPane.add(skedRow, 0, 6, 1, 1);
+		FlowPane skedRow = new FlowPane(
+				Orientation.HORIZONTAL,
+				10,
+				5
+		);
+		skedRow.setAlignment(Pos.CENTER_LEFT);
+		skedRow.getChildren().addAll(
+				skedTimeGroup,
+				skedModeGroup,
+				btnCreateSked,
+				skedReminderGroup
+		);
+
+		selectedCallSignDownerSiteGridPane.add(skedRow, 0, 6, 2, 1);
+		GridPane.setHgrow(skedRow, Priority.ALWAYS);
 
 
 
@@ -2597,7 +2621,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private TableView<ChatMessage> initFurtherInfoAbtCallsignMSGTable() {
 
 		TableView<ChatMessage> tbl_furtherInfoAbtCallsignMSGTable = new TableView<ChatMessage>();
-		tbl_furtherInfoAbtCallsignMSGTable.setTooltip(new Tooltip("Messages of selected station are shown here"));
+//		tbl_furtherInfoAbtCallsignMSGTable.setTooltip(new Tooltip("Messages of selected station are shown here"));
 
 		TableColumn<ChatMessage, String> timeCol = new TableColumn<ChatMessage, String>("Time");
 		timeCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -2727,6 +2751,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 		msgCol.prefWidthProperty().bind(tbl_furtherInfoAbtCallsignMSGTable.widthProperty().divide(2));
 
+		msgCol.setCellFactory(column ->
+				new MessageTextTableCell<>(getHostServices()::showDocument)
+		);
+
 		TableColumn<ChatMessage, String> workedRXCol = new TableColumn<ChatMessage, String>("wkd RX?");
 		workedRXCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
 
@@ -2795,7 +2823,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			Label selectedCallSignInfoLblQRBInfo,
 			Label lblDetectedRxBands,
 			HBox priorityRow,
-			HBox skedRow,
+			FlowPane skedRow,
 			HBox selectedCallSignPathAndMapButtons,
 			Button selectedCallSignTurnAntBtn,
 			Button selectedCallSignShowQRZprofile,
@@ -2941,7 +2969,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private TableView initChatGeneralMSGTable() {
 
 		TableView<ChatMessage> tbl_generalMSGTable = new TableView<ChatMessage>();
-		tbl_generalMSGTable.setTooltip(new Tooltip("General messages are shown here (handle it like CQ messages)"));
+//		tbl_generalMSGTable.setTooltip(new Tooltip("General messages are shown here (handle it like CQ messages)"));
 
 		TableColumn<ChatMessage, String> timeCol = new TableColumn<ChatMessage, String>("Time");
 		timeCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -3035,37 +3063,25 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 		msgCol.prefWidthProperty().bind(tbl_generalMSGTable.widthProperty().divide(2));
 
-		msgCol.setCellFactory(new Callback<TableColumn<ChatMessage, String>, TableCell<ChatMessage, String>>() {
-			public TableCell call(TableColumn param) {
-				return new TableCell<ChatMessage, String>() {
+		msgCol.setCellFactory(column ->
+				new MessageTextTableCell<>(
+						getHostServices()::showDocument,
+						messageText -> {
+							String ownCallsign = chatcontroller
+									.getChatPreferences()
+									.getStn_loginCallSign();
 
-					@Override
-					public void updateItem(String item, boolean empty) {
-						super.updateItem(item, empty);
-						if (!isEmpty()) {
-
-//							System.out.println("style\n\n" + this.getStyleClass());
-							this.getStyleClass().clear(); //clear css reference
-							this.getStyleClass().add("table-cell"); //set old reference
-							this.getStyleClass().add("defaultText-column"); //add new special colored css reference
-
-//							this.setTextFill(Color.BLACK); //old colouring mechanic
-							// Get fancy and change color based on data
-
-
-							if (item.toUpperCase()
-									.contains(chatcontroller.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
-								this.getStyleClass().clear();
-								this.getStyleClass().add("table-cell"); //set old reference
-								this.getStyleClass().add("messageToMe-column"); //add new special colored css reference
-//								this.setTextFill(Color.GREEN); //old colouring mechanic
-							}
-							setText(item);
-						}
-					}
-				};
-			}
-		});
+							return messageText != null
+									&& ownCallsign != null
+									&& !ownCallsign.isBlank()
+									&& messageText
+									.toUpperCase(Locale.ROOT)
+									.contains(ownCallsign.toUpperCase(Locale.ROOT));
+						},
+						"defaultText-column",
+						"messageToMe-column"
+				)
+		);
 
 		TableColumn<ChatMessage, String> categoryCol = new TableColumn<ChatMessage, String>("Category");
 		categoryCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -3110,7 +3126,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private TableView<ChatMessage> initChatprivateMSGTable() {
 
 		TableView<ChatMessage> tbl_privateMSGTable = new TableView<ChatMessage>();
-		tbl_privateMSGTable.setTooltip(new Tooltip("Private messages to you are shown here"));
+//		tbl_privateMSGTable.setTooltip(new Tooltip("Private messages to you are shown here"));
 
 		TableColumn<ChatMessage, String> timeCol = new TableColumn<ChatMessage, String>("Time");
 
@@ -3260,6 +3276,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 		msgCol.prefWidthProperty().bind(tbl_privateMSGTable.widthProperty().divide(2.5));
+
+		msgCol.setCellFactory(column ->
+				new MessageTextTableCell<>(getHostServices()::showDocument)
+		);
 
 		TableColumn<ChatMessage, String> airScoutCol = new TableColumn<ChatMessage, String>("AP [minutes / pot%]");
 		airScoutCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -3476,7 +3496,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private TableView<ClusterMessage> initDXClusterTable() {
 
 		TableView<ClusterMessage> tbl_DXCTable = new TableView<ClusterMessage>();
-		tbl_DXCTable.setTooltip(new Tooltip("Cluster Messages are shown here"));
+//		tbl_DXCTable.setTooltip(new Tooltip("Cluster Messages are shown here"));
 
 		TableColumn<ClusterMessage, String> timeCol = new TableColumn<ClusterMessage, String>("Time");
 		timeCol.setCellValueFactory(new Callback<CellDataFeatures<ClusterMessage, String>, ObservableValue<String>>() {
@@ -3605,6 +3625,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
+		msgCol.setCellFactory(column ->
+				new MessageTextTableCell<>(getHostServices()::showDocument)
+		);
+
 		TableColumn<ClusterMessage, String> workedCol = new TableColumn<ClusterMessage, String>("wkd");
 		workedCol
 				.setCellValueFactory(new Callback<CellDataFeatures<ClusterMessage, String>, ObservableValue<String>>() {
@@ -3637,7 +3661,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private TableView<ChatMessage> initChatToOtherMSGTable() {
 
 		TableView<ChatMessage> tbl_toOtherMSGTable = new TableView<ChatMessage>();
-		tbl_toOtherMSGTable.setTooltip(new Tooltip("Messages between other member are shown here"));
+//		tbl_toOtherMSGTable.setTooltip(new Tooltip("Messages between other member are shown here"));
 
 		TableColumn<ChatMessage, String> timeCol = new TableColumn<ChatMessage, String>("Time");
 		timeCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -3766,6 +3790,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 		msgCol.prefWidthProperty().bind(tbl_toOtherMSGTable.widthProperty().divide(2));
+
+		msgCol.setCellFactory(column ->
+				new MessageTextTableCell<>(getHostServices()::showDocument)
+		);
+
 
 		TableColumn<ChatMessage, String> workedRXCol = new TableColumn<ChatMessage, String>("wkd RX?");
 		workedRXCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
@@ -5464,6 +5493,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	Button btnOptionspnlConnect;
 	ContextMenu chatMessageContextMenu; // public due need to update it on modify
 	ContextMenu chatMemberContextMenu;// public due need to update it on modify
+//	FlowPane chatMemberTableFilterQTFAndQRBHbox;
 	HBox chatMemberTableFilterQTFAndQRBHbox;
 
     TableView<ChatMember> tbl_chatMember = new TableView<ChatMember>();
@@ -7039,13 +7069,20 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			BorderPane chatMemberTableBorderPane = new BorderPane();
 			chatMemberTableBorderPane.setCenter(tbl_chatMember);
 
-			chatMemberTableFilterQTFAndQRBHbox = new HBox();
-			chatMemberTableFilterQTFAndQRBHbox.setSpacing(10);
+			chatMemberTableBorderPane.setMinWidth(0);
+			tbl_chatMember.setMinWidth(0);
+
+			chatMemberTableFilterQTFAndQRBHbox = new HBox(10);
+			chatMemberTableFilterQTFAndQRBHbox.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterQTFAndQRBHbox.setMinWidth(0);
 
 //			chatMemberTableFilterQTFAndQRBHbox.set
 
 			VBox chatMemberTableFilterVBoxForAllFilters= new VBox();
 			chatMemberTableFilterVBoxForAllFilters.setSpacing(1);
+
+			chatMemberTableFilterVBoxForAllFilters.setMinWidth(0);
+
 			chatMemberTableFilterVBoxForAllFilters.setStyle("-fx-padding: 1;" +
 					"-fx-border-style: solid inside;" +
 					"-fx-border-width: 1;" +
@@ -7053,11 +7090,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					"-fx-border-radius: 1;" +
 					"-fx-border-color: lightgreen;");
 
-//			HBox chatMemberTableFilterQRBHBox  = new HBox();
-			FlowPane chatMemberTableFilterQRBHBox  = new FlowPane();
+
+			HBox chatMemberTableFilterQRBHBox = new HBox(2);
 			chatMemberTableFilterQRBHBox.setAlignment(Pos.CENTER_LEFT);
-			chatMemberTableFilterQRBHBox.setHgap(2);
-			chatMemberTableFilterQRBHBox.setPrefWidth(225);
 
 			TextField chatMemberTableFilterMaxQrbTF = new TextField(chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
 			chatMemberTableFilterMaxQrbTF.setFocusTraversable(false);
@@ -7223,16 +7258,34 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					"-fx-border-radius: 1;" +
 					"-fx-border-color: lightgrey;");
 
-			chatMemberTableFilterQTFAndQRBHbox.setFillHeight(true);
-			chatMemberTableFilterQTFAndQRBHbox.setAlignment(Pos.CENTER_LEFT);
-			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQRBHBox);
+//			chatMemberTableFilterQTFAndQRBHbox.setFillHeight(true);
+//			chatMemberTableFilterQTFAndQRBHbox.setAlignment(Pos.CENTER_LEFT);
+//			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQRBHBox);
+			chatMemberTableFilterQTFAndQRBHbox
+					.getChildren()
+					.add(chatMemberTableFilterQRBHBox);
 
 
 //			HBox chatMemberTableFilterQTFHBox  = new HBox();
-			FlowPane chatMemberTableFilterQTFHBox  = new FlowPane();
+//			FlowPane chatMemberTableFilterQTFHBox  = new FlowPane();
+//			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
+//			chatMemberTableFilterQTFHBox.setPrefWidth(525);
+//			chatMemberTableFilterQTFHBox.setHgap(2);
+
+			FlowPane chatMemberTableFilterQTFHBox = new FlowPane(
+					Orientation.HORIZONTAL,
+					2,
+					2
+			);
 			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
-			chatMemberTableFilterQTFHBox.setPrefWidth(525);
-			chatMemberTableFilterQTFHBox.setHgap(2);
+			chatMemberTableFilterQTFHBox.setRowValignment(VPos.CENTER);
+			chatMemberTableFilterQTFHBox.setMinWidth(0);
+
+			HBox.setHgrow(
+					chatMemberTableFilterQTFHBox,
+					Priority.ALWAYS
+			);
+
 
 			CheckBox chatMemberTableFilterQtfEnableChkbx = new CheckBox("Show only QTF:");
 			TextField chatMemberTableFilterQtfTF = new TextField(chatcontroller.getChatPreferences().getStn_qtfDefault()+"");
@@ -7530,7 +7583,16 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				}
 			});
 
-			HBox chatMemberTableFilterWorkedBandFiltersHbx = new HBox();
+//			HBox chatMemberTableFilterWorkedBandFiltersHbx = new HBox();
+
+			FlowPane chatMemberTableFilterWorkedBandFiltersHbx = new FlowPane(
+					Orientation.HORIZONTAL,
+					2,
+					3
+			);
+			chatMemberTableFilterWorkedBandFiltersHbx.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterWorkedBandFiltersHbx.setRowValignment(VPos.CENTER);
+			chatMemberTableFilterWorkedBandFiltersHbx.setMinWidth(0);
 
 
 			Button btnCalculateSelectedTropo = new Button("Calc selected");
@@ -7589,6 +7651,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			if (chatcontroller.getReachabilityService().getEnabledStationBands().isEmpty()) {
 				Label bandSetupWarning = new Label("Please enable at least one active station band for New Locator/New Band filters.");
 				bandSetupWarning.setStyle("-fx-text-fill: orange; -fx-font-weight: bold;");
+				bandSetupWarning.setWrapText(true);
+				bandSetupWarning.setMinWidth(0);
+				bandSetupWarning.setMaxWidth(320);
 				chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(bandSetupWarning);
 			}
 
@@ -7848,8 +7913,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 
 			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnTglInactive);
-			chatMemberTableFilterWorkedBandFiltersHbx.setAlignment(Pos.CENTER_LEFT);
-			chatMemberTableFilterWorkedBandFiltersHbx.setSpacing(5);
+//			chatMemberTableFilterWorkedBandFiltersHbx.setAlignment(Pos.CENTER_LEFT);
+//			chatMemberTableFilterWorkedBandFiltersHbx.setSpacing(5);
 			chatMemberTableFilterWorkedBandFiltersHbx.setStyle("-fx-padding: 1;" +
 					"-fx-border-style: solid inside;" +
 					"-fx-border-width: 1;" +
@@ -7871,11 +7936,20 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			chatMemberTableFilterTextFieldBox.getChildren().addAll(chatMemberTableFilterTextField);
 
-//			HBox chatMemberTableFilterTextFieldAndWorkedBandsHbx = new HBox();
-			FlowPane chatMemberTableFilterTextFieldAndWorkedBandsHbx = new FlowPane();
-			chatMemberTableFilterTextFieldAndWorkedBandsHbx.getChildren().addAll(chatMemberTableFilterTextFieldBox, chatMemberTableFilterWorkedBandFiltersHbx);
-//			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setSpacing(5);
-			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setHgap(2);
+
+			HBox chatMemberTableFilterTextFieldAndWorkedBandsHbx = new HBox(2);
+			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableFilterTextFieldAndWorkedBandsHbx.setMinWidth(0);
+
+			HBox.setHgrow(
+					chatMemberTableFilterWorkedBandFiltersHbx,
+					Priority.ALWAYS
+			);
+
+			chatMemberTableFilterTextFieldAndWorkedBandsHbx.getChildren().addAll(
+					chatMemberTableFilterTextFieldBox,
+					chatMemberTableFilterWorkedBandFiltersHbx
+			);
 
 			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterTextFieldAndWorkedBandsHbx);
 

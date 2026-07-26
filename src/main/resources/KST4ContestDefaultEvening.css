@@ -241,3 +241,18 @@
   -fx-text-fill: #fa9f66;
   -fx-font-weight: bold;
 }
+
+/*
+ * Clickable web links inside message-table cells.
+ * Brighter colors preserve contrast on the dark table background.
+ */
+.message-table-link {
+    -fx-padding: 0;
+    -fx-border-color: transparent;
+    -fx-underline: true;
+    -fx-text-fill: #73b7ff;
+}
+
+.message-table-link:visited {
+    -fx-text-fill: #c59cff;
+}
