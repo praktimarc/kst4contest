@@ -1277,115 +1277,65 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		tbl_chatMemberTable.setTooltip(new Tooltip(
 				"Stations available \n\nUse right click to a station to select predefined texts\nor hit <strg> + <1> ... <9> to write textsnippet to selected station\n\nHit <enter> to send"));
 
-		TableColumn<ChatMember, String> callSignCol = new TableColumn<ChatMember, String>("Callsign");
-		callSignCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
+		TableColumn<ChatMember, String> callSignCol =
+				new TableColumn<ChatMember, String>("Callsign");
 
-			@Override
-			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-				SimpleStringProperty callsgn = new SimpleStringProperty();
+		callSignCol.setCellValueFactory(cellDataFeatures -> {
+			ChatMember member = cellDataFeatures.getValue();
 
-				ChatMember member = cellDataFeatures.getValue();
-				String baseCallsign;
-
-				if (member.getState() == 1) {
-					baseCallsign = "(" + member.getCallSign() + ")"; //away user
-				} else {
-					baseCallsign = member.getCallSign();
-				}
-
-				callsgn.setValue(baseCallsign);
-
-//				System.out.println(member.getCallSign() + " / " + member.getState()+ " <<<<<<<<<<<<<<<<<< state ");
-
-				return callsgn;
+			if (member == null || member.getCallSign() == null) {
+				return new SimpleStringProperty("");
 			}
+
+			String displayedCallsign = member.getState() == 1
+					? "(" + member.getCallSign() + ")"
+					: member.getCallSign();
+
+			return new SimpleStringProperty(displayedCallsign);
 		});
 
-		callSignCol.setCellFactory(new Callback<TableColumn<ChatMember, String>, TableCell<ChatMember, String>>() {
-			public TableCell call(TableColumn param) {
+		callSignCol.setCellFactory(column -> new TableCell<ChatMember, String>() {
 
-				return new TableCell<ChatMember, String>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
 
+				/*
+				 * JavaFX reuses TableCell instances while the user scrolls, sorts or
+				 * filters the table. Every visual state must therefore be reset before
+				 * the cell is populated with another ChatMember.
+				 */
+				getStyleClass().remove("table-cell-inAngleAndRange");
+				setGraphic(null);
 
-					@Override
-					public void updateItem(String item, boolean empty) {
+				if (empty || item == null) {
+					setText(null);
+					setStyle("");
+					return;
+				}
 
-						super.updateItem(item, empty);
+				setText(item);
 
-						int currentIndex = indexProperty().getValue() < 0 ? 0 : indexProperty().getValue();
-//						System.out.println(">>>>>>>>>>>>>>>> INDEXPROPERTY  =  " + indexProperty().getValue()  + " " + getIndex() + " / " + item);
+				ChatMember chatMember = getTableRow() == null
+						? null
+						: getTableRow().getItem();
 
+				if (chatMember == null) {
+					setStyle("");
+					return;
+				}
 
-						if (item != null) {
+				boolean useBoldFont = chatMember.getState() == 2
+						|| chatMember.getState() == 3;
 
-							ChatMember chatMember = (ChatMember) param.getTableView().getItems().get(currentIndex);
-//							System.out.println(chatMember.getCallSign() + " / " + chatMember.getState() + " <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<state ");
+				if (chatMember.isInAngleAndRange()) {
+					getStyleClass().add("table-cell-inAngleAndRange");
+					useBoldFont = true;
+				}
 
-//							System.out.println(this.getStyleClass() + "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-//							this.getStyleClass().clear(); //clear css reference, then recoloring
-//							this.getStyleClass().add("table-cell"); //set old reference
-
-
-//							System.out.println("KST4Contestapp ************************************** members state is: " + chatMember.getState());
-
-							if (chatMember.getState() == 3 ) { //login in last 5 min
-//								System.out.println("####################################### fATfatFett");
-								this.setStyle("-fx-font-weight: bold");
-//								this.getStyleClass().clear();
-//								this.getStyleClass().add("table-cell-bold"); //add new special colored css reference
-
-							} else if (chatMember.getState() == 0 ) { //here
-//								this.getStyleClass().clear();
-//								this.getStyleClass().add("table-cell");
-								this.setStyle("-fx-font-weight: normal");
-							} else if (chatMember.getState() == 2 ) { //here and relogin
-//								this.getStyleClass().clear();
-//								this.getStyleClass().add("table-cell-bold");
-								this.setStyle("-fx-font-weight: bold");
-							} else if (chatMember.getState() == 1 ) { //away
-//								this.getStyleClass().clear();
-//								this.getStyleClass().add("table-cell");
-								this.setStyle("-fx-font-weight: normal");
-							}
-
-							if (chatMember.isInAngleAndRange()) {
-//								this.getStyleClass().add("table-cell-inAngleAndRange");
-
-////								getStyleClass().add("");
-								this.setTextFill(Color.LIGHTGREEN);
-								this.setStyle("-fx-font-weight: bold");
-							}
-
-
-//							else if (chatMember.getState() != 3){ //TODO: this double handling should be improved as may there can be new markers. Neccessarry to reset the colour to black
-//								this.setTextFill(Color.BLACK);
-//								this.setStyle("-fx-font-weight: normal");
-//							} else {
-//								this.setTextFill(Color.BLACK);
-//							}
-
-//							if ((Utils4KST.time_getSecondsBetweenEpochAndNow(chatMember.getActivityTimeLastInEpoch()+"") /60%60) < 2) {
-//								this.setTextFill(Color.ORANGE);
-//							}
-						}
-
-
-//						if (!isEmpty()) {
-//							this.setTextFill(Color.BLACK);
-//							// Get fancy and change color based on data
-//
-//							if (item.contains("5")) {
-//								this.setTextFill(Color.BLUEVIOLET);
-//							} else if (item.contains("7") ) {
-//								this.setTextFill(Color.RED);
-//							} else if (item.contains("0") ) {
-//								this.setTextFill(Color.ORANGE);
-//							}
-////
-							setText(item);
-//						}
-					}
-				};
+				setStyle(useBoldFont
+						? "-fx-font-weight: bold;"
+						: "-fx-font-weight: normal;");
 			}
 		});
 
@@ -7470,7 +7420,23 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 //			chatMemberTableFilterQTFHBox.setSpacing(5);
-			chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg +/- " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + ""), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
+			Label lblQtfHalfBeamwidth = new Label("± BW/2");
+			lblQtfHalfBeamwidth.setTooltip(new Tooltip(
+					"The QTF filter uses half of the configured total antenna beamwidth "
+							+ "on each side of the selected direction."));
+
+			chatMemberTableFilterQTFHBox.getChildren().addAll(
+					chatMemberTableFilterQtfTF,
+					lblQtfHalfBeamwidth,
+					qtfNorth,
+					qtfNorthEast,
+					qtfEast,
+					qtfSouthEast,
+					qtfSouth,
+					qtfSouthWest,
+					qtfWest,
+					qtfNorthWest);
+
 			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQTFHBox);
 
 			chatMemberTableFilterVBoxForAllFilters.getChildren().add(chatMemberTableFilterQTFAndQRBHbox);
@@ -8474,7 +8440,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		TextField txtFldstn_antennaBeamWidthDeg = new TextField(this.chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + "");
 		txtFldstn_antennaBeamWidthDeg.setFocusTraversable(false);
-		txtFldstn_antennaBeamWidthDeg.setTooltip(new Tooltip("Your antenna beamwidth in DEG\n\nEnter correct values here due it´s used for path suggestions!!!"));
+		txtFldstn_antennaBeamWidthDeg.setTooltip(new Tooltip(
+				"Your antenna beamwidth in degrees.\n\n"
+						+ "KST4Contest also uses this value as an assumed beamwidth "
+						+ "for other stations when it derives directional opportunities "
+						+ "from directed chat messages."));
+
 		txtFldstn_antennaBeamWidthDeg.textProperty().addListener(new ChangeListener<String>() {
 
 			@Override

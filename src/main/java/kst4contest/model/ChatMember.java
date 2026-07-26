@@ -26,9 +26,16 @@ public class ChatMember {
 	String name;
 	String callSignRaw; //without -2 or -70 etc.
 
+	/**
+	 * A directional opportunity inferred from a directed chat message remains
+	 * relevant for five minutes. The timestamp is used instead of a permanent
+	 * boolean so an old antenna-direction assumption cannot remain visible
+	 * indefinitely.
+	 */
+	static final long DIRECTION_OPPORTUNITY_VALIDITY_MILLIS = 5L * 60L * 1000L;
 
+	private volatile long directionOpportunityValidUntilEpochMs;
 
-	boolean isInAngleAndRange; //if he tries a sked in my dir, he is in range, will process that in the messages
 
 //	String frequency; // last known qrg of the station
 
@@ -108,12 +115,37 @@ public class ChatMember {
 		this.lastFlagsChangeEpochMs = lastFlagsChangeEpochMs;
 	}
 
+	/**
+	 * Returns whether the most recently inferred directional opportunity is
+	 * still valid.
+	 *
+	 * @return {@code true} until the five-minute validity period has expired
+	 */
 	public boolean isInAngleAndRange() {
-		return isInAngleAndRange;
+		return isInAngleAndRangeAt(System.currentTimeMillis());
 	}
 
+	/**
+	 * Time-aware variant used by the public getter and by unit tests.
+	 *
+	 * @param nowEpochMs time against which the validity is checked
+	 * @return {@code true} while the stored validity timestamp is still in the future
+	 */
+	boolean isInAngleAndRangeAt(long nowEpochMs) {
+		return directionOpportunityValidUntilEpochMs > nowEpochMs;
+	}
+
+	/**
+	 * Starts a new five-minute validity period or removes the current
+	 * directional opportunity immediately.
+	 *
+	 * @param inAngleAndRange {@code true} for a newly detected opportunity;
+	 *                        {@code false} to clear it
+	 */
 	public void setInAngleAndRange(boolean inAngleAndRange) {
-		isInAngleAndRange = inAngleAndRange;
+		directionOpportunityValidUntilEpochMs = inAngleAndRange
+				? System.currentTimeMillis() + DIRECTION_OPPORTUNITY_VALIDITY_MILLIS
+				: 0L;
 	}
 
 	public AirPlaneReflectionInfo getAirPlaneReflectInfo() {

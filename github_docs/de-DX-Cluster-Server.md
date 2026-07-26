@@ -25,25 +25,29 @@ Im Klartext: Die Information muss nicht erst im Chat gefunden, gelesen, gemerkt 
 
 ## Wie wird eine Richtungsgelegenheit hergeleitet?
 
-Angenommen, Station A schreibt eine gerichtete Nachricht an Station B. KST4Contest geht in diesem Fall davon aus, dass Station A ihre Antenne zumindest ungefähr in Richtung von Station B ausgerichtet hat.
+Angenommen, Station A schreibt eine gerichtete Nachricht an Station B. KST4Contest verwendet die Richtung von A zu B als Näherung für die aktuelle Antennenrichtung von Station A. Anschließend wird geprüft, ob die eigene Station aus Sicht von A innerhalb des angenommenen Antennenkorridors liegt.
 
-Anschließend werden zwei Richtungen verglichen:
+Dafür werden zwei Richtungen verglichen:
 
 - die Richtung von Station A zu Station B,
 - die Richtung von Station A zur eigenen Station.
 
-Liegt die eigene Station innerhalb des konfigurierten Antennen-Öffnungswinkels und befindet sich Station A innerhalb des eingestellten maximalen QRB, wird die Situation als Richtungsgelegenheit behandelt.
+Der in den Station Settings konfigurierte Antennen-Öffnungswinkel ist der vollständige Winkel. Für die Prüfung wird jeweils die Hälfte links und rechts der Richtung A → B angesetzt. Bei `70°` sind das somit `±35°`.
+
+Da ON4KST keine Antennendaten der fremden Station überträgt, verwendet KST4Contest den Öffnungswinkel der eigenen Antenne zugleich als Näherung für Station A. Das ist keine Messung der tatsächlichen Antennenrichtung, sondern eine bewusst einfache geometrische Annahme.
 
 Ein DX-Cluster-Spot wird nur erzeugt, wenn alle folgenden Bedingungen erfüllt sind:
 
-1. Die Nachricht ist an eine konkrete andere Station gerichtet.
+1. Eine gerichtete Nachricht wurde zwischen zwei anderen Stationen erkannt.
 2. Für Absender und Empfänger sind gültige Locator bekannt.
-3. Der Absender liegt innerhalb des konfigurierten maximalen QRB.
-4. Die eigene Station liegt aus Sicht des Absenders innerhalb des konfigurierten Antennen-Öffnungswinkels.
-5. Für den Absender ist eine verwertbare Frequenz bekannt.
+3. Der Absender liegt innerhalb des konfigurierten maximalen QRB zur eigenen Station.
+4. Die eigene Station liegt aus Sicht des Absenders innerhalb des angenommenen Antennenkorridors.
+5. Für den Absender ist eine verwertbare Frequenz bekannt oder in der aktuellen Nachricht erkannt worden.
 6. Der lokale DX-Cluster-Server ist aktiviert.
 
-Das Verfahren ist bewusst eine geometrische Herleitung. Es beweist weder, dass die Gegenstation tatsächlich mit genau dieser Antennenrichtung arbeitet, noch ersetzt es eine Ausbreitungsberechnung. Es erkennt eine plausible Gelegenheit. Mehr sollte man aus einer Chat-Nachricht auch nicht herauslesen.
+Treffen die Bedingungen zu, wird der Spot unmittelbar beim Verarbeiten der Nachricht erzeugt. Die parallel angezeigte grüne Richtungsmarkierung bleibt dagegen fünf Minuten sichtbar und kann durch spätere Nachrichten verlängert oder vorzeitig entfernt werden.
+
+Das Verfahren berücksichtigt weder Gelände noch aktuelle Ausbreitungsbedingungen und beweist keine tatsächliche Antennenstellung. Es erkennt eine plausible Gelegenheit. Die ausführliche Herleitung und ein Zahlenbeispiel stehen unter [Richtungsgelegenheiten aus gerichteten Nachrichten](de-Funktionen#richtungsgelegenheiten-aus-gerichteten-nachrichten).
 
 ---
 

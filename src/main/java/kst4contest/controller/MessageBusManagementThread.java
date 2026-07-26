@@ -776,6 +776,19 @@ public class MessageBusManagementThread extends Thread {
 										newMessageArrived));
 							}
 
+							/*
+							 * Detect and store the sender's QRG before any directional-opportunity
+							 * or DX-Cluster processing. A frequency first mentioned in this directed
+							 * message is then immediately available for the resulting spot.
+							 *
+							 * The parser needs only the message text, sender and preferences. The
+							 * receiver does not have to be resolved yet.
+							 */
+							smartFrequencyExtraction(
+									newMessageArrived,
+									this.client.getChatPreferences());
+
+							// TODO: Next: get frequency infos out of name?
 
 							if (splittedMessageLine[7].equals("0")) {
 								// message is not directed to anyone, move it to the cq messages.
@@ -1057,9 +1070,6 @@ public class MessageBusManagementThread extends Thread {
 								System.out.println("[MSGMgtBus: ERROR CHATCHED ON MAYBE NULL ISSUE]: " + exceptionOccured.getMessage());
 								exceptionOccured.printStackTrace();
 							}
-
-							// --- Band/QRG recognition (fills ChatMember.knownActiveBands) ---
-							smartFrequencyExtraction(newMessageArrived, this.client.getChatPreferences());
 
 							// TODO: Next: get frequency infos out of name?
 						} else

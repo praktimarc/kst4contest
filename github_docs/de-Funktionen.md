@@ -2,45 +2,71 @@
 
 > 🇬🇧 [English version](en-Features) | 🇩🇪 Du liest gerade die deutsche Version
 
-Übersicht aller Hauptfunktionen von KST4Contest.
+Dieses Kapitel beschreibt die wichtigsten Funktionen von KST4Contest, ihre Herleitung und die Grenzen der daraus gewonnenen Informationen.
 
 ---
+## Richtungsgelegenheiten aus gerichteten Nachrichten
 
-## Sked-Richtungs-Hervorhebung
+Im ON4KST-Chat ist sichtbar, welche Station eine Nachricht an welche andere Station richtet. Eine tatsächliche Antennenrichtung wird dabei nicht übertragen. Für den Contestbetrieb lässt sich aus einer solchen Nachricht trotzdem eine brauchbare Annahme ableiten: Wer einen Sked anfragt, beantwortet oder vorbereitet, richtet seine Antenne normalerweise zumindest ungefähr auf die angesprochene Station.
 
-Eine der Kernfunktionen: Wenn eine Station ein Sked in die **eigene Richtung** sendet, wird sie in der Benutzerliste **grün und fett** hervorgehoben.
+KST4Contest wertet deshalb gerichtete Nachrichten zwischen zwei anderen Stationen aus. Die Nachricht muss nicht ausdrücklich als Sked gekennzeichnet sein. Entscheidend sind der Absender, der Empfänger und deren Locator.
 
-### Wie funktioniert das?
+### Wie wird die Richtung hergeleitet?
 
-Die Berechnung basiert auf folgender Logik:
+Angenommen, Station A schreibt eine gerichtete Nachricht an Station B:
 
-- Wenn Station A eine Sked-Anfrage an Station B sendet, wird angenommen, dass A ihre Antenne auf B ausrichtet.
-- Wenn die daraus resultierende Richtung von A zur eigenen Station innerhalb des halben Öffnungswinkels der eigenen Antenne liegt, wird A hervorgehoben.
+1. KST4Contest berechnet die Richtung von Station A zu Station B.
+2. Diese Richtung wird als wahrscheinliche Antennenrichtung von Station A verwendet.
+3. Anschließend wird die Richtung von Station A zur eigenen Station berechnet.
+4. Die Winkeldifferenz wird mit der Hälfte des konfigurierten Antennen-Öffnungswinkels verglichen.
+5. Zusätzlich muss Station A innerhalb des konfigurierten maximalen QRB liegen.
 
-**Beispiel** (Öffnungswinkel 69°, Halbwinkel 34,5°):
+Ein eingetragener Öffnungswinkel von `70°` ergibt damit einen angenommenen Korridor von jeweils `35°` links und rechts der Richtung von Station A zu Station B.
 
-| Situation | Ergebnis für DO5AMF in JN49 |
+| Beispiel | Ergebnis |
 |---|---|
-| Sked von F5FEN → DM5M | ✅ Hervorhebung (F5FEN zeigt Richtung DM5M, das liegt nahe JN49) |
-| Sked von DM5M → F5FEN | ✅ Hervorhebung (DM5M antwortet in Richtung F5FEN) |
-| F1DBN ist unbeteiligt | ❌ Keine Hervorhebung |
-| DO5AMF/P (anderer Standort) | ❌ Keine Hervorhebung für Sked-Antwort |
+| Richtung A → B: `120°`, Richtung A → eigene Station: `145°` | Winkeldifferenz `25°`: Richtungsgelegenheit erkannt |
+| Richtung A → B: `120°`, Richtung A → eigene Station: `165°` | Winkeldifferenz `45°`: außerhalb des angenommenen Korridors |
+| Locator von A oder B fehlt | Keine Richtungsberechnung möglich |
+| A liegt außerhalb des maximalen QRB | Keine Richtungsgelegenheit |
 
-Die Berechnung berücksichtigt keine topografischen Wegberechnungen – das ist eine bewusste Vereinfachung. Möglicherweise wird das in einer späteren Version ergänzt.
+### Was wird in der Benutzerliste angezeigt?
 
-> Konfiguration: [Konfiguration – Antennen-Öffnungswinkel](Konfiguration#antennen-öffnungswinkel-antenna-beamwidth)
+Wird eine Richtungsgelegenheit erkannt, erscheint das Rufzeichen des Absenders in der Benutzerliste grün und fett. Im Evening-Modus wird dafür ein helleres Grün verwendet. Der Empfänger der Nachricht wird nicht allein deshalb markiert; eine Antwort in Gegenrichtung wird als eigene Nachricht und damit als neuer Fall berechnet.
+
+![Erkannte Richtungsgelegenheit in der Benutzerliste](direction_opportunity_highlight.png)
+
+Im Bild sendete DF0GEB eine gerichtete Nachricht an DN9APW und bekam eine Antwort. KST4Contest erkannte die Richtungsgelegenheit und markierte DN9APW in der Benutzerliste.
+Zur Verdeutlichung ist die MAP eingeblendet. Ich stehe als Empfänger zwischen beiden Stationen und bekomme deswegen die Warnung.
+
+Die Markierung bleibt fünf Minuten ab der letzten passenden Nachricht sichtbar. Eine weitere passende Nachricht derselben Station beginnt diesen Zeitraum erneut. Sendet die Station vorher eine gerichtete Nachricht, deren Richtung die Bedingungen nicht erfüllt, wird die Markierung unmittelbar entfernt.
+
+Ist die einfache Soundausgabe aktiviert, gibt KST4Contest beim erstmaligen Erkennen der Richtungsgelegenheit zusätzlich einen kurzen Hinweis aus. Solange die Station bereits markiert ist, wird derselbe Hinweis nicht mit jeder weiteren passenden Nachricht wiederholt.
+
+### Was bedeutet die Markierung – und was nicht?
+
+Die Berechnung ist eine geometrische Herleitung. Sie beweist nicht, dass Station A ihre Antenne tatsächlich auf Station B ausgerichtet hat. Ebenso wenig berücksichtigt sie Gelände, aktuelle Ausbreitungsbedingungen, die reale Antennencharakteristik der fremden Station oder deren Rotatorposition.
+
+ON4KST liefert keinen individuellen Öffnungswinkel für die fremde Station. KST4Contest verwendet deshalb den für die eigene Antenne konfigurierten Wert auch als Näherung für Station A. Ein zu großer Wert erzeugt entsprechend mehr mögliche Richtungsgelegenheiten, ein zu kleiner Wert kann brauchbare Situationen übersehen.
+
+Im Klartext: Die grüne Markierung ist ein begründeter Hinweis auf eine mögliche Gelegenheit. Sie ist weder eine Ausbreitungsvorhersage noch eine Garantie für ein QSO.
+
+Konfiguration:
+
+- [Antennen-Öffnungswinkel](de-Konfiguration#antennen-öffnungswinkel-antenna-beamwidth)
+- [Standard-Maximum-QRB](de-Konfiguration#standard-maximum-qrb)
 
 ---
 
-## Sked-Richtungs-Spots (Integrierter DX-Cluster)
+## Weitergabe als DX-Cluster-Spot
 
-Seit Version 1.23 kann KST4Contest erkannte Richtungsgelegenheiten als DX-Cluster-Spots an ein verbundenes Logprogramm weitergeben.
+Seit Version 1.23 kann KST4Contest eine erkannte Richtungsgelegenheit an den DX-Cluster-Client eines Logprogramms weitergeben. Dafür muss der lokale DX-Cluster-Server aktiviert und für den Absender eine verwertbare Frequenz bekannt sein.
 
-Aus einer gerichteten Chat-Nachricht wird zunächst die wahrscheinliche Antennenrichtung des Absenders hergeleitet. Liegt die eigene Station innerhalb des konfigurierten Öffnungswinkels und ist eine Frequenz bekannt, erscheint die Station als Spot in der Bandmap des Logprogramms.
+Die Frequenz kann bereits aus einer früheren Nachricht stammen oder erstmals in der aktuell auslösenden Nachricht stehen. In beiden Fällen steht sie der Spot-Prüfung zur Verfügung. KST4Contest überträgt damit nicht jede im Chat gefundene QRG, sondern nur Frequenzen, die mit einer geometrisch passenden gerichteten Nachricht zusammenfallen.
 
-KST4Contest überträgt damit nicht jede gefundene Frequenz, sondern nur Situationen, die für die eigene Station geometrisch plausibel sind.
+Die Fünf-Minuten-Markierung und der DX-Cluster-Spot beruhen auf derselben Richtungsberechnung, haben aber einen unterschiedlichen Lebenszyklus: Die Markierung bleibt vorübergehend in der Benutzerliste sichtbar. Der Spot wird unmittelbar beim Verarbeiten der passenden Nachricht erzeugt.
 
-Details: [Integrierter DX-Cluster-Server](de-DX-Cluster-Server).
+Einrichtung, Frequenzbehandlung und Grenzen: [Integrierter DX-Cluster-Server](de-DX-Cluster-Server).
 
 ---
 

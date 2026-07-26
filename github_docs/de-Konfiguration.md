@@ -29,13 +29,25 @@ Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. `JN49IJ`) eintragen.
 
 ### Antennen-Öffnungswinkel (Antenna Beamwidth)
 
-Einen realistischen Wert für den Öffnungswinkel der eigenen Antenne eintragen (in Grad). Dieser Wert wird für die [Sked-Richtungs-Hervorhebung](Funktionen#sked-richtungs-hervorhebung) verwendet. Ein Testwert von 50° hat sich bewährt; DM5M nutzt Quads mit 69°.
+Trage den vollständigen horizontalen Öffnungswinkel der eigenen Antenne in Grad ein. KST4Contest verwendet jeweils die Hälfte dieses Werts links und rechts der gewählten beziehungsweise hergeleiteten Antennenrichtung. Ein eingetragener Wert von `70°` entspricht daher einem Korridor von `±35°`.
 
-> **Keinesfalls** Fantasy-Werte eintragen – die Richtungsberechnungen werden sonst unbrauchbar.
+Der Wert wird an mehreren Stellen verwendet:
+
+- für den QTF-Filter der Benutzerliste,
+- für die Darstellung des eigenen Antennenkorridors,
+- als angenommener Öffnungswinkel einer fremden Station bei der [Herleitung von Richtungsgelegenheiten](de-Funktionen#richtungsgelegenheiten-aus-gerichteten-nachrichten).
+
+Der letzte Punkt ist bewusst eine Näherung. ON4KST überträgt weder die verwendete Antenne noch deren Öffnungswinkel. KST4Contest verwendet deshalb den eigenen Wert als praktikable Annahme für die Gegenstation.
+
+Wähle einen realistischen Wert. Ein zu großer Öffnungswinkel erzeugt viele geometrische Treffer, die praktisch kaum noch eine Aussage haben. Ein zu kleiner Wert kann dagegen brauchbare Richtungsgelegenheiten ausblenden.
 
 ### Standard-Maximum-QRB
 
-Maximale Entfernung (in km), für die Richtungs-Warnungen ausgelöst werden sollen. Realistischer Wert für DM5M: 900 km. Stationen, die weiter entfernt sind, werden für Highlighting-Zwecke ignoriert.
+Trage die maximale Entfernung in Kilometern ein, innerhalb der KST4Contest Richtungsgelegenheiten berücksichtigen soll. Maßgeblich ist die Entfernung zwischen der eigenen Station und dem Absender der gerichteten Nachricht – nicht die Entfernung zwischen Absender und Empfänger.
+
+Liegt der Absender weiter entfernt, wird die Situation auch dann nicht hervorgehoben und nicht als Richtungsgelegenheit an den lokalen DX-Cluster-Server weitergegeben, wenn der berechnete Winkel passen würde.
+
+Der Wert sollte zum eigenen Stationsaufbau und zum vorgesehenen Contestbetrieb passen. Ein unnötig großer Bereich erzeugt Hinweise für Stationen, die praktisch nicht mehr zum Arbeitsbereich gehören; ein zu kleiner Bereich blendet mögliche Kandidaten bereits vor der Richtungsbewertung aus.
 
 ---
 
