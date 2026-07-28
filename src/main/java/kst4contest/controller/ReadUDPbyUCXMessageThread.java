@@ -84,6 +84,9 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			xmlStart = rawPacket.indexOf("<contactinfo");
 		}
 		if (xmlStart < 0) {
+			xmlStart = rawPacket.indexOf("<contactreplace");
+		}
+		if (xmlStart < 0) {
 			xmlStart = rawPacket.indexOf("<RadioInfo");
 		}
 
@@ -313,10 +316,16 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			Document doc = db.parse(new InputSource(new StringReader(udpMsg)));
 
 			/**
-			 * case Log-QSO-Packet in ucxlog
+			 * case Log-QSO-Packet in ucxlog / DXLog and compatible
 			 * 
 			 */
 			NodeList list = doc.getElementsByTagName("contactinfo");
+
+			if (list.getLength() == 0) {
+				list = doc.getElementsByTagName("contactreplace");
+				//DXlog will send contactreplace instead of contactinfo on clicking "broadcast whole logbook"
+			}
+
 			if (list.getLength() != 0) {
 
 				/*
