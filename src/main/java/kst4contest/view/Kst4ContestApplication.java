@@ -31,6 +31,7 @@ import javafx.scene.layout.*;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
 import kst4contest.ApplicationConstants;
 import kst4contest.controller.ChatController;
 import kst4contest.controller.MessageVariableResolver;
@@ -1504,19 +1505,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-//				StringProperty qrg = new SimpleStringProperty();
-
-//				qrg.setValue(cellDataFeatures.getValue().getFrequency());
-//				qrg = (cellDataFeatures.getValue().getFrequency());
-
-//				if (!qrg.getValue().equals("")) {
-//
-//				}
 
 				return cellDataFeatures.getValue().getFrequency();
 			}
 
 		});
+		applyQrgUiFormatting(qrgCol); //insert zero until qrg string looks pretty
+
 
 		TableColumn<ChatMember, String> airScoutCol = new TableColumn<ChatMember, String>("AP [minutes / pot%]");
 		airScoutCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
@@ -9854,53 +9849,84 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						}
 				);
 
-		TextField txtFld_notify_DXclusterServerFrequencyPrefix =
-				new TextField(
-						this.chatcontroller
-								.getChatPreferences()
-								.getNotify_optionalFrequencyPrefix()
-								.getValue()
+		ComboBox<Band> cmbBx_notifyFrequencyFallbackBand =
+				new ComboBox<>(
+						FXCollections.observableArrayList(Band.values())
 				);
 
-		txtFld_notify_DXclusterServerFrequencyPrefix
-				.focusedProperty()
+		cmbBx_notifyFrequencyFallbackBand.setEditable(false);
+		cmbBx_notifyFrequencyFallbackBand.setMaxWidth(Double.MAX_VALUE);
+		cmbBx_notifyFrequencyFallbackBand.setTooltip(
+				new Tooltip(
+						"Used for relative QRG values such as .210 when no band "
+								+ "has been recognized for the sender during the "
+								+ "previous 30 minutes. This setting affects the "
+								+ "general QRG detection, not only DX-Cluster spots."
+				)
+		);
+
+		cmbBx_notifyFrequencyFallbackBand.setConverter(
+				new StringConverter<Band>() {
+					@Override
+					public String toString(Band band) {
+						if (band == null) {
+							return "";
+						}
+
+						String displayLabel = band.getDisplayLabel();
+						if (band.getPrefix().equals(displayLabel)) {
+							return band.getPrefix() + " MHz";
+						}
+
+						return band.getPrefix()
+								+ " MHz ("
+								+ displayLabel
+								+ ")";
+					}
+
+					@Override
+					public Band fromString(String displayedValue) {
+						if (displayedValue == null) {
+							return null;
+						}
+
+						int firstSpace = displayedValue.indexOf(' ');
+						String prefix = firstSpace >= 0
+								? displayedValue.substring(0, firstSpace)
+								: displayedValue;
+
+						return Band.fromPrefix(prefix);
+					}
+				}
+		);
+
+		Band configuredFallbackBand = Band.fromPrefix(
+				chatcontroller
+						.getChatPreferences()
+						.getNotify_optionalFrequencyPrefix()
+						.get()
+		);
+
+		if (configuredFallbackBand == null) {
+			configuredFallbackBand = Band.B_144;
+			chatcontroller
+					.getChatPreferences()
+					.setNotify_optionalFrequencyPrefix(
+							configuredFallbackBand.getPrefix()
+					);
+		}
+
+		cmbBx_notifyFrequencyFallbackBand.setValue(configuredFallbackBand);
+
+		cmbBx_notifyFrequencyFallbackBand
+				.valueProperty()
 				.addListener(
-						(observable, oldValue, focused) -> {
-							if (focused) {
-								return;
-							}
-
-							String bandInMHz =
-									txtFld_notify_DXclusterServerFrequencyPrefix
-											.getText()
-											.trim();
-
-							if (bandInMHz.matches(
-									"[1-9]\\d{1,4}"
-							)) {
+						(observable, oldBand, newBand) -> {
+							if (newBand != null) {
 								chatcontroller
 										.getChatPreferences()
 										.setNotify_optionalFrequencyPrefix(
-												bandInMHz
-										);
-
-								txtFld_notify_DXclusterServerFrequencyPrefix
-										.setText(bandInMHz);
-							} else {
-								showUserInputErrorWindow(
-										"\""
-												+ bandInMHz
-												+ "\" is not a valid fallback band. "
-												+ "Enter the MHz part as an integer, "
-												+ "for example 144, 432 or 1296."
-								);
-
-								txtFld_notify_DXclusterServerFrequencyPrefix
-										.setText(
-												chatcontroller
-														.getChatPreferences()
-														.getNotify_optionalFrequencyPrefix()
-														.getValue()
+												newBand.getPrefix()
 										);
 							}
 						}
@@ -10075,14 +10101,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		grdPnlNotify.add(
 				new Label(
-						"Fallback band in MHz for relative "
-								+ "frequencies [default: 144]:"
+						"Fallback band for relative QRG detection:"
 				),
 				0,
 				8
 		);
 		grdPnlNotify.add(
-				txtFld_notify_DXclusterServerFrequencyPrefix,
+				cmbBx_notifyFrequencyFallbackBand,
 				1,
 				8
 		);

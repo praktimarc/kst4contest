@@ -113,23 +113,47 @@ Die drei Audiofunktionen arbeiten unabhängig voneinander:
 
 CW- und Sprachausgabe können gleichzeitig aktiviert werden. Das ist technisch möglich, im Contest aber nicht zwingend hilfreich. In der Praxis sollte nur die Ausgabe eingeschaltet werden, die im eigenen Stationsbetrieb tatsächlich wahrgenommen werden kann, ohne den Operator dauerhaft zu beschäftigen.
 
+### Fallback-Band für relative QRG-Erkennung
+
+Das Dropdown **Fallback band for relative QRG detection** legt fest, welches Band KST4Contest verwendet, wenn eine relative QRG keinem aktuellen Stationskontext zugeordnet werden kann.
+
+Zur Auswahl stehen ausschließlich die vom Frequenzparser unterstützten Bandpräfixe:
+
+```text
+144 MHz
+432 MHz
+1296 MHz
+2320 MHz
+3400 MHz
+5760 MHz
+10368 MHz (10G)
+24048 MHz (24G)
+```
+
+Das Dropdown ist kein Filter und keine Vorgabe für vollständig angegebene Frequenzen. `432.088` wird unabhängig von der Auswahl als Frequenz im 432-MHz-Band erkannt. Benötigt wird das Fallback bei relativen Angaben wie `.205`, `,205` oder `qrg 205`.
+
+Bevor KST4Contest auf das Fallback zurückgreift, prüft es den Bandkontext des Absenders. Wurde für dieselbe Station innerhalb der letzten 30 Minuten bereits eine passende vollständige Frequenz erkannt, hat dieses Band Vorrang. Ein Fallback von `144 MHz` macht aus `.100` daher `432.100 MHz`, wenn die Station kurz zuvor beispielsweise `432.088` genannt hat.
+
+Die Einstellung befindet sich im Notification-Bereich, wirkt aber auf die gesamte QRG-Erkennung. Damit beeinflusst sie nicht nur mögliche DX-Cluster-Spots, sondern auch die QRG-Spalte, erkannte aktive Bänder, Priorisierung, Band-Upgrade-Hinweise und Funktionen, die eine bekannte Stationsfrequenz verwenden.
+
+Mehr zur Erkennungslogik und zu absichtlich ignorierten Zahlen: [QRG-Erkennung](de-Funktionen#qrg-erkennung).
+
 ### Local DX Cluster output
 
-KST4Contest kann erkannte Richtungsgelegenheiten als DX-Cluster-Spots an ein Logprogramm weitergeben. Der praktische Nutzen liegt auf der Hand: Eine im Chat erkannte Frequenz erscheint direkt in der Bandmap des Logprogramms und muss nicht erst von Hand übertragen werden.
+KST4Contest kann erkannte Richtungsgelegenheiten als DX-Cluster-Spots an ein Logprogramm weitergeben. Eine im Chat erkannte Frequenz erscheint dadurch direkt in der Bandmap des Logprogramms und muss nicht erst von Hand übertragen werden.
 
 Die Checkbox **Enable the local DX Cluster server …** startet beziehungsweise beendet den lokalen TCP-Server. Bei einer laufenden Chat-Verbindung wird die Änderung sofort wirksam.
 
-Folgende Einstellungen sind erforderlich:
+Folgende Einstellungen und Schaltflächen gehören zur lokalen DX-Cluster-Ausgabe:
 
 - **TCP port**: Port, auf dem KST4Contest Verbindungen von DX-Cluster-Clients annimmt. Der Standardwert ist `8000`. Wird der Port während einer laufenden Verbindung geändert, startet KST4Contest den Server auf dem neuen Port neu. Der Logger muss sich anschließend ebenfalls mit dem neuen Port verbinden.
-- **Fallback band in MHz**: Bandpräfix für relative Frequenzangaben. Aus `205` oder `.205` wird bei einem Fallback-Band von `144` die Frequenz `144.205 MHz`. Vollständige Angaben wie `432.205` oder `1296.338` benötigen diesen Fallback nicht.
+- **Fallback band for relative QRG detection**: Das oben beschriebene globale Fallback-Band. Der Testspot verwendet `.300` dieses Bandes. Reale Spots verwenden dagegen die für den jeweiligen Absender erkannte QRG.
 - **Spotter callsign**: Rufzeichen, das im erzeugten DX-Cluster-Spot als Spotter erscheint. Hier sollte ein anderes Rufzeichen als das im Contest verwendete Stationsrufzeichen eingetragen werden. Einige Logprogramme filtern Spots des eigenen Rufzeichens oder behandeln sie anders als fremde Spots.
-- **Send test spot**: Sendet einen Testspot für `DL0TEST` auf `.300` des eingestellten Fallback-Bandes. Der Test funktioniert nur, wenn KST4Contest mit dem Chat verbunden, der lokale DX-Cluster-Server aktiviert und mindestens ein DX-Cluster-Client verbunden ist.
+- **Send test spot**: Sendet einen Testspot für `DL0TEST` auf `.300` des ausgewählten Fallback-Bandes. Der Test funktioniert nur, wenn KST4Contest mit dem Chat verbunden, der lokale DX-Cluster-Server aktiviert und mindestens ein DX-Cluster-Client verbunden ist.
 
 KST4Contest erzeugt nicht bei jeder im Chat gefundenen Frequenz automatisch einen Spot. Ein Spot entsteht nur dann, wenn eine gerichtete Nachricht zwischen zwei Stationen auf eine für die eigene Station interessante Antennenrichtung schließen lässt und für den Absender eine nutzbare Frequenz bekannt ist.
 
 Die vollständige Herleitung und die Einrichtung des Logprogramms sind im Kapitel [Integrierter DX-Cluster-Server](de-DX-Cluster-Server) beschrieben.
-
 ### Band-Upgrade-Hinweis nach einem Logeintrag
 
 Nach einem über UCXLog oder Win-Test empfangenen Logeintrag kann KST4Contest prüfen, ob die gerade gearbeitete Station auf einem weiteren gemeinsamen, aber noch nicht gearbeiteten Band aktiv ist.

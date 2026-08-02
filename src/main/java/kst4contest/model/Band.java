@@ -29,6 +29,35 @@ public enum Band {
         return prefix;
     }
 
+
+    /**
+     * Resolves a configured MHz prefix to one of the bands supported by the
+     * frequency parser.
+     *
+     * <p>The former free-text preference accepted arbitrary numeric values even
+     * though only prefixes represented by this enum can be used for a plausible
+     * frequency. Keeping the lookup here gives the UI and the parser one common
+     * definition of a valid fallback band.</p>
+     *
+     * @param prefix configured MHz prefix, for example {@code 144} or {@code 10368}
+     * @return matching band, or {@code null} if the prefix is not supported
+     */
+    public static Band fromPrefix(String prefix) {
+        if (prefix == null) {
+            return null;
+        }
+
+        String normalizedPrefix = prefix.trim();
+
+        for (Band band : values()) {
+            if (band.prefix.equals(normalizedPrefix)) {
+                return band;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Returns the lower edge used as practical analysis frequency when only the band
      * is known. This keeps the batch reachability calculation deterministic.

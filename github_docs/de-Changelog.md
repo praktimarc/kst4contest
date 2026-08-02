@@ -8,6 +8,12 @@ Versionsverlauf von KST4Contest / PraktiKST.
 
 letzter Changelog bitte aus GitHub entnehmen. Der bisherige Changelog
 
+## v1.42 (2026-08)
+- **QRG-Erkennung präzisiert**: Vollständige und relative Frequenzangaben werden weiterhin erkannt. Nackte dreistellige Zahlen werden nur noch mit erkennbarem Frequenzkontext ausgewertet, damit Signalrapporte, Bandangaben und andere Zahlen keine falsche QRG erzeugen.
+- **Stationsbezogener Bandkontext**: Bei relativen Frequenzen verwendet KST4Contest zuerst einen höchstens 30 Minuten alten Bandkontext desselben Absenders. Erst danach greift das globale Fallback-Band.
+- **Fallback-Band als Dropdown**: Das globale Fallback kann nur noch aus den tatsächlich unterstützten Bändern ausgewählt werden und gilt für die gesamte QRG-Erkennung, nicht nur für DX-Cluster-Spots.
+- **QRG-Anzeige vereinheitlicht**: Frequenzen werden in der Benutzerliste und den Nachrichtentabellen mit mindestens drei Nachkommastellen dargestellt.
+
 ## v1.41
 **Stationskarte, Performance, Reaktionsfähiges UI**
 

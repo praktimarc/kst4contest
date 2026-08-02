@@ -31,9 +31,13 @@ Die zentrale Tabelle aller aktuell aktiven Chat-Nutzer. Spalten (je nach Konfigu
 | Loc | Maidenhead-Locator |
 | QRB | Entfernung in km |
 | QTF | Richtung in Grad |
-| QRG | Automatisch erkannte Frequenz |
+| QRG | Zuletzt aus einer Chat-Nachricht erkannte Frequenz |
 | AP | AirScout-Flugzeugdaten (wenn aktiv) |
 | Band-Farben | Worked/NOT-QRV-Status pro Band |
+
+Die QRG-Spalte zeigt die zuletzt für eine Station erkannte Frequenz. Fehlende Nullen werden für die Anzeige ergänzt, sodass beispielsweise `144.21` als `144.210` erscheint. Erkennt KST4Contest nacheinander Frequenzen auf mehreren Bändern, zeigt die Spalte den letzten Treffer; die internen Bandinformationen können trotzdem mehrere aktuelle Bänder der Station enthalten.
+
+Relative Angaben werden zunächst mit einem höchstens 30 Minuten alten Bandkontext desselben Absenders kombiniert. Nur wenn dieser fehlt, verwendet KST4Contest das globale Fallback-Band. Erkennungsregeln, Beispiele und Grenzen: [QRG-Erkennung](de-Funktionen#qrg-erkennung).
 
 **Sortierung**: Klick auf Spaltenköpfe. QRB-Sortierung arbeitet numerisch (ab v1.22 korrigiert).
 

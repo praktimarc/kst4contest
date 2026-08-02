@@ -46,6 +46,49 @@ public class MessageBusManagementThread extends Thread {
 	private final String PTRN_QRG_CAT2 = "(([0-9]{3,4}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
 	private final String PTRN_QRG_CAT3 = "(([0-9]{3,5}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
 
+	/*
+	 * Frequency formats handled by the smart parser:
+	 *
+	 * Group 1: full frequencies, for example 144.210 or 10368.100
+	 * Group 2: relative frequencies with a separator, for example .210 or ,210
+	 * Group 3: bare three-digit values, for example 210
+	 *
+	 * Group 3 is deliberately subjected to an additional context check. Without
+	 * that check, ordinary chat values such as 599 or a bare band name such as 144
+	 * would be converted into plausible but incorrect frequencies.
+	 */
+	private static final Pattern SMART_FREQUENCY_PATTERN = Pattern.compile(
+			"(?<![\\d])(\\d{3,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?)(?![\\d])"
+					+ "|(?<![\\d])([.,]\\d{3}(?:[.,]\\d{1,3})?)(?![\\d])"
+					+ "|(?<=\\s|^)(\\d{3})(?=\\s|$)"
+	);
+
+	/*
+	 * A bare three-digit value is accepted only when the nearby text makes its
+	 * meaning sufficiently clear. Examples:
+	 *
+	 * qrg 210
+	 * QRG: 210
+	 * freq is 210
+	 * on 210
+	 * pse 210
+	 * at 210
+	 * 210 MHz
+	 * 210 qrg
+	 */
+	private static final Pattern BARE_FREQUENCY_PREFIX_CONTEXT_PATTERN =
+			Pattern.compile(
+					"(?i)\\b(?:qrg|freq(?:uency)?|on|pse|at)\\b"
+							+ "\\s*(?:is\\s*)?[:=@-]?\\s*$"
+			);
+
+	private static final Pattern BARE_FREQUENCY_SUFFIX_CONTEXT_PATTERN =
+			Pattern.compile(
+					"(?i)^\\s*(?:mhz|qrg|freq(?:uency)?)\\b"
+			);
+
+	private static final int BARE_FREQUENCY_CONTEXT_CHARACTERS = 32;
+
 
 	// ==== Auto-answer flood/ping-pong protection ====
 	private static final String AUTOANSWER_PREFIX = ApplicationConstants.AUTOANSWER_PREFIX;
@@ -200,143 +243,218 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	/**
-	 * Smart Frequency Parser (V1.32)
-	 * Replaces the old RegEx logic.
-	 * Features:
-	 * 1. Handles full frequencies (144.210) and short forms (.210, 210).
-	 * 2. Handles extended precision/weird formatting (144.210.10, 144,210,10).
-	 * 3. Prioritizes USER CONTEXT (History) over GLOBAL CONTEXT (Preferences).
+	 * Detects complete and relative frequencies in a chat message and stores the
+	 * result on the sender.
+	 *
+	 * <p>Complete frequencies determine their band directly. Relative frequencies
+	 * first use the sender's most recent band context if that context is not older
+	 * than 30 minutes. Only when no suitable sender context exists does the parser
+	 * use the globally configured fallback band.</p>
+	 *
+	 * <p>A relative value beginning with a dot or comma is sufficiently explicit
+	 * on its own. A bare three-digit value is ambiguous and is therefore accepted
+	 * only with nearby frequency-related text.</p>
+	 *
+	 * @param message message whose text is inspected
+	 * @param prefs preferences containing the global fallback band
 	 */
 	private void smartFrequencyExtraction(ChatMessage message, ChatPreferences prefs) {
-
-		// Regex Explanation:
-		// Part 1 (Full): Start (not digit), 3-5 digits, sep, 1-3 digits, OPTIONAL (sep, 1-3 digits)
-		//                Matches: 144.210, 144.210.10, 10368.100
-		// Part 2 (Short1): Start (not digit), sep, 3 digits, OPTIONAL (sep, 1-3 digits)
-		//                Matches: .210, .210.10, ,210
-		// Part 3 (Short2): Whitespace/Start, 3 digits, Whitespace/End
-		//                Matches: " 210 ", " 144 "
-		String smartPattern = "(?<![\\d])(\\d{3,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?)(?![\\d])|(?<![\\d])([.,]\\d{3}(?:[.,]\\d{1,3})?)(?![\\d])|(?<=\\s|^)(\\d{3})(?=\\s|$)";
-
-		Pattern pattern = Pattern.compile(smartPattern);
-		Matcher matcher = pattern.matcher(message.getMessageText());
+		if (message == null || message.getMessageText() == null) {
+			return;
+		}
 
 		ChatMember sender = message.getSender();
-		// Safety check, in case sender is null (e.g., server message)
-		if (sender == null) return;
+		if (sender == null) {
+			return;
+		}
+
+		String messageText = message.getMessageText();
+		Matcher matcher = SMART_FREQUENCY_PATTERN.matcher(messageText);
 
 		while (matcher.find()) {
-			String foundRaw = matcher.group().trim();
+			boolean dottedShortForm = matcher.group(2) != null;
+			boolean bareShortForm = matcher.group(3) != null;
+			boolean shortForm = dottedShortForm || bareShortForm;
 
-			// --- PRE-PROCESSING: Normalize separators ---
-			// 1. Replace all commas with dots to unify format (144,210,10 -> 144.210.10)
-			foundRaw = foundRaw.replace(",", ".");
+			if (bareShortForm
+					&& !hasExplicitBareFrequencyContext(
+					messageText,
+					matcher.start(),
+					matcher.end()
+			)) {
+				continue;
+			}
+
+			String foundRaw = matcher.group().trim().replace(',', '.');
 
 			double finalDetectedFrequency = 0.0;
 			Band finalDetectedBand = null;
-			boolean isShortForm = false;
 
-			// --- STEP 1: Type Determination (Short or Full?) ---
+			if (shortForm) {
+				if (foundRaw.startsWith(".")) {
+					foundRaw = foundRaw.substring(1);
+				}
 
-			// Check if it starts with a dot (e.g. ".210") OR is just 3 digits ("210")
-			if (foundRaw.startsWith(".") || foundRaw.length() == 3) {
+				/*
+				 * Priority 1: use this sender's most recently observed band if its
+				 * information is not older than 30 minutes and the reconstructed
+				 * frequency lies inside that band.
+				 */
+				long bestTimestamp = 0L;
 
-				// It is a short form.
-				// We strip the leading dot for calculation if present -> "210.10" or "210"
-				if (foundRaw.startsWith(".")) foundRaw = foundRaw.substring(1);
-				isShortForm = true;
-
-			} else {
-				// It is a full frequency (e.g., 144.210.10 or 144.210)
-				try {
-					// Normalize "144.210.10" to "144.21010" for Double.parseDouble
-					String normalizedFull = normalizeFrequencyString(foundRaw);
-
-					finalDetectedFrequency = Double.parseDouble(normalizedFull);
-					finalDetectedBand = Band.fromFrequency(finalDetectedFrequency);
-				} catch (NumberFormatException e) { continue; }
-			}
-
-			// --- STEP 2: Context Resolution (Only needed for Short Forms) ---
-			if (isShortForm) {
-
-				// A) HISTORY CHECK (Priority 1: What did THIS USER do recently?)
-				// We search for the most recent band where this short form makes physical sense.
-				long bestTimestamp = 0;
-
-				// Iterate over all bands where the user is known
-				// (Assumption: ChatMember has a getter getKnownActiveBands())
 				if (sender.getKnownActiveBands() != null) {
-					for (java.util.Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry : sender.getKnownActiveBands().entrySet()) {
+					for (java.util.Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
+							: sender.getKnownActiveBands().entrySet()) {
 
 						Band candidateBand = entry.getKey();
 						ChatMember.ActiveFrequencyInfo info = entry.getValue();
 
-						// Timeout Check: Info must not be older than 30 mins (1,800,000 ms)
-						if (System.currentTimeMillis() - info.timestampEpoch > 1800000) continue;
-
-						// Try Reconstruction: Band Prefix + ShortForm
-						// Example: Band 144 (Prefix "144") + "." + "210.10" -> "144.210.10"
-						try {
-							String reconstructedStr = candidateBand.getPrefix() + "." + foundRaw;
-							String normalizedReconstruction = normalizeFrequencyString(reconstructedStr);
-
-							double attemptFreq = Double.parseDouble(normalizedReconstruction);
-
-							// Does this frequency fit into the candidate band?
-							if (candidateBand.isPlausible(attemptFreq)) {
-								// If we have multiple matches, pick the most recent one
-								if (info.timestampEpoch > bestTimestamp) {
-									finalDetectedFrequency = attemptFreq;
-									finalDetectedBand = candidateBand;
-									bestTimestamp = info.timestampEpoch;
-								}
-							}
-						} catch (Exception e) { /* Ignore parsing errors */ }
-					}
-				}
-
-				// B) GLOBAL PREFERENCES CHECK (Priority 2: Fallback if history is empty/old)
-				if (finalDetectedBand == null) {
-					// Get standard band from prefs (e.g., "144" or "432")
-					String defaultPrefix = prefs.getNotify_optionalFrequencyPrefix().get();
-					try {
-						String reconstructedStr = defaultPrefix + "." + foundRaw;
-						String normalizedReconstruction = normalizeFrequencyString(reconstructedStr);
-
-						double attemptFreq = Double.parseDouble(normalizedReconstruction);
-
-						// Check if this results in a valid amateur radio band
-						Band defaultBandCandidate = Band.fromFrequency(attemptFreq);
-
-						if (defaultBandCandidate != null) {
-							finalDetectedFrequency = attemptFreq;
-							finalDetectedBand = defaultBandCandidate;
+						if (candidateBand == null || info == null) {
+							continue;
 						}
-					} catch (NumberFormatException e) {
-						// Number was likely not a frequency (e.g., "73" or "599") and didn't fit any band
-						continue;
+
+						if (System.currentTimeMillis() - info.timestampEpoch > 1_800_000L) {
+							continue;
+						}
+
+						try {
+							String reconstructed =
+									candidateBand.getPrefix() + "." + foundRaw;
+							double candidateFrequency = Double.parseDouble(
+									normalizeFrequencyString(reconstructed)
+							);
+
+							if (candidateBand.isPlausible(candidateFrequency)
+									&& info.timestampEpoch > bestTimestamp) {
+								finalDetectedFrequency = candidateFrequency;
+								finalDetectedBand = candidateBand;
+								bestTimestamp = info.timestampEpoch;
+							}
+						} catch (NumberFormatException ignored) {
+							// Try the next known band.
+						}
 					}
 				}
-			}
-
-			// --- STEP 3: Process Result ---
-			if (finalDetectedBand != null && finalDetectedFrequency > 0) {
 
 				/*
-				 * Store the detected QRG in the thread-safe active-member model.
-				 * The UI table is only a JavaFX mirror, so the MessageBus must not scan
-				 * or mutate getLst_chatMemberList() here.
+				 * Priority 2: use the configured fallback band. Invalid values from
+				 * an older hand-edited configuration fall back safely to 144 MHz.
+				 * The current UI itself offers only values from Band.values().
 				 */
-				client.applyDetectedFrequencyToActiveMembers(sender, finalDetectedBand, finalDetectedFrequency);
+				if (finalDetectedBand == null) {
+					String configuredPrefix = null;
 
-				System.out.println("[SmartParser] Detected for " + sender.getCallSign() + ": " +
-						finalDetectedFrequency + " MHz (" + finalDetectedBand + ") " +
-						(isShortForm ? "[derived from " + foundRaw + "]" : "[full match]"));
+					if (prefs != null
+							&& prefs.getNotify_optionalFrequencyPrefix() != null) {
+						configuredPrefix =
+								prefs.getNotify_optionalFrequencyPrefix().get();
+					}
 
-				// Optional: Trigger Cluster-Spot here if enabled
+					Band fallbackBand = Band.fromPrefix(configuredPrefix);
+					if (fallbackBand == null) {
+						fallbackBand = Band.B_144;
+					}
+
+					try {
+						String reconstructed =
+								fallbackBand.getPrefix() + "." + foundRaw;
+						double candidateFrequency = Double.parseDouble(
+								normalizeFrequencyString(reconstructed)
+						);
+
+						if (fallbackBand.isPlausible(candidateFrequency)) {
+							finalDetectedFrequency = candidateFrequency;
+							finalDetectedBand = fallbackBand;
+						}
+					} catch (NumberFormatException ignored) {
+						// The matched value cannot be converted into a frequency.
+					}
+				}
+			} else {
+				try {
+					finalDetectedFrequency = Double.parseDouble(
+							normalizeFrequencyString(foundRaw)
+					);
+					finalDetectedBand = Band.fromFrequency(finalDetectedFrequency);
+				} catch (NumberFormatException ignored) {
+					// Continue with the next possible match in the message.
+				}
 			}
+
+			if (finalDetectedBand == null || finalDetectedFrequency <= 0.0) {
+				continue;
+			}
+
+			/*
+			 * Store the result in the thread-safe active-member model. The existing
+			 * compatibility property used by the TableView and DX-Cluster code is
+			 * updated by applyDetectedFrequencyToActiveMembers(...), too.
+			 */
+			client.applyDetectedFrequencyToActiveMembers(
+					sender,
+					finalDetectedBand,
+					finalDetectedFrequency
+			);
+
+			System.out.println(
+					"[SmartParser] Detected for "
+							+ sender.getCallSign()
+							+ ": "
+							+ finalDetectedFrequency
+							+ " MHz ("
+							+ finalDetectedBand
+							+ ") "
+							+ (shortForm
+							? "[derived from " + foundRaw + "]"
+							: "[full match]")
+			);
 		}
+	}
+
+
+	/**
+	 * Checks whether a bare three-digit value is surrounded by text that identifies
+	 * it as a frequency.
+	 *
+	 * <p>The check intentionally uses only a small area around the value. A remote
+	 * occurrence of the word "QRG" elsewhere in a long message must not turn every
+	 * three-digit number in that message into a frequency.</p>
+	 *
+	 * @param messageText complete chat message
+	 * @param matchStart start index of the three-digit match
+	 * @param matchEnd end index of the three-digit match
+	 * @return {@code true} if the value has explicit frequency context
+	 */
+	static boolean hasExplicitBareFrequencyContext(
+			String messageText,
+			int matchStart,
+			int matchEnd
+	) {
+		if (messageText == null
+				|| matchStart < 0
+				|| matchEnd < matchStart
+				|| matchEnd > messageText.length()) {
+			return false;
+		}
+
+		int prefixStart = Math.max(
+				0,
+				matchStart - BARE_FREQUENCY_CONTEXT_CHARACTERS
+		);
+		int suffixEnd = Math.min(
+				messageText.length(),
+				matchEnd + BARE_FREQUENCY_CONTEXT_CHARACTERS
+		);
+
+		String prefixContext = messageText.substring(prefixStart, matchStart);
+		String suffixContext = messageText.substring(matchEnd, suffixEnd);
+
+		return BARE_FREQUENCY_PREFIX_CONTEXT_PATTERN
+				.matcher(prefixContext)
+				.find()
+				|| BARE_FREQUENCY_SUFFIX_CONTEXT_PATTERN
+				.matcher(suffixContext)
+				.find();
 	}
 
 	/**

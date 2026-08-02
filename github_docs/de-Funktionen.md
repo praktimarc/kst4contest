@@ -70,16 +70,54 @@ Einrichtung, Frequenzbehandlung und Grenzen: [Integrierter DX-Cluster-Server](de
 
 ---
 
-## QRG-Erkennung (QRG Reading)
+## QRG-Erkennung
 
-KST4Contest verarbeitet jede Chat-Nachricht und extrahiert automatisch **Frequenzangaben**. Diese werden in der Benutzerliste in der **QRG-Spalte** angezeigt.
+Im ON4KST-Chat werden Frequenzen selten einheitlich geschrieben. Eine Station nennt beispielsweise zuerst `432.088`, später nur noch `.100` und in einer weiteren Nachricht `qrg 120`. Für einen Menschen ist der Zusammenhang meistens klar. Ein Programm muss dagegen unterscheiden, ob `120` eine Frequenz, eine Zeitangabe, eine Entfernung oder etwas völlig anderes bedeutet.
 
-Erkannte Formate: `144.205`, `432.088`, `.205` (mit konfigurierter Bandannahme), etc.
+KST4Contest wertet deshalb den Text jeder öffentlichen und gerichteten Chat-Nachricht aus. Eine erkannte QRG wird dem Absender zugeordnet und in der **QRG-Spalte** der Benutzerliste angezeigt. Die Spalte enthält die zuletzt erkannte Frequenz und stellt mindestens drei Nachkommastellen dar. Ein intern als `144.21` gespeicherter Wert erscheint damit als `144.210`.
 
-**Nutzen**: Ohne nachzufragen kann man direkt auf die QRG einer Station schauen und entscheiden, ob eine Verbindung möglich ist.
+### Welche Angaben werden erkannt?
+
+| Schreibweise | Beispiel | Verarbeitung |
+|---|---|---|
+| Vollständige Frequenz | `144.210`, `432,088`, `10368.100` | Das Band ergibt sich direkt aus der Frequenz. |
+| Relative Frequenz mit Punkt oder Komma | `.210`, `,088` | Das Band wird aus dem Stationskontext oder dem konfigurierten Fallback ergänzt. |
+| Dreistellige Frequenz mit Textkontext | `qrg 210`, `freq is 210`, `on 210`, `210 MHz` | Die Zahl wird als relative Frequenz behandelt. |
+| Dreistellige Zahl ohne Frequenzkontext | `210`, `599`, `144` | Die Zahl wird absichtlich nicht als QRG übernommen. |
+
+Die letzte Einschränkung verhindert plausible, aber falsche Ergebnisse. Mit einem Fallback von `144 MHz` ließe sich ein Signalrapport `599` technisch problemlos zu `144.599 MHz` zusammensetzen. Das Ergebnis wäre formal gültig und fachlich trotzdem Unsinn.
+
+### Wie wird das Band einer relativen QRG bestimmt?
+
+KST4Contest verwendet folgende Reihenfolge:
+
+1. Wurde für denselben Absender innerhalb der letzten 30 Minuten bereits eine passende vollständige Frequenz erkannt, verwendet KST4Contest deren Band.
+2. Sind mehrere aktuelle Bänder bekannt, wird der zuletzt aktualisierte plausible Bandkontext verwendet.
+3. Fehlt ein geeigneter Stationskontext, verwendet KST4Contest das unter **Fallback band for relative QRG detection** ausgewählte Band.
+
+Beispiel: Das globale Fallback steht auf `144 MHz`. Eine Station nennt zunächst `432.088` und schreibt wenige Minuten später `.100`. KST4Contest ergänzt nicht das globale Fallback, sondern den aktuelleren Stationskontext. Das Ergebnis ist `432.100 MHz`. Schreibt eine andere Station ohne vorherige Bandinformation `.100`, wird daraus `144.100 MHz`.
+
+Das Fallback-Band ist damit tatsächlich nur der letzte Ausweg. Es wird aus den von KST4Contest unterstützten Bandwerten ausgewählt und wirkt auf die gesamte QRG-Erkennung – nicht nur auf den integrierten DX-Cluster.
+
+### Wofür wird die erkannte QRG verwendet?
+
+Die zuletzt erkannte Frequenz erscheint in der Benutzerliste. Der zugehörige Bandkontext kann außerdem in weitere Funktionen einfließen, beispielsweise in:
+
+- die Erkennung aktiver Bänder einer Station,
+- den Chatmember-Score und die Prioritätslisten,
+- Band-Upgrade-Hinweise nach einem Logeintrag,
+- die Frequenzwahl bei Skeds,
+- einen DX-Cluster-Spot aus einer erkannten Richtungsgelegenheit.
+
+Steht die QRG erstmals in der Nachricht, die zugleich eine Richtungsgelegenheit auslöst, wird sie vor der Richtungs- und Spotprüfung verarbeitet. Der daraus erzeugte Spot kann deshalb bereits die Frequenz dieser Nachricht verwenden.
+
+Die Erkennung bleibt eine Textauswertung. KST4Contest kann nicht beweisen, dass die Station noch auf der genannten Frequenz arbeitet oder ob sich eine mehrdeutige Angabe auf einen anderen Zusammenhang bezieht. Genau deshalb werden nackte dreistellige Zahlen ohne Frequenzkontext nicht mehr übernommen.
+
+Konfiguration und unterstützte Fallback-Bänder: [Fallback-Band für relative QRG-Erkennung](de-Konfiguration#fallback-band-für-relative-qrg-erkennung).
+
+Verwendung in der Bandmap eines Logprogramms: [Integrierter DX-Cluster-Server](de-DX-Cluster-Server).
 
 ---
-
 ## Worked-Markierung
 
 Gearbeitete Stationen werden in der Benutzerliste visuell markiert – pro Band. Grundlage ist die [Log-Synchronisation](de-Log-Synchronisation) via UDP oder Simplelogfile.

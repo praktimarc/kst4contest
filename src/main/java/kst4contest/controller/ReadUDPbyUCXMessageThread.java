@@ -291,14 +291,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 		ChatMember modifyThat = null;
 
-//		System.out.println("ReadUDPByUCX, message catched: " + udpMsg);
-
-//        String[] threadStatusMessage = new String[2];
-//        threadStatusMessage = new String[3];
-//        threadStatusMessage[0] = "on";
-//        threadStatusMessage[1] = "received message:";
-//        threadStatusMessage[2] = udpMsg;
-
         ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "received Message\n" + udpMsg, false);
 
         callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
@@ -307,7 +299,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		try {
 			dbf.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
 		} catch (ParserConfigurationException e1) {
-			// TODO Auto-generated catch block
+
 			e1.printStackTrace();
 		}
 

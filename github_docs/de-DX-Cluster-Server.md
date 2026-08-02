@@ -53,35 +53,51 @@ Das Verfahren berücksichtigt weder Gelände noch aktuelle Ausbreitungsbedingung
 
 ## Welche Frequenz wird verwendet?
 
-Vollständige Frequenzangaben können direkt verarbeitet werden, beispielsweise:
+Ein DX-Cluster-Spot benötigt eine eindeutige Frequenz. KST4Contest verwendet dafür dieselbe QRG-Erkennung wie die Benutzerliste und die übrigen bandbezogenen Funktionen.
+
+Vollständige Frequenzen bestimmen ihr Band direkt:
 
 ```text
 144.205
-432.088
+432,088
 1296.338
+10368.100
 ```
 
-Im Chat werden jedoch häufig nur relative Angaben geschrieben:
+Relative Angaben enthalten dagegen nur den Frequenzanteil innerhalb eines Bandes:
 
 ```text
-205
 .205
-338
+,205
+qrg 205
+freq is 205
+on 205
+205 MHz
 ```
 
-In diesem Fall fehlt das Band. KST4Contest ergänzt deshalb das unter **Fallback band in MHz** konfigurierte Bandpräfix.
+Eine nackte dreistellige Zahl wie `205` wird ohne Frequenzkontext nicht ausgewertet. Dasselbe gilt für `599`, `144` oder Formulierungen wie `worked 210 stations`. So verhindert KST4Contest, dass Signalrapporte, Bandnamen oder Zählwerte als scheinbar plausible QRG gespeichert und später an den Logger weitergegeben werden.
+
+Bei einer relativen QRG wird das Band in dieser Reihenfolge bestimmt:
+
+1. KST4Contest prüft, ob für denselben Absender innerhalb der letzten 30 Minuten bereits ein passender Bandkontext bekannt wurde.
+2. Sind mehrere aktuelle Bänder bekannt, wird der zuletzt aktualisierte plausible Kontext verwendet.
+3. Erst wenn kein geeigneter Stationskontext vorhanden ist, verwendet KST4Contest das unter **Fallback band for relative QRG detection** ausgewählte Band.
 
 Beispiel:
 
 ```text
-Fallback-Band: 144
-Chat-Frequenz: .205
-DX-Cluster-Frequenz: 144205.0 kHz
+Globales Fallback: 144 MHz
+Letzte vollständige QRG der Station: 432.088 MHz
+Neue Chat-Angabe derselben Station: .100
+Erkannte QRG: 432.100 MHz
+DX-Cluster-Frequenz: 432100.0 kHz
 ```
 
-Bei einem Einband-Contest ist diese Annahme normalerweise eindeutig. Bei gleichzeitigem Betrieb mehrerer Bänder kann sie falsch sein. Das Fallback-Band sollte deshalb zu dem Band passen, das in der betreffenden Chat-Kategorie überwiegend verwendet wird.
+Ohne den aktuellen 432-MHz-Kontext würde dieselbe Angabe mit dem globalen Fallback zu `144.100 MHz` ergänzt.
 
-Die weitergehende Frage, ob sich das Band künftig aus der konkreten Arbeitsfrequenz oder dem Stationskontext ableiten lässt, wird nach Abschluss des Manuals gesondert geprüft.
+Die QRG-Erkennung läuft vor der Richtungs- und Spotprüfung. Nennt eine Station ihre Frequenz erstmals in der gerichteten Nachricht, die zugleich eine Richtungsgelegenheit auslöst, kann bereits der daraus erzeugte Spot diese Frequenz enthalten. War zuvor eine andere QRG der Station bekannt, wird sie durch die neu erkannte Angabe aktualisiert.
+
+Das Fallback-Band ist eine globale Einstellung der QRG-Erkennung. Seine Wirkung ist nicht auf den DX-Cluster beschränkt. Konfiguration, unterstützte Bänder und weitere Folgen sind unter [Fallback-Band für relative QRG-Erkennung](de-Konfiguration#fallback-band-für-relative-qrg-erkennung) beschrieben.
 
 ---
 
@@ -95,7 +111,7 @@ Konfiguriere anschließend:
 
 1. **Enable the local DX Cluster server …** aktivieren.
 2. Einen freien **TCP port** eintragen. Standard ist `8000`.
-3. Das passende **Fallback band in MHz** eintragen.
+3. Unter **Fallback band for relative QRG detection** das passende Band auswählen.
 4. Ein **Spotter callsign** festlegen.
 
 Für das Spotter-Rufzeichen sollte nach Möglichkeit ein anderes Rufzeichen als das Contest-Rufzeichen verwendet werden. Einige Logger filtern Spots, die scheinbar von der eigenen Station stammen. Das Ergebnis wäre technisch korrekt erzeugt, aber in der Bandmap trotzdem unsichtbar – eine besonders unproduktive Art von Erfolg.
@@ -189,7 +205,9 @@ KST4Contest sendet absichtlich nicht jede gefundene Frequenz an den Logger. Ande
 
 ### Der Spot erscheint auf dem falschen Band
 
-Prüfe zuerst das konfigurierte **Fallback band in MHz**. Es wird nur benötigt, wenn im Chat keine vollständige Frequenz angegeben wurde.
+Prüfe zuerst, welche Frequenzen für die betreffende Station innerhalb der letzten 30 Minuten erkannt wurden. Bei einer relativen Angabe hat dieser Stationskontext Vorrang vor dem globalen Fallback.
+
+Ist kein aktueller Stationskontext vorhanden, prüfe die Auswahl unter **Fallback band for relative QRG detection**. Das Fallback wird nur benötigt, wenn sich das Band weder aus einer vollständigen Frequenz noch aus dem aktuellen Kontext des Absenders ergibt.
 
 ### Der Spot wird vom Logger ausgeblendet
 
