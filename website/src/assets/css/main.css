@@ -10,6 +10,8 @@
     --accent: #38bdf8;
     --accent2: #a855f7;
     --accent3: #22c55e;
+    --warn: #f59e0b;
+    --danger: #f43f5e;
     --shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
 }
 
@@ -259,6 +261,7 @@ a:hover {
     color: #020617;
     background: linear-gradient(135deg, var(--accent), var(--accent2));
     font-weight: 800;
+    cursor: pointer;
     box-shadow:
             0 16px 44px rgba(56, 189, 248, 0.25),
             inset 0 1px 0 rgba(255, 255, 255, 0.35);
@@ -463,6 +466,181 @@ a:hover {
     min-height: 220px;
 }
 
+.channel-picker {
+    margin: 34px 0 0;
+}
+
+.channel-switch {
+    display: inline-flex;
+    gap: 4px;
+    padding: 5px;
+    margin: 0 0 40px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: rgba(2, 6, 23, 0.55);
+}
+
+.channel-option {
+    position: relative;
+    display: inline-flex;
+}
+
+.channel-option input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.channel-option span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 999px;
+    font-weight: 800;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.channel-option input:checked + span {
+    color: #020617;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    box-shadow: 0 10px 30px rgba(56, 189, 248, 0.25);
+}
+
+.channel-option input:focus-visible + span {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.channel-panel {
+    display: none;
+}
+
+.channel-picker:has(#channel-stable:checked) .channel-panel[data-channel="stable"],
+.channel-picker:has(#channel-beta:checked) .channel-panel[data-channel="beta"],
+.channel-picker:has(#channel-nightly:checked) .channel-panel[data-channel="nightly"] {
+    display: block;
+}
+
+.notice-banner {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    padding: clamp(18px, 3vw, 26px);
+    margin-bottom: 30px;
+    border: 1px solid var(--warn);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(245, 158, 11, 0.14), rgba(245, 158, 11, 0.04));
+}
+
+.notice-banner .disclaimer-icon {
+    font-size: 2rem;
+}
+
+.notice-banner h3 {
+    margin: 0 0 6px;
+    font-size: 1.1rem;
+    color: #fde68a;
+}
+
+.notice-banner p {
+    margin: 0;
+    color: var(--muted);
+}
+
+.empty-state {
+    text-align: center;
+    padding: clamp(30px, 5vw, 54px);
+}
+
+.empty-state .disclaimer-icon {
+    font-size: 2.4rem;
+    margin-bottom: 12px;
+}
+
+.empty-state h3 {
+    margin: 0 0 10px;
+}
+
+.empty-state p {
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.empty-state .actions {
+    justify-content: center;
+}
+
+.disclaimer-banner {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: clamp(22px, 4vw, 34px);
+    margin-bottom: 34px;
+    border: 2px solid var(--danger);
+    border-radius: 22px;
+    background: linear-gradient(180deg, rgba(244, 63, 94, 0.16), rgba(244, 63, 94, 0.05));
+    box-shadow: 0 0 40px rgba(244, 63, 94, 0.16);
+}
+
+.disclaimer-icon {
+    flex: none;
+    font-size: 2.6rem;
+    line-height: 1;
+}
+
+.disclaimer-banner h3 {
+    margin: 0 0 8px;
+    font-size: 1.35rem;
+    color: #fecdd3;
+}
+
+.disclaimer-banner p {
+    margin: 0;
+    color: var(--text);
+}
+
+.disclaimer-banner p + p {
+    margin-top: 10px;
+    color: var(--muted);
+}
+
+.disclaimer-banner .inline-link {
+    color: #fecdd3;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.channel-panel .section-heading + .actions {
+    margin: -10px 0 30px;
+}
+
+.channel-panel .content-card {
+    margin-top: 30px;
+}
+
 .screenshot-placeholder {
     display: grid;
     place-items: center;
@@ -491,14 +669,14 @@ a:hover {
     line-height: 1.2;
 }
 
-.manual-content pre {
+pre {
     overflow-x: auto;
     padding: 16px;
     border-radius: 14px;
     background: #020617;
 }
 
-.manual-content code {
+code {
     color: #bae6fd;
 }
 

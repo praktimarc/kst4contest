@@ -1,45 +1,214 @@
 ---
 layout: base.njk
 title: Download KST4Contest
-description: Download the latest stable KST4Contest packages for Windows, Linux and macOS. The required Java runtime is included.
+description: Download the latest stable KST4Contest packages for Windows, Linux and macOS, or switch to a nightly build for testing. The required Java runtime is included.
 ---
 
 <section class="hero">
-  <p class="badge">Stable release</p>
+  <p class="badge">Stable, Beta &amp; Nightly channels</p>
   <h1>Download KST4Contest</h1>
   <p class="lead">
-    Choose the package for your operating system. Official builds are published through GitHub Releases,
-    and the required Java runtime is already included.
+    Choose the package for your operating system. The required Java runtime is already included. Use
+    the switch below to pick between the Stable release, Beta and current Nightly builds.
   </p>
-
-  <div class="actions">
-    <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Latest release on GitHub</a>
-    <a class="button secondary" href="https://github.com/praktimarc/kst4contest/releases">All releases</a>
-  </div>
 </section>
 
 <section class="section">
-  <div class="section-heading">
-    <p class="eyebrow">Packages by platform</p>
-    <h2>Choose the format that fits your system</h2>
-  </div>
+  <div class="channel-picker">
+    <fieldset class="channel-switch">
+      <legend class="sr-only">Choose a build channel</legend>
+      <label class="channel-option">
+        <input type="radio" name="channel" id="channel-stable" checked>
+        <span>Stable release</span>
+      </label>
+      <label class="channel-option">
+        <input type="radio" name="channel" id="channel-beta">
+        <span>Beta{% if beta.available %} · {{ beta.tag }}{% endif %}</span>
+      </label>
+      <label class="channel-option">
+        <input type="radio" name="channel" id="channel-nightly">
+        <span>Nightly builds</span>
+      </label>
+    </fieldset>
 
-  <div class="grid">
-    {% for item in downloads %}
-      <article class="card download-card">
-        <div class="feature-icon">{{ item.icon }}</div>
+    <div class="channel-panel" data-channel="stable">
+      <div class="section-heading">
+        <p class="eyebrow">Packages by platform</p>
+        <h2>Choose the format that fits your system</h2>
+      </div>
 
-        {% if item.recommended %}
-          <p class="badge">Default choice</p>
-        {% endif %}
+      <div class="actions">
+        <a class="button" href="https://github.com/praktimarc/kst4contest/releases/latest">Latest release on GitHub</a>
+        <a class="button secondary" href="https://github.com/praktimarc/kst4contest/releases">All releases</a>
+      </div>
 
-        <h3>{{ item.os }}</h3>
-        <p><strong>{{ item.format }}</strong></p>
-        <p>{{ item.note }}</p>
+      <div class="grid">
+        {% for item in downloads %}
+          <article class="card download-card">
+            <div class="feature-icon">{{ item.icon }}</div>
 
-        <a class="button secondary" href="{{ item.url }}">Download →</a>
-      </article>
-    {% endfor %}
+            {% if item.recommended %}
+              <p class="badge">Default choice</p>
+            {% endif %}
+
+            <h3>{{ item.os }}</h3>
+            <p><strong>{{ item.format }}</strong></p>
+            <p>{{ item.note }}</p>
+
+            <a class="button secondary" href="{{ item.url }}">Download →</a>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="channel-panel" data-channel="beta">
+      {% if beta.available %}
+        <div class="notice-banner">
+          <div class="disclaimer-icon" aria-hidden="true">🧪</div>
+          <div>
+            <h3>Pre-release — do a quick check before a contest</h3>
+            <p>
+              Beta builds have a largely defined feature set and are used for focused testing ahead of
+              a Stable release. They can still contain new defects. If you plan to use one on contest
+              day, try it beforehand.
+            </p>
+          </div>
+        </div>
+
+        <div class="section-heading">
+          <p class="eyebrow">Current beta</p>
+          <h2>{{ beta.name or beta.tag }} · {{ beta.publishedAt | dateToIso }}</h2>
+        </div>
+        <p class="lead">
+          <a href="{{ beta.releaseUrl }}">View this release on GitHub</a>
+        </p>
+
+        <div class="grid">
+          {% for item in beta.items %}
+            <article class="card download-card">
+              <div class="feature-icon">{{ item.icon }}</div>
+
+              <h3>{{ item.os }}</h3>
+              <p><strong>{{ item.format }}</strong></p>
+              <p>{{ item.note }}</p>
+
+              <a class="button secondary" href="{{ item.url }}">Download →</a>
+            </article>
+          {% endfor %}
+        </div>
+
+        <div class="card content-card">
+          <h3>Flatpak beta channel</h3>
+          <p>
+            Instead of the .flatpakref download above, Flatpak users can also track the beta channel
+            directly through the CLI once the Stable repo is already added:
+          </p>
+          <pre><code>flatpak install kst4contest de.x08.KST4Contest//beta</code></pre>
+          <p>
+            See the <a href="/manual/en/installation/">installation guide</a> for the full Flatpak setup.
+          </p>
+        </div>
+      {% else %}
+        <div class="card content-card empty-state">
+          <div class="disclaimer-icon" aria-hidden="true">🧪</div>
+          <h3>No Beta build right now</h3>
+          <p>
+            There is currently no Beta release. Beta builds are published occasionally for focused
+            testing ahead of a Stable release, tagged separately from Nightly builds. Check back later,
+            or use the Stable release or a Nightly build in the meantime.
+          </p>
+          <div class="actions">
+            <label for="channel-stable" class="button secondary">Switch to Stable</label>
+            <label for="channel-nightly" class="button ghost">Switch to Nightly</label>
+            <a class="button ghost" href="{{ beta.releasesUrl }}">All releases on GitHub</a>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="channel-panel" data-channel="nightly">
+      <div class="disclaimer-banner">
+        <div class="disclaimer-icon" aria-hidden="true">⚠️</div>
+        <div>
+          <h3>Testing only — not for contest operation</h3>
+          <p>
+            Nightly builds are automated, unreviewed snapshots of the <code>main</code> branch. They can
+            be unstable, contain unfinished features, break your settings or corrupt log data. Do not
+            rely on a nightly build during a contest.
+          </p>
+          <p>
+            Use the <label for="channel-stable" class="inline-link">Stable release</label> for actual
+            operation. Nightly builds exist to test a specific fix or feature ahead of the next release.
+          </p>
+        </div>
+      </div>
+
+      <div class="section-heading">
+        <p class="eyebrow">
+          {% if nightly.meta %}
+            Latest successful build
+          {% else %}
+            Current nightly build
+          {% endif %}
+        </p>
+        <h2>
+          {% if nightly.meta %}
+            Build {{ nightly.meta.shortSha }} · {{ nightly.meta.createdAt | dateToIso }}
+          {% else %}
+            Always points to the newest successful workflow run
+          {% endif %}
+        </h2>
+      </div>
+
+      {% if nightly.meta %}
+        <p class="lead">
+          From commit <a href="{{ nightly.meta.commitUrl }}"><code>{{ nightly.meta.shortSha }}</code></a> ·
+          <a href="{{ nightly.meta.runUrl }}">view this workflow run on GitHub</a>
+        </p>
+      {% else %}
+        <p class="lead">
+          Commit and date details could not be loaded when this page was built. The download links below
+          are unaffected — nightly.link always resolves to the latest successful run on its own.
+        </p>
+      {% endif %}
+
+      <div class="grid">
+        {% for item in nightly.items %}
+          <article class="card download-card">
+            <div class="feature-icon">{{ item.icon }}</div>
+
+            <h3>{{ item.os }}</h3>
+            <p><strong>{{ item.format }}</strong></p>
+            <p>{{ item.note }}</p>
+            {% if item.size %}<p><small>{{ item.size }}</small></p>{% endif %}
+
+            <a class="button secondary" href="{{ item.url }}">Download →</a>
+          </article>
+        {% endfor %}
+      </div>
+
+      <div class="card content-card">
+        <h3>How these downloads work</h3>
+        <p>
+          GitHub Actions build artifacts normally require a signed-in GitHub account to download. The
+          links above go through <a href="https://nightly.link/">nightly.link</a>, a public, open-source
+          proxy that mirrors the most recent successful build with no login required. Each link downloads
+          a <code>.zip</code> file; the actual installer, package or AppImage is inside and needs to be
+          extracted once.
+        </p>
+        <p>
+          Instead of the .flatpakref download, Flatpak users can also track the nightly channel directly
+          through the CLI once the Stable or Beta repo is already added:
+        </p>
+        <pre><code>flatpak install kst4contest de.x08.KST4Contest//nightly</code></pre>
+        <p>
+          See the <a href="/manual/en/installation/">installation guide</a> for how the Stable, Beta and
+          Nightly channels relate to each other, and for the full Flatpak setup. Older or in-progress
+          builds can be browsed on the
+          <a href="{{ nightly.runsUrl }}">nightly workflow run list on GitHub</a>.
+        </p>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -78,3 +247,9 @@ description: Download the latest stable KST4Contest packages for Windows, Linux 
     </div>
   </div>
 </section>
+
+<script>
+  var channelTabByHash = { "#beta": "channel-beta", "#nightly": "channel-nightly" };
+  var channelTab = document.getElementById(channelTabByHash[location.hash]);
+  if (channelTab) { channelTab.checked = true; }
+</script>
