@@ -140,7 +140,9 @@ public final class ScoreService {
                 controller.getStationMetricsService().snapshot(nowEpochMs, prefs);
 
         // 1) Choose one representative per callsignRaw
-        Map<String, ChatMember> representativeByCallRaw = chooseRepresentativeMembers(members, lastInbound);
+        Map<String, List<ChatMember>> variantsByCallRaw = groupMembersByCallRaw(members);
+        Map<String, ChatMember> representativeByCallRaw =
+                chooseRepresentativeMembers(variantsByCallRaw, lastInbound);
 
         // 2) Compute score once per callsignRaw
         Map<String, Double> scoreByCallRaw = new HashMap<>(representativeByCallRaw.size());
@@ -154,6 +156,7 @@ public final class ScoreService {
 
             double score = priorityCalculator.calculatePriority(
                     representative,
+                    variantsByCallRaw.getOrDefault(callRaw, List.of(representative)),
                     prefs,
                     activeSkeds,
                     metricsSnapshot,
@@ -189,6 +192,21 @@ public final class ScoreService {
         });
     }
 
+    private Map<String, List<ChatMember>> groupMembersByCallRaw(List<ChatMember> members) {
+        Map<String, List<ChatMember>> byCallRaw = new HashMap<>();
+
+        for (ChatMember member : members) {
+            if (member == null) continue;
+
+            String callRaw = normalizeCallRaw(member.getCallSignRaw());
+            if (callRaw == null || callRaw.isEmpty()) continue;
+
+            byCallRaw.computeIfAbsent(callRaw, ignored -> new ArrayList<>()).add(member);
+        }
+
+        return byCallRaw;
+    }
+
     /**
      * Picks one ChatMember object per callsignRaw.
      * Preference order:
@@ -196,18 +214,9 @@ public final class ScoreService {
      * 2) Most recently active variant (fallback)
      */
     private Map<String, ChatMember> chooseRepresentativeMembers(
-            List<ChatMember> members,
+            Map<String, List<ChatMember>> byCallRaw,
             Map<String, ChatCategory> lastInboundCategoryByCallRaw
     ) {
-        Map<String, List<ChatMember>> byCallRaw = new HashMap<>();
-
-        for (ChatMember m : members) {
-            if (m == null) continue;
-            String callRaw = normalizeCallRaw(m.getCallSignRaw());
-            if (callRaw == null || callRaw.isEmpty()) continue;
-            byCallRaw.computeIfAbsent(callRaw, k -> new ArrayList<>()).add(m);
-        }
-
         Map<String, ChatMember> representative = new HashMap<>(byCallRaw.size());
 
         for (Map.Entry<String, List<ChatMember>> entry : byCallRaw.entrySet()) {

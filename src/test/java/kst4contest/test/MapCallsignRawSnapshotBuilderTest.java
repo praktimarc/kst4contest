@@ -45,6 +45,38 @@ class MapCallsignRawSnapshotBuilderTest {
         assertFalse(snapshots.get(0).offersSelectedBand());
     }
 
+    @Test
+    void notQrvOverridesNameDerivedMapOpportunity() {
+        ChatMember station = buildStation("DL1ABC", "QRV 2m 70cm", "JN58TD", 1_000L);
+        station.setQrv432(false);
+
+        MapCallsignRawSnapshotBuilder builder = new MapCallsignRawSnapshotBuilder();
+        MapCallsignRawSnapshot snapshot = builder.buildSnapshots(
+                List.of(station),
+                null,
+                EnumSet.of(Band.B_432)
+        ).get(0);
+
+        assertFalse(snapshot.offersSelectedBand());
+        assertFalse(snapshot.bandSummary().contains("432"));
+    }
+
+    @Test
+    void workedBandIsShownAsInformationButNotAsUpgradeOpportunity() {
+        ChatMember station = buildStation("DL1ABC", "QRV 2m", "JN58TD", 1_000L);
+        station.setWorked144(true);
+
+        MapCallsignRawSnapshotBuilder builder = new MapCallsignRawSnapshotBuilder();
+        MapCallsignRawSnapshot snapshot = builder.buildSnapshots(
+                List.of(station),
+                null,
+                EnumSet.of(Band.B_144)
+        ).get(0);
+
+        assertTrue(snapshot.bandSummary().contains("144"));
+        assertFalse(snapshot.offersSelectedBand());
+    }
+
     private ChatMember buildStation(String callSign, String name, String locator, long activityEpoch) {
         ChatMember chatMember = new ChatMember();
         chatMember.setCallSign(callSign);

@@ -153,7 +153,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>5.12.2</version>
+            <version>${junit.version}</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -266,6 +266,15 @@
                 <version>${maven.surfire.plugin}</version>
                 <configuration>
                     <testFailureIgnore>true</testFailureIgnore>
+                    <!--
+                        Without this, Surefire's automatic module-path detection splits the
+                        JUnit Platform jars across classpath and module-path inconsistently
+                        (module org.junit.platform.commons ends up loaded while a class from
+                        junit-platform-engine stays in the unnamed module), which fails with
+                        an IllegalAccessError before any test can run. The project itself has
+                        no module-info.java, so plain classpath execution is correct here.
+                    -->
+                    <useModulePath>false</useModulePath>
                 </configuration>
             </plugin>
 

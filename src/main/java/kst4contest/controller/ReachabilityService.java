@@ -1,4 +1,5 @@
 package kst4contest.controller;
+import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.view.map.MapCallsignRawSnapshot;
 
 import java.util.ArrayList;
@@ -168,14 +169,31 @@ public final class ReachabilityService {
                 selectedSnapshot.lastKnownFrequenciesByBand()
         );
 
-        if (!Double.isFinite(analysisFrequencyMHz) || analysisFrequencyMHz <= 0.0) {
-            Band fallbackBand = member == null ? Band.B_144 : resolveAutoBand(member);
-            analysisFrequencyMHz = resolveAnalysisFrequencyForBand(member, fallbackBand);
+        Band analysisBand = Band.fromFrequency(analysisFrequencyMHz);
+        if (analysisBand != null && !isUsableAutomaticBand(member, analysisBand)) {
+            analysisFrequencyMHz = Double.NaN;
+            analysisBand = null;
         }
 
-        Band analysisBand = Band.fromFrequency(analysisFrequencyMHz);
-        if (analysisBand == null) {
-            analysisBand = member == null ? Band.B_144 : resolveAutoBand(member);
+        if (!Double.isFinite(analysisFrequencyMHz)
+                || analysisFrequencyMHz <= 0.0
+                || analysisBand == null) {
+
+            Band fallbackBand = resolveAutoBand(member);
+            if (fallbackBand == null) {
+                dispatchFxCallback(
+                        fxCallback,
+                        PathAnalysisResult.waitingForUsableBand(
+                                ownLocator6,
+                                targetLocator6,
+                                selectedSnapshot.callSignRaw()
+                        )
+                );
+                return;
+            }
+
+            analysisBand = fallbackBand;
+            analysisFrequencyMHz = resolveAnalysisFrequencyForBand(member, fallbackBand);
         }
 
         PathAnalysisRequest request = buildRequest(
@@ -230,20 +248,49 @@ public final class ReachabilityService {
      * @return resolved band
      */
     public Band resolveAutoBand(ChatMember member) {
-        if (member != null && member.getKnownActiveBands() != null && !member.getKnownActiveBands().isEmpty()) {
-            return member.getKnownActiveBands().keySet().stream()
-                    .filter(Objects::nonNull)
+        EnumSet<Band> enabledBands = getEnabledStationBands();
+        if (enabledBands.isEmpty()) {
+            return null;
+        }
+
+        List<ChatMember> variants = resolveCallsignVariants(member);
+        BandOpportunityResolver.Resolution resolution =
+                BandOpportunityResolver.resolve(variants, System.currentTimeMillis());
+
+        EnumSet<Band> availableOfferedBands = resolution.getAvailableBands();
+        availableOfferedBands.retainAll(enabledBands);
+
+        if (!availableOfferedBands.isEmpty()) {
+            return availableOfferedBands.stream()
                     .min(Comparator.comparingDouble(Band::getDefaultAnalysisFrequencyMHz))
-                    .orElse(Band.B_144);
+                    .orElse(null);
+        }
+
+        // Known evidence exists, but every matching band is disabled or NOT QRV.
+        if (resolution.hasBandEvidence()) {
+            return null;
+        }
+
+        EnumSet<Band> fallbackBands = EnumSet.copyOf(enabledBands);
+        fallbackBands.removeAll(resolution.getNotQrvBands());
+        if (fallbackBands.isEmpty()) {
+            return null;
         }
 
         if (member != null
                 && member.getChatCategory() != null
-                && member.getChatCategory().getCategoryNumber() == ChatCategory.MICROWAVE) {
+                && member.getChatCategory().getCategoryNumber() == ChatCategory.MICROWAVE
+                && fallbackBands.contains(Band.B_1296)) {
             return Band.B_1296;
         }
 
-        return Band.B_144;
+        if (fallbackBands.contains(Band.B_144)) {
+            return Band.B_144;
+        }
+
+        return fallbackBands.stream()
+                .min(Comparator.comparingDouble(Band::getDefaultAnalysisFrequencyMHz))
+                .orElse(null);
     }
 
     /**
@@ -253,22 +300,44 @@ public final class ReachabilityService {
      * @return set of enabled bands
      */
     public EnumSet<Band> getEnabledStationBands() {
-        ChatPreferences preferences = chatController.getChatPreferences();
-        EnumSet<Band> enabledBands = EnumSet.noneOf(Band.class);
+        return BandOpportunityResolver.getEnabledStationBands(
+                chatController.getChatPreferences()
+        );
+    }
 
-        if (preferences == null) {
-            return enabledBands;
+    private List<ChatMember> resolveCallsignVariants(ChatMember member) {
+        if (member == null) {
+            return List.of();
         }
 
-        if (preferences.isStn_bandActive144()) enabledBands.add(Band.B_144);
-        if (preferences.isStn_bandActive432()) enabledBands.add(Band.B_432);
-        if (preferences.isStn_bandActive1240()) enabledBands.add(Band.B_1296);
-        if (preferences.isStn_bandActive2300()) enabledBands.add(Band.B_2320);
-        if (preferences.isStn_bandActive3400()) enabledBands.add(Band.B_3400);
-        if (preferences.isStn_bandActive5600()) enabledBands.add(Band.B_5760);
-        if (preferences.isStn_bandActive10G()) enabledBands.add(Band.B_10G);
+        String rawCall = member.getCallSignRaw() != null
+                ? member.getCallSignRaw()
+                : member.getCallSign();
 
-        return enabledBands;
+        List<ChatMember> variants = chatController.findActiveChatMembersByRawCall(rawCall);
+        return variants.isEmpty() ? List.of(member) : variants;
+    }
+
+    /**
+     * Verifies that an automatically selected map/snapshot frequency belongs to a
+     * locally enabled band that is still available after NOT-QRV resolution.
+     * Manual UI band overrides are handled separately and are not changed here.
+     */
+    private boolean isUsableAutomaticBand(ChatMember member, Band band) {
+        if (band == null || !getEnabledStationBands().contains(band)) {
+            return false;
+        }
+
+        if (member == null) {
+            return true;
+        }
+
+        BandOpportunityResolver.Resolution resolution = BandOpportunityResolver.resolve(
+                resolveCallsignVariants(member),
+                System.currentTimeMillis()
+        );
+
+        return resolution.getAvailableBands().contains(band);
     }
 
     /**

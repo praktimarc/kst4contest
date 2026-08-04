@@ -332,6 +332,8 @@ public class ChatPreferences {
 	boolean guiOptions_defaultFilterPmToMe;
 	boolean guiOptions_defaultFilterPmToOther;
 	boolean guiOptions_defaultFilterPublicMsgs;
+	boolean guiOptions_showGrossFieldWorkedHintInBandColumns = true; // show "o" (grid square already worked on this band) in the band columns
+	boolean guiOptions_showFreshCallHintInBandColumns = true; // show "a" (band available, call not worked on any band yet) instead of always "B+" in the band columns
 
 	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
 	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
@@ -645,6 +647,22 @@ public class ChatPreferences {
 
 	public void setGuiOptions_defaultFilterPmToMe(boolean guiOptions_defaultFilterPmToMe) {
 		this.guiOptions_defaultFilterPmToMe = guiOptions_defaultFilterPmToMe;
+	}
+
+	public boolean isGuiOptions_showGrossFieldWorkedHintInBandColumns() {
+		return guiOptions_showGrossFieldWorkedHintInBandColumns;
+	}
+
+	public void setGuiOptions_showGrossFieldWorkedHintInBandColumns(boolean guiOptions_showGrossFieldWorkedHintInBandColumns) {
+		this.guiOptions_showGrossFieldWorkedHintInBandColumns = guiOptions_showGrossFieldWorkedHintInBandColumns;
+	}
+
+	public boolean isGuiOptions_showFreshCallHintInBandColumns() {
+		return guiOptions_showFreshCallHintInBandColumns;
+	}
+
+	public void setGuiOptions_showFreshCallHintInBandColumns(boolean guiOptions_showFreshCallHintInBandColumns) {
+		this.guiOptions_showFreshCallHintInBandColumns = guiOptions_showFreshCallHintInBandColumns;
 	}
 
 	public boolean isGuiOptions_defaultFilterPmToOther() {
@@ -1935,6 +1953,14 @@ public class ChatPreferences {
 			guiOptions_defaultFilterPublicMsgs.setTextContent(this.isGuiOptions_defaultFilterPublicMsgs()+"");
 			guiSaveableOptions.appendChild(guiOptions_defaultFilterPublicMsgs);
 
+			Element guiOptions_showGrossFieldWorkedHintInBandColumns = doc.createElement("guiOptions_showGrossFieldWorkedHintInBandColumns");
+			guiOptions_showGrossFieldWorkedHintInBandColumns.setTextContent(this.isGuiOptions_showGrossFieldWorkedHintInBandColumns()+"");
+			guiSaveableOptions.appendChild(guiOptions_showGrossFieldWorkedHintInBandColumns);
+
+			Element guiOptions_showFreshCallHintInBandColumns = doc.createElement("guiOptions_showFreshCallHintInBandColumns");
+			guiOptions_showFreshCallHintInBandColumns.setTextContent(this.isGuiOptions_showFreshCallHintInBandColumns()+"");
+			guiSaveableOptions.appendChild(guiOptions_showFreshCallHintInBandColumns);
+
 			Element guiOptions_darkModeActive = doc.createElement("guiOptions_darkModeActive");
 			guiOptions_darkModeActive.setTextContent(this.GUI_darkModeActive + "");
 			guiSaveableOptions.appendChild(guiOptions_darkModeActive);
@@ -2815,6 +2841,8 @@ public class ChatPreferences {
 				this.setGuiOptions_defaultFilterPmToMe(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPmToMe(), "guiOptions_defaultFilterPmToMe"));
 				this.setGuiOptions_defaultFilterPmToOther(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPmToOther(), "guiOptions_defaultFilterPmToOther"));
 				this.setGuiOptions_defaultFilterPublicMsgs(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPublicMsgs(), "guiOptions_defaultFilterPublicMsgs"));
+				this.setGuiOptions_showGrossFieldWorkedHintInBandColumns(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_showGrossFieldWorkedHintInBandColumns(), "guiOptions_showGrossFieldWorkedHintInBandColumns"));
+				this.setGuiOptions_showFreshCallHintInBandColumns(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_showFreshCallHintInBandColumns(), "guiOptions_showFreshCallHintInBandColumns"));
 
 				// Added in later versions: dark mode flags
 				this.GUI_darkModeActive = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActive, "guiOptions_darkModeActive");

@@ -241,6 +241,36 @@ public record PathAnalysisResult(
     }
 
     /**
+     * Creates a placeholder when automatic band resolution has no usable result.
+     */
+    public static PathAnalysisResult waitingForUsableBand(String fromLocator6,
+                                                          String toLocator6,
+                                                          String toCallsignRaw) {
+        return new PathAnalysisResult(
+                "Waiting",
+                fromLocator6,
+                toLocator6,
+                toCallsignRaw,
+                Double.NaN,
+                Double.NaN,
+                Double.NaN,
+                Double.NaN,
+                Double.NaN,
+                false,
+                false,
+                Double.NaN,
+                Double.NaN,
+                Double.NaN,
+                Double.NaN,
+                Double.NaN,
+                -1,
+                "No usable automatic band is available. "
+                        + "Check own enabled bands and the station's NOT-QRV tags.",
+                List.of()
+        );
+    }
+
+    /**
      * Creates a finished result without a usable terrain profile.
      *
      * @param analysisMode source/mode text

@@ -1,6 +1,7 @@
 package kst4contest.view.map;
 
 import kst4contest.locatorUtils.Location;
+import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.model.AirPlaneReflectionInfo;
 import kst4contest.model.Band;
 import kst4contest.model.ChatMember;
@@ -14,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Builds immutable map snapshots from the currently visible chat members.
@@ -23,8 +23,6 @@ import java.util.regex.Pattern;
  * per base callsign, even if the same station exists in multiple chat categories.
  */
 public final class MapCallsignRawSnapshotBuilder {
-
-    private static final Pattern TOKEN_SPLIT_PATTERN = Pattern.compile("[^A-Z0-9]+");
 
     public List<MapCallsignRawSnapshot> buildSnapshots(Collection<ChatMember> visibleChatMembers,
                                                        ChatMember selectedChatMember,
@@ -73,10 +71,21 @@ public final class MapCallsignRawSnapshotBuilder {
 
             Location location = new Location(locator6);
 
-            LinkedHashMap<String, String> frequenciesByBand = collectLastKnownFrequenciesByBand(variants);
-            EnumSet<Band> sureBands = collectSureBands(variants, frequenciesByBand);
-            String bandSummary = buildBandSummary(sureBands);
-            boolean offersSelectedBand = hasAnySelectedBand(sureBands, selectedBands);
+            long nowEpochMs = System.currentTimeMillis();
+            BandOpportunityResolver.Resolution bandResolution =
+                    BandOpportunityResolver.resolve(variants, nowEpochMs);
+
+            EnumSet<Band> availableBands = bandResolution.getAvailableBands();
+            LinkedHashMap<String, String> frequenciesByBand = collectLastKnownFrequenciesByBand(
+                    variants,
+                    availableBands,
+                    nowEpochMs
+            );
+
+            String bandSummary = buildBandSummary(availableBands);
+            boolean offersSelectedBand = !bandResolution
+                    .getUnworkedEnabledBands(selectedBands)
+                    .isEmpty();
 
             boolean warningToMyDirection = variants.stream().anyMatch(ChatMember::isInAngleAndRange);
             boolean worked = variants.stream().anyMatch(this::isWorkedAtAnyBand);
@@ -152,7 +161,11 @@ public final class MapCallsignRawSnapshotBuilder {
                 .orElse("");
     }
 
-    private LinkedHashMap<String, String> collectLastKnownFrequenciesByBand(List<ChatMember> variants) {
+    private LinkedHashMap<String, String> collectLastKnownFrequenciesByBand(
+            List<ChatMember> variants,
+            EnumSet<Band> availableBands,
+            long nowEpochMs
+    ) {
 
         Map<Band, FrequencyCandidate> latestByBand = new EnumMap<>(Band.class);
 
@@ -161,16 +174,29 @@ public final class MapCallsignRawSnapshotBuilder {
                 continue;
             }
 
-            for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> bandEntry : variant.getKnownActiveBands().entrySet()) {
+            for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> bandEntry
+                    : variant.getKnownActiveBands().entrySet()) {
+
                 Band band = bandEntry.getKey();
                 ChatMember.ActiveFrequencyInfo activeFrequencyInfo = bandEntry.getValue();
 
-                if (band == null || activeFrequencyInfo == null) {
+                if (band == null
+                        || activeFrequencyInfo == null
+                        || availableBands == null
+                        || !availableBands.contains(band)) {
+                    continue;
+                }
+
+                long ageMs = nowEpochMs - activeFrequencyInfo.timestampEpoch;
+                if (ageMs < 0L
+                        || ageMs > BandOpportunityResolver.RECENT_DYNAMIC_EVIDENCE_MAX_AGE_MS) {
                     continue;
                 }
 
                 FrequencyCandidate previous = latestByBand.get(band);
-                if (previous == null || activeFrequencyInfo.timestampEpoch > previous.timestampEpochMs()) {
+                if (previous == null
+                        || activeFrequencyInfo.timestampEpoch > previous.timestampEpochMs()) {
+
                     latestByBand.put(band, new FrequencyCandidate(
                             band,
                             formatFrequency(activeFrequencyInfo.frequency),
@@ -178,150 +204,29 @@ public final class MapCallsignRawSnapshotBuilder {
                     ));
                 }
             }
-
-            addFallbackCurrentFrequencyIfUseful(variant, latestByBand);
         }
 
         LinkedHashMap<String, String> ordered = new LinkedHashMap<>();
         latestByBand.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .forEach(entry -> ordered.put(toBandDisplayLabel(entry.getKey()), entry.getValue().formattedFrequency()));
+                .forEach(entry -> ordered.put(
+                        toBandDisplayLabel(entry.getKey()),
+                        entry.getValue().formattedFrequency()
+                ));
 
         return ordered;
     }
 
-    private EnumSet<Band> collectSureBands(List<ChatMember> variants,
-                                           LinkedHashMap<String, String> frequenciesByBand) {
-        EnumSet<Band> sureBands = EnumSet.noneOf(Band.class);
-
-        if (frequenciesByBand != null) {
-            for (String label : frequenciesByBand.keySet()) {
-                Band mappedBand = bandFromDisplayLabel(label);
-                if (mappedBand != null) {
-                    sureBands.add(mappedBand);
-                }
-            }
-        }
-
-        for (ChatMember variant : variants) {
-            if (variant == null || variant.getName() == null || variant.getName().isBlank()) {
-                continue;
-            }
-            sureBands.addAll(detectBandsFromStationName(variant.getName()));
-        }
-
-        return sureBands;
-    }
-
-    private EnumSet<Band> detectBandsFromStationName(String stationName) {
-        EnumSet<Band> detectedBands = EnumSet.noneOf(Band.class);
-        if (stationName == null || stationName.isBlank()) {
-            return detectedBands;
-        }
-
-        String normalized = stationName.toUpperCase(Locale.ROOT);
-        String[] tokens = TOKEN_SPLIT_PATTERN.split(normalized);
-        for (String token : tokens) {
-            if (token == null || token.isBlank()) {
-                continue;
-            }
-
-            switch (token) {
-                case "2", "2M", "144", "144MHZ" -> detectedBands.add(Band.B_144);
-                case "70", "70CM", "432", "432MHZ" -> detectedBands.add(Band.B_432);
-                case "23", "23CM", "1296", "1296MHZ" -> detectedBands.add(Band.B_1296);
-                case "13", "13CM", "2300", "2320", "2320MHZ" -> detectedBands.add(Band.B_2320);
-                case "9", "9CM", "3400", "3400MHZ" -> detectedBands.add(Band.B_3400);
-                case "6", "6CM", "5600", "5760", "5760MHZ" -> detectedBands.add(Band.B_5760);
-                case "3", "3CM", "10G", "10GHZ", "10368", "10368MHZ" -> detectedBands.add(Band.B_10G);
-                case "24G", "24GHZ", "24048", "24048MHZ" -> detectedBands.add(Band.B_24G);
-                default -> {
-                }
-            }
-        }
-
-        return detectedBands;
-    }
-
-    private String buildBandSummary(EnumSet<Band> sureBands) {
-        if (sureBands == null || sureBands.isEmpty()) {
+    private String buildBandSummary(EnumSet<Band> availableBands) {
+        if (availableBands == null || availableBands.isEmpty()) {
             return "";
         }
 
-        List<String> labels = sureBands.stream()
+        List<String> labels = availableBands.stream()
                 .sorted()
                 .map(this::toBandDisplayLabel)
                 .toList();
         return String.join(", ", labels);
-    }
-
-    private boolean hasAnySelectedBand(EnumSet<Band> sureBands, EnumSet<Band> selectedBands) {
-        if (sureBands == null || sureBands.isEmpty() || selectedBands == null || selectedBands.isEmpty()) {
-            return false;
-        }
-        for (Band band : selectedBands) {
-            if (sureBands.contains(band)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private Band bandFromDisplayLabel(String label) {
-        if (label == null || label.isBlank()) {
-            return null;
-        }
-
-        return switch (label) {
-            case "144" -> Band.B_144;
-            case "432" -> Band.B_432;
-            case "1296" -> Band.B_1296;
-            case "2320" -> Band.B_2320;
-            case "3400" -> Band.B_3400;
-            case "5760" -> Band.B_5760;
-            case "10368" -> Band.B_10G;
-            case "24048" -> Band.B_24G;
-            default -> null;
-        };
-    }
-
-    /**
-     * Fallback for stations where the current displayed QRG exists but the
-     * knownActiveBands history has not yet been filled.
-     *
-     * This parsing is intentionally tolerant so strings like "144.300 MHz"
-     * can still be used.
-     */
-    private void addFallbackCurrentFrequencyIfUseful(ChatMember variant, Map<Band, FrequencyCandidate> latestByBand) {
-        if (variant == null || variant.getFrequency() == null || variant.getFrequency().getValue() == null) {
-            return;
-        }
-
-        String rawFrequency = variant.getFrequency().getValue().trim();
-        if (rawFrequency.isBlank()) {
-            return;
-        }
-
-        double parsedFrequencyMHz = PathGeometryUtils.tryParseFrequencyMHz(rawFrequency);
-        if (!Double.isFinite(parsedFrequencyMHz) || parsedFrequencyMHz <= 0.0) {
-            return;
-        }
-
-        Band detectedBand = Band.fromFrequency(parsedFrequencyMHz);
-        if (detectedBand == null) {
-            return;
-        }
-
-        FrequencyCandidate previous = latestByBand.get(detectedBand);
-        if (previous != null && previous.timestampEpochMs() >= variant.getActivityTimeLastInEpoch()) {
-            return;
-        }
-
-        latestByBand.put(detectedBand, new FrequencyCandidate(
-                detectedBand,
-                formatFrequency(parsedFrequencyMHz),
-                variant.getActivityTimeLastInEpoch()
-        ));
     }
 
     private boolean isWorkedAtAnyBand(ChatMember member) {

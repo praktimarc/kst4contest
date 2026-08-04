@@ -20,6 +20,7 @@ import javafx.collections.transformation.SortedList;
 import kst4contest.ApplicationConstants;
 import kst4contest.controller.interfaces.PstRotatorEventListener;
 import kst4contest.locatorUtils.DirectionUtils;
+import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.*;
 import kst4contest.test.MockKstServer;
@@ -216,18 +217,11 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
     }
 
 	/**
-	 * Called when an external logger (Win-Test or UCXLog interface) reports that a QSO was logged.
+	 * Called when an external logger reports that a QSO was logged.
 	 *
-	 * Process goal:
-	 * 1) Detect whether the logged station is *still active (QRV)* on at least one *other* band
-	 *    that is enabled for "my station" (stn_bandActive[Band]) AND not worked yet (worked144/432/...).
-	 * 2) If yes: trigger an on-screen hint (blinking status button) and play the existing sked-notification sound.
-	 * 3) Request a score recompute so the station can become visible again (optional boost is applied in PriorityCalculator).
-	 *
-	 * IMPORTANT:
-	 * - We do NOT use ChatMember.worked (UI-only filter flag) for scoring decisions.
-	 * - We only use per-band worked flags (worked144, worked432, ...).
-	 * - "QRV on band" is derived from recent entries in ChatMember.knownActiveBands.
+	 * <p>The common resolver combines recent QRG evidence and station-name bands
+	 * across every active callsignRaw variant. A manual NOT-QRV tag overrides this
+	 * automatic evidence before the hint and priority boost are evaluated.</p>
 	 */
 	public void onExternalLogEntryReceived(String callSignRaw) {
 
@@ -241,26 +235,20 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 			System.out.println("[BandUpgradeHint] LOG received for call=" + callRaw);
 		}
 
-		// 1) Determine which bands I am active on (configured at startup via stn_bandActive* flags)
-		EnumSet<Band> myEnabledBands = getMyEnabledBandsFromPrefs(chatPreferences);
+		EnumSet<Band> myEnabledBands =
+				BandOpportunityResolver.getEnabledStationBands(chatPreferences);
 		if (myEnabledBands.isEmpty()) return;
 
-		// 2) Determine which bands the station was recently seen active on (from Smart Frequency Extraction history)
-		final long now = System.currentTimeMillis();
-		final long maxAgeMs = TimeUnit.MINUTES.toMillis(30); // keep consistent with "recent activity" semantics
-		EnumSet<Band> stationOfferedBands = collectStationOfferedBandsFromHistory(callRaw, now, maxAgeMs);
+		List<ChatMember> variants = findActiveChatMembersByRawCall(callRaw);
+		BandOpportunityResolver.Resolution bandResolution =
+				BandOpportunityResolver.resolve(variants, System.currentTimeMillis());
+
+		EnumSet<Band> stationOfferedBands = bandResolution.getOfferedBands();
 		if (stationOfferedBands.isEmpty()) return;
 
-		// 3) Keep only bands that I can actually work
-		stationOfferedBands.retainAll(myEnabledBands);
-		if (stationOfferedBands.isEmpty()) return;
-
-		// 4) Determine already worked bands (per-band flags only)
-		EnumSet<Band> workedBands = collectWorkedBands(callRaw);
-
-		// 5) Remaining bands = offered ∩ enabled - worked
-		EnumSet<Band> remainingBands = EnumSet.copyOf(stationOfferedBands);
-		remainingBands.removeAll(workedBands);
+		EnumSet<Band> workedBands = bandResolution.getWorkedBands();
+		EnumSet<Band> remainingBands =
+				bandResolution.getUnworkedEnabledBands(myEnabledBands);
 		if (remainingBands.isEmpty()) return;
 
 		if (DEBUG_BAND_UPGRADE_HINT) {
@@ -268,34 +256,35 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 					+ " enabled=" + formatBandsHuman(myEnabledBands)
 					+ " offered=" + formatBandsHuman(stationOfferedBands)
 					+ " worked=" + (workedBands.isEmpty() ? "-" : formatBandsHuman(workedBands))
+					+ " NOT-QRV=" + formatBandsHuman(bandResolution.getNotQrvBands())
 					+ " remaining=" + formatBandsHuman(remainingBands));
 		}
 
-		// 6) Build UI text (button + tooltip)
 		String remainingHuman = formatBandsHuman(remainingBands);
 		String shortText = "BAND+ " + callRaw + " " + remainingHuman;
 
-		String tooltip = "Logged " + callRaw + ", but station is still QRV on additional band(s): "
+		String tooltip = "Logged " + callRaw
+				+ ", but the station still offers additional band(s): "
 				+ remainingHuman
 				+ "\n(Enabled: " + formatBandsHuman(myEnabledBands)
-				+ " | Worked: " + (workedBands.isEmpty() ? "-" : formatBandsHuman(workedBands)) + ")";
+				+ " | Worked: " + (workedBands.isEmpty() ? "-" : formatBandsHuman(workedBands))
+				+ " | NOT QRV: " + formatBandsHuman(bandResolution.getNotQrvBands()) + ")";
 
 		ThreadStateMessage msg = new ThreadStateMessage("BandUpgradeHint", true, tooltip, false);
 		msg.setRunningInformationTextDescription(shortText);
-
-		// 7) Trigger status update -> View will blink a dedicated indicator button
 		onThreadStatus("BandUpgradeHint", msg);
 
-		// 8) Sound (re-use existing sked notification sound) - respects global simple-sound flag
 		if (chatPreferences.isNotify_playSimpleSounds()) {
 			try {
-				getPlayAudioUtils().playNoiseLauncher('!'); // same as SkedReminderService
+				getPlayAudioUtils().playNoiseLauncher('!');
 			} catch (Exception e) {
-				System.out.println("[ChatController, warning]: failed to play band-upgrade hint sound: " + e.getMessage());
+				System.out.println(
+						"[ChatController, warning]: failed to play band-upgrade hint sound: "
+								+ e.getMessage()
+				);
 			}
 		}
 
-		// 9) Make sure score reacts quickly (boost is applied in PriorityCalculator if enabled)
 		if (getScoreService() != null) {
 			getScoreService().requestRecompute("BandUpgradeHint");
 		}
@@ -304,77 +293,6 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	/** Normalize callsign raw to a stable key for comparisons. */
 	private static String normalizeCallRaw(String callRaw) {
 		return callRaw.trim().toUpperCase(Locale.ROOT);
-	}
-
-	/** Helper: create enabled-band set from preferences. */
-	private static EnumSet<Band> getMyEnabledBandsFromPrefs(ChatPreferences prefs) {
-		EnumSet<Band> s = EnumSet.noneOf(Band.class);
-		if (prefs.isStn_bandActive144())  s.add(Band.B_144);
-		if (prefs.isStn_bandActive432())  s.add(Band.B_432);
-		if (prefs.isStn_bandActive1240()) s.add(Band.B_1296);
-		if (prefs.isStn_bandActive2300()) s.add(Band.B_2320);
-		if (prefs.isStn_bandActive3400()) s.add(Band.B_3400);
-		if (prefs.isStn_bandActive5600()) s.add(Band.B_5760);
-		if (prefs.isStn_bandActive10G())  s.add(Band.B_10G);
-		return s;
-	}
-
-	/**
-	 * Helper: union of all recently detected "QRV on band" entries across *all* ChatMember instances
-	 * having the same callSignRaw (because a callsign may exist multiple times with different categories).
-	 */
-	private EnumSet<Band> collectStationOfferedBandsFromHistory(String callRaw, long nowMs, long maxAgeMs) {
-
-		EnumSet<Band> offered = EnumSet.noneOf(Band.class);
-
-		for (ChatMember cm : findActiveChatMembersByRawCall(callRaw)) {
-			if (cm == null || cm.getCallSignRaw() == null) continue;
-
-			Map<Band, ChatMember.ActiveFrequencyInfo> map = cm.getKnownActiveBands();
-			if (map == null || map.isEmpty()) continue;
-
-			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> e : map.entrySet()) {
-				if (e.getKey() == null || e.getValue() == null) continue;
-
-				long age = nowMs - e.getValue().timestampEpoch;
-				if (age >= 0 && age <= maxAgeMs) {
-					offered.add(e.getKey());
-				}
-
-				if (DEBUG_BAND_UPGRADE_HINT) {
-					System.out.println("[BandUpgradeHint] history call=" + callRaw
-							+ " band=" + e.getKey()
-							+ " freq=" + e.getValue().frequency
-							+ " ageMs=" + age);
-				}
-			}
-		}
-
-		return offered;
-	}
-
-	/**
-	 * Helper: union of per-band worked flags across all ChatMember instances for the same call.
-	 * IMPORTANT: ChatMember.worked is UI-only and NOT used here.
-	 */
-	private EnumSet<Band> collectWorkedBands(String callRaw) {
-
-		EnumSet<Band> worked = EnumSet.noneOf(Band.class);
-
-		for (ChatMember cm : findActiveChatMembersByRawCall(callRaw)) {
-			if (cm == null || cm.getCallSignRaw() == null) continue;
-
-			if (cm.isWorked144())  worked.add(Band.B_144);
-			if (cm.isWorked432())  worked.add(Band.B_432);
-			if (cm.isWorked1240()) worked.add(Band.B_1296);
-			if (cm.isWorked2300()) worked.add(Band.B_2320);
-			if (cm.isWorked3400()) worked.add(Band.B_3400);
-			if (cm.isWorked5600()) worked.add(Band.B_5760);
-			if (cm.isWorked10G())  worked.add(Band.B_10G);
-			if (cm.isWorked24G())  worked.add(Band.B_24G);
-		}
-
-		return worked;
 	}
 
 	private static String formatBandsHuman(EnumSet<Band> bands) {
@@ -1371,6 +1289,49 @@ private ObservableList<String>
 		}
 
 		return matchingMembers;
+	}
+
+	/**
+	 * Copies the band-specific NOT-QRV state to every active category variant of the
+	 * same base callsign. The database already uses callSignRaw as its key; applying
+	 * the state to the runtime model immediately prevents category-dependent B+,
+	 * filter, map and score results before the next database refresh.
+	 *
+	 * @param sourceMember member whose current NOT-QRV checkboxes are authoritative
+	 */
+	public void propagateNotQrvStateToActiveMembers(ChatMember sourceMember) {
+		if (sourceMember == null) {
+			return;
+		}
+
+		String rawCall = sourceMember.getCallSignRaw() != null
+				? sourceMember.getCallSignRaw()
+				: sourceMember.getCallSign();
+
+		List<ChatMember> variants = findActiveChatMembersByRawCall(rawCall);
+		if (variants.isEmpty()) {
+			variants = List.of(sourceMember);
+		}
+
+		for (ChatMember target : variants) {
+			if (target == null) {
+				continue;
+			}
+
+			target.setQrv144(sourceMember.isQrv144());
+			target.setQrv432(sourceMember.isQrv432());
+			target.setQrv1240(sourceMember.isQrv1240());
+			target.setQrv2300(sourceMember.isQrv2300());
+			target.setQrv3400(sourceMember.isQrv3400());
+			target.setQrv5600(sourceMember.isQrv5600());
+			target.setQrv10G(sourceMember.isQrv10G());
+		}
+
+		if (scoreService != null) {
+			scoreService.requestRecompute("NOT-QRV state changed");
+		}
+
+		fireUserListUpdate("NOT-QRV state propagated to callsign variants");
 	}
 
 	/**

@@ -3,9 +3,9 @@ package kst4contest.logic;
 import kst4contest.controller.StationMetricsService;
 import kst4contest.model.*;
 
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Priority score calculation (off FX-thread).
@@ -16,10 +16,8 @@ import java.util.Map;
  */
 public class PriorityCalculator {
 
-    /** Max age for "known active bands" (derived from chat history). */
-    private static final long RX_BANDS_MAX_AGE_MS = 30L * 60L * 1000L; // 30 minutes
-
     public double calculatePriority(ChatMember member,
+                                    Collection<ChatMember> callsignVariants,
                                     ChatPreferences prefs,
                                     List<ContestSked> activeSkeds,
                                     StationMetricsService.Snapshot metricsSnapshot,
@@ -33,39 +31,49 @@ public class PriorityCalculator {
         // --------------------------------------------------------------------
         // 1) HARD FILTER: reachable hardware + "already worked on all possible bands"
         // --------------------------------------------------------------------
-        // --------------------------------------------------------------------
-// 1) HARD FILTER: reachable hardware + "already worked on all possible bands"
-// --------------------------------------------------------------------
-        EnumSet<Band> myEnabledBands = getMyEnabledBands(prefs);
+        Collection<ChatMember> variants = callsignVariants == null || callsignVariants.isEmpty()
+                ? List.of(member)
+                : callsignVariants;
 
-// "worked" for scoring is derived ONLY from per-band flags (worked144/432/...)
-// IMPORTANT: ChatMember.worked is UI-only and NOT used in scoring.
-        EnumSet<Band> workedBandsForScoring = getWorkedBands(member);
+        BandOpportunityResolver.Resolution bandResolution =
+                BandOpportunityResolver.resolve(variants, nowEpochMs);
 
-// Remaining bands that are:
-// - recently offered by the station (from knownActiveBands history)
-// - enabled at our station
-// - NOT worked yet (per-band flags)
-// If we do not know offered bands (history empty), this remains empty.
+        EnumSet<Band> myEnabledBands =
+                BandOpportunityResolver.getEnabledStationBands(prefs);
+
+        // ChatMember.worked remains UI-only. Scoring uses only per-band worked flags.
+        EnumSet<Band> workedBandsForScoring = bandResolution.getWorkedBands();
+
         EnumSet<Band> unworkedPossible = EnumSet.noneOf(Band.class);
 
-        EnumSet<Band> stationOfferedBands = getStationOfferedBandsFromHistory(member, nowEpochMs);
+        EnumSet<Band> stationOfferedBands = bandResolution.getOfferedBands();
+        EnumSet<Band> stationAvailableBands = bandResolution.getAvailableBands();
         EnumSet<Band> possibleBands = stationOfferedBands.isEmpty()
-                ? EnumSet.noneOf(Band.class) // unknown => don't hard-filter
-                : EnumSet.copyOf(stationOfferedBands);
+                ? EnumSet.noneOf(Band.class)
+                : EnumSet.copyOf(stationAvailableBands);
 
-        if (!possibleBands.isEmpty()) {
+        if (!stationOfferedBands.isEmpty()) {
             possibleBands.retainAll(myEnabledBands);
             if (possibleBands.isEmpty()) {
-                // We know their bands, but none of them are enabled at our station.
+                // Known bands are disabled locally or manually marked NOT QRV.
                 return 0.0;
             }
 
             unworkedPossible = EnumSet.copyOf(possibleBands);
             unworkedPossible.removeAll(workedBandsForScoring);
 
-            // If already worked on all possible bands => no priority on them anymore (contest logic).
             if (unworkedPossible.isEmpty()) {
+                return 0.0;
+            }
+        } else {
+            /*
+             * Missing band evidence is not automatically negative. A complete manual
+             * NOT-QRV exclusion is different: if every enabled own band is excluded,
+             * this station cannot be a current contest candidate.
+             */
+            EnumSet<Band> notExplicitlyExcluded = EnumSet.copyOf(myEnabledBands);
+            notExplicitlyExcluded.removeAll(bandResolution.getNotQrvBands());
+            if (!myEnabledBands.isEmpty() && notExplicitlyExcluded.isEmpty()) {
                 return 0.0;
             }
         }
@@ -223,46 +231,6 @@ public class PriorityCalculator {
         }
 
         return Math.max(0.0, score);
-    }
-
-    private static EnumSet<Band> getMyEnabledBands(ChatPreferences prefs) {
-        EnumSet<Band> out = EnumSet.noneOf(Band.class);
-        if (prefs.isStn_bandActive144()) out.add(Band.B_144);
-        if (prefs.isStn_bandActive432()) out.add(Band.B_432);
-        if (prefs.isStn_bandActive1240()) out.add(Band.B_1296);
-        if (prefs.isStn_bandActive2300()) out.add(Band.B_2320);
-        if (prefs.isStn_bandActive3400()) out.add(Band.B_3400);
-        if (prefs.isStn_bandActive5600()) out.add(Band.B_5760);
-        if (prefs.isStn_bandActive10G()) out.add(Band.B_10G);
-        return out;
-    }
-
-    private static EnumSet<Band> getStationOfferedBandsFromHistory(ChatMember member, long nowEpochMs) {
-        EnumSet<Band> out = EnumSet.noneOf(Band.class);
-        Map<Band, ChatMember.ActiveFrequencyInfo> map = member.getKnownActiveBands();
-        if (map == null || map.isEmpty()) return out;
-
-        for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> e : map.entrySet()) {
-            if (e == null || e.getKey() == null || e.getValue() == null) continue;
-            long age = nowEpochMs - e.getValue().timestampEpoch;
-            if (age <= RX_BANDS_MAX_AGE_MS) {
-                out.add(e.getKey());
-            }
-        }
-        return out;
-    }
-
-    private static EnumSet<Band> getWorkedBands(ChatMember member) {
-        EnumSet<Band> out = EnumSet.noneOf(Band.class);
-        if (member.isWorked144()) out.add(Band.B_144);
-        if (member.isWorked432()) out.add(Band.B_432);
-        if (member.isWorked1240()) out.add(Band.B_1296);
-        if (member.isWorked2300()) out.add(Band.B_2320);
-        if (member.isWorked3400()) out.add(Band.B_3400);
-        if (member.isWorked5600()) out.add(Band.B_5760);
-        if (member.isWorked10G()) out.add(Band.B_10G);
-        if (member.isWorked24G()) out.add(Band.B_24G);
-        return out;
     }
 
     private static int findNextAirplaneArrivingMinutes(AirPlaneReflectionInfo apInfo) {

@@ -343,6 +343,8 @@ public final class StationMapBridge {
                 + "|"
                 + String.format(Locale.US, "%.3f", analysisFrequencyMHz)
                 + "|"
+                + selectedSnapshot.bandSummary()
+                + "|"
                 + String.format(Locale.US, "%.1f", preferences.getStn_pathAnalysisOwnAntennaHeightMeters())
                 + "|"
                 + String.format(Locale.US, "%.1f", preferences.getStn_pathAnalysisDefaultTargetAntennaHeightMeters())

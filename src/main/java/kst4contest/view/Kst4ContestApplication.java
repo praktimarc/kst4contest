@@ -66,9 +66,8 @@ import javafx.scene.shape.Line;
 import javafx.scene.shape.Polygon;
 import javafx.stage.Screen;
 
+import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.utils.ApplicationFileUtils;
-import kst4contest.view.map.MapCallsignRawSnapshot;
-import kst4contest.view.map.MapCallsignRawSnapshotBuilder;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
@@ -120,9 +119,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private final Button btnSkedWarnIndicator = new Button("SKED");
 	private final Tooltip tipSkedWarnIndicator = new Tooltip();
 	private Timeline skedWarnBlinkTimeline;
-
-	private final MapCallsignRawSnapshotBuilder mainViewBandMarkerSnapshotBuilder = new MapCallsignRawSnapshotBuilder();
-
 
 	// Timeline: show at most N priority markers per minute bucket (minute 0/1 often has many planes)
 	private static final int TIMELINE_PRIORITY_MARKERS_PER_MINUTE = 2;
@@ -365,61 +361,69 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		if (callSignRaw == null) return "Bands: -";
 
-		// band -> (freq,timestamp) newest across ALL category-variants
-		Map<kst4contest.model.Band, ChatMember.ActiveFrequencyInfo> newestPerBand = new java.util.EnumMap<>(kst4contest.model.Band.class);
+		List<ChatMember> variants = chatcontroller.findActiveChatMembersByRawCall(callSignRaw);
+		BandOpportunityResolver.Resolution bandResolution =
+				BandOpportunityResolver.resolve(variants, System.currentTimeMillis(), maxAgeMs);
+		EnumSet<Band> availableBands = bandResolution.getAvailableBands();
 
-		synchronized (chatcontroller.getLst_chatMemberList()) {
-			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
-				if (m == null) continue;
-				if (m.getCallSignRaw() == null) continue;
-				if (!m.getCallSignRaw().equalsIgnoreCase(callSignRaw)) continue;
+		if (availableBands.isEmpty()) {
+			return "Bands: -";
+		}
 
-				Map<kst4contest.model.Band, ChatMember.ActiveFrequencyInfo> map = m.getKnownActiveBands();
-				if (map == null) continue;
+		Map<Band, ChatMember.ActiveFrequencyInfo> newestPerBand =
+				new EnumMap<>(Band.class);
 
-				for (Map.Entry<kst4contest.model.Band, ChatMember.ActiveFrequencyInfo> e : map.entrySet()) {
-					kst4contest.model.Band band = e.getKey();
-					ChatMember.ActiveFrequencyInfo info = e.getValue();
-					if (band == null || info == null) continue;
+		for (ChatMember member : variants) {
+			if (member == null || member.getKnownActiveBands() == null) continue;
 
-					// optional age filter (e.g. last 30 minutes)
-					if (maxAgeMs > 0 && (System.currentTimeMillis() - info.timestampEpoch) > maxAgeMs) {
-						continue;
-					}
+			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
+					: member.getKnownActiveBands().entrySet()) {
 
-					ChatMember.ActiveFrequencyInfo existing = newestPerBand.get(band);
-					if (existing == null || info.timestampEpoch > existing.timestampEpoch) {
-						newestPerBand.put(band, info);
-					}
+				Band band = entry.getKey();
+				ChatMember.ActiveFrequencyInfo info = entry.getValue();
+				if (band == null || info == null || !availableBands.contains(band)) continue;
+
+				long ageMs = System.currentTimeMillis() - info.timestampEpoch;
+				if (ageMs < 0L || (maxAgeMs > 0 && ageMs > maxAgeMs)) continue;
+
+				ChatMember.ActiveFrequencyInfo existing = newestPerBand.get(band);
+				if (existing == null || info.timestampEpoch > existing.timestampEpoch) {
+					newestPerBand.put(band, info);
 				}
 			}
 		}
 
+		StringBuilder result = new StringBuilder("Bands: ").append(
+				availableBands.stream()
+						.sorted()
+						.map(this::bandToHumanLabel)
+						.collect(java.util.stream.Collectors.joining(", "))
+		);
+
 		if (newestPerBand.isEmpty()) {
-			return "Bands: -";
+			return result.toString();
 		}
 
-		// Render sorted by band enum order
-		StringBuilder sb = new StringBuilder("Bands: ");
+		result.append(" | QRGs: ");
 		boolean first = true;
 
-		for (kst4contest.model.Band b : kst4contest.model.Band.values()) {
-			ChatMember.ActiveFrequencyInfo info = newestPerBand.get(b);
+		for (Band band : Band.values()) {
+			ChatMember.ActiveFrequencyInfo info = newestPerBand.get(band);
 			if (info == null) continue;
 
-			long ageMin = (System.currentTimeMillis() - info.timestampEpoch) / 60000L;
-
-			if (!first) sb.append(" | ");
+			if (!first) result.append(" | ");
 			first = false;
 
-			sb.append(String.format(java.util.Locale.US, "%.3f", info.frequency))
-					.append(" MHz")
-					.append(" (")
-					.append(ageMin)
+			long ageMinutes = (System.currentTimeMillis() - info.timestampEpoch) / 60_000L;
+			result.append(bandToHumanLabel(band))
+					.append(" ")
+					.append(String.format(Locale.US, "%.3f", info.frequency))
+					.append(" MHz (")
+					.append(ageMinutes)
 					.append(" min ago)");
 		}
 
-		return sb.toString();
+		return result.toString();
 	}
 
 	/**
@@ -432,43 +436,135 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 * @return true if the band cell should show a star
 	 */
 	private boolean isBandOfferForMainView(ChatMember chatMember, Band band) {
-		if (chatMember == null
-				|| band == null
-				|| chatcontroller == null
-				|| chatcontroller.getReachabilityService() == null
-				|| chatMember.getCallSignRaw() == null
-				|| chatMember.getCallSignRaw().isBlank()) {
+		if (chatMember == null || band == null || chatcontroller == null) {
 			return false;
 		}
 
-		EnumSet<Band> enabledBands = chatcontroller.getReachabilityService().getEnabledStationBands();
-		if (enabledBands == null || !enabledBands.contains(band)) {
-			return false;
-		}
-
-		List<ChatMember> variants = new ArrayList<>();
-		synchronized (chatcontroller.getLst_chatMemberList()) {
-			for (ChatMember variant : chatcontroller.getLst_chatMemberList()) {
-				if (variant == null || variant.getCallSignRaw() == null) {
-					continue;
-				}
-				if (variant.getCallSignRaw().equalsIgnoreCase(chatMember.getCallSignRaw())) {
-					variants.add(variant);
-				}
-			}
-		}
-
+		List<ChatMember> variants =
+				chatcontroller.findActiveChatMembersByRawCall(chatMember.getCallSignRaw());
 		if (variants.isEmpty()) {
 			variants = List.of(chatMember);
 		}
 
-		List<MapCallsignRawSnapshot> snapshots = mainViewBandMarkerSnapshotBuilder.buildSnapshots(
-				variants,
-				null,
-				EnumSet.of(band)
-		);
+		BandOpportunityResolver.Resolution resolution =
+				BandOpportunityResolver.resolve(variants, System.currentTimeMillis());
+		EnumSet<Band> enabledBands =
+				BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences());
 
-		return snapshots.stream().anyMatch(MapCallsignRawSnapshot::offersSelectedBand);
+		return resolution.getUnworkedEnabledBands(enabledBands).contains(band);
+	}
+
+	/**
+	 * Checks whether the station's four-character grid square has already been worked
+	 * specifically on the given band, regardless of which call was worked there. Mirrors
+	 * the "o" semantics of the wkdAny column, just scoped to one band instead of any band.
+	 * Can be turned off via
+	 * {@link ChatPreferences#isGuiOptions_showGrossFieldWorkedHintInBandColumns()}.
+	 *
+	 * @param chatMember station row
+	 * @param band       band to check
+	 * @return true if the cell should show the "o" worked-grid-square hint
+	 */
+	private boolean isGrossFieldWorkedForBand(ChatMember chatMember, Band band) {
+		if (chatMember == null || band == null || chatcontroller == null) {
+			return false;
+		}
+
+		if (!chatcontroller.getChatPreferences().isGuiOptions_showGrossFieldWorkedHintInBandColumns()) {
+			return false;
+		}
+
+		String qra = chatMember.getQra();
+		if (qra == null || qra.isBlank()) {
+			return false;
+		}
+
+		return chatcontroller.getWorkedGrossFieldCache().isGrossFieldWorked(band, qra);
+	}
+
+	/**
+	 * Resolves the compact per-band status shown in the 144/432/23/13/9/6/3 table
+	 * columns.
+	 *
+	 * <p>{@code X}/{@code a}/{@code B+}/(empty) describe the band-opportunity part:
+	 * {@code X} if worked on this exact band, otherwise {@code a}/{@code B+} if the band
+	 * is offered, enabled and unworked ({@code a} when the call has not been worked on
+	 * any band yet, {@code B+} when it has), otherwise empty.</p>
+	 *
+	 * <p>{@code o} is an independent overlay, appended to whichever of the above applies,
+	 * exactly like the {@code x}/{@code o}/{@code xo} combination in the wkdAny column:
+	 * it marks that this band's grid square has already been worked, by any station.
+	 * So e.g. {@code "a"}, {@code "ao"}, {@code "B+"}, {@code "B+o"} or just {@code "o"}
+	 * can all appear.</p>
+	 *
+	 * @param chatMember     station row
+	 * @param band           band this column represents
+	 * @param workedThisBand true if the per-band worked flag for this exact band is set
+	 * @return compact status text for the cell
+	 */
+	private String formatBandCellStatus(ChatMember chatMember, Band band, boolean workedThisBand) {
+		String opportunity;
+
+		boolean showFreshCallHint = chatcontroller != null
+				&& chatcontroller.getChatPreferences().isGuiOptions_showFreshCallHintInBandColumns();
+
+		if (workedThisBand) {
+			opportunity = "X";
+		} else if (isBandOfferForMainView(chatMember, band)) {
+			opportunity = showFreshCallHint && chatMember != null && !chatMember.isWorked() ? "a" : "B+";
+		} else {
+			opportunity = "";
+		}
+
+		return isGrossFieldWorkedForBand(chatMember, band) ? opportunity + "o" : opportunity;
+	}
+
+	/**
+	 * Builds the tooltip shown on a band-status cell: a fixed legend plus this row's
+	 * resolved status for the given band.
+	 */
+	private Tooltip buildBandCellStatusTooltip(ChatMember chatMember, Band band, String status) {
+		StringBuilder tooltip = new StringBuilder("Band status:\n")
+				.append("X = worked on this band\n")
+				.append("B+ = band available, not worked on this band yet (call already worked on another band)\n")
+				.append("a = band available, call not worked on any band yet (can be turned off in GUI settings; falls back to B+)\n")
+				.append("o = grid square already worked on this band, by any station (can be turned off in GUI settings)\n")
+				.append("(empty) = no information for this band\n")
+				.append("o can combine with the others, e.g. \"ao\" or \"B+o\"");
+
+		if (chatMember != null && band != null) {
+			tooltip.append("\n\nThis station (").append(bandToHumanLabel(band)).append("):\n")
+					.append("Status: ").append(status == null || status.isBlank() ? "-" : status);
+		}
+
+		return new Tooltip(tooltip.toString());
+	}
+
+	/**
+	 * Creates a shared cell factory for one band-status column, attaching the
+	 * {@link #buildBandCellStatusTooltip(ChatMember, Band, String)} tooltip.
+	 */
+	private Callback<TableColumn<ChatMember, String>, TableCell<ChatMember, String>> createBandStatusCellFactory(Band band) {
+		return column -> new TableCell<ChatMember, String>() {
+			@Override
+			protected void updateItem(String item, boolean empty) {
+				super.updateItem(item, empty);
+
+				if (empty) {
+					setText(null);
+					setTooltip(null);
+					setStyle("");
+					return;
+				}
+
+				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
+
+				setText(item);
+				setTooltip(buildBandCellStatusTooltip(member, band, item));
+				setAlignment(Pos.CENTER);
+				setStyle("-fx-font-weight: bold;");
+			}
+		};
 	}
 
 	private String bandToHumanLabel(kst4contest.model.Band b) {
@@ -529,6 +625,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				formatDetectedRxBandsForCallsignRaw(selectedCallSignInfoStageChatMember.getCallSignRaw(), 30L * 60L * 1000L)
 			);
 		lblDetectedRxBands.setWrapText(true);
+		lblDetectedRxBands.setTooltip(new Tooltip(
+				"Bands are derived from recent QRG detections and the station name. "
+						+ "Manual NOT-QRV tags override automatic hints."
+		));
 		selectedCallSignDownerSiteGridPane.add(lblDetectedRxBands, 0, 4, 1, 1);
 
 
@@ -684,6 +784,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				}
 				try {
 
+				chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 				chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 
 				GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
@@ -707,6 +808,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -728,6 +830,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -749,6 +852,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -770,6 +874,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -792,6 +897,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -813,6 +919,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -845,6 +952,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				try {
 
+					chatcontroller.propagateNotQrvStateToActiveMembers(selectedCallSignInfoStageChatMember);
 					chatcontroller.getDbHandler().updateNotQRVInfoOnChatMember(selectedCallSignInfoStageChatMember);
 					GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
 				} catch (Exception e) {
@@ -1692,20 +1800,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					@Override
 					public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-						SimpleStringProperty wkd = new SimpleStringProperty();
-
-						if (cellDataFeatures.getValue().isWorked144()) {
-							wkd.setValue("X");
-						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_144)) {
-							wkd.setValue("B+");
-						} else {
-							wkd.setValue("");
-						}
-
-						return wkd;
+						return new SimpleStringProperty(formatBandCellStatus(
+								cellDataFeatures.getValue(), Band.B_144, cellDataFeatures.getValue().isWorked144()
+						));
 					}
 				});
 		vhfCol_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(28));
+		vhfCol_subcol.setCellFactory(createBandStatusCellFactory(Band.B_144));
 
 		TableColumn<ChatMember, String> uhfCol_subcol = new TableColumn<ChatMember, String>("432");
 		uhfCol_subcol
@@ -1713,122 +1814,80 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					@Override
 					public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-						SimpleStringProperty wkd = new SimpleStringProperty();
-
-						if (cellDataFeatures.getValue().isWorked432()) {
-							wkd.setValue("X");
-						} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_432)) {
-							wkd.setValue("B+");
-						} else {
-							wkd.setValue("");
-						}
-
-						return wkd;
+						return new SimpleStringProperty(formatBandCellStatus(
+								cellDataFeatures.getValue(), Band.B_432, cellDataFeatures.getValue().isWorked432()
+						));
 					}
 				});
 
 		uhfCol_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(28));
+		uhfCol_subcol.setCellFactory(createBandStatusCellFactory(Band.B_432));
 
 		TableColumn<ChatMember, String> shf23_subcol = new TableColumn<ChatMember, String>("23");
 		shf23_subcol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-				SimpleStringProperty wkd = new SimpleStringProperty();
-
-				if (cellDataFeatures.getValue().isWorked1240()) {
-					wkd.setValue("X");
-				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_1296)) {
-					wkd.setValue("B+");
-				} else {
-					wkd.setValue("");
-				}
-
-				return wkd;
+				return new SimpleStringProperty(formatBandCellStatus(
+						cellDataFeatures.getValue(), Band.B_1296, cellDataFeatures.getValue().isWorked1240()
+				));
 			}
 		});
 		shf23_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(30));
+		shf23_subcol.setCellFactory(createBandStatusCellFactory(Band.B_1296));
 
 		TableColumn<ChatMember, String> shf13_subcol = new TableColumn<ChatMember, String>("13");
 		shf13_subcol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-				SimpleStringProperty wkd = new SimpleStringProperty();
-
-				if (cellDataFeatures.getValue().isWorked2300()) {
-					wkd.setValue("X");
-				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_2320)) {
-					wkd.setValue("B+");
-				} else {
-					wkd.setValue("");
-				}
-
-				return wkd;
+				return new SimpleStringProperty(formatBandCellStatus(
+						cellDataFeatures.getValue(), Band.B_2320, cellDataFeatures.getValue().isWorked2300()
+				));
 			}
 		});
 		shf13_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(30));
+		shf13_subcol.setCellFactory(createBandStatusCellFactory(Band.B_2320));
 
 		TableColumn<ChatMember, String> shf9_subcol = new TableColumn<ChatMember, String>("9");
 		shf9_subcol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-				SimpleStringProperty wkd = new SimpleStringProperty();
-
-				if (cellDataFeatures.getValue().isWorked3400()) {
-					wkd.setValue("X");
-				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_3400)) {
-					wkd.setValue("B+");
-				} else {
-					wkd.setValue("");
-				}
-
-				return wkd;
+				return new SimpleStringProperty(formatBandCellStatus(
+						cellDataFeatures.getValue(), Band.B_3400, cellDataFeatures.getValue().isWorked3400()
+				));
 			}
 		});
 		shf9_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(32));
+		shf9_subcol.setCellFactory(createBandStatusCellFactory(Band.B_3400));
 
 		TableColumn<ChatMember, String> shf6_subcol = new TableColumn<ChatMember, String>("6");
 		shf6_subcol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-				SimpleStringProperty wkd = new SimpleStringProperty();
-
-				if (cellDataFeatures.getValue().isWorked5600()) {
-					wkd.setValue("X");
-				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_5760)) {
-					wkd.setValue("B+");
-				} else {
-					wkd.setValue("");
-				}
-
-				return wkd;
+				return new SimpleStringProperty(formatBandCellStatus(
+						cellDataFeatures.getValue(), Band.B_5760, cellDataFeatures.getValue().isWorked5600()
+				));
 			}
 		});
 		shf6_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(32));
+		shf6_subcol.setCellFactory(createBandStatusCellFactory(Band.B_5760));
 
 		TableColumn<ChatMember, String> shf3_subcol = new TableColumn<ChatMember, String>("3");
 		shf3_subcol.setCellValueFactory(new Callback<CellDataFeatures<ChatMember, String>, ObservableValue<String>>() {
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMember, String> cellDataFeatures) {
-				SimpleStringProperty wkd = new SimpleStringProperty();
-
-				if (cellDataFeatures.getValue().isWorked10G()) {
-					wkd.setValue("X");
-				} else if (isBandOfferForMainView(cellDataFeatures.getValue(), Band.B_10G)) {
-					wkd.setValue("B+");
-				} else {
-					wkd.setValue("");
-				}
-
-				return wkd;
+				return new SimpleStringProperty(formatBandCellStatus(
+						cellDataFeatures.getValue(), Band.B_10G, cellDataFeatures.getValue().isWorked10G()
+				));
 			}
 		});
 
 		shf3_subcol.prefWidthProperty().bind(tbl_chatMemberTable.widthProperty().divide(32));
+		shf3_subcol.setCellFactory(createBandStatusCellFactory(Band.B_10G));
 
 		/**
 		 * section of NOT-QRV flag in chatmember table
@@ -7118,7 +7177,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					}
 				}
 			});
-			btnTglNewBands.setTooltip(new Tooltip("Show stations that are QRV on a known active band that has not been worked yet"));
+			btnTglNewBands.setTooltip(new Tooltip(
+					"Show stations offering at least one enabled, unworked band. "
+							+ "Recent QRG detections and station names are evaluated; "
+							+ "NOT-QRV tags override them."
+			));
 
 			ToggleButton btnTglAsNext5Min = new ToggleButton("AS next 5m");
 			Predicate<ChatMember> asNext5MinPredicate = new Predicate<ChatMember>() {
@@ -10151,7 +10214,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		grdPnlNotify.add(generateLabeledSeparator(100, "Band-upgrade hint (after log entry)"), 0, 13, 2, 1);
 
-		Label lblNotifyBandUpgradeHint = new Label("Blink + sound if logged station is still QRV on other unworked enabled band(s)");
+		Label lblNotifyBandUpgradeHint = new Label(
+				"Blink + sound if a logged station still offers another unworked enabled band"
+		);
 		CheckBox chkBxNotifyBandUpgradeHint = new CheckBox();
 		chkBxNotifyBandUpgradeHint.setSelected(chatcontroller.getChatPreferences().isNotify_bandUpgradeHintOnLogEnabled());
 		chkBxNotifyBandUpgradeHint.selectedProperty().addListener((obs, o, n) ->
@@ -10707,6 +10772,38 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Bring color to the people (SM6VTZ wish for next subversion! Pse patience)"),
 				0, 2, 2, 1);
 		grdPnlGuiOptions.add(new Label("Coloring mode:"), 0, 3);
+
+		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Band table hints"), 0, 4, 2, 1);
+
+		Label lblShowGrossFieldWorkedHint = new Label(
+				"Show \"o\" in band columns when the grid square is already worked on that band"
+		);
+		CheckBox chkBxShowGrossFieldWorkedHint = new CheckBox();
+		chkBxShowGrossFieldWorkedHint.setSelected(
+				chatcontroller.getChatPreferences().isGuiOptions_showGrossFieldWorkedHintInBandColumns()
+		);
+		chkBxShowGrossFieldWorkedHint.selectedProperty().addListener((obs, o, n) -> {
+			chatcontroller.getChatPreferences().setGuiOptions_showGrossFieldWorkedHintInBandColumns(n);
+			GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
+		});
+
+		grdPnlGuiOptions.add(lblShowGrossFieldWorkedHint, 0, 5);
+		grdPnlGuiOptions.add(chkBxShowGrossFieldWorkedHint, 1, 5);
+
+		Label lblShowFreshCallHint = new Label(
+				"Show \"a\" in band columns for a call not worked on any band yet (otherwise always \"B+\")"
+		);
+		CheckBox chkBxShowFreshCallHint = new CheckBox();
+		chkBxShowFreshCallHint.setSelected(
+				chatcontroller.getChatPreferences().isGuiOptions_showFreshCallHintInBandColumns()
+		);
+		chkBxShowFreshCallHint.selectedProperty().addListener((obs, o, n) -> {
+			chatcontroller.getChatPreferences().setGuiOptions_showFreshCallHintInBandColumns(n);
+			GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
+		});
+
+		grdPnlGuiOptions.add(lblShowFreshCallHint, 0, 6);
+		grdPnlGuiOptions.add(chkBxShowFreshCallHint, 1, 6);
 
 
 
@@ -12004,43 +12101,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 * @return true if there is a new-band opportunity
 	 */
 	private boolean isNewBandOpportunity(ChatMember member) {
-		if (member == null || chatcontroller.getReachabilityService() == null
-				|| member.getKnownActiveBands() == null || member.getKnownActiveBands().isEmpty()) {
+		if (member == null || chatcontroller == null) {
 			return false;
 		}
 
-		EnumSet<Band> enabledBands = chatcontroller.getReachabilityService().getEnabledStationBands();
-		for (Band band : member.getKnownActiveBands().keySet()) {
-			if (band != null && enabledBands.contains(band) && !isWorkedOnBand(member, band)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Maps the existing per-band worked flags to the Band enum.
-	 *
-	 * @param member station row
-	 * @param band band to inspect
-	 * @return true if worked on that band
-	 */
-	private boolean isWorkedOnBand(ChatMember member, Band band) {
-		if (member == null || band == null) {
-			return false;
+		List<ChatMember> variants =
+				chatcontroller.findActiveChatMembersByRawCall(member.getCallSignRaw());
+		if (variants.isEmpty()) {
+			variants = List.of(member);
 		}
 
-		switch (band) {
-			case B_144: return member.isWorked144();
-			case B_432: return member.isWorked432();
-			case B_1296: return member.isWorked1240();
-			case B_2320: return member.isWorked2300();
-			case B_3400: return member.isWorked3400();
-			case B_5760: return member.isWorked5600();
-			case B_10G: return member.isWorked10G();
-			case B_24G: return member.isWorked24G();
-			default: return false;
-		}
+		BandOpportunityResolver.Resolution resolution =
+				BandOpportunityResolver.resolve(variants, System.currentTimeMillis());
+		EnumSet<Band> enabledBands =
+				BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences());
+
+		return !resolution.getUnworkedEnabledBands(enabledBands).isEmpty();
 	}
 
 }
