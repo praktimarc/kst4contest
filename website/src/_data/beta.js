@@ -12,6 +12,13 @@ const RELEASES_URL = `https://github.com/${REPO}/releases`;
  * prerelease flag, but that flag is exactly what this workflow sets, and
  * nothing else in this repository publishes prereleases, so it is a safe
  * signal to use here.
+ *
+ * A prerelease flag alone isn't enough though: GitHub never clears
+ * `prerelease` once the corresponding Stable version has actually shipped,
+ * so the latest prerelease can be stale (e.g. beta-1.41-rc04 published
+ * 2026-06-30, followed by Stable v1.41.0 on 2026-07-01). If the newest
+ * Stable release is more recent than the newest prerelease, there is no
+ * current beta and the empty state should be shown instead.
  */
 async function fetchLatestBetaRelease() {
     const headers = { Accept: "application/vnd.github+json" };
@@ -29,7 +36,18 @@ async function fetchLatestBetaRelease() {
 
         const releases = await res.json();
 
-        return releases.find((release) => release.prerelease && !release.draft) || null;
+        const latestBeta = releases.find((release) => release.prerelease && !release.draft) || null;
+        const latestStable = releases.find((release) => !release.prerelease && !release.draft) || null;
+
+        if (!latestBeta) {
+            return null;
+        }
+
+        if (latestStable && latestStable.published_at > latestBeta.published_at) {
+            return null;
+        }
+
+        return latestBeta;
     } catch (err) {
         console.warn(
             `[beta] Could not load the latest beta release. ` +
