@@ -87,6 +87,8 @@ public final class BandOpportunityResolver {
             return enabledBands;
         }
 
+        if (preferences.isStn_bandActive50()) enabledBands.add(Band.B_50);
+        if (preferences.isStn_bandActive70()) enabledBands.add(Band.B_70);
         if (preferences.isStn_bandActive144()) enabledBands.add(Band.B_144);
         if (preferences.isStn_bandActive432()) enabledBands.add(Band.B_432);
         if (preferences.isStn_bandActive1240()) enabledBands.add(Band.B_1296);
@@ -149,6 +151,8 @@ public final class BandOpportunityResolver {
     }
 
     private static void collectWorkedBands(ChatMember member, EnumSet<Band> target) {
+        if (member.isWorked50()) target.add(Band.B_50);
+        if (member.isWorked70()) target.add(Band.B_70);
         if (member.isWorked144()) target.add(Band.B_144);
         if (member.isWorked432()) target.add(Band.B_432);
         if (member.isWorked1240()) target.add(Band.B_1296);
@@ -160,6 +164,8 @@ public final class BandOpportunityResolver {
     }
 
     private static void collectNotQrvBands(ChatMember member, EnumSet<Band> target) {
+        if (!member.isQrv50()) target.add(Band.B_50);
+        if (!member.isQrv70()) target.add(Band.B_70);
         if (!member.isQrv144()) target.add(Band.B_144);
         if (!member.isQrv432()) target.add(Band.B_432);
         if (!member.isQrv1240()) target.add(Band.B_1296);
@@ -173,6 +179,11 @@ public final class BandOpportunityResolver {
     private static Map<Band, Pattern> createStationNameBandPatterns() {
         Map<Band, Pattern> patterns = new EnumMap<>(Band.class);
 
+        // Bare "70" and bare "6" are already claimed by the 70cm/6cm shorthand below
+        // (their "CM" suffix is optional), so 4m/6m must require an explicit MHz/"M"
+        // suffix here to avoid misreading a cm-band shorthand as 70/50 MHz.
+        patterns.put(Band.B_50, bandPattern("50(?:\\s*MHZ)?|6\\s*M"));
+        patterns.put(Band.B_70, bandPattern("70\\s*MHZ|4\\s*M"));
         patterns.put(Band.B_144, bandPattern("144(?:\\s*MHZ)?|2(?:\\s*M)?"));
         patterns.put(Band.B_432, bandPattern("432(?:\\s*MHZ)?|70(?:\\s*CM)?"));
         patterns.put(Band.B_1296, bandPattern("1296(?:\\s*MHZ)?|23(?:\\s*CM)?"));

@@ -98,6 +98,8 @@ public final class WorkedGrossFieldCache {
             if (member.isWorked3400()) addWorked(Band.B_3400, locator);
             if (member.isWorked5600()) addWorked(Band.B_5760, locator);
             if (member.isWorked10G()) addWorked(Band.B_10G, locator);
+            if (member.isWorked50()) addWorked(Band.B_50, locator);
+            if (member.isWorked70()) addWorked(Band.B_70, locator);
         }
     }
 

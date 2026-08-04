@@ -72,6 +72,8 @@ public class ChatMember {
 	/**
 	 * Chatmember is qrv at all band except we initialize anything other, depending to user entry
 	 */
+	boolean qrv50 = true;
+	boolean qrv70 = true;
 	boolean qrv144 = true;
 	boolean qrv432 = true;
 	boolean qrv1240 = true;
@@ -226,6 +228,22 @@ public class ChatMember {
 
 	public void setWorked10G(boolean worked10g) {
 		worked10G = worked10g;
+	}
+
+	public boolean isQrv50() {
+		return qrv50;
+	}
+
+	public void setQrv50(boolean qrv50) {
+		this.qrv50 = qrv50;
+	}
+
+	public boolean isQrv70() {
+		return qrv70;
+	}
+
+	public void setQrv70(boolean qrv70) {
+		this.qrv70 = qrv70;
 	}
 
 	public boolean isQrv144() {
@@ -607,6 +625,8 @@ public class ChatMember {
 	public void resetQRVInformationAtAllBands() {
 
 		this.setQrvAny(true);
+		this.setQrv50(true);
+		this.setQrv70(true);
 		this.setQrv144(true);
 		this.setQrv432(true);
 		this.setQrv1240(true);

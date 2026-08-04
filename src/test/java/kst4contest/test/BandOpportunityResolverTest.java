@@ -81,6 +81,29 @@ class BandOpportunityResolverTest {
     }
 
     @Test
+    void detectsFourAndSixMetersWithoutStealingCmShorthandBands() {
+        EnumSet<Band> bands = BandOpportunityResolver.detectBandsFromStationName(
+                "QRV 50 70cm 6M 4M"
+        );
+
+        assertEquals(
+                EnumSet.of(Band.B_50, Band.B_432, Band.B_70),
+                bands
+        );
+    }
+
+    @Test
+    void bareSeventyAndBareSixStillMeanCentimeterBands() {
+        EnumSet<Band> bands = BandOpportunityResolver.detectBandsFromStationName(
+                "QRV 70 6"
+        );
+
+        assertEquals(EnumSet.of(Band.B_432, Band.B_5760), bands);
+        assertFalse(bands.contains(Band.B_70));
+        assertFalse(bands.contains(Band.B_50));
+    }
+
+    @Test
     void opportunityRequiresAvailableEnabledAndUnworkedBand() {
         ChatMember station = new ChatMember();
         station.setName("2m 70cm");

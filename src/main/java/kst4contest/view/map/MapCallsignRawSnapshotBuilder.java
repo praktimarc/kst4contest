@@ -275,6 +275,8 @@ public final class MapCallsignRawSnapshotBuilder {
 
     private String toBandDisplayLabel(Band band) {
         return switch (band) {
+            case B_50 -> "50";
+            case B_70 -> "70";
             case B_144 -> "144";
             case B_432 -> "432";
             case B_1296 -> "1296";

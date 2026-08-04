@@ -155,6 +155,8 @@ public class WinTestSkedSender {
     public static int toWinTestBandId(Band band) {
         if (band == null) return 12; // default to 144 MHz
         return switch (band) {
+            case B_50   -> 10;
+            case B_70   -> 11;
             case B_144  -> 12;
             case B_432  -> 14;
             case B_1296 -> 16;

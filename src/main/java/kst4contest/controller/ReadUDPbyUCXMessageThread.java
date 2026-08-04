@@ -144,6 +144,12 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		}
 
 		switch (band.trim()) {
+			case "50":
+			case "6m":
+				return Band.B_50;
+			case "70":
+			case "4m":
+				return Band.B_70;
 			case "144":
 			case "2m":
 				return Band.B_144;
@@ -357,6 +363,20 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						Band workedBand = helper_resolveBandFromLoggerBand(band);
 
 						switch (band) {
+						case "50":
+						case "6m":
+						{
+							workedCall.setWorked50(true);
+							break;
+						}
+
+						case "70":
+						case "4m":
+						{
+							workedCall.setWorked70(true);
+							break;
+						}
+
 						case "144":
 						case "2m": //minos contest logger
 						{
@@ -434,7 +454,13 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 									modifyThat.setWorked(true);
 
-									if (workedCall.isWorked144()) {
+									if (workedCall.isWorked50()) {
+										modifyThat.setWorked50(true);
+
+									} else if (workedCall.isWorked70()) {
+										modifyThat.setWorked70(true);
+
+									} else if (workedCall.isWorked144()) {
 										modifyThat.setWorked144(true);
 
 									} else if (workedCall.isWorked432()) {

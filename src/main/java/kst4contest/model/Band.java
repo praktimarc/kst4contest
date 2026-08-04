@@ -5,6 +5,8 @@ package kst4contest.model;
  * Used for plausibility checks in the Smart Parser.
  */
 public enum Band {
+    B_50(50.000, 54.000, "50"),
+    B_70(70.000, 70.500, "70"),
     B_144(144.000, 146.000, "144"),
     B_432(432.000, 434.000, "432"),
     B_1296(1296.000, 1298.000, "1296"),
@@ -75,6 +77,8 @@ public enum Band {
      */
     public String getDisplayLabel() {
         switch (this) {
+            case B_50: return "50";
+            case B_70: return "70";
             case B_144: return "144";
             case B_432: return "432";
             case B_1296: return "1296";

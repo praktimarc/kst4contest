@@ -197,6 +197,8 @@ public class ChatPreferences {
 	boolean loginToSecondChatEnabled;
 	DoubleProperty actualQTF = new SimpleDoubleProperty(360); // will be updated by user at runtime!
 
+	boolean stn_bandActive50;
+	boolean stn_bandActive70;
 	boolean stn_bandActive144;
 	boolean stn_bandActive432;
 	boolean stn_bandActive1240;
@@ -1504,6 +1506,14 @@ public class ChatPreferences {
 
 
 
+			Element stn_bandActive50 = doc.createElement("stn_bandActive50");
+			stn_bandActive50.setTextContent(this.stn_bandActive50+"");
+			station.appendChild(stn_bandActive50);
+
+			Element stn_bandActive70 = doc.createElement("stn_bandActive70");
+			stn_bandActive70.setTextContent(this.stn_bandActive70+"");
+			station.appendChild(stn_bandActive70);
+
 			Element stn_bandActive144 = doc.createElement("stn_bandActive144");
 			stn_bandActive144.setTextContent(this.stn_bandActive144+"");
 			station.appendChild(stn_bandActive144);
@@ -2239,6 +2249,8 @@ public class ChatPreferences {
 				);
 
 				// Band activity flags (introduced later; if missing -> keep defaults)
+				stn_bandActive50 = getBoolean(stationEl, stn_bandActive50, "stn_bandActive50");
+				stn_bandActive70 = getBoolean(stationEl, stn_bandActive70, "stn_bandActive70");
 				stn_bandActive144 = getBoolean(stationEl, stn_bandActive144, "stn_bandActive144");
 				stn_bandActive432 = getBoolean(stationEl, stn_bandActive432, "stn_bandActive432");
 				stn_bandActive1240 = getBoolean(stationEl, stn_bandActive1240, "stn_bandActive1240");
@@ -2894,6 +2906,22 @@ public class ChatPreferences {
 		}
 
 		return result;
+	}
+
+	public boolean isStn_bandActive50() {
+		return stn_bandActive50;
+	}
+
+	public void setStn_bandActive50(boolean stn_bandActive50) {
+		this.stn_bandActive50 = stn_bandActive50;
+	}
+
+	public boolean isStn_bandActive70() {
+		return stn_bandActive70;
+	}
+
+	public void setStn_bandActive70(boolean stn_bandActive70) {
+		this.stn_bandActive70 = stn_bandActive70;
 	}
 
 	public boolean isStn_bandActive144() {

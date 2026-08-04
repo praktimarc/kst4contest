@@ -303,6 +303,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private static String bandToHumanLabel(Band b) {
 		if (b == null) return "?";
 		return switch (b) {
+			case B_50 -> "6m";
+			case B_70 -> "4m";
 			case B_144 -> "2m";
 			case B_432 -> "70cm";
 			case B_1296 -> "23cm";
@@ -1318,6 +1320,8 @@ private ObservableList<String>
 				continue;
 			}
 
+			target.setQrv50(sourceMember.isQrv50());
+			target.setQrv70(sourceMember.isQrv70());
 			target.setQrv144(sourceMember.isQrv144());
 			target.setQrv432(sourceMember.isQrv432());
 			target.setQrv1240(sourceMember.isQrv1240());
@@ -2922,6 +2926,8 @@ private ObservableList<String>
 			activeChatMember.setWorked3400(storedChatMemberState.isWorked3400());
 			activeChatMember.setWorked5600(storedChatMemberState.isWorked5600());
 			activeChatMember.setWorked10G(storedChatMemberState.isWorked10G());
+			activeChatMember.setWorked50(storedChatMemberState.isWorked50());
+			activeChatMember.setWorked70(storedChatMemberState.isWorked70());
 			activeChatMember.setQrv144(storedChatMemberState.isQrv144());
 			activeChatMember.setQrv432(storedChatMemberState.isQrv432());
 			activeChatMember.setQrv1240(storedChatMemberState.isQrv1240());
@@ -2929,6 +2935,8 @@ private ObservableList<String>
 			activeChatMember.setQrv3400(storedChatMemberState.isQrv3400());
 			activeChatMember.setQrv5600(storedChatMemberState.isQrv5600());
 			activeChatMember.setQrv10G(storedChatMemberState.isQrv10G());
+			activeChatMember.setQrv50(storedChatMemberState.isQrv50());
+			activeChatMember.setQrv70(storedChatMemberState.isQrv70());
 		}
 	}
 

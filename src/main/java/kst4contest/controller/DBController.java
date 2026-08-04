@@ -145,6 +145,7 @@ public class DBController {
 		createWorkedGrossFieldTableIfRequired();
 		versionUpdateOfDBCheckAndChangeV11ToV12();
 		versionUpdateOfDBCheckAndChangeV12ToV13();
+		versionUpdateOfDBCheckAndChangeV13ToV14();
 
 		if (helper_isDatabaseSchemaVersionOlderThanCurrent() || helper_isCallsignNormalizationMigrationRequired()) {
 			normalizeStoredCallsignsToRawCallsigns();
@@ -230,6 +231,8 @@ public class DBController {
 						+ "worked3400 BOOLEAN DEFAULT 0, "
 						+ "worked5600 BOOLEAN DEFAULT 0, "
 						+ "worked10G BOOLEAN DEFAULT 0, "
+						+ "worked50 BOOLEAN DEFAULT 0, "
+						+ "worked70 BOOLEAN DEFAULT 0, "
 						+ "notQRV144 BOOLEAN DEFAULT 0, "
 						+ "notQRV432 BOOLEAN DEFAULT 0, "
 						+ "notQRV1240 BOOLEAN DEFAULT 0, "
@@ -237,6 +240,8 @@ public class DBController {
 						+ "notQRV3400 BOOLEAN DEFAULT 0, "
 						+ "notQRV5600 BOOLEAN DEFAULT 0, "
 						+ "notQRV10G BOOLEAN DEFAULT 0, "
+						+ "notQRV50 BOOLEAN DEFAULT 0, "
+						+ "notQRV70 BOOLEAN DEFAULT 0, "
 						+ "lastFlagsChangeEpochMs INTEGER DEFAULT 0"
 						+ ");";
 
@@ -300,6 +305,22 @@ public class DBController {
 			ensureColumnExists("ChatMember", "lastFlagsChangeEpochMs", "INTEGER DEFAULT 0");
 		} catch (SQLException e) {
 			throw new RuntimeException("[DBH, ERROR:] Could not migrate database from v1.2 to v1.3", e);
+		}
+	}
+
+	/**
+	 * Updates old v1.3 databases to the v1.4 schema by adding the worked/not-QRV
+	 * columns for the 50 MHz and 70 MHz bands if they are missing.
+	 */
+	public synchronized void versionUpdateOfDBCheckAndChangeV13ToV14() {
+
+		try {
+			ensureColumnExists("ChatMember", "worked50", "BOOLEAN DEFAULT 0");
+			ensureColumnExists("ChatMember", "worked70", "BOOLEAN DEFAULT 0");
+			ensureColumnExists("ChatMember", "notQRV50", "BOOLEAN DEFAULT 0");
+			ensureColumnExists("ChatMember", "notQRV70", "BOOLEAN DEFAULT 0");
+		} catch (SQLException e) {
+			throw new RuntimeException("[DBH, ERROR:] Could not migrate database from v1.3 to v1.4", e);
 		}
 	}
 
@@ -452,7 +473,11 @@ public class DBController {
 		targetChatMember.setWorked3400(targetChatMember.isWorked3400() || sourceChatMember.isWorked3400());
 		targetChatMember.setWorked5600(targetChatMember.isWorked5600() || sourceChatMember.isWorked5600());
 		targetChatMember.setWorked10G(targetChatMember.isWorked10G() || sourceChatMember.isWorked10G());
+		targetChatMember.setWorked50(targetChatMember.isWorked50() || sourceChatMember.isWorked50());
+		targetChatMember.setWorked70(targetChatMember.isWorked70() || sourceChatMember.isWorked70());
 
+		targetChatMember.setQrv50(targetChatMember.isQrv50() && sourceChatMember.isQrv50());
+		targetChatMember.setQrv70(targetChatMember.isQrv70() && sourceChatMember.isQrv70());
 		targetChatMember.setQrv144(targetChatMember.isQrv144() && sourceChatMember.isQrv144());
 		targetChatMember.setQrv432(targetChatMember.isQrv432() && sourceChatMember.isQrv432());
 		targetChatMember.setQrv1240(targetChatMember.isQrv1240() && sourceChatMember.isQrv1240());
@@ -491,6 +516,8 @@ public class DBController {
 						+ "worked3400 = 0, "
 						+ "worked5600 = 0, "
 						+ "worked10G = 0, "
+						+ "worked50 = 0, "
+						+ "worked70 = 0, "
 						+ "notQRV144 = 0, "
 						+ "notQRV432 = 0, "
 						+ "notQRV1240 = 0, "
@@ -498,6 +525,8 @@ public class DBController {
 						+ "notQRV3400 = 0, "
 						+ "notQRV5600 = 0, "
 						+ "notQRV10G = 0, "
+						+ "notQRV50 = 0, "
+						+ "notQRV70 = 0, "
 						+ "lastFlagsChangeEpochMs = 0 "
 						+ "WHERE lastFlagsChangeEpochMs > 0 AND lastFlagsChangeEpochMs < ?;";
 
@@ -534,9 +563,9 @@ public class DBController {
 
 		String insertOrUpdateSql =
 				"INSERT INTO ChatMember ("
-						+ "callsign, qra, name, lastActivityDateTime, worked, worked144, worked432, worked1240, worked2300, worked3400, worked5600, worked10G, "
-						+ "notQRV144, notQRV432, notQRV1240, notQRV2300, notQRV3400, notQRV5600, notQRV10G, lastFlagsChangeEpochMs"
-						+ ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+						+ "callsign, qra, name, lastActivityDateTime, worked, worked144, worked432, worked1240, worked2300, worked3400, worked5600, worked10G, worked50, worked70, "
+						+ "notQRV144, notQRV432, notQRV1240, notQRV2300, notQRV3400, notQRV5600, notQRV10G, notQRV50, notQRV70, lastFlagsChangeEpochMs"
+						+ ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 						+ "ON CONFLICT(callsign) DO UPDATE SET "
 						+ "qra = excluded.qra, "
 						+ "name = excluded.name, "
@@ -557,14 +586,18 @@ public class DBController {
 			preparedStatement.setInt(10, helper_booleanIntConverter(chatMemberToStore.isWorked3400()));
 			preparedStatement.setInt(11, helper_booleanIntConverter(chatMemberToStore.isWorked5600()));
 			preparedStatement.setInt(12, helper_booleanIntConverter(chatMemberToStore.isWorked10G()));
-			preparedStatement.setInt(13, helper_booleanIntConverter(!chatMemberToStore.isQrv144()));
-			preparedStatement.setInt(14, helper_booleanIntConverter(!chatMemberToStore.isQrv432()));
-			preparedStatement.setInt(15, helper_booleanIntConverter(!chatMemberToStore.isQrv1240()));
-			preparedStatement.setInt(16, helper_booleanIntConverter(!chatMemberToStore.isQrv2300()));
-			preparedStatement.setInt(17, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
-			preparedStatement.setInt(18, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
-			preparedStatement.setInt(19, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
-			preparedStatement.setLong(20, resolvedLastFlagsChangeEpochMs);
+			preparedStatement.setInt(13, helper_booleanIntConverter(chatMemberToStore.isWorked50()));
+			preparedStatement.setInt(14, helper_booleanIntConverter(chatMemberToStore.isWorked70()));
+			preparedStatement.setInt(15, helper_booleanIntConverter(!chatMemberToStore.isQrv144()));
+			preparedStatement.setInt(16, helper_booleanIntConverter(!chatMemberToStore.isQrv432()));
+			preparedStatement.setInt(17, helper_booleanIntConverter(!chatMemberToStore.isQrv1240()));
+			preparedStatement.setInt(18, helper_booleanIntConverter(!chatMemberToStore.isQrv2300()));
+			preparedStatement.setInt(19, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
+			preparedStatement.setInt(20, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
+			preparedStatement.setInt(21, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
+			preparedStatement.setInt(22, helper_booleanIntConverter(!chatMemberToStore.isQrv50()));
+			preparedStatement.setInt(23, helper_booleanIntConverter(!chatMemberToStore.isQrv70()));
+			preparedStatement.setLong(24, resolvedLastFlagsChangeEpochMs);
 			preparedStatement.executeUpdate();
 		} catch (SQLException e) {
 			System.err.println("[DBH, ERROR:] Chatmember could not been stored.");
@@ -646,8 +679,8 @@ public class DBController {
 
 		String resetAllWorkedDataSql =
 				"UPDATE ChatMember SET "
-						+ "worked = 0, worked144 = 0, worked432 = 0, worked1240 = 0, worked2300 = 0, worked3400 = 0, worked5600 = 0, worked10G = 0, "
-						+ "notQRV144 = 0, notQRV432 = 0, notQRV1240 = 0, notQRV2300 = 0, notQRV3400 = 0, notQRV5600 = 0, notQRV10G = 0, "
+						+ "worked = 0, worked144 = 0, worked432 = 0, worked1240 = 0, worked2300 = 0, worked3400 = 0, worked5600 = 0, worked10G = 0, worked50 = 0, worked70 = 0, "
+						+ "notQRV144 = 0, notQRV432 = 0, notQRV1240 = 0, notQRV2300 = 0, notQRV3400 = 0, notQRV5600 = 0, notQRV10G = 0, notQRV50 = 0, notQRV70 = 0, "
 						+ "lastFlagsChangeEpochMs = 0;";
 
 		try (Statement statement = connection.createStatement()) {
@@ -781,6 +814,8 @@ public class DBController {
 						+ "notQRV3400 = ?, "
 						+ "notQRV5600 = ?, "
 						+ "notQRV10G = ?, "
+						+ "notQRV50 = ?, "
+						+ "notQRV70 = ?, "
 						+ "lastFlagsChangeEpochMs = ? "
 						+ "WHERE callsign = ?;";
 
@@ -792,8 +827,10 @@ public class DBController {
 			preparedStatement.setInt(5, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
 			preparedStatement.setInt(6, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
 			preparedStatement.setInt(7, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
-			preparedStatement.setLong(8, System.currentTimeMillis());
-			preparedStatement.setString(9, chatMemberToStore.getCallSignRaw());
+			preparedStatement.setInt(8, helper_booleanIntConverter(!chatMemberToStore.isQrv50()));
+			preparedStatement.setInt(9, helper_booleanIntConverter(!chatMemberToStore.isQrv70()));
+			preparedStatement.setLong(10, System.currentTimeMillis());
+			preparedStatement.setString(11, chatMemberToStore.getCallSignRaw());
 
 			int affectedRows = preparedStatement.executeUpdate();
 
@@ -821,9 +858,9 @@ public class DBController {
 
 		String upsertCompleteRowSql =
 				"INSERT INTO ChatMember ("
-						+ "callsign, qra, name, lastActivityDateTime, worked, worked144, worked432, worked1240, worked2300, worked3400, worked5600, worked10G, "
-						+ "notQRV144, notQRV432, notQRV1240, notQRV2300, notQRV3400, notQRV5600, notQRV10G, lastFlagsChangeEpochMs"
-						+ ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
+						+ "callsign, qra, name, lastActivityDateTime, worked, worked144, worked432, worked1240, worked2300, worked3400, worked5600, worked10G, worked50, worked70, "
+						+ "notQRV144, notQRV432, notQRV1240, notQRV2300, notQRV3400, notQRV5600, notQRV10G, notQRV50, notQRV70, lastFlagsChangeEpochMs"
+						+ ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) "
 						+ "ON CONFLICT(callsign) DO UPDATE SET "
 						+ "qra = excluded.qra, "
 						+ "name = excluded.name, "
@@ -836,6 +873,8 @@ public class DBController {
 						+ "worked3400 = excluded.worked3400, "
 						+ "worked5600 = excluded.worked5600, "
 						+ "worked10G = excluded.worked10G, "
+						+ "worked50 = excluded.worked50, "
+						+ "worked70 = excluded.worked70, "
 						+ "notQRV144 = excluded.notQRV144, "
 						+ "notQRV432 = excluded.notQRV432, "
 						+ "notQRV1240 = excluded.notQRV1240, "
@@ -843,6 +882,8 @@ public class DBController {
 						+ "notQRV3400 = excluded.notQRV3400, "
 						+ "notQRV5600 = excluded.notQRV5600, "
 						+ "notQRV10G = excluded.notQRV10G, "
+						+ "notQRV50 = excluded.notQRV50, "
+						+ "notQRV70 = excluded.notQRV70, "
 						+ "lastFlagsChangeEpochMs = excluded.lastFlagsChangeEpochMs;";
 
 		try (PreparedStatement preparedStatement = connection.prepareStatement(upsertCompleteRowSql)) {
@@ -858,14 +899,18 @@ public class DBController {
 			preparedStatement.setInt(10, helper_booleanIntConverter(chatMemberToStore.isWorked3400()));
 			preparedStatement.setInt(11, helper_booleanIntConverter(chatMemberToStore.isWorked5600()));
 			preparedStatement.setInt(12, helper_booleanIntConverter(chatMemberToStore.isWorked10G()));
-			preparedStatement.setInt(13, helper_booleanIntConverter(!chatMemberToStore.isQrv144()));
-			preparedStatement.setInt(14, helper_booleanIntConverter(!chatMemberToStore.isQrv432()));
-			preparedStatement.setInt(15, helper_booleanIntConverter(!chatMemberToStore.isQrv1240()));
-			preparedStatement.setInt(16, helper_booleanIntConverter(!chatMemberToStore.isQrv2300()));
-			preparedStatement.setInt(17, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
-			preparedStatement.setInt(18, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
-			preparedStatement.setInt(19, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
-			preparedStatement.setLong(20, chatMemberToStore.getLastFlagsChangeEpochMs());
+			preparedStatement.setInt(13, helper_booleanIntConverter(chatMemberToStore.isWorked50()));
+			preparedStatement.setInt(14, helper_booleanIntConverter(chatMemberToStore.isWorked70()));
+			preparedStatement.setInt(15, helper_booleanIntConverter(!chatMemberToStore.isQrv144()));
+			preparedStatement.setInt(16, helper_booleanIntConverter(!chatMemberToStore.isQrv432()));
+			preparedStatement.setInt(17, helper_booleanIntConverter(!chatMemberToStore.isQrv1240()));
+			preparedStatement.setInt(18, helper_booleanIntConverter(!chatMemberToStore.isQrv2300()));
+			preparedStatement.setInt(19, helper_booleanIntConverter(!chatMemberToStore.isQrv3400()));
+			preparedStatement.setInt(20, helper_booleanIntConverter(!chatMemberToStore.isQrv5600()));
+			preparedStatement.setInt(21, helper_booleanIntConverter(!chatMemberToStore.isQrv10G()));
+			preparedStatement.setInt(22, helper_booleanIntConverter(!chatMemberToStore.isQrv50()));
+			preparedStatement.setInt(23, helper_booleanIntConverter(!chatMemberToStore.isQrv70()));
+			preparedStatement.setLong(24, chatMemberToStore.getLastFlagsChangeEpochMs());
 			preparedStatement.executeUpdate();
 		} catch (SQLException e) {
 			throw new RuntimeException("[DBH, ERROR:] Could not rebuild normalized ChatMember row", e);
@@ -894,6 +939,8 @@ public class DBController {
 		builtChatMember.setWorked3400(helper_IntToBooleanConverter(resultSet.getInt("worked3400")));
 		builtChatMember.setWorked5600(helper_IntToBooleanConverter(resultSet.getInt("worked5600")));
 		builtChatMember.setWorked10G(helper_IntToBooleanConverter(resultSet.getInt("worked10G")));
+		builtChatMember.setWorked50(helper_IntToBooleanConverter(resultSet.getInt("worked50")));
+		builtChatMember.setWorked70(helper_IntToBooleanConverter(resultSet.getInt("worked70")));
 		builtChatMember.setQrv144(!helper_IntToBooleanConverter(resultSet.getInt("notQRV144")));
 		builtChatMember.setQrv432(!helper_IntToBooleanConverter(resultSet.getInt("notQRV432")));
 		builtChatMember.setQrv1240(!helper_IntToBooleanConverter(resultSet.getInt("notQRV1240")));
@@ -901,6 +948,8 @@ public class DBController {
 		builtChatMember.setQrv3400(!helper_IntToBooleanConverter(resultSet.getInt("notQRV3400")));
 		builtChatMember.setQrv5600(!helper_IntToBooleanConverter(resultSet.getInt("notQRV5600")));
 		builtChatMember.setQrv10G(!helper_IntToBooleanConverter(resultSet.getInt("notQRV10G")));
+		builtChatMember.setQrv50(!helper_IntToBooleanConverter(resultSet.getInt("notQRV50")));
+		builtChatMember.setQrv70(!helper_IntToBooleanConverter(resultSet.getInt("notQRV70")));
 		builtChatMember.setLastFlagsChangeEpochMs(resultSet.getLong("lastFlagsChangeEpochMs"));
 
 		return builtChatMember;
@@ -922,6 +971,8 @@ public class DBController {
 		targetChatMember.setWorked3400(sourceChatMember.isWorked3400());
 		targetChatMember.setWorked5600(sourceChatMember.isWorked5600());
 		targetChatMember.setWorked10G(sourceChatMember.isWorked10G());
+		targetChatMember.setWorked50(sourceChatMember.isWorked50());
+		targetChatMember.setWorked70(sourceChatMember.isWorked70());
 		targetChatMember.setQrv144(sourceChatMember.isQrv144());
 		targetChatMember.setQrv432(sourceChatMember.isQrv432());
 		targetChatMember.setQrv1240(sourceChatMember.isQrv1240());
@@ -929,6 +980,8 @@ public class DBController {
 		targetChatMember.setQrv3400(sourceChatMember.isQrv3400());
 		targetChatMember.setQrv5600(sourceChatMember.isQrv5600());
 		targetChatMember.setQrv10G(sourceChatMember.isQrv10G());
+		targetChatMember.setQrv50(sourceChatMember.isQrv50());
+		targetChatMember.setQrv70(sourceChatMember.isQrv70());
 		targetChatMember.setLastFlagsChangeEpochMs(sourceChatMember.getLastFlagsChangeEpochMs());
 	}
 
@@ -954,6 +1007,10 @@ public class DBController {
 			return "worked5600";
 		} else if (chatMemberToStore.isWorked10G()) {
 			return "worked10G";
+		} else if (chatMemberToStore.isWorked50()) {
+			return "worked50";
+		} else if (chatMemberToStore.isWorked70()) {
+			return "worked70";
 		}
 
 		return null;
@@ -996,13 +1053,17 @@ public class DBController {
 				|| chatMemberToStore.isWorked3400()
 				|| chatMemberToStore.isWorked5600()
 				|| chatMemberToStore.isWorked10G()
+				|| chatMemberToStore.isWorked50()
+				|| chatMemberToStore.isWorked70()
 				|| !chatMemberToStore.isQrv144()
 				|| !chatMemberToStore.isQrv432()
 				|| !chatMemberToStore.isQrv1240()
 				|| !chatMemberToStore.isQrv2300()
 				|| !chatMemberToStore.isQrv3400()
 				|| !chatMemberToStore.isQrv5600()
-				|| !chatMemberToStore.isQrv10G();
+				|| !chatMemberToStore.isQrv10G()
+				|| !chatMemberToStore.isQrv50()
+				|| !chatMemberToStore.isQrv70();
 	}
 
 	/**

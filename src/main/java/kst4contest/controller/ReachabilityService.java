@@ -284,6 +284,17 @@ public final class ReachabilityService {
             return Band.B_1296;
         }
 
+        if (member != null
+                && member.getChatCategory() != null
+                && member.getChatCategory().getCategoryNumber() == ChatCategory.FIFTYSEVENTYMHz) {
+            if (fallbackBands.contains(Band.B_50)) {
+                return Band.B_50;
+            }
+            if (fallbackBands.contains(Band.B_70)) {
+                return Band.B_70;
+            }
+        }
+
         if (fallbackBands.contains(Band.B_144)) {
             return Band.B_144;
         }
