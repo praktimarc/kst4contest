@@ -25,7 +25,18 @@ Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. `JN49IJ`) eintragen.
 
 ### Aktivierte Bänder
 
-Über die **„my station uses band"**-Checkboxen werden die aktiven Bänder ausgewählt. Nur für ausgewählte Bänder erscheinen Schaltflächen und Tabellenzeilen in der Benutzeroberfläche. Nach Änderungen muss die Software neu gestartet werden.
+Über die Checkboxen **My station uses …** wird festgelegt, auf welchen Bändern die eigene Station im aktuellen Setup arbeiten kann. Unterstützt werden 50 MHz, 70 MHz, 144 MHz, 432 MHz, 1296 MHz, 2320 MHz, 3400 MHz, 5760 MHz und 10 GHz.
+
+Die Auswahl steuert nicht nur die sichtbaren Bandspalten. Sie wird außerdem verwendet für:
+
+- die bandbezogenen Worked- und NOT-QRV-Filter,
+- die im **Further Info**-Bereich sichtbaren NOT-QRV-Schalter,
+- die Herleitung von `a`- und `B+`-Bandmöglichkeiten,
+- den Filter **New bands**,
+- den Band-Upgrade-Hinweis nach einem Logeintrag und
+- bandbezogene Prioritäts- und Reachability-Funktionen.
+
+Nach einer Änderung **Save Settings** verwenden und KST4Contest neu starten. Die Bandspalten und mehrere zugehörige Bedienelemente werden beim Aufbau der Benutzeroberfläche erzeugt und deshalb nicht vollständig in der laufenden Sitzung ergänzt oder entfernt.
 
 ### Antennen-Öffnungswinkel (Antenna Beamwidth)
 
@@ -120,6 +131,8 @@ Das Dropdown **Fallback band for relative QRG detection** legt fest, welches Ban
 Zur Auswahl stehen ausschließlich die vom Frequenzparser unterstützten Bandpräfixe:
 
 ```text
+50 MHz
+70 MHz
 144 MHz
 432 MHz
 1296 MHz
@@ -156,22 +169,28 @@ KST4Contest erzeugt nicht bei jeder im Chat gefundenen Frequenz automatisch eine
 Die vollständige Herleitung und die Einrichtung des Logprogramms sind im Kapitel [Integrierter DX-Cluster-Server](de-DX-Cluster-Server) beschrieben.
 ### Band-Upgrade-Hinweis nach einem Logeintrag
 
-Nach einem über UCXLog oder Win-Test empfangenen Logeintrag kann KST4Contest prüfen, ob die gerade gearbeitete Station auf einem weiteren gemeinsamen, aber noch nicht gearbeiteten Band aktiv ist.
+Nach einem über UCXLog oder Win-Test empfangenen Logeintrag kann KST4Contest prüfen, ob die gerade gearbeitete Station noch ein weiteres gemeinsames, aber bisher nicht gearbeitetes Band anbietet.
 
-Dafür werden drei Informationen miteinander verglichen:
+Die Prüfung verwendet dieselbe Bandherleitung wie die `a`- und `B+`-Anzeige:
 
 1. die in den Stationseinstellungen aktivierten eigenen Bänder,
-2. die innerhalb der letzten 30 Minuten erkannten Bänder der Gegenstation,
-3. die bereits pro Band gespeicherten Worked-Markierungen.
+2. höchstens 30 Minuten alte QRG-Erkennungen der Gegenstation,
+3. eindeutige Bandangaben im Namensfeld ihrer aktiven Chat-Einträge,
+4. die pro Band gespeicherten Worked-Markierungen und
+5. manuell gesetzte NOT-QRV-Tags.
 
-Bleibt danach mindestens ein gemeinsames, noch nicht gearbeitetes Band übrig, erscheint im Hauptfenster ein blinkender **BAND+**-Hinweis. Ist die allgemeine Soundausgabe aktiviert, wird zusätzlich ein Hinweiston abgespielt.
+Aktive Chat-Varianten desselben normalisierten Rufzeichens werden gemeinsam ausgewertet. NOT-QRV hat Vorrang vor einer automatisch erkannten QRG oder Bandangabe.
+
+Bleibt mindestens ein gemeinsames, noch nicht gearbeitetes Band übrig, erscheint im Hauptfenster für ungefähr zwölf Sekunden ein blinkender **BAND+**-Hinweis mit Rufzeichen und den noch offenen Bändern. Der Tooltip zeigt die vollständige Herleitung. Ist die allgemeine Soundausgabe aktiviert, wird zusätzlich ein kurzer Hinweiston abgespielt.
 
 Die beiden Optionen haben unterschiedliche Aufgaben:
 
-- **Blink + sound …** aktiviert den eigentlichen Band-Upgrade-Hinweis.
-- **Priority boost …** erhöht zusätzlich die Priorität entsprechender Stationen, damit sie in den Kandidatenlisten besser sichtbar bleiben. Der Boost garantiert keinen bestimmten Listenplatz; er ist nur ein zusätzlicher Faktor innerhalb der gesamten Prioritätsberechnung.
+- **Blink + sound …** aktiviert den Hinweis nach einem passenden Logeintrag.
+- **Priority boost …** erhöht zusätzlich die Priorität von Stationen mit einer offenen Bandmöglichkeit. Der Boost ist ein Faktor innerhalb der gesamten Prioritätsberechnung und garantiert keinen bestimmten Listenplatz.
 
-Der Hinweis setzt eine Log-Synchronisation mit Bandinformation voraus. Der einfache dateibasierte Callsign-Interpreter kann nur Rufzeichen erkennen und liefert deshalb keine ausreichende Grundlage für diese Prüfung.
+Der Hinweis setzt eine Log-Synchronisation mit Bandinformation voraus. Der einfache dateibasierte Callsign-Interpreter erkennt lediglich Rufzeichen und liefert deshalb keine sichere Information über das Band des gerade geloggten QSOs.
+
+Weitere Hintergründe: [Band-Upgrade-Hinweis nach einem Logeintrag](de-Funktionen#band-upgrade-hinweis-nach-einem-logeintrag).
 
 ### Sniffer-Einstellungen (ab v1.31)
 
@@ -357,14 +376,37 @@ Einstellungen:
 
 ---
 
+## GUI Settings: Hinweise in den Bandspalten
+
+Im Reiter **GUI** lassen sich zwei Zusatzinformationen der Bandspalten ein- oder ausblenden:
+
+- **Show "o" in band columns …** zeigt ein `o`, wenn das vierstellige Großfeld auf dem betreffenden Band bereits gearbeitet wurde. Das Abschalten entfernt keine Daten aus der Datenbank; nur die zusätzliche Anzeige in den Bandspalten wird ausgeblendet. `wkdany` bleibt davon unberührt.
+- **Show "a" in band columns …** unterscheidet ein vollständig neues Rufzeichen von einer Bandmöglichkeit mit einem bereits auf einem anderen Band gearbeiteten Rufzeichen. Ist die Option ausgeschaltet, werden beide Fälle als `B+` dargestellt. Die Bandherleitung selbst ändert sich dadurch nicht.
+
+Änderungen werden in der laufenden Benutzeroberfläche unmittelbar sichtbar. Damit sie nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
+
+![GUI-Einstellungen für die Hinweise in den Bandspalten](client_settings_window_gui.png)
+
+---
+
 ## Worked Station Database Settings (Gearbeitete-Stationen-Datenbank)
 
-Die interne Worked-Datenbank enthält:
+Die interne SQLite-Datenbank speichert die contestbezogenen Zustände unabhängig von der Datenbank des Logprogramms:
 
-- Worked-Status aller Stationen (pro Band)
-- NOT-QRV-Tags (seit v1.2)
+- globaler Worked-Status eines Rufzeichens,
+- Worked-Status pro Band,
+- manuell gesetzte NOT-QRV-Tags pro Band und
+- gearbeitete vierstellige Großfelder pro Band.
 
-**Ab v1.40**: Einträge haben eine automatische Lebensdauer von **3 Tagen** – ein manuelles Zurücksetzen vor jedem Contest ist nicht mehr zwingend notwendig. Für ein vollständiges Reset kann trotzdem die Schaltfläche **„Reinitialize"** verwendet werden.
+Als Schlüssel wird das normalisierte Rufzeichen ohne sichtbare Chat-Klammern oder Kategorieformatierung verwendet. Dadurch können aktive Varianten desselben Rufzeichens konsistent ausgewertet werden.
+
+Worked- und NOT-QRV-Informationen laufen drei Tage nach ihrer letzten Änderung automatisch ab. Gespeicherte Großfelder laufen drei Tage nach dem zugehörigen Logeintrag ab. Ein manuelles Zurücksetzen vor jedem Contest ist deshalb normalerweise nicht erforderlich.
+
+Die Schaltfläche **Reset worked, NOT-QRV and grid data...** entfernt sämtliche Worked-Markierungen, NOT-QRV-Tags und gespeicherten Großfelder. Vor dem Reset erscheint eine Sicherheitsabfrage. Die bekannten Rufzeichenzeilen bleiben erhalten; zurückgesetzt werden nur die contestbezogenen Zustände.
+
+Ein Reset ist sinnvoll, wenn bewusst mit einem leeren Conteststand begonnen werden soll oder Testdaten eingelesen wurden. Als tägliche Wartungsmaßnahme ist er nicht vorgesehen.
+
+Anzeige und Herleitung: [Gearbeitete Rufzeichen, neue Bänder und neue Großfelder](de-Funktionen#gearbeitete-rufzeichen-neue-bänder-und-neue-großfelder).
 
 ---
 

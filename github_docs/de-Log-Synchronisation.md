@@ -2,7 +2,7 @@
 
 > 🇬🇧 [English version](en-Log-Sync) | 🇩🇪 Du liest gerade die deutsche Version
 
-KST4Contest markiert gearbeitete Stationen automatisch in der Chat-Benutzerliste. Dafür gibt es zwei grundlegende Methoden:
+KST4Contest übernimmt gearbeitete Stationen aus dem Logprogramm und stellt daraus den globalen Worked-Status, bandbezogene Worked-Markierungen und – sofern ein Locator übertragen wurde – gearbeitete Großfelder bereit. Dafür gibt es drei Wege: den dateibasierten Simplelogfile-Interpreter, den allgemeinen QSO-UDP-Listener und den eigenen Win-Test-Netzwerk-Listener.
 
 ---
 
@@ -10,24 +10,25 @@ KST4Contest markiert gearbeitete Stationen automatisch in der Chat-Benutzerliste
 
 ## Methode 1: Universal File Based Callsign Interpreter (Simplelogfile)
 
-KST4Contest liest eine Log-Datei und sucht mittels regulärem Ausdruck nach Rufzeichen-Mustern. Dabei werden auch binäre Logdateien unterstützt – unlesbarer Binärinhalt wird einfach ignoriert.
+KST4Contest liest eine Logdatei und sucht mit einem konfigurierbaren regulären Ausdruck nach Rufzeichen. Die Datei wird ausschließlich gelesen und nicht verändert. Auch binäre Logdateien können verwendet werden; nicht als Text interpretierbare Inhalte werden übersprungen.
 
-**Vorteil**: Funktioniert mit nahezu jedem Logprogramm, das eine Datei schreibt.
-**Nachteil**: Keine Bandinformation möglich – es wird nur „gearbeitet" markiert, nicht auf welchem Band.
+Der Vorteil liegt in der breiten Kompatibilität: Die Funktion benötigt keine besondere Netzwerkschnittstelle des Logprogramms.
 
-Pfad der Log-Datei in den Preferences eintragen. Die Datei wird nur gelesen, nie verändert (read-only).
+Die Grenze ist ebenso eindeutig: Aus einem reinen Rufzeichentreffer lassen sich weder Band noch Locator zuverlässig ableiten. Der Simplelogfile-Interpreter kann deshalb nur den globalen Worked-Status setzen. Er erzeugt keine bandbezogene `X`-Markierung, kein Worked-Großfeld und keine belastbare Grundlage für den Band-Upgrade-Hinweis nach einem Logeintrag.
 
-> **Tipp**: Die Simplelogfile-Funktion kann auch genutzt werden, um Stationen zu markieren, die definitiv nicht erreichbar sind (z. B. eigene Notizen). Das wird in einer späteren Version durch ein besseres Tagging-System ersetzt.
+Den Pfad der Logdatei und den regulären Ausdruck im Reiter **Log sync** eintragen. Für bandbezogene Auswertungen sollte nach Möglichkeit eine der Netzwerkschnittstellen verwendet werden.
 
 ---
 
-## Methode 2: Netzwerk-Listener (UDP-Broadcast) – Empfohlen
+## Methode 2: Netzwerk-Listener für QSO-UDP-Pakete – empfohlen
 
-Das Logprogramm sendet beim Speichern eines QSOs ein UDP-Paket an die Broadcast-Adresse des Heimnetzwerks. KST4Contest empfängt dieses Paket und markiert die Station inklusive **Bandinformation** in der internen SQLite-Datenbank.
+UCXLog, QARTest, N1MM+ und DXLog.net können beim Speichern eines QSOs ein UDP-Paket senden. KST4Contest empfängt diese Pakete standardmäßig auf Port `12060` und übernimmt das Rufzeichen sowie die enthaltenen Band- und Locatorinformationen.
 
-> **Wichtig**: KST4Contest muss **parallel zum Logprogramm laufen**. QSOs, die während einer Abwesenheit von KST4Contest geloggt werden, werden nicht erfasst – außer bei QARTest (kann das komplette Log senden).
+Liegt eine Bandinformation vor, wird das Rufzeichen für dieses Band als gearbeitet markiert. Enthält das Paket zusätzlich einen gültigen Locator, speichert KST4Contest dessen vierstelliges Großfeld für das betreffende Band. Fehlende Informationen werden nicht aus anderen Feldern geraten.
 
-**Standard UDP-Port**: 12060 (entspricht dem Standard der meisten Logprogramme)
+KST4Contest muss zum Zeitpunkt der Übertragung laufen. Einige Logprogramme können jedoch das vorhandene Log erneut senden: QARTest bietet dafür **Invia log completo**; DXLog.net sendet beim Broadcast des vollständigen Logs `contactreplace`-Pakete, die KST4Contest ebenfalls verarbeitet.
+
+**Standardport:** `12060`
 
 ---
 
@@ -81,11 +82,16 @@ Für den integrierten DX-Cluster-Server: N1MM+ als DX-Cluster-Client konfigurier
 - IP des KST4Contest-Computers eintragen (grün markierte Felder)
 - Port: 12060
 
+Beim Broadcast des vollständigen Logbuchs verwendet DXLog.net `contactreplace` anstelle von `contactinfo`. KST4Contest verarbeitet beide Pakettypen. Damit können auch ältere QSOs übernommen werden, wenn der vollständige Broadcast ausgelöst wird, während KST4Contest läuft.
+
 ### Win-Test
 
 Win-Test wird mit einem dedizierten UDP-Netzwerk-Listener unterstützt, der das native Win-Test Netzwerkprotokoll versteht.
 
+Bei einem neuen QSO übernimmt KST4Contest das Rufzeichen und löst die native Win-Test-Band-ID auf. Dabei werden auch 50 und 70 MHz verarbeitet. Ist im Paket ein gültiger Locator enthalten, wird zusätzlich das gearbeitete Großfeld für das erkannte Band gespeichert.
+
 **Vorteile der Win-Test Integration:**
+- **Bandbezogene Worked-Daten:** Neue QSOs setzen die Worked-Markierung des von Win-Test gemeldeten Bandes und aktualisieren – sofern vorhanden – den Großfeldstatus.
 - Automatische QSO-Synchronisation zur Markierung gearbeiteter Stationen.
 - **Sked-Übergabe (ADDSKED):** Über den Button "Create sked" im Stationsinfo-Panel wird nicht nur in KST4Contest ein Sked angelegt, sondern dieser auch *direkt per UDP an das Win-Test Netzwerk als ADDSKED-Paket gesendet* – automatisch, sobald der Listener aktiv ist.
 - Es kann zwischen den Sked-Modi "AUTO", "SSB" oder "CW" gewählt werden.
@@ -144,6 +150,16 @@ Für DM5M-typische Setups (2 Radios, 2 Computer, eine KST4Contest-Instanz oder z
 
 ## Interne Datenbank
 
-KST4Contest speichert die Worked-Information in einer internen **SQLite-Datenbank**. Diese ist von der Logprogramm-Datenbank unabhängig und wird nur über den UDP-Broadcast befüllt.
+KST4Contest speichert Worked-, NOT-QRV- und Großfeldinformationen in einer eigenen SQLite-Datenbank. Sie ist von der Datenbank des Logprogramms unabhängig.
 
-Vor jedem neuen Contest: Datenbank zurücksetzen! → [Konfiguration – Worked Station Database Settings](Konfiguration#worked-station-database-settings)
+Die Datenquellen liefern unterschiedlich genaue Informationen:
+
+| Quelle | Rufzeichen global | Bandbezogen | Großfeld |
+|---|---:|---:|---:|
+| Simplelogfile | ja | nein | nein |
+| QSO-UDP-Listener | ja | ja, wenn im Paket enthalten | ja, wenn Band und Locator enthalten sind |
+| Win-Test-Netzwerk-Listener | ja | ja | ja, wenn ein Locator enthalten ist |
+
+Die Daten werden beim Programmstart wieder geladen und bei neuen Logeinträgen während des Betriebs aktualisiert. Sie laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist daher normalerweise nicht erforderlich.
+
+Ein vollständiger manueller Reset entfernt Worked-Markierungen, NOT-QRV-Tags und Worked-Großfelder gemeinsam. Weitere Einzelheiten: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).

@@ -26,18 +26,33 @@ Die zentrale Tabelle aller aktuell aktiven Chat-Nutzer. Spalten (je nach Konfigu
 
 | Spalte | Inhalt |
 |---|---|
-| Call | Rufzeichen der Station |
-| Name | Name aus dem Chat-Namenfeld |
-| Loc | Maidenhead-Locator |
+| Callsign | Rufzeichen der Station |
+| Name | Name beziehungsweise Zusatzinformationen aus dem Chat-Namensfeld |
+| QRA | Maidenhead-Locator |
 | QRB | Entfernung in km |
 | QTF | Richtung in Grad |
 | QRG | Zuletzt aus einer Chat-Nachricht erkannte Frequenz |
-| AP | AirScout-Flugzeugdaten (wenn aktiv) |
-| Band-Farben | Worked/NOT-QRV-Status pro Band |
+| Tropo | Ergebnis der bandbezogenen Tropo- beziehungsweise Streckenbewertung |
+| Score | Aktueller Prioritätswert |
+| Act | Minuten seit der letzten Aktivität |
+| AP | AirScout-Flugzeugdaten, sofern aktiviert |
+| worked | Bandbezogener Worked-, Bandmöglichkeits- und Großfeldstatus sowie `wkdany` |
+| NOT QRV @ | Bänder, auf denen die Station manuell als nicht QRV markiert wurde |
+| Category | Chat-Kategorie des Eintrags |
 
 Die QRG-Spalte zeigt die zuletzt für eine Station erkannte Frequenz. Fehlende Nullen werden für die Anzeige ergänzt, sodass beispielsweise `144.21` als `144.210` erscheint. Erkennt KST4Contest nacheinander Frequenzen auf mehreren Bändern, zeigt die Spalte den letzten Treffer; die internen Bandinformationen können trotzdem mehrere aktuelle Bänder der Station enthalten.
 
 Relative Angaben werden zunächst mit einem höchstens 30 Minuten alten Bandkontext desselben Absenders kombiniert. Nur wenn dieser fehlt, verwendet KST4Contest das globale Fallback-Band. Erkennungsregeln, Beispiele und Grenzen: [QRG-Erkennung](de-Funktionen#qrg-erkennung).
+
+### Worked-, Band- und Großfeldstatus
+
+Die Unterspalten unter **worked** sind kompakt, weil bei mehreren aktivierten Bändern kaum Platz für ausgeschriebene Zustände bleibt. `X` kennzeichnet ein auf diesem Band gearbeitetes Rufzeichen. `a` und `B+` weisen auf ein angebotenes, noch nicht gearbeitetes Band hin. Ein angehängtes `o` bedeutet, dass das vierstellige Großfeld auf diesem Band bereits gearbeitet wurde.
+
+Die Unterspalte **wkdany** ist bandunabhängig: `x` steht für ein bereits gearbeitetes Rufzeichen, `o` für ein auf irgendeinem Band gearbeitetes Großfeld und `xo` für beides.
+
+Jede Statuszelle besitzt einen Tooltip mit der Legende und dem für die betreffende Station ermittelten Zustand. Die vollständige Herleitung einschließlich NOT-QRV-Vorrang: [Gearbeitete Rufzeichen, neue Bänder und neue Großfelder](de-Funktionen#gearbeitete-rufzeichen-neue-bänder-und-neue-großfelder).
+
+![Bandbezogener Worked-Status und Worked-Großfelder](worked_band_status.png)
 
 **Sortierung**: Klick auf Spaltenköpfe. QRB-Sortierung arbeitet numerisch (ab v1.22 korrigiert).
 
@@ -78,8 +93,12 @@ Die Filterleiste befindet sich oberhalb der Chatmember-Tabelle. Sie ist in mehre
 - **Show only QTF** begrenzt die Liste auf eine gewählte Antennenrichtung.
 - **Show only QRB [km] <=** setzt eine maximale Entfernung.
 - **Find** sucht nach einem Rufzeichen.
-- **Hide worked** und die Band-Schaltflächen blenden bereits gearbeitete beziehungsweise nicht verfügbare Stationen aus.
-- **Reachability**, **Only new grids**, **Tropo >=0dB**, **New bands** und **AS next 5m** unterstützen die Auswahl technisch interessanter Kandidaten.
+- **wkd** blendet Rufzeichen aus, die bereits auf mindestens einem Band gearbeitet wurden.
+- Die einzelnen Band-Schaltflächen blenden eine Station aus, wenn sie auf dem betreffenden Band bereits gearbeitet oder dort als NOT QRV markiert wurde. Angezeigt werden nur die für die eigene Station aktivierten Bänder.
+- **Only new grids** zeigt ausschließlich Stationen aus vierstelligen Großfeldern, die auf noch keinem Band gearbeitet wurden.
+- **Grid color** ist kein Filter. Die Funktion markiert das QRA-Feld bereits gearbeiteter Großfelder, ohne Stationen auszublenden.
+- **New bands** zeigt Stationen mit mindestens einer erkannten, an der eigenen Station aktivierten und noch nicht gearbeiteten Bandmöglichkeit. NOT-QRV-Markierungen haben Vorrang.
+- **Reachability**, **Tropo >=0dB** und **AS next 5m** schränken die Liste anhand der gewählten Strecken- beziehungsweise AirScout-Bedingungen ein.
 
 Die Filterleiste besitzt keine feste Breite. QTF sowie die Worked- und Reachability-Filter nutzen zunächst den gesamten Platz ihrer jeweiligen Zeile. Wird der horizontale Divider nach rechts verschoben und die Chatmember-Ansicht dadurch schmaler, wechseln die Controls erst dann in die nächste Zeile, wenn ihre tatsächlich benötigte Breite nicht mehr zur Verfügung steht.
 
@@ -102,6 +121,12 @@ Der im Panel gewählte Filter bestimmt, welche dieser Nachrichten angezeigt werd
 - öffentliche Nachrichten.
 
 Die Einstellung verändert nur die Darstellung im Stationsinfo-Panel. Nachrichten werden dadurch weder verworfen noch aus den übrigen Nachrichtentabellen entfernt. Der Filter kann im Panel jederzeit für die aktuell betrachtete Station gewechselt werden.
+
+Im unteren Bereich können für die ausgewählte Station bandbezogene **Not QRV**-Markierungen gesetzt werden. Sichtbar sind die Bänder, die in den Stationseinstellungen für die eigene Station aktiviert wurden. **tag not qrv all** setzt beziehungsweise entfernt die Markierung für alle unterstützten Bänder gemeinsam, einschließlich momentan nicht eingeblendeter Bänder.
+
+Die Änderung wirkt sofort auf die Spalte **NOT QRV @**, die Bandmöglichkeiten und die zugehörigen Filter. Sie wird in der internen Datenbank gespeichert und nach einem Neustart wiederhergestellt.
+
+![Bandbezogene NOT-QRV-Markierungen im Further-Info-Bereich](not_qrv_controls.png)
 
 Hier können auch **Sked-Erinnerungen / Wecker** für beide Skkedpartner aktiviert werden.
 

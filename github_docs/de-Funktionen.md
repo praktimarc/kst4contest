@@ -118,11 +118,93 @@ Konfiguration und unterstützte Fallback-Bänder: [Fallback-Band für relative Q
 Verwendung in der Bandmap eines Logprogramms: [Integrierter DX-Cluster-Server](de-DX-Cluster-Server).
 
 ---
-## Worked-Markierung
+## Gearbeitete Rufzeichen, neue Bänder und neue Großfelder
 
-Gearbeitete Stationen werden in der Benutzerliste visuell markiert – pro Band. Grundlage ist die [Log-Synchronisation](de-Log-Synchronisation) via UDP oder Simplelogfile.
+KST4Contest unterscheidet drei Informationen, die im Contest ähnlich aussehen können, aber unterschiedliche Fragen beantworten:
 
-Vor jedem Contest die Datenbank zurücksetzen: [Konfiguration – Worked Station Database Settings](Konfiguration#worked-station-database-settings).
+1. Wurde dieses Rufzeichen bereits gearbeitet?
+2. Wurde dieses Rufzeichen auf einem bestimmten Band gearbeitet?
+3. Wurde das vierstellige Maidenhead-Großfeld bereits gearbeitet – möglicherweise mit einer anderen Station?
+
+Diese Trennung ist notwendig. Ein bereits gearbeitetes Rufzeichen kann auf einem anderen Band weiterhin interessant sein. Umgekehrt kann eine noch nicht gearbeitete Station in einem Großfeld liegen, das bereits im Log steht.
+
+### Worked-Informationen aus dem Log
+
+Die [Log-Synchronisation](de-Log-Synchronisation) übernimmt neue QSOs aus dem Logprogramm. Welche Informationen dabei zur Verfügung stehen, hängt von der verwendeten Schnittstelle ab:
+
+- Der dateibasierte Simplelogfile-Interpreter erkennt nur das Rufzeichen. Er kann deshalb lediglich den globalen Worked-Status setzen.
+- Die QSO-UDP-Schnittstellen und der Win-Test-Netzwerk-Listener können zusätzlich das Band übernehmen.
+- Enthält das Logpaket einen gültigen Locator, speichert KST4Contest außerdem das gearbeitete vierstellige Großfeld für dieses Band.
+
+Fehlt eine Information im Logpaket, wird sie nicht geraten. Ein QSO ohne Locator erzeugt deshalb keinen Großfeld-Eintrag; ein Simplelogfile-Treffer erzeugt keine bandbezogene Worked-Markierung.
+
+### Bedeutung der Bandspalten
+
+Unter der gemeinsamen Spalte **worked** erscheinen nur die Bänder, die unter **Station → my station uses …** aktiviert wurden. Die Zellen verwenden bewusst kurze Kennzeichen:
+
+| Anzeige | Bedeutung |
+|---|---|
+| `X` | Das Rufzeichen wurde auf diesem Band gearbeitet. |
+| `a` | Die Station bietet dieses Band an, das Band ist noch nicht gearbeitet und das Rufzeichen wurde bisher auf keinem Band gearbeitet. |
+| `B+` | Die Station bietet dieses Band an und das Band ist noch nicht gearbeitet. Das Rufzeichen wurde bereits auf einem anderen Band gearbeitet. Ist die getrennte `a`-Anzeige deaktiviert, wird auch ein vollständig neues Rufzeichen als `B+` dargestellt. |
+| `o` | Das vierstellige Großfeld der Station wurde auf diesem Band bereits gearbeitet – unabhängig vom Rufzeichen. |
+| leer | Für dieses Band liegt keine passende Information vor. Das ist nicht gleichbedeutend mit „nicht QRV“. |
+
+Das `o` ist eine unabhängige Zusatzinformation und kann deshalb mit den anderen Kennzeichen kombiniert werden. Möglich sind beispielsweise `Xo`, `ao` oder `B+o`. Ein einzelnes `o` bedeutet: Das Großfeld wurde auf diesem Band bereits gearbeitet, für das angezeigte Rufzeichen liegt aber weder eine Worked-Markierung noch eine aktuelle Bandmöglichkeit vor.
+
+![Bandbezogener Worked-Status und Worked-Großfelder](worked_band_status.png)
+
+### Wie entsteht eine Bandmöglichkeit?
+
+KST4Contest zeigt `a` oder `B+` nur an, wenn sich eine noch offene gemeinsame Bandmöglichkeit herleiten lässt. Dafür werden folgende Informationen zusammengeführt:
+
+1. die in den Stationseinstellungen aktivierten eigenen Bänder,
+2. höchstens 30 Minuten alte QRG-Erkennungen der Gegenstation,
+3. eindeutige Bandangaben im Namensfeld der Gegenstation,
+4. die pro Band gespeicherten Worked-Markierungen und
+5. manuell gesetzte NOT-QRV-Markierungen.
+
+Aktive Chat-Einträge mit demselben normalisierten Rufzeichen werden gemeinsam ausgewertet. Das ist insbesondere bei mehreren Chat-Kategorien oder unterschiedlichen sichtbaren Rufzeichenvarianten wichtig. Eine eindeutige Bandangabe im Namensfeld bleibt dabei so lange nutzbar, wie der betreffende Chat-Eintrag aktiv ist; eine aus einer Nachricht erkannte QRG läuft nach 30 Minuten aus.
+
+Anschließend werden nur die Bänder berücksichtigt, die an der eigenen Station aktiviert, für die Gegenstation bekannt und noch nicht gearbeitet sind. Ein manuelles NOT-QRV-Tag übersteuert die automatisch erkannten Hinweise. Die Chat-Kategorie allein reicht dagegen nicht als Nachweis, dass eine einzelne Station auf einem bestimmten Band QRV ist.
+
+Die globale Worked-Markierung entscheidet nicht darüber, ob eine Bandmöglichkeit besteht. Sie unterscheidet in der Darstellung lediglich zwischen `a` und `B+`. Die eigentliche Bandprüfung arbeitet mit den bandbezogenen Worked-Informationen.
+
+### Bedeutung von `wkdany`
+
+Die Unterspalte **wkdany** fasst den globalen Rufzeichen- und Großfeldstatus zusammen:
+
+| Anzeige | Bedeutung |
+|---|---|
+| leer | Weder das Rufzeichen noch das vierstellige Großfeld wurden gearbeitet. |
+| `x` | Das Rufzeichen wurde auf mindestens einem Band gearbeitet. |
+| `o` | Das vierstellige Großfeld wurde auf mindestens einem Band gearbeitet. |
+| `xo` | Rufzeichen und Großfeld wurden bereits gearbeitet. |
+
+`wkdany` ist eine bandunabhängige Übersicht. Das kleine `x` darf daher nicht mit dem großen `X` in einer Bandspalte verwechselt werden. Der globale Status wird für die Anzeige und den globalen **wkd**-Filter verwendet, nicht als Ersatz für bandbezogene Worked-Informationen.
+
+### NOT-QRV-Markierungen
+
+Teilt eine Station mit, dass sie auf einem bestimmten Band nicht QRV ist, kann dies im **Further Info**-Bereich der ausgewählten Station markiert werden:
+
+1. Station in der Benutzerliste auswählen.
+2. Im Bereich **Not QRV** das betreffende Band aktivieren.
+3. **tag not qrv all** nur verwenden, wenn die Station auf keinem der unterstützten Bänder angefragt werden soll.
+
+Angezeigt werden die einzelnen NOT-QRV-Schalter der Bänder, die für die eigene Station aktiviert sind. **tag not qrv all** setzt dagegen alle unterstützten Bänder, auch wenn einzelne davon momentan nicht in der Benutzeroberfläche eingeblendet sind. Die Markierung wird bandbezogen unter dem normalisierten Rufzeichen gespeichert und auf dessen aktive Chat-Varianten übertragen.
+
+![Bandbezogene NOT-QRV-Markierungen im Further-Info-Bereich](not_qrv_controls.png)
+
+NOT-QRV ist eine manuelle Korrektur und hat deshalb Vorrang vor automatisch erkannten QRGs und Bandangaben im Namensfeld. Das betreffende Band wird nicht mehr als `a` oder `B+` angeboten, vom **New bands**-Filter nicht als Gelegenheit gewertet und von den zugehörigen Bandfiltern ausgeblendet.
+
+Im Klartext: Ein erkannter Hinweis bedeutet „wahrscheinlich auf diesem Band aktiv“. Ein manuelles NOT-QRV-Tag bedeutet „für unsere weitere Auswahl nicht auf diesem Band anfragen“. Diese Entscheidung soll nicht durch die nächste erkannte Zahl wieder aufgehoben werden.
+
+### Speicherung und Lebensdauer
+
+Worked-, NOT-QRV- und Großfeldinformationen werden in der internen SQLite-Datenbank gespeichert und beim nächsten Start wieder geladen. Die Einträge laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist deshalb normalerweise nicht erforderlich.
+
+Ein manueller Reset unter **Workedstn database** entfernt sämtliche Worked-Markierungen, NOT-QRV-Tags und gespeicherten Worked-Großfelder. Die bekannten Rufzeichenzeilen bleiben dabei in der Datenbank erhalten. Einzelheiten: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).
+
 
 ---
 
@@ -153,9 +235,19 @@ Stationen jenseits einer maximalen Entfernung ausblenden. Schaltfläche **„Sho
 
 ---
 
-## Worked- und NOT-QRV-Filter
+## Filter für Worked-Status, neue Bänder und neue Großfelder
 
-Toggle-Buttons (einer pro Band) zum Ausblenden bereits gearbeiteter Stationen und/oder NOT-QRV-markierter Stationen. Der Filter wirkt **sofort** ohne manuelles Neu-Aktivieren (ab v1.22 live).
+Die Filter oberhalb der Benutzerliste greifen auf dieselben Informationen zurück wie die Worked-Spalten:
+
+- **wkd** blendet Rufzeichen aus, die auf mindestens einem Band gearbeitet wurden.
+- Die einzelnen Band-Schaltflächen blenden Stationen aus, wenn das Rufzeichen auf diesem Band bereits gearbeitet oder für dieses Band manuell als NOT QRV markiert wurde.
+- **New bands** zeigt nur Stationen, für die mindestens ein eigenes aktiviertes, noch nicht gearbeitetes Band bekannt ist. Berücksichtigt werden aktuelle QRG-Erkennungen und Bandangaben im Namensfeld; NOT-QRV hat Vorrang.
+- **Only new grids** zeigt nur Stationen, deren vierstelliges Großfeld auf noch keinem Band gearbeitet wurde. Stationen ohne auswertbaren Locator erfüllen den Filter nicht.
+- **Grid color** verändert die Liste nicht. Ist die Funktion aktiv, wird das QRA-Feld eines bereits gearbeiteten Großfelds dezent dunkler dargestellt. Neue Großfelder behalten die normale Tabellenfarbe.
+
+Mehrere aktivierte Filter werden gemeinsam angewendet. Eine Station bleibt nur sichtbar, wenn sie alle gewählten Bedingungen erfüllt. Die Filter reagieren unmittelbar auf neue Logeinträge und geänderte NOT-QRV-Markierungen.
+
+Bedienung und Aufbau der Filterleiste: [Benutzeroberfläche – Filter](de-Benutzeroberflaeche#filter).
 
 ---
 
@@ -265,18 +357,21 @@ Konfiguration: [Konfiguration – PSTRotator-Einstellungen](de-Konfiguration#pst
 
 ---
 
-## Band-Alert bei neuen QSOs (ab v1.40)
+## Band-Upgrade-Hinweis nach einem Logeintrag
 
-Wenn eine Station geloggt wird, prüft KST4Contest automatisch, ob diese Station im Chat weitere aktive Bänder angezeigt hat, auf denen man selbst ebenfalls QRV ist. Falls ja, erscheint ein **Hinweis-Alert**, damit keine Multi-Band-Möglichkeit übersehen wird.
+Meldet UCXLog oder Win-Test einen neuen Logeintrag mit Bandinformation, prüft KST4Contest, ob die gearbeitete Station noch ein weiteres gemeinsames Band anbietet.
+
+Die Herleitung verwendet dieselben Regeln wie `a`, `B+` und der Filter **New bands**: aktivierte eigene Bänder, aktuelle QRG-Erkennungen, Bandangaben im Namensfeld, bandbezogene Worked-Markierungen und NOT-QRV-Tags. Ausgewertet werden die aktiven Chat-Varianten desselben normalisierten Rufzeichens.
+
+Bleibt mindestens ein gemeinsames, noch nicht gearbeitetes Band übrig, erscheint für ungefähr zwölf Sekunden ein blinkender Hinweis mit Rufzeichen und den betreffenden Bändern, beispielsweise `BAND+ DL0ABC 432, 1296`. Der Tooltip zeigt zusätzlich die bei der Entscheidung berücksichtigten aktivierten, gearbeiteten und als NOT QRV markierten Bänder. Ist die allgemeine Soundausgabe eingeschaltet, wird außerdem ein kurzer Hinweiston abgespielt.
+
+Der einfache Simplelogfile-Interpreter kann diesen Hinweis nicht zuverlässig auslösen, weil er keine Bandinformation für das gerade geloggte QSO liefert.
+
+Konfiguration: [Band-Upgrade-Hinweis nach einem Logeintrag](de-Konfiguration#band-upgrade-hinweis-nach-einem-logeintrag).
+
+Worked-, NOT-QRV- und Großfelddaten laufen nach drei Tagen automatisch ab. Einzelheiten und manueller Reset: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).
 
 ---
-
-## Worked-Tag-Lebensdauer (ab v1.40)
-
-Gearbeitete Stationen werden nach **3 Tagen** automatisch aus der Datenbank entfernt. Ein manuelles Zurücksetzen der Worked-Datenbank vor jedem Contest ist damit nicht mehr zwingend notwendig – die Datenbank hält sich selbst aktuell.
-
----
-
 ## Chatmember Score-System / Prioritätsliste (ab v1.40)
 
 KST4Contest berechnet automatisch eine **Prioritätsbewertung** für jeden aktiven Chatmember. Der Score setzt sich zusammen aus:
