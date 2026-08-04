@@ -10915,9 +10915,15 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
 
 		grdPnlInternalDBPane.add(
-				generateLabeledSeparator(100,
-						"Change the settings of the internal database (worked stations, reset before a new contest!)"),
-				0, 0, 2, 1);
+				generateLabeledSeparator(
+						100,
+						"Internal contest data: worked stations, NOT-QRV tags and worked grids"
+				),
+				0,
+				0,
+				2,
+				1
+		);
 //        grdPnlShorts.add(lblEnableTRXMsgbyUCX, 0, 1);
 //        grdPnlShorts.add(chkBxEnableTRXMsgbyUCX, 1, 1);
 
@@ -10940,34 +10946,64 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		Button btn_wkdDB_reset = new Button("Reset worked-tags and NOT-QRV-tags");
-		btn_wkdDB_reset.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
+		Button btn_wkdDB_reset = new Button("Reset worked, NOT-QRV and grid data...");
+		btn_wkdDB_reset.setTooltip(new Tooltip(
+				"Manual reset of all contest-related database flags. "
+						+ "This is normally not required because entries expire automatically after three days."
+		));
 
-				int affectedLines;
-				affectedLines = chatcontroller.getDbHandler().resetWorkedDataInDB();
-				chatcontroller.resetWorkedAndQrvInfoInGuiLists();
-				chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
-				finalTblVwWorked.refresh();
+		btn_wkdDB_reset.setOnAction(event -> {
+			Alert confirmation = new Alert(AlertType.CONFIRMATION);
+			confirmation.setTitle("Reset contest data");
+			confirmation.setHeaderText("Reset all worked, NOT-QRV and grid data?");
+			confirmation.setContentText(
+					"This removes all worked markings, manually assigned NOT-QRV tags "
+							+ "and stored worked-grid information. The operation cannot be undone.\n\n"
+							+ "A reset before every contest is normally not required because these data "
+							+ "expire automatically after three days."
+			);
 
-				if (affectedLines >= 0) {
+			ButtonType resetButton = new ButtonType(
+					"Reset data",
+					ButtonBar.ButtonData.OK_DONE
+			);
+			ButtonType cancelButton = new ButtonType(
+					"Cancel",
+					ButtonBar.ButtonData.CANCEL_CLOSE
+			);
+			confirmation.getButtonTypes().setAll(resetButton, cancelButton);
 
-					Alert a = new Alert(AlertType.INFORMATION);
-
-					a.setTitle("Worked data");
-					a.setHeaderText("All worked data had been reset. " + affectedLines
-							+ " callsign entries had been updated.");
-					a.show();
-
-				} else {
-					Alert a = new Alert(AlertType.INFORMATION);
-
-					a.setTitle("Worked data");
-					a.setHeaderText("Something went wrong, DB have to be rebuilt or other error!");
-					a.show();
-				}
+			if (confirmation.showAndWait().orElse(cancelButton) != resetButton) {
+				return;
 			}
+
+			int affectedLines = chatcontroller.getDbHandler().resetWorkedDataInDB();
+
+			if (affectedLines < 0) {
+				Alert error = new Alert(AlertType.ERROR);
+				error.setTitle("Reset contest data");
+				error.setHeaderText("The contest data could not be reset.");
+				error.setContentText(
+						"The internal database may be unavailable or inconsistent. "
+								+ "No successful reset was confirmed."
+				);
+				error.show();
+				return;
+			}
+
+			chatcontroller.resetWorkedAndQrvInfoInGuiLists();
+			chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
+			finalTblVwWorked.refresh();
+
+			Alert information = new Alert(AlertType.INFORMATION);
+			information.setTitle("Reset contest data");
+			information.setHeaderText("The contest data were reset.");
+			information.setContentText(
+					affectedLines
+							+ " callsign database entries were updated. "
+							+ "Worked-grid data were cleared as well."
+			);
+			information.show();
 		});
 
 		HBox hbxwkdShortBtnBox = new HBox();

@@ -2371,3 +2371,12 @@ DO5SA;unknown;unknown;StringProperty [value: null]; wkd true; wkd144 true; wkd43
 9A2HM;null;null;StringProperty [value: null]; wkd true; wkd144 false; wkd432true; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
 9A2HM;null;null;StringProperty [value: null]; wkd true; wkd144 false; wkd432false; wkd1240false; wkd2300true; wkd3400false; wkd5600false; wkd10Gfalse ; null
 OV3T;Thomas;JO46CM;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OZ1ALS;144307;JO44XX;StringProperty [value: 144.307]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OZ1FDH;Claus;JO55QX;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OZ2AR;FRS Club;JO65BT;StringProperty [value: 144.243]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+SM7NCL;Chris;JO66JI;StringProperty [value: 144.255]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OZ1DLD/P;Bent;JO45SK;StringProperty [value: 144.285]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+SM6VTZ;Chris 2/70/23/3;JO58UJ;StringProperty [value: 144.135]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OZ7KJ;Skive Club;JO46ML;StringProperty [value: 144.225]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OV3T;Thomas;JO46CM;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
+OZ6TY;Henning;JO55XE;StringProperty [value: 144.196]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz

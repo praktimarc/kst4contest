@@ -36,8 +36,8 @@ public class DBController {
 	 * Number of milliseconds after which worked/not-QRV data is considered outdated
 	 * and therefore automatically reset.
 	 */
-	private static final long WORKED_DATA_EXPIRATION_IN_MILLISECONDS = 65L * 60L * 60L * 1000L;
-
+	private static final long WORKED_DATA_EXPIRATION_IN_MILLISECONDS =
+			3L * 24L * 60L * 60L * 1000L;
 	/**
 	 * Database schema version that includes the raw-callsign normalization migration
 	 * marker. The marker is stored in SQLite PRAGMA user_version so the expensive

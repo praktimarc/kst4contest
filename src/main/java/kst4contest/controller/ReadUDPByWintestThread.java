@@ -303,17 +303,19 @@ public class ReadUDPByWintestThread extends Thread {
             return null;
         }
 
-        switch (bandId.trim()) {
-            case "12": return Band.B_144;
-            case "14": return Band.B_432;
-            case "16": return Band.B_1296;
-            case "17": return Band.B_2320;
-            case "18": return Band.B_3400;
-            case "19": return Band.B_5760;
-            case "20": return Band.B_10G;
-            case "21": return Band.B_24G;
-            default: return null;
-        }
+        return switch (bandId.trim()) {
+            case "10" -> Band.B_50;
+            case "11" -> Band.B_70;
+            case "12" -> Band.B_144;
+            case "14" -> Band.B_432;
+            case "16" -> Band.B_1296;
+            case "17" -> Band.B_2320;
+            case "18" -> Band.B_3400;
+            case "19" -> Band.B_5760;
+            case "20" -> Band.B_10G;
+            case "21" -> Band.B_24G;
+            default -> null;
+        };
     }
 
     /**
