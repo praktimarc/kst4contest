@@ -227,12 +227,11 @@ public final class ScoreService {
             ChatMember chosen = null;
 
             if (preferredCat != null) {
-                for (ChatMember v : variants) {
-                    if (v != null && v.getChatCategory() == preferredCat) {
-                        chosen = v;
-                        break;
-                    }
-                }
+                chosen = variants.stream()
+                        .filter(Objects::nonNull)
+                        .filter(v -> isSameChatCategory(v.getChatCategory(), preferredCat))
+                        .max(Comparator.comparingLong(ChatMember::getActivityTimeLastInEpoch))
+                        .orElse(null);
             }
 
             if (chosen == null) {
@@ -247,6 +246,14 @@ public final class ScoreService {
 
         return representative;
     }
+
+    private static boolean isSameChatCategory(ChatCategory left, ChatCategory right) {
+        return left != null
+                && right != null
+                && left.getCategoryNumber() == right.getCategoryNumber();
+    }
+
+
     /**
      * Projects the immutable score snapshot back into ChatMember display fields so
      * the normal station table can sort/filter by score without knowing the score

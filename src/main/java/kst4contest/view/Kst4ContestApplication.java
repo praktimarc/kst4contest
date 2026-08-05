@@ -4291,32 +4291,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 
-	private ChatMember resolveChatMemberForTopCandidate(kst4contest.controller.ScoreService.TopCandidate c) {
+	private ChatMember resolveChatMemberForTopCandidate(
+			kst4contest.controller.ScoreService.TopCandidate c
+	) {
 
-		String callRaw = c.getCallSignRaw();
-		ChatCategory preferredCategory = c.getPreferredChatCategory();
-
-		// 1) Prefer exact (callRaw + category) match
-		synchronized (chatcontroller.getLst_chatMemberList()) {
-			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
-				if (m == null) continue;
-				if (m.getCallSignRaw() == null) continue;
-				if (!m.getCallSignRaw().equalsIgnoreCase(callRaw)) continue;
-
-				if (preferredCategory != null && preferredCategory.equals(m.getChatCategory())) {
-					return m;
-				}
-			}
-
-			// 2) Fallback: any variant with the same callsignRaw
-			for (ChatMember m : chatcontroller.getLst_chatMemberList()) {
-				if (m == null) continue;
-				if (m.getCallSignRaw() == null) continue;
-				if (m.getCallSignRaw().equalsIgnoreCase(callRaw)) return m;
-			}
+		if (c == null
+				|| c.getDisplayCallSign() == null
+				|| c.getPreferredChatCategory() == null) {
+			return null;
 		}
 
-		return null;
+		/*
+		 * Resolve the concrete active login by full callsign and category. Falling
+		 * back to callSignRaw could select a different suffix in the same category.
+		 */
+		return chatcontroller.findActiveChatMember(
+				c.getDisplayCallSign(),
+				c.getPreferredChatCategory()
+		);
 	}
 
 
