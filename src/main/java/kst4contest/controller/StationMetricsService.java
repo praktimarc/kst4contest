@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import kst4contest.logic.SignalDetector;
 import kst4contest.model.ChatPreferences;
+import kst4contest.model.ChatMember;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -21,7 +22,7 @@ import java.util.regex.Pattern;
 public final class StationMetricsService {
 
     /** /cq <CALL> ... */
-    private static final Pattern OUTBOUND_CQ_PATTERN = Pattern.compile("(?i)^\\s*/cq\\s+([A-Z0-9/]+)\\b.*");
+    private static final Pattern OUTBOUND_CQ_PATTERN = Pattern.compile("(?i)^\\s*/cq\\s+([A-Z0-9/-]+)\\b.*");
 
     /** Rolling window timestamps for momentum scoring. */
     private static final int MAX_STORED_INBOUND_TIMESTAMPS = 32;
@@ -195,7 +196,7 @@ public final class StationMetricsService {
 
     private static String normalizeCallRaw(String s) {
         if (s == null) return null;
-        return s.trim().toUpperCase();
+        return ChatMember.normalizeCallSignToBaseCallSign(s);
     }
 
     private static final class StationMetrics {

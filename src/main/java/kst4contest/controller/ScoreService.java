@@ -166,7 +166,15 @@ public final class ScoreService {
             scoreByCallRaw.put(callRaw, score);
             preferredCategoryByCallRaw.put(callRaw, representative.getChatCategory());
 
-            topAll.add(new TopCandidate(callRaw, representative.getCallSign(), representative.getChatCategory(), score));
+            if (Double.isFinite(score) && score > 0.0) {
+                topAll.add(new TopCandidate(
+                        callRaw,
+                        representative.getCallSign(),
+                        representative.getChatCategory(),
+                        score
+                ));
+            }
+
         }
 
         // 3) Build Top-N
