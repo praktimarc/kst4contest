@@ -1175,27 +1175,45 @@ private ObservableList<String>
 	}
 
 	/**
-	 * Builds the active-member key. The raw/base callsign alone is not enough
-	 * because the same station can be logged into multiple ON4KST categories at
-	 * the same time. Therefore the category number is part of the key.
+	 * Builds the unique identity key for one active ON4KST login.
+	 *
+	 * <p>The complete callsign must be preserved here. Callsigns such as
+	 * {@code 9A0BB-2}, {@code 9A0BB-70} and {@code 9A0BB-144} represent different
+	 * active chat sessions and must therefore remain separate objects, even when
+	 * they are logged into the same chat category.</p>
+	 *
+	 * <p>The normalized base callsign ({@code callSignRaw}) is deliberately not
+	 * used for this key. It remains the common station key for worked, band and
+	 * NOT-QRV information.</p>
 	 */
 	private String buildActiveChatMemberKey(String callSign, ChatCategory category) {
-		String normalizedCallsign = ChatMember.normalizeCallSignToBaseCallSign(callSign);
-		if (normalizedCallsign == null || normalizedCallsign.isBlank()) {
+
+		if (callSign == null) {
 			return null;
 		}
 
-		int categoryNumber = category == null ? -1 : category.getCategoryNumber();
-		return normalizedCallsign.trim().toUpperCase(Locale.ROOT) + "|" + categoryNumber;
+		String fullCallSign = callSign.trim().toUpperCase(Locale.ROOT);
+
+		if (fullCallSign.isBlank()) {
+			return null;
+		}
+
+		int categoryNumber =
+				category == null ? -1 : category.getCategoryNumber();
+
+		return fullCallSign + "|" + categoryNumber;
 	}
 
 	private String buildActiveChatMemberKey(ChatMember member) {
+
 		if (member == null) {
 			return null;
 		}
 
-		String callSign = member.getCallSignRaw() != null ? member.getCallSignRaw() : member.getCallSign();
-		return buildActiveChatMemberKey(callSign, member.getChatCategory());
+		return buildActiveChatMemberKey(
+				member.getCallSign(),
+				member.getChatCategory()
+		);
 	}
 
 	/**

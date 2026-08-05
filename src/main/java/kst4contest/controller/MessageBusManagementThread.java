@@ -602,76 +602,129 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	/**
-	 * Resolves a message sender from the thread-safe active-member model. If a
-	 * CH/CR message arrives before the matching user-enter message, a marked
-	 * fallback sender is used. The returned sender is never null.
+	 * Resolves a message sender from the thread-safe active-member model.
+	 *
+	 * <p>The local login is handled before the active-user lookup because the own
+	 * ChatMember is intentionally not stored in the visible user list. This also
+	 * prevents another active login with the same base callsign from replacing the
+	 * identity of our own message echo.</p>
 	 */
-	private ChatMember resolveInboundSender(String senderCallSign, ChatCategory category, ChatMessage message) {
+	private ChatMember resolveInboundSender(
+			String senderCallSign,
+			ChatCategory category,
+			ChatMessage message
+	) {
+
+		String myCall =
+				this.client.getChatPreferences().getStn_loginCallSign();
+
+		if (senderCallSign != null
+				&& myCall != null
+				&& senderCallSign.equalsIgnoreCase(myCall)) {
+
+			ChatMember ownSender = new ChatMember();
+			ownSender.setCallSign(senderCallSign);
+			ownSender.setChatCategory(category);
+			ownSender.setAirPlaneReflectInfo(
+					new AirPlaneReflectionInfo()
+			);
+
+			return ownSender;
+		}
+
 		ChatMember lookup = new ChatMember();
 		lookup.setCallSign(senderCallSign);
 		lookup.setChatCategory(category);
 
-		ChatMember senderObj = this.client.findActiveChatMember(lookup);
+		ChatMember senderObj =
+				this.client.findActiveChatMember(lookup);
+
 		if (senderObj != null) {
-			senderObj.setActivityTimeLastInEpoch(new Utils4KST().time_generateCurrentEpochTime());
+			senderObj.setActivityTimeLastInEpoch(
+					new Utils4KST().time_generateCurrentEpochTime()
+			);
 
-			// Remember the last active category so later outgoing replies can be routed correctly.
-			this.client.rememberLastInboundCategory(senderObj.getCallSignRaw(), senderObj.getChatCategory());
+			this.client.rememberLastInboundCategory(
+					senderObj.getCallSignRaw(),
+					senderObj.getChatCategory()
+			);
 
-			// Metrics influence priority scoring; process them after message text is known.
 			this.client.getStationMetricsService().onInboundMessage(
 					senderObj.getCallSignRaw(),
 					System.currentTimeMillis(),
 					message == null ? null : message.getMessageText(),
 					this.client.getChatPreferences(),
-					this.client.getChatPreferences().getStn_loginCallSign()
+					myCall
 			);
 
-			this.client.getScoreService().requestRecompute("rx-chat-message");
+			this.client.getScoreService().requestRecompute(
+					"rx-chat-message"
+			);
+
 			return senderObj;
 		}
 
 		ChatMember fallbackSender = new ChatMember();
-		String myCall = this.client.getChatPreferences().getStn_loginCallSign();
-		if (senderCallSign != null && senderCallSign.equalsIgnoreCase(myCall)) {
-			fallbackSender.setCallSign(myCall);
-		} else {
-			fallbackSender.setCallSign("[n/a]" + senderCallSign);
-		}
+		fallbackSender.setCallSign("[n/a]" + senderCallSign);
 		fallbackSender.setChatCategory(category);
-		fallbackSender.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+		fallbackSender.setAirPlaneReflectInfo(
+				new AirPlaneReflectionInfo()
+		);
+
 		return fallbackSender;
 	}
 
 	/**
-	 * Resolves a message receiver from the active-member model. Unknown receivers
-	 * are represented as explicit fallback objects instead of null. This keeps PM
-	 * echo display and historic messages stable even if the target station already
-	 * left the chat.
+	 * Resolves a message receiver from the thread-safe active-member model.
+	 *
+	 * <p>The local login is handled before the active-user lookup. The receiver
+	 * from the ON4KST packet therefore remains authoritative even if another
+	 * station with the same base callsign is logged into the same category.</p>
 	 */
-	private ChatMember resolveInboundReceiver(String receiverCallSign, ChatCategory category) {
-		if (receiverCallSign == null || receiverCallSign.equals("0")) {
+	private ChatMember resolveInboundReceiver(
+			String receiverCallSign,
+			ChatCategory category
+	) {
+
+		if (receiverCallSign == null
+				|| receiverCallSign.equals("0")) {
 			return createAllReceiver();
+		}
+
+		String myCall =
+				this.client.getChatPreferences().getStn_loginCallSign();
+
+		if (myCall != null
+				&& receiverCallSign.equalsIgnoreCase(myCall)) {
+
+			ChatMember ownReceiver = new ChatMember();
+			ownReceiver.setCallSign(receiverCallSign);
+			ownReceiver.setChatCategory(category);
+			ownReceiver.setAirPlaneReflectInfo(
+					new AirPlaneReflectionInfo()
+			);
+
+			return ownReceiver;
 		}
 
 		ChatMember lookup = new ChatMember();
 		lookup.setCallSign(receiverCallSign);
 		lookup.setChatCategory(category);
 
-		ChatMember receiverObj = this.client.findActiveChatMember(lookup);
+		ChatMember receiverObj =
+				this.client.findActiveChatMember(lookup);
+
 		if (receiverObj != null) {
 			return receiverObj;
 		}
 
 		ChatMember fallbackReceiver = new ChatMember();
-		String myCall = this.client.getChatPreferences().getStn_loginCallSign();
-		if (receiverCallSign.equalsIgnoreCase(myCall)) {
-			fallbackReceiver.setCallSign(myCall);
-		} else {
-			fallbackReceiver.setCallSign(receiverCallSign + "(left)");
-		}
+		fallbackReceiver.setCallSign(receiverCallSign + "(left)");
 		fallbackReceiver.setChatCategory(category);
-		fallbackReceiver.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+		fallbackReceiver.setAirPlaneReflectInfo(
+				new AirPlaneReflectionInfo()
+		);
+
 		return fallbackReceiver;
 	}
 

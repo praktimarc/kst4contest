@@ -2431,24 +2431,32 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 	/**
-	 * Compares two ChatMember objects by their logical identity.
+	 * Compares two ChatMember objects by their active chat identity.
 	 *
-	 * JavaFX may replace item instances during refreshes, so object identity alone is
-	 * not enough. For selection stability we compare callsign/raw callsign and chat
-	 * category number.
+	 * <p>JavaFX may replace item instances during list refreshes, so object
+	 * identity alone is not sufficient. The complete callsign and the chat
+	 * category identify one active ON4KST login.</p>
+	 *
+	 * <p>The raw/base callsign must not be used here. Otherwise callsigns such as
+	 * {@code 9A0BB-2} and {@code 9A0BB-70} would still be treated as the same
+	 * selection inside one chat category.</p>
 	 */
 	private boolean isSameLogicalChatMember(ChatMember a, ChatMember b) {
+
 		if (a == b) {
 			return true;
 		}
+
 		if (a == null || b == null) {
 			return false;
 		}
 
-		String aCall = a.getCallSignRaw() != null ? a.getCallSignRaw() : a.getCallSign();
-		String bCall = b.getCallSignRaw() != null ? b.getCallSignRaw() : b.getCallSign();
+		String aCallSign = a.getCallSign();
+		String bCallSign = b.getCallSign();
 
-		if (aCall == null || bCall == null || !aCall.equalsIgnoreCase(bCall)) {
+		if (aCallSign == null
+				|| bCallSign == null
+				|| !aCallSign.equalsIgnoreCase(bCallSign)) {
 			return false;
 		}
 
@@ -2458,11 +2466,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		if (aCategory == bCategory) {
 			return true;
 		}
+
 		if (aCategory == null || bCategory == null) {
 			return false;
 		}
 
-		return aCategory.getCategoryNumber() == bCategory.getCategoryNumber();
+		return aCategory.getCategoryNumber()
+				== bCategory.getCategoryNumber();
 	}
 
 	/**
