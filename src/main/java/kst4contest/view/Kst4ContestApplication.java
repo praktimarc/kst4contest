@@ -11359,14 +11359,18 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		vbxButtons.getChildren().addAll(btnOptionspnlConnect, btn_preferences_saveAsDefault, btnOptionsPnlApply,
 				btnOptionspnlDisconnect, btnOptionspnlDisconnectOnly);
 
-		AnchorPane anchorPaneOkAndSave = new AnchorPane();
-		AnchorPane.setRightAnchor(vbxButtons, 10d);
-		AnchorPane.setBottomAnchor(vbxButtons, 10d);
+//		AnchorPane anchorPaneOkAndSave = new AnchorPane();
+//		AnchorPane.setRightAnchor(vbxButtons, 10d);
+//		AnchorPane.setBottomAnchor(vbxButtons, 10d);
+//
+//		anchorPaneOkAndSave.getChildren().addAll(vbxButtons);
 
-		anchorPaneOkAndSave.getChildren().addAll(vbxButtons);
-
-		optionsPanel.setBottom(anchorPaneOkAndSave);
+//		optionsPanel.setBottom(anchorPaneOkAndSave);
 //        optionsPanel.setAlignment(vbxButtons, Pos.CENTER);;
+
+
+		vbxButtons.setAlignment(Pos.CENTER_LEFT);
+		optionsPanel.setBottom(vbxButtons);
 
 //        VBox vBox = new VBox(tabPaneOptions);
 		settingsScene = new Scene(optionsPanel, chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1]);
