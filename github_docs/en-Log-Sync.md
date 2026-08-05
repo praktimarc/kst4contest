@@ -2,7 +2,7 @@
 
 > 🇬🇧 You are reading the English version | 🇩🇪 [Deutsche Version](de-Log-Synchronisation)
 
-KST4Contest automatically marks worked stations in the chat user list. Two basic methods are available:
+KST4Contest imports worked stations from the logging application and derives the global Worked status, per-band Worked marks and – where a locator is available – worked grid squares. Three input paths are available: the file-based Simplelogfile interpreter, the general QSO UDP listener and the dedicated Win-Test network listener.
 
 ---
 
@@ -10,24 +10,25 @@ KST4Contest automatically marks worked stations in the chat user list. Two basic
 
 ## Method 1: Universal File Based Callsign Interpreter (Simplelogfile)
 
-KST4Contest reads a log file and searches for callsign patterns using a regular expression. Binary log files are also supported – unreadable binary content is simply ignored.
+KST4Contest reads a log file and searches it for callsigns using a configurable regular expression. The file is read only and is never modified. Binary log files can also be used; content which cannot be interpreted as text is skipped.
 
-**Advantage**: Works with almost any logging program that writes a file.
-**Disadvantage**: No band information available – stations are only marked as "worked", not on which band.
+The advantage is broad compatibility: no dedicated network interface is required from the logging application.
 
-Enter the path to the log file in the Preferences. The file is only read, never modified (read-only).
+The limitation is equally clear. A callsign match alone provides neither a reliable band nor a locator. The Simplelogfile interpreter can therefore set only the global Worked status. It does not create a per-band `X`, a worked-grid record or a reliable basis for the band-upgrade hint after a log entry.
 
-> **Tip**: The Simplelogfile function can also be used to mark stations that are definitely unreachable (e.g. personal notes). This will be replaced in a later version by a better tagging system.
+Configure the log-file path and regular expression in the **Log sync** tab. Use one of the network interfaces where possible if band-specific information is required.
 
 ---
 
-## Method 2: Network Listener (UDP Broadcast) – Recommended
+# Method 2: Network Listener for QSO UDP Packets – Recommended
 
-When saving a QSO, the logging software sends a UDP packet to the broadcast address of the home network. KST4Contest receives this packet and marks the station including **band information** in its internal SQLite database.
+UCXLog, QARTest, N1MM+ and DXLog.net can transmit a UDP packet when a QSO is saved. KST4Contest receives these packets on port `12060` by default and imports the callsign together with any band and locator information they contain.
 
-> **Important**: KST4Contest must be **running in parallel with the logging software**. QSOs logged while KST4Contest is not running will not be captured – except with QARTest (which can send the complete log).
+If a band is available, the callsign is marked as worked on that band. If the packet also contains a valid locator, KST4Contest stores its four-character grid square for that band. Missing information is not inferred from unrelated fields.
 
-**Default UDP port**: 12060 (matches the default of most logging programs)
+KST4Contest must be running when the packet is transmitted. Some logging applications can, however, resend an existing log: QARTest provides **Invia log completo**, while DXLog.net sends `contactreplace` packets when broadcasting the complete log. KST4Contest processes both mechanisms.
+
+**Default port:** `12060`
 
 ---
 
@@ -81,11 +82,16 @@ For the built-in DX cluster server: configure N1MM+ as a DX cluster client (serv
 - Enter the IP of the KST4Contest computer (green-highlighted fields)
 - Port: 12060
 
+When broadcasting the complete logbook, DXLog.net uses `contactreplace` instead of `contactinfo`. KST4Contest processes both packet types. Older QSOs can therefore be imported by starting a complete-log broadcast while KST4Contest is running.
+
 ### Win-Test
 
 Win-Test is supported with a dedicated UDP network listener that understands the native Win-Test network protocol.
 
+For a new QSO, KST4Contest imports the callsign and resolves the native Win-Test band ID. This includes 50 and 70 MHz. If the packet contains a valid locator, the worked grid square is also stored for the detected band.
+
 **Advantages of Win-Test Integration:**
+- **Per-band Worked data:** New QSOs set the Worked mark for the band reported by Win-Test and update the grid-square status where a locator is available.
 - Automatic QSO synchronization to mark worked stations.
 - **Sked Handover (ADDSKED):** Using the "Create sked" button in the station info panel not only creates a sked in KST4Contest but also *sends it directly via UDP to the Win-Test network as an ADDSKED packet* – automatically, as soon as the listener is active. No separate toggle is needed.
 - You can choose between "AUTO", "SSB", or "CW" sked modes.
@@ -144,6 +150,16 @@ For DM5M-style setups (2 radios, 2 computers, one KST4Contest instance or two se
 
 ## Internal Database
 
-KST4Contest stores worked information in an internal **SQLite database**. This is independent of the logging program's database and is only populated via the UDP broadcast.
+KST4Contest stores Worked, NOT-QRV and worked-grid information in its own SQLite database. This database is independent of the logging application's database.
 
-Before each new contest: reset the database! → [Configuration – Worked Station Database Settings](Configuration#worked-station-database-settings)
+The input sources provide different levels of detail:
+
+| Source | Global callsign status | Per-band status | Grid square |
+|---|---:|---:|---:|
+| Simplelogfile | yes | no | no |
+| QSO UDP listener | yes | yes, if included in the packet | yes, if both band and locator are available |
+| Win-Test network listener | yes | yes | yes, if a locator is available |
+
+The information is restored when KST4Contest starts and updated during operation when new log entries arrive. It expires automatically after three days, so a reset before every contest is normally unnecessary.
+
+A complete manual reset removes Worked marks, NOT-QRV marks and worked grid squares together. See [Worked Station Database Settings](en-Configuration#worked-station-database-settings) for details.

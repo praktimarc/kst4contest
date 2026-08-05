@@ -25,7 +25,18 @@ Enter your own callsign and Maidenhead locator (6 characters, e.g., `JN49IJ`). T
 
 ### Active Bands
 
-Use the **"my station uses band"** checkboxes to select the active bands. Buttons and table rows will only appear in the user interface for selected bands. The software must be restarted after making changes.
+The **My station uses …** checkboxes define the bands available in the current local station setup. Supported choices are 50 MHz, 70 MHz, 144 MHz, 432 MHz, 1296 MHz, 2320 MHz, 3400 MHz, 5760 MHz and 10 GHz.
+
+This selection controls more than the visible band columns. It is also used for:
+
+- the per-band Worked and NOT-QRV filters,
+- the NOT-QRV controls visible in the **Further Info** panel,
+- the `a` and `B+` band-opportunity calculation,
+- the **New bands** filter,
+- the band-upgrade hint after a log entry, and
+- band-specific priority and Reachability functions.
+
+After a change, click **Save Settings** and restart KST4Contest. Band columns and several related controls are created while the user interface is being built and are therefore not added or removed completely during the current session.
 
 ### Antenna Beamwidth
 
@@ -87,11 +98,63 @@ Configuration of the interface to AirScout for aircraft scatter detection. Detai
 
 ## Notification Settings
 
+![Notifications, DX cluster output and QSO monitoring](client_settings_window_notification.png)
+
 Three notification types are available:
 
 1. **Simple sounds**: TADA sound for incoming messages, tick for sked direction detection, etc.
 2. **CW announcement**: The callsign of a station sending a private message is output as a CW signal.
 3. **Phonetic announcement**: The callsign is pronounced phonetically.
+
+### Fallback Band for Relative QRG Detection
+
+The **Fallback band for relative QRG detection** dropdown selects the band used when a relative QRG cannot be assigned to a recent station-specific band context.
+
+Only band prefixes supported by the frequency parser are available:
+
+```text
+50 MHz
+70 MHz
+144 MHz
+432 MHz
+1296 MHz
+2320 MHz
+3400 MHz
+5760 MHz
+10368 MHz (10G)
+24048 MHz (24G)
+```
+
+The dropdown is neither a filter nor an override for complete frequencies. `432.088` is recognised as a frequency in the 432 MHz band regardless of the selection. The fallback is needed for relative values such as `.205`, `,205` or `qrg 205`.
+
+Before using the fallback, KST4Contest checks the sender's recent band context. If a complete frequency has been detected for the same station during the previous 30 minutes, that band takes precedence. A fallback setting of `144 MHz` therefore still turns `.100` into `432.100 MHz` if the station mentioned `432.088` shortly before.
+
+Although the setting is located in the Notification tab, it affects the general QRG parser. It therefore influences the QRG column, detected active bands, priority calculations, band-upgrade hints and other functions which use a known station frequency – not only DX cluster spots.
+
+### Band Upgrade Hint after a Log Entry
+
+After receiving a log entry from UCXLog or Win-Test, KST4Contest can check whether the station which has just been worked still offers another common and unworked band.
+
+The check uses the same derivation as the `a` and `B+` display:
+
+1. the bands enabled in the local station settings,
+2. QRGs detected for the remote station during the previous 30 minutes,
+3. explicit band designators in the name fields of its active chat entries,
+4. stored per-band Worked marks, and
+5. manually assigned NOT-QRV marks.
+
+Active chat variants of the same normalised callsign are evaluated together. NOT-QRV takes precedence over an automatically detected QRG or band designator.
+
+If at least one common and unworked band remains, the main window displays a blinking **BAND+** hint for approximately twelve seconds. The callsign and remaining bands are included in the button text; the tooltip contains the complete derivation. If general notification sounds are enabled, KST4Contest also plays a short sound.
+
+The two options serve different purposes:
+
+- **Blink + sound …** enables the hint after a matching log entry.
+- **Priority boost …** additionally raises the priority of stations with an open band opportunity. The boost is one factor within the complete score calculation and does not guarantee a particular list position.
+
+The hint requires a log-synchronisation source which provides band information. The file-based callsign interpreter sees callsigns only and cannot reliably identify the band of the QSO which has just been logged.
+
+Further explanation: [Band Upgrade Hint after a Log Entry](en-Features#band-upgrade-hint-after-a-log-entry).
 
 ---
 
@@ -174,14 +237,37 @@ Use case: Keep track of important stations (e.g. DX expeditions or trusted conte
 
 ---
 
+## GUI Settings: Band-Column Hints
+
+Two optional additions to the band columns can be enabled or disabled in the **GUI** tab:
+
+- **Show "o" in band columns …** displays an `o` if the four-character grid square has already been worked on the relevant band. Disabling the option does not delete any database records; it only hides the additional indicator in the band columns. `wkdany` is unaffected.
+- **Show "a" in band columns …** distinguishes a completely new callsign from a band opportunity involving a callsign already worked elsewhere. When disabled, both cases are displayed as `B+`. The band-opportunity calculation itself remains unchanged.
+
+Changes are reflected in the current user interface immediately. Click **Save Settings** afterwards if they should persist after the next start.
+
+![GUI settings for band-column hints](client_settings_window_gui.png)
+
+---
+
 ## Worked Station Database Settings
 
-The internal worked database contains:
+The internal SQLite database stores contest-related state independently of the logging application's database:
 
-- Worked status of all stations (per band)
-- NOT-QRV tags (since v1.2)
+- the global Worked status of a callsign,
+- Worked status per band,
+- manually assigned NOT-QRV marks per band, and
+- worked four-character grid squares per band.
 
-**From v1.40**: Entries have an automatic lifetime of **3 days** – manually resetting before each contest is no longer strictly necessary. For a full reset, the **"Reinitialize"** button is still available.
+The normalised callsign, without visible chat brackets or category formatting, is used as the key. This allows active variants of the same callsign to be evaluated consistently.
+
+Worked and NOT-QRV information expires automatically three days after its most recent change. Stored grid squares expire three days after the corresponding log entry. A manual reset before every contest is therefore normally unnecessary.
+
+The **Reset worked, NOT-QRV and grid data...** button removes every Worked mark, NOT-QRV mark and stored worked grid square. A confirmation dialog is displayed first. Known callsign rows remain in the database; only the contest-related state is reset.
+
+A reset is useful when you deliberately want to start with an empty contest state or have imported test data. It is not intended as a daily maintenance step.
+
+Display and derivation: [Worked Callsigns, New Bands and New Grid Squares](en-Features#worked-callsigns-new-bands-and-new-grid-squares).
 
 ---
 
