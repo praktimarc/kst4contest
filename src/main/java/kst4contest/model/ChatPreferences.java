@@ -50,7 +50,7 @@ public class ChatPreferences {
 	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
 	 */
 //	private static final int CONFIG_VERSION = 2;
-	public static final int CONFIG_VERSION = 4;
+	public static final int CONFIG_VERSION = 5;
 
 	// Prefer writing tag names that mirror variable names (human readable). Keep legacy tags for compatibility.
 	private static final String TAG_CONFIG_VERSION = "configVersion";
@@ -339,6 +339,7 @@ public class ChatPreferences {
 
 	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
 	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
+	private boolean GUIstationMapPathAnalysisVisible = true;
 
 
 	/*********************************************************************************
@@ -633,6 +634,14 @@ public class ChatPreferences {
 
 	public void setGUIstationMapStagePositionXY(double[] GUIstationMapStagePositionXY) {
 		this.GUIstationMapStagePositionXY = GUIstationMapStagePositionXY;
+	}
+
+	public boolean isGUIstationMapPathAnalysisVisible() {
+		return GUIstationMapPathAnalysisVisible;
+	}
+
+	public void setGUIstationMapPathAnalysisVisible(boolean GUIstationMapPathAnalysisVisible) {
+		this.GUIstationMapPathAnalysisVisible = GUIstationMapPathAnalysisVisible;
 	}
 
 	public boolean isGuiOptions_defaultFilterNothing() {
@@ -2048,6 +2057,12 @@ public class ChatPreferences {
 			);
 			guiOptions.appendChild(GUIstationMapStagePositionXY);
 
+			Element GUIstationMapPathAnalysisVisible = doc.createElement("GUIstationMapPathAnalysisVisible");
+			GUIstationMapPathAnalysisVisible.setTextContent(
+					String.valueOf(this.isGUIstationMapPathAnalysisVisible())
+			);
+			guiOptions.appendChild(GUIstationMapPathAnalysisVisible);
+
 			/****************************************************************************************
 			 ****************************** now write this XML! *************************************
 			 ****************************************************************************************/
@@ -2782,6 +2797,17 @@ public class ChatPreferences {
 								getText(element, null, "GUIstationMapStagePositionXY"),
 								this.getGUIstationMapStagePositionXY()
 						);
+
+						/*
+						 * Files written before config version 5 do not contain this value.
+						 * Keep the default true in that case so existing users discover the
+						 * path-analysis feature before choosing to hide it themselves.
+						 */
+						this.setGUIstationMapPathAnalysisVisible(getBoolean(
+								element,
+								this.isGUIstationMapPathAnalysisVisible(),
+								"GUIstationMapPathAnalysisVisible"
+						));
 
 						// Splitpane divider positions
 						String s1 = getText(element, null, "GUIselectedCallSignSplitPane_dividerposition");

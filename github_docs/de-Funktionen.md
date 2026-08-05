@@ -496,8 +496,10 @@ So kann der Contest-Operator auf einem Blick sehen, welche Stationen wann und ü
 ## Intervall-Beacon
 
 KST4Contest kann wiederkehrende CQ-Nachrichten in den öffentlichen Chat senden. Beide Chat-Kategorien verwenden ein gemeinsames Intervall, besitzen aber jeweils einen eigenen Aktivierungsschalter und Nachrichtentext. Globale Variablen wie `MYQRG`, `SECONDQRG` oder `MYLOCATOR` werden unmittelbar vor jeder Aussendung aktualisiert.
+ 
 
 Der Beacon ist für längeres CQ-Rufen auf einer festen Frequenz gedacht. Beim Absuchen oder häufigen Wechseln der QRG sollte er ausgeschaltet werden, damit keine inzwischen falsche Frequenz verbreitet wird. Details: [Konfiguration – Beacon Settings](de-Konfiguration#beacon-settings-automatischer-beacon).
+
 ---
 
 ## Simplelogfile
@@ -510,7 +512,7 @@ Dateibasierte Log-Auswertung per Regex. Details: [Log-Synchronisation](Log-Synch
 
 Ein separates Fenster zeigt den QSO-Fluss zwischen anderen Stationen. Besonders interessant in ruhigeren Nacht-Stunden während des Contests, wenn weniger Verkehr herrscht.
 
-Dieses Fenster kann miniaturisiert werden, wenn es nicht benötigt wird. Zukünftig geplant: Filterung auf Stationen im ausgewählten QTF.
+Dieses Fenster kann minimiert werden, wenn es nicht benötigt wird. Zukünftig geplant: Filterung auf Stationen im ausgewählten QTF.
 
 ---
 

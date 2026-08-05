@@ -28,6 +28,8 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.ColumnConstraints;
+import javafx.geometry.Pos;
+import javafx.scene.layout.HBox;
 
 /**
  * Standalone station map window.
@@ -48,6 +50,9 @@ public final class StationMapView {
      * noisy during map interaction.
      */
     private static final boolean MAP_DEBUG_LOGGING = false;
+
+    private static final double MINIMUM_HEIGHT_WITH_PATH_ANALYSIS = 650.0;
+    private static final double MINIMUM_HEIGHT_WITHOUT_PATH_ANALYSIS = 420.0;
 
     private final PathProfileChart detailPathProfileChart = new PathProfileChart();
     private final Label detailPathModeValue = new Label("-");
@@ -76,6 +81,12 @@ public final class StationMapView {
     private VBox detailPane;
 
     private final Label statusLabel = new Label("Station map not initialized yet.");
+
+    private final Label pathAnalysisHiddenHintLabel = new Label("Path analysis is hidden.");
+    private final Button pathAnalysisVisibilityButton = new Button();
+    private final Tooltip pathAnalysisVisibilityTooltip = new Tooltip();
+
+
     private final Label detailCallsignValue = new Label("-");
     private final Label detailLocatorValue = new Label("-");
     private final Label detailQrbValue = new Label("-");
@@ -138,7 +149,11 @@ public final class StationMapView {
     private PathAnalysisResult lastPathAnalysisResult = PathAnalysisResult.waitingForSelection("");
 
     private VBox mapAndProfilePane;
+    private VBox profileSection;
+    private VBox pathAnalysisSection;
     private ScrollPane detailScrollPane;
+
+
 
     private final Label detailPathLosValue = new Label("-");
     private final Label detailPathWorstClearanceValue = new Label("-");
@@ -287,6 +302,14 @@ public final class StationMapView {
             }
         });
 
+        pathAnalysisVisibilityButton.setMinWidth(Region.USE_PREF_SIZE);
+        pathAnalysisVisibilityButton.setTooltip(pathAnalysisVisibilityTooltip);
+        pathAnalysisVisibilityButton.setOnAction(event ->
+                setPathAnalysisVisible(!profileSection.isVisible(), true));
+
+        pathAnalysisHiddenHintLabel.setMinWidth(Region.USE_PREF_SIZE);
+        pathAnalysisHiddenHintLabel.setStyle("-fx-font-style: italic; -fx-opacity: 0.85;");
+
         webView.setFocusTraversable(true);
         webView.setPickOnBounds(true);
 
@@ -323,7 +346,8 @@ public final class StationMapView {
         webView.widthProperty().addListener((obs, oldValue, newValue) -> requestMapInvalidateSize());
         webView.heightProperty().addListener((obs, oldValue, newValue) -> requestMapInvalidateSize());
 
-        VBox profileSection = createProfileSection();
+        profileSection = createProfileSection();
+
 
         mapAndProfilePane = new VBox(6, webView, profileSection);
         mapAndProfilePane.setPadding(new Insets(0));
@@ -349,10 +373,9 @@ public final class StationMapView {
                 mapAndProfilePane.widthProperty().subtract(20)
         );
 
-        detailPane = new VBox(10,
-                createSelectedStationSection(),
-                createPathAnalysisSection()
-        );
+        pathAnalysisSection = createPathAnalysisSection();
+        detailPane = new VBox(10, createSelectedStationSection(), pathAnalysisSection);
+
         detailPane.setPadding(new Insets(10));
 
         detailPane.setMinWidth(0);
@@ -364,8 +387,14 @@ public final class StationMapView {
         detailScrollPane.setFitToWidth(true);
         detailScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         detailScrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        detailScrollPane.setMinWidth(300);
+        /*
+         * Allow the details pane to be reduced far enough to leave more room for the
+         * map. At its minimum width, a callsign with up to ten characters remains
+         * readable.
+         */
+        detailScrollPane.setMinWidth(210);
         detailScrollPane.setPrefWidth(350);
+
         detailScrollPane.setMaxWidth(Double.MAX_VALUE);
 
         detailScrollPane.setFitToWidth(true);
@@ -378,8 +407,7 @@ public final class StationMapView {
         SplitPane.setResizableWithParent(detailScrollPane, true);
 
         rootPane = new BorderPane();
-        rootPane.setTop(statusLabel);
-        BorderPane.setMargin(statusLabel, new Insets(8));
+        rootPane.setTop(createMapHeader());
         rootPane.setCenter(mainSplitPane);
 
         double[] size = chatPreferences.getGUIstationMapStageSceneSizeHW();
@@ -390,7 +418,12 @@ public final class StationMapView {
         scene = new Scene(rootPane, initialWidth, initialHeight);
 
         stage.setMinWidth(900);
-        stage.setMinHeight(650);
+        stage.setMinHeight(resolveMinimumStationMapHeight(
+                chatPreferences.isGUIstationMapPathAnalysisVisible()));
+
+        stage.setScene(scene);
+        setPathAnalysisVisible(chatPreferences.isGUIstationMapPathAnalysisVisible(), false);
+        applyThemeFromPreferences();
 
         stage.setScene(scene);
         applyThemeFromPreferences();
@@ -446,6 +479,91 @@ public final class StationMapView {
 
     }
 
+    /**
+     * Creates an always-visible header for the map status and analysis controls.
+     *
+     * Keeping the control outside the sections that it hides is important: users
+     * must always have an obvious way to restore a previously hidden analysis.
+     */
+    private HBox createMapHeader() {
+        // The status may be shortened before the show/hide control is ever clipped.
+        statusLabel.setMinWidth(0);
+        statusLabel.setMaxWidth(Double.MAX_VALUE);
+        statusLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+
+        HBox header = new HBox(
+                10,
+                statusLabel,
+                pathAnalysisHiddenHintLabel,
+                pathAnalysisVisibilityButton
+        );
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(8));
+        HBox.setHgrow(statusLabel, Priority.ALWAYS);
+        return header;
+    }
+
+    /**
+     * Shows or hides both parts of the path analysis as one logical feature.
+     *
+     * Both visible and managed must be changed. A node that is merely invisible
+     * would still reserve layout space and the map would not grow into that area.
+     * The current analysis result remains attached to the controls and is
+     * immediately available again when the user restores the sections.
+     *
+     * @param visible true to show the profile and detailed analysis
+     * @param persist true when the change was explicitly requested by the user
+     */
+    private void setPathAnalysisVisible(boolean visible, boolean persist) {
+        profileSection.setVisible(visible);
+        profileSection.setManaged(visible);
+
+        pathAnalysisSection.setVisible(visible);
+        pathAnalysisSection.setManaged(visible);
+
+        pathAnalysisHiddenHintLabel.setVisible(!visible);
+        pathAnalysisHiddenHintLabel.setManaged(!visible);
+
+        pathAnalysisVisibilityButton.setText(
+                visible ? "Hide path analysis" : "Show path analysis");
+        pathAnalysisVisibilityButton.setAccessibleText(
+                visible ? "Hide path analysis" : "Show path analysis");
+        pathAnalysisVisibilityButton.setStyle(
+                visible ? "" : "-fx-font-weight: bold;");
+
+        pathAnalysisVisibilityTooltip.setText(visible
+                ? "Hide the path profile and detailed path analysis. You can show them again at any time."
+                : "Show the path profile and detailed path analysis.");
+
+        pathAnalysisVisibilityButton.setAccessibleHelp(
+                pathAnalysisVisibilityTooltip.getText());
+
+        if (!visible) {
+            /*
+             * Do not leave a profile hover marker on the map after its chart was
+             * hidden.
+             */
+            showProfileHoverPointOnMap(null);
+        }
+
+        stage.setMinHeight(resolveMinimumStationMapHeight(visible));
+
+        if (persist) {
+            chatPreferences.setGUIstationMapPathAnalysisVisible(visible);
+        }
+
+        if (rootPane != null) {
+            rootPane.requestLayout();
+            Platform.runLater(this::requestMapInvalidateSize);
+        }
+    }
+
+    private double resolveMinimumStationMapHeight(boolean pathAnalysisVisible) {
+        return pathAnalysisVisible
+                ? MINIMUM_HEIGHT_WITH_PATH_ANALYSIS
+                : MINIMUM_HEIGHT_WITHOUT_PATH_ANALYSIS;
+    }
+
     private VBox createSelectedStationSection() {
         GridPane detailGrid = new GridPane();
         detailGrid.setHgap(8);
@@ -494,13 +612,18 @@ public final class StationMapView {
         gridPane.getColumnConstraints().clear();
 
         ColumnConstraints labelColumn = new ColumnConstraints();
-        labelColumn.setMinWidth(105);
+        labelColumn.setMinWidth(70);
         labelColumn.setPrefWidth(115);
         labelColumn.setMaxWidth(130);
         labelColumn.setHgrow(Priority.NEVER);
 
         ColumnConstraints valueColumn = new ColumnConstraints();
-        valueColumn.setMinWidth(180);
+
+        /*
+         * Reserve enough space for a callsign with up to ten characters, while still
+         * allowing the details pane to become considerably narrower.
+         */
+        valueColumn.setMinWidth(85);
         valueColumn.setHgrow(Priority.ALWAYS);
 
         gridPane.getColumnConstraints().addAll(labelColumn, valueColumn);
@@ -1530,8 +1653,11 @@ public final class StationMapView {
             return 768.0;
         }
 
+        double minimumHeight = resolveMinimumStationMapHeight(
+                chatPreferences.isGUIstationMapPathAnalysisVisible());
+
         // Avoid restoring very large old test sizes after the layout changed.
-        if (storedSize[1] < 650.0 || storedSize[1] > 1100.0) {
+        if (storedSize[1] < minimumHeight || storedSize[1] > 1100.0) {
             return 768.0;
         }
 
