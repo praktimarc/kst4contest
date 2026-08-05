@@ -97,15 +97,17 @@ function rewriteManualLinks(content, lang) {
             return `[${label}](/manual/${linkLang}/${slug.toLowerCase()}/)`;
         })
 
-        // Markdown-Links auf de-/en-Dateien ohne .md
-        .replace(/\]\((en|de)-([^)#]+)\)/g, (match, linkLang, slug) => {
-            return `](/manual/${linkLang}/${slug.toLowerCase()}/)`;
-        })
+        // Markdown links to German or English manual pages.
+        // The source may contain an optional ".md" suffix and an optional anchor.
+        // Both forms must be converted to the corresponding website manual URL.
+        .replace(
+            /\]\((en|de)-([^#)]+?)(?:\.md)?(?:#([^)]+))?\)/g,
+            (match, linkLang, slug, anchor) => {
+                const fragment = anchor ? `#${anchor}` : "";
 
-        // Markdown-Links auf de-/en-Dateien mit .md
-        .replace(/\]\((en|de)-([^)#]+)\.md\)/g, (match, linkLang, slug) => {
-            return `](/manual/${linkLang}/${slug.toLowerCase()}/)`;
-        });
+                return `](/manual/${linkLang}/${slug.toLowerCase()}/${fragment})`;
+            }
+        );
 }
 
 module.exports = function (eleventyConfig) {
