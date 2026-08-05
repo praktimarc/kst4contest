@@ -2423,8 +2423,11 @@ public class ChatPreferences {
 					notify_noReplyPenaltyMinutes = noReply;
 				}
 
-				Integer momentum = getInt(notificationsEl, 666, "notify_momentumWindowSeconds");
-				if (momentum != null) {
+				Integer momentum = getInt(
+						notificationsEl,
+						notify_momentumWindowSeconds,
+						"notify_momentumWindowSeconds"
+				);				if (momentum != null) {
 					notify_momentumWindowSeconds = momentum;
 				}
 

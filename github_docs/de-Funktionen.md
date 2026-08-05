@@ -372,21 +372,113 @@ Konfiguration: [Band-Upgrade-Hinweis nach einem Logeintrag](de-Konfiguration#ban
 Worked-, NOT-QRV- und Großfelddaten laufen nach drei Tagen automatisch ab. Einzelheiten und manueller Reset: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).
 
 ---
-## Chatmember Score-System / Prioritätsliste (ab v1.40)
+## Prioritätsscore und Prioritätsliste (ab v1.40)
 
-KST4Contest berechnet automatisch eine **Prioritätsbewertung** für jeden aktiven Chatmember. Der Score setzt sich zusammen aus:
+### Warum wird überhaupt ein Score benötigt?
 
-- Antennenrichtung der Gegenstation (zeigt sie auf mich?)
-- QRB (Entfernung)
-- Aktivitätszeit und Nachrichtenanzahl
-- Aktive Bänder und Frequenzen
-- AP-Verfügbarkeit (AirScout)
-- Sked-Richtung
-- Sked-Erfolgsrate und Skedfail-Markierungen
+Eine klassische Chat-Benutzerliste zeigt zunächst nur, welche Stationen gerade eingeloggt sind. Im Contestbetrieb reicht diese Information nicht aus. Der Operator muss zusätzlich abschätzen, welche Station noch nicht gearbeitet wurde, auf welchem Band ein QSO möglich sein könnte, wohin die Antenne zeigt, ob ein passendes Flugzeug verfügbar ist und ob ein vereinbarter Sked unmittelbar bevorsteht.
 
-Die Top-Kandidaten werden in einer eigenen Prioritätsliste hervorgehoben und helfen, im Contest-Stress die wichtigsten Stationen nicht zu übersehen.
+Bei einer kurzen Liste lässt sich das noch im Kopf erledigen. Mit zunehmender Contestdauer, mehreren Bändern und zwei gleichzeitig verwendeten Chat-Kategorien wird daraus jedoch eine ständig wiederholte Entscheidung.
 
-Stationen, bei denen ein Sked gescheitert ist, können über den **Skedfail-Button** im FurtherInfo-Panel markiert werden – das senkt ihren Score vorübergehend.
+KST4Contest führt die bereits vorhandenen Informationen deshalb in einem Prioritätsscore zusammen. Der Score beantwortet nicht die Frage, ob ein QSO sicher möglich ist. Er hilft bei der praktisch wichtigeren Frage:
+
+> Welche der aktuell sichtbaren Stationen sollte ich mir als Nächstes ansehen?
+
+### Wann wird eine Station ausgeschlossen?
+
+Vor der eigentlichen Gewichtung prüft KST4Contest, ob überhaupt eine bekannte Bandmöglichkeit besteht. Dafür werden alle aktiven Chat-Einträge desselben normalisierten Basisrufzeichens gemeinsam ausgewertet.
+
+Berücksichtigt werden:
+
+1. die in den Stationseinstellungen aktivierten eigenen Bänder,
+2. höchstens 30 Minuten alte QRG-Erkennungen der Gegenstation,
+3. eindeutige Bandangaben im Namensfeld ihrer aktiven Chat-Einträge,
+4. die pro Band gespeicherten Worked-Markierungen und
+5. manuell gesetzte NOT-QRV-Tags.
+
+NOT QRV hat dabei Vorrang vor automatisch erkannten Frequenzen oder Bandangaben.
+
+Sind Bänder der Gegenstation bekannt, aber keines davon ist lokal aktiviert und noch verfügbar, erhält die Station einen Score von `0`. Dasselbe gilt, wenn alle gemeinsam möglichen Bänder bereits gearbeitet wurden.
+
+Fehlen dagegen sämtliche Bandinformationen, wird die Station nicht allein deshalb ausgeschlossen. Eine unbekannte Bandmöglichkeit ist nicht dasselbe wie eine nachweislich unmögliche Bandmöglichkeit. Erst wenn alle eigenen aktivierten Bänder für die Station manuell als NOT QRV markiert wurden, ist auch in diesem Fall keine aktuelle Contestmöglichkeit mehr vorhanden.
+
+Stationen mit einem Score von `0` bleiben in der Benutzerliste sichtbar, erscheinen aber nicht in der Prioritätsliste.
+
+### Welche Informationen erhöhen oder verringern den Score?
+
+Der Score entsteht aus mehreren voneinander unabhängigen Hinweisen. Ein einzelnes Kriterium entscheidet daher normalerweise nicht über den endgültigen Listenplatz.
+
+| Faktor | Wirkung auf die Priorisierung |
+|---|---|
+| Worked-Status | Ein noch auf keinem unterstützten Band gearbeitetes Rufzeichen erhält eine höhere Ausgangspriorität. Bereits gearbeitete Stationen werden niedriger bewertet, bleiben bei offenen Bandmöglichkeiten aber Kandidaten. |
+| Verfügbare Bänder | Mehrere gemeinsam nutzbare und noch nicht gearbeitete Bänder erhöhen die Priorität. Optional kann für Band-Upgrades ein zusätzlicher Boost aktiviert werden. |
+| Entfernung | Entfernungen unter 200 km werden niedriger gewichtet. Der Bereich zwischen 200 km und dem konfigurierten maximalen QRB wird bevorzugt. Stationen jenseits des maximalen QRB werden deutlich herabgestuft. Fehlt der QRB, entfällt dieser Faktor. |
+| Antennenrichtung | Liegt der QTF zur Gegenstation innerhalb der Hälfte des konfigurierten Antennen-Öffnungswinkels um den aktuellen eigenen QTF, steigt der Score. Je näher die Richtungen zusammenliegen, desto stärker wirkt der Hinweis. |
+| AirScout | Mindestens ein aktuell erreichbares Flugzeug erhöht den Score. Eine erwartete AP-Gelegenheit in null, einer oder zwei Minuten wird zusätzlich zeitlich gewichtet. |
+| Aktuelle Chat-Aktivität | Eine Nachricht innerhalb der letzten Minute wirkt stärker als eine Nachricht innerhalb der letzten drei Minuten. Mehrere eingehende Zeilen innerhalb des Aktivitätsfensters erhöhen den Score zusätzlich. |
+| Positive Signale | Erkannte Angaben wie `QRV`, `READY`, `RGR`, `OK`, `TNX` oder vergleichbare konfigurierte Textmuster werden für einige Minuten als positiver Hinweis berücksichtigt. |
+| Antwortverhalten | Reagiert eine Station nach einer eigenen `/cq`-Nachricht schnell mit einer weiteren sichtbaren Chat-Zeile, wirkt sich die gemittelte Reaktionszeit positiv aus. Bleibt eine solche Zeile aus, entsteht nach dem konfigurierten Timeout eine negative Bewertung. |
+| Skeds | Ein eingetragener Sked erhöht die Priorität zunächst leicht. Innerhalb der letzten 15 Minuten vor dem Termin steigt der Einfluss kontinuierlich an. Zwischen drei Minuten vor und einer Minute nach dem Termin erhält der Sked eine sehr hohe Priorität. |
+| Fehlgeschlagener Versuch | **Sked fail** reduziert den Score der Station stark, bis die Markierung mit **Reset fail** zurückgesetzt oder KST4Contest neu gestartet wird. |
+
+Das standardmäßige Aktivitätsfenster für die Anzahl eingehender Nachrichten beträgt 180 Sekunden. Eine aktuelle Nachricht innerhalb der letzten 60 Sekunden wird noch einmal gesondert bewertet. Der standardmäßige No-Reply-Timeout beträgt 13 Minuten.
+
+Beim Antwortverhalten kann KST4Contest nicht sicher feststellen, ob eine nachfolgende öffentliche oder private Nachricht tatsächlich die Antwort auf die eigene Anfrage war. Jede anschließend empfangene Zeile derselben Station beendet deshalb den laufenden Antwortzeitversuch. Der Wert ist eine praktische Näherung und keine statistisch belastbare Antwortquote.
+
+### Was bedeutet ein eingetragener Sked?
+
+Ein Sked ist eine zeitlich vereinbarte Arbeitsaufgabe. Deshalb übersteuert ein unmittelbar bevorstehender Sked die meisten normalen Aktivitäts- und Entfernungshinweise. Ohne diese Gewichtung könnte eine gerade sehr aktive Station einen vereinbarten Termin aus der Prioritätsliste verdrängen.
+
+Der starke Sked-Boost ist absichtlich auf den Zeitraum von drei Minuten vor bis eine Minute nach dem eingetragenen Termin begrenzt. Ein weiter in der Zukunft liegender Sked bleibt sichtbar, soll den laufenden Betrieb aber noch nicht dominieren.
+
+Die Bewertung wird für das normalisierte Basisrufzeichen vorgenommen. Ein Sked für eine aktive Variante wie `9A0BB-23` beeinflusst daher den gemeinsamen Score der zu `9A0BB` gehörenden Chat-Einträge.
+
+### Wie werden mehrere SSIDs und Chat-Kategorien behandelt?
+
+Aktive Rufzeichen wie `9A0BB-2`, `9A0BB-70`, `9A0BB-23` und `9A0BB-13` bleiben getrennte Chatmember. Dadurch können Nachrichten weiterhin an das vollständige Rufzeichen und die richtige Chat-Kategorie adressiert werden.
+
+Worked-, Band-, NOT-QRV- und Score-Informationen beziehen sich dagegen auf das gemeinsame Basisrufzeichen `9A0BB`. Der Score wird deshalb einmal berechnet und auf alle aktiven Varianten übertragen. Die Benutzerliste kann mehrere getrennte Zeilen mit demselben Score enthalten; in der Prioritätsliste erscheint das Basisrufzeichen nur einmal.
+
+Als konkretes Nachrichtenziel verwendet KST4Contest den zuletzt passenden aktiven Login in der zuletzt verwendeten Chat-Kategorie. Beim Anklicken eines Kandidaten wird anschließend das vollständige Rufzeichen einschließlich Suffix und Kategorie ausgewählt.
+
+### Aktualisierung und Anzeige
+
+Änderungen durch neue Nachrichten, AirScout-Daten, Skeds, Worked-Informationen oder manuelle NOT-QRV- und Sked-fail-Markierungen fordern unmittelbar eine Neuberechnung an. Zusätzlich wird der Score regelmäßig im Hintergrund aktualisiert, weil Aktivitäts-, AP- und Sked-Informationen auch ohne neues Ereignis altern.
+
+Eine kurze Verzögerung von einigen Sekunden zwischen einem Ereignis und der sichtbaren neuen Reihenfolge ist daher normal.
+
+Die Benutzeroberfläche zeigt den Score an drei Stellen:
+
+- als numerisch sortierbare Spalte **Score** in der Benutzerliste,
+- für die ausgewählte Station im Bereich **Further Info** und
+- als kompakte Liste der beiden derzeit höchstbewerteten Kandidaten mit einem zusätzlichen Fenster für bis zu 15 Kandidaten.
+
+Bedienung: [Prioritätsliste in der Benutzeroberfläche](de-Benutzeroberflaeche#prioritätsliste).
+
+### Was sagt der Score nicht aus?
+
+Der Zahlenwert ist weder eine Erfolgswahrscheinlichkeit noch eine Signalprognose. Ein doppelt so hoher Score bedeutet nicht, dass ein QSO doppelt so wahrscheinlich ist.
+
+Die Berechnung kennt unter anderem nicht:
+
+- die tatsächliche Antennenrichtung der Gegenstation,
+- deren momentane Betriebssituation,
+- lokale Störungen,
+- kurzfristige Ausbreitungsänderungen,
+- Geländeabschattungen außerhalb der jeweils angebundenen Funktionen oder
+- die Frage, ob eine im Chat aktive Station tatsächlich gerade am Funkgerät sitzt.
+
+Auch bekannte Eingabedaten können veraltet oder missverständlich sein. Eine erkannte Frequenz belegt beispielsweise nur, dass diese QRG kürzlich im Zusammenhang mit der Station aufgetreten ist.
+
+Im Klartext: Der Score ersetzt nicht die Entscheidung des Operators. Er sorgt dafür, dass die dafür bereits vorhandenen Informationen nicht bei jedem Kandidaten erneut im Kopf zusammengesucht werden müssen.
+
+Zugehörige Einstellungen:
+
+- [Aktivierte Bänder](de-Konfiguration#aktivierte-bänder)
+- [Antennen-Öffnungswinkel](de-Konfiguration#antennen-öffnungswinkel-antenna-beamwidth)
+- [Standard-Maximum-QRB](de-Konfiguration#standard-maximum-qrb)
+- [AirScout-Einstellungen](de-Konfiguration#airscout-einstellungen)
+- [Band-Upgrade-Hinweis und Priority Boost](de-Konfiguration#band-upgrade-hinweis-nach-einem-logeintrag)
 
 ---
 

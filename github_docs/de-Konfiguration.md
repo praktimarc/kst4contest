@@ -186,7 +186,13 @@ Bleibt mindestens ein gemeinsames, noch nicht gearbeitetes Band übrig, erschein
 Die beiden Optionen haben unterschiedliche Aufgaben:
 
 - **Blink + sound …** aktiviert den Hinweis nach einem passenden Logeintrag.
-- **Priority boost …** erhöht zusätzlich die Priorität von Stationen mit einer offenen Bandmöglichkeit. Der Boost ist ein Faktor innerhalb der gesamten Prioritätsberechnung und garantiert keinen bestimmten Listenplatz.
+- **Priority boost …** erhöht zusätzlich den Score von Stationen, die bereits auf mindestens einem Band gearbeitet wurden, aber noch ein weiteres gemeinsames und nicht gearbeitetes Band anbieten.
+
+Der Priority Boost ist nur ein Faktor innerhalb der gesamten Berechnung. Entfernung, Antennenrichtung, aktuelle Aktivität, AirScout-Daten, Skeds und negative Hinweise können den endgültigen Listenplatz weiterhin verändern. Die aktivierte Option garantiert deshalb weder einen bestimmten Score noch einen bestimmten Platz in der Prioritätsliste.
+
+Die übrigen Score-Gewichte besitzen derzeit keine eigenen Bedienelemente. Mehrere vorhandene Einstellungen liefern jedoch Eingangsdaten für die Berechnung, insbesondere die [aktivierten Bänder](#aktivierte-bänder), der [Antennen-Öffnungswinkel](#antennen-öffnungswinkel-antenna-beamwidth), der [Standard-Maximum-QRB](#standard-maximum-qrb) und die [AirScout-Einstellungen](#airscout-einstellungen).
+
+Die vollständige Herleitung ist unter [Prioritätsscore und Prioritätsliste](de-Funktionen#prioritätsscore-und-prioritätsliste-ab-v140) beschrieben.
 
 Der Hinweis setzt eine Log-Synchronisation mit Bandinformation voraus. Der einfache dateibasierte Callsign-Interpreter erkennt lediglich Rufzeichen und liefert deshalb keine sichere Information über das Band des gerade geloggten QSOs.
 

@@ -33,7 +33,7 @@ Die zentrale Tabelle aller aktuell aktiven Chat-Nutzer. Spalten (je nach Konfigu
 | QTF | Richtung in Grad |
 | QRG | Zuletzt aus einer Chat-Nachricht erkannte Frequenz |
 | Tropo | Ergebnis der bandbezogenen Tropo- beziehungsweise Streckenbewertung |
-| Score | Aktueller Prioritätswert |
+| Score | Aktueller, numerisch sortierbarer Prioritätswert des normalisierten Basisrufzeichens |
 | Act | Minuten seit der letzten Aktivität |
 | AP | AirScout-Flugzeugdaten, sofern aktiviert |
 | worked | Bandbezogener Worked-, Bandmöglichkeits- und Großfeldstatus sowie `wkdany` |
@@ -128,13 +128,35 @@ Die Änderung wirkt sofort auf die Spalte **NOT QRV @**, die Bandmöglichkeiten 
 
 ![Bandbezogene NOT-QRV-Markierungen im Further-Info-Bereich](not_qrv_controls.png)
 
-Hier können auch **Sked-Erinnerungen / Wecker** für beide Skkedpartner aktiviert werden.
+Im selben Bereich wird der aktuelle **Priority score** der ausgewählten Station angezeigt.
+
+Mit **Sked fail** lässt sich ein fehlgeschlagener Versuch markieren. Der Score des normalisierten Basisrufzeichens wird dadurch stark reduziert. **Reset fail** entfernt diese Markierung wieder. Die Markierung gilt für alle aktiven Suffix- und Kategorievarianten der Station und bleibt innerhalb der laufenden Programmsitzung erhalten.
+
+Darunter können ein Sked und die zugehörigen **Sked-Erinnerungen / Wecker** angelegt werden. Ein nahender Sked erhöht den Priority Score zeitabhängig; unmittelbar vor dem Termin erhält er eine sehr hohe Gewichtung.
 
 ---
 
 ## Prioritätsliste
 
-Zeigt die vom Score-Service berechneten Top-Kandidaten. Aktualisiert sich automatisch im Hintergrund basierend auf Richtung, Entfernung und AP-Verfügbarkeit.
+Die kompakte Prioritätsleiste befindet sich rechts zwischen Benutzerliste und Further-Info-Bereich. Sie zeigt die beiden derzeit höchstbewerteten Kandidaten unmittelbar im Hauptfenster:
+
+```text
+Priority:  1 RUFZEICHEN SCORE  2 RUFZEICHEN SCORE  more
+```
+
+Ein Klick auf einen der beiden Kandidaten wählt den dazugehörigen aktiven Chatmember aus. Dabei werden das vollständige Rufzeichen einschließlich Suffix und die zugehörige Chat-Kategorie verwendet.
+
+Die Schaltfläche **more** öffnet ein separates Fenster mit bis zu 15 Kandidaten. Die Liste ist nach absteigendem Score sortiert. Ein Doppelklick wählt den betreffenden Kandidaten aus und schließt das Fenster.
+
+![Priority Score, kompakte Kandidatenliste und Further-Info-Steuerung](priority_score_overview.png)
+
+Stationen mit einem Score von `0` werden nicht in die Prioritätsliste aufgenommen. In der Benutzerliste bleiben sie sichtbar, sodass der Ausschluss nachvollzogen und beispielsweise durch eine geänderte NOT-QRV-Markierung korrigiert werden kann.
+
+Der Score wird für das normalisierte Basisrufzeichen berechnet. Mehrere aktive Varianten wie `9A0BB-2` und `9A0BB-70` können daher in der Benutzerliste denselben Wert anzeigen. Die Chatmember bleiben trotzdem getrennte Nachrichtenziele.
+
+Neue Nachrichten, AirScout-Daten, Skeds und Statusänderungen lösen eine Neuberechnung aus. Zusätzlich erfolgt eine regelmäßige Aktualisierung im Hintergrund. Eine kurzzeitig noch nicht angepasste Reihenfolge ist deshalb kein Fehler.
+
+Herleitung und Grenzen: [Prioritätsscore und Prioritätsliste](de-Funktionen#prioritätsscore-und-prioritätsliste-ab-v140).
 
 ---
 
