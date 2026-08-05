@@ -150,7 +150,14 @@ If at least one common and unworked band remains, the main window displays a bli
 The two options serve different purposes:
 
 - **Blink + sound …** enables the hint after a matching log entry.
-- **Priority boost …** additionally raises the priority of stations with an open band opportunity. The boost is one factor within the complete score calculation and does not guarantee a particular list position.
+- **Priority boost …** additionally raises the score of stations which have already been worked on at least one band but still offer another common and unworked band.
+
+The Priority Boost is only one factor in the complete calculation. Distance, antenna direction, recent activity, AirScout data, skeds and negative hints may still change the final order. Enabling the option therefore guarantees neither a particular score nor a particular position in the priority list.
+
+The other score weights currently have no separate user-interface controls. Several existing settings nevertheless provide input data for the calculation, particularly the [enabled bands](#enabled-bands), [antenna beamwidth](#antenna-beamwidth), [default maximum QRB](#default-maximum-qrb) and [AirScout settings](#airscout-settings).
+
+The complete calculation is described under [Priority Score and Priority List](en-Features#priority-score-and-priority-list-from-v140).
+
 
 The hint requires a log-synchronisation source which provides band information. The file-based callsign interpreter sees callsigns only and cannot reliably identify the band of the QSO which has just been logged.
 

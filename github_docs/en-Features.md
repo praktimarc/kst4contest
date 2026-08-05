@@ -269,21 +269,113 @@ Worked, NOT-QRV and worked-grid data expire automatically after three days. See 
 
 ---
 
-## Chatmember Score System / Priority List (from v1.40)
+## Priority Score and Priority List (from v1.40)
 
-KST4Contest automatically calculates a **priority score** for each active chat member. The score is derived from:
+### Why is a score needed at all?
 
-- Antenna direction of the remote station (is it pointing towards me?)
-- QRB (distance)
-- Activity time and message count
-- Active bands and frequencies
-- AP availability (AirScout)
-- Sked direction (degrees)
-- Sked success rate and skedfail markings
+A conventional chat user list initially tells the operator only which stations are logged in. That is not enough during a contest. The operator must also consider which stations have not yet been worked, which bands may still be available, where the antenna is pointing, whether a suitable aircraft is approaching and whether an agreed sked is about to begin.
 
-The top candidates are highlighted in a dedicated priority list, helping you not to miss the most important contacts during contest stress.
+With a short list, much of this can still be handled mentally. As the contest continues, several bands are used and two chat categories are monitored at the same time, the same decision has to be reconstructed over and over again.
 
-Stations with a failed sked can be marked using the **Skedfail button** in the FurtherInfo panel – this temporarily lowers their score.
+KST4Contest therefore combines the available information into a priority score. The score does not answer whether a QSO will definitely be possible. It supports the more practical question:
+
+> Which of the currently visible stations should I examine next?
+
+### When is a station excluded?
+
+Before applying the weighted factors, KST4Contest checks whether a known band opportunity exists. All active chat entries belonging to the same normalised base callsign are evaluated together.
+
+The calculation uses:
+
+1. the bands enabled in the local station settings,
+2. QRGs detected for the remote station during the previous 30 minutes,
+3. explicit band designators in the name fields of its active chat entries,
+4. stored per-band Worked marks, and
+5. manually assigned NOT-QRV marks.
+
+NOT QRV takes precedence over automatically detected frequencies and band designators.
+
+If the remote station’s bands are known but none of them is both enabled locally and still available, the station receives a score of `0`. The same applies when every common band opportunity has already been worked.
+
+A station is not excluded merely because all band information is missing. An unknown band opportunity is not the same as a known incompatibility. In this case, the station is removed from consideration only if all locally enabled bands have been manually marked NOT QRV for that station.
+
+Stations with a score of `0` remain visible in the user list but are not included in the priority list.
+
+### Which information raises or lowers the score?
+
+The score combines several independent hints. One factor will therefore not normally determine the final position on its own.
+
+| Factor | Effect on priority |
+|---|---|
+| Worked status | A callsign which has not been worked on any supported band receives a higher initial priority. A station which has already been worked is ranked lower but remains a candidate when another band opportunity is available. |
+| Available bands | Several common and unworked bands raise the priority. An additional boost for band-upgrade cases can be enabled separately. |
+| Distance | Distances below 200 km are weighted lower. The range between 200 km and the configured maximum QRB is preferred. Stations beyond the maximum QRB are reduced substantially. If the QRB is unavailable, this factor is omitted. |
+| Antenna direction | The score rises when the QTF to the station lies within half of the configured antenna beamwidth around the current local QTF. The closer both directions are, the stronger the effect. |
+| AirScout | At least one currently reachable aircraft raises the score. An expected AP opportunity in zero, one or two minutes receives an additional time-dependent weighting. |
+| Recent chat activity | A message received during the previous minute has a stronger effect than one received during the previous three minutes. Several incoming lines within the activity window raise the score further. |
+| Positive signals | Detected terms such as `QRV`, `READY`, `RGR`, `OK`, `TNX` or comparable configured text patterns are treated as a positive hint for several minutes. |
+| Reply behaviour | If another visible chat line from the station follows an outgoing `/cq` message quickly, the averaged reaction time raises the score. If no such line arrives before the configured timeout, a negative mark is added. |
+| Skeds | A scheduled contact initially adds a small amount of priority. During the final 15 minutes, its influence increases continuously. From three minutes before until one minute after the scheduled time, the sked receives very high priority. |
+| Failed attempt | **Sked fail** strongly reduces the station’s score until the mark is removed with **Reset fail** or KST4Contest is restarted. |
+
+The default activity window for counting incoming messages is 180 seconds. A message received during the previous 60 seconds is evaluated separately as current activity. The default no-reply timeout is 13 minutes.
+
+For reply behaviour, KST4Contest cannot prove that a later public or private line is actually a reply to the operator’s request. Any subsequent line received from the same station therefore ends the pending response-time measurement. This is a practical approximation, not a statistically reliable response rate.
+
+### What does a scheduled contact mean for the score?
+
+A sked is a time-dependent operating commitment. An imminent sked must therefore take precedence over most normal activity and distance hints. Without this weighting, a station which happens to be very active in the chat could displace an agreed contact from the priority list.
+
+The strongest sked boost is deliberately limited to the period from three minutes before until one minute after the scheduled time. A sked further in the future remains relevant but should not yet dominate current operation.
+
+The score is calculated for the normalised base callsign. A sked entered for an active variant such as `9A0BB-23` therefore affects the common score of the chat entries belonging to `9A0BB`.
+
+### How are multiple suffixes and chat categories handled?
+
+Active callsigns such as `9A0BB-2`, `9A0BB-70`, `9A0BB-23` and `9A0BB-13` remain separate chat members. Messages can therefore still be addressed to the complete callsign in the correct chat category.
+
+Worked, band, NOT-QRV and score information belongs to the common base callsign `9A0BB`. The score is calculated once and projected to all active variants. The user list may consequently contain several separate rows with the same score, while the priority list contains only one entry for the base station.
+
+KST4Contest uses the most recently suitable active login in the last relevant chat category as the concrete message target. Selecting a priority candidate then resolves the complete callsign, including its suffix and chat category.
+
+### Updating and displaying the score
+
+New messages, AirScout data, skeds, Worked information and manual NOT-QRV or Sked-fail changes request a new calculation immediately. The score is also refreshed periodically because activity, AP and sked information changes with time even when no new event is received.
+
+A delay of a few seconds between an event and the visible new order is therefore normal.
+
+The user interface displays the score in three places:
+
+- the numerically sortable **Score** column in the user list,
+- the **Further Info** section for the selected station, and
+- the compact list of the two highest-ranked candidates, with a separate window containing up to 15 candidates.
+
+Operation: [Priority List in the User Interface](en-User-Interface#priority-list).
+
+### What does the score not tell you?
+
+The numerical value is neither a success probability nor a signal prediction. A score which is twice as high does not mean that the QSO is twice as likely.
+
+Among other things, the calculation does not know:
+
+- the actual antenna direction of the remote station,
+- its current operating situation,
+- local interference,
+- short-term propagation changes,
+- terrain obstruction outside the connected assessment functions, or
+- whether a station which is active in the chat is currently sitting at the radio.
+
+Known input data may also be outdated or ambiguous. A detected frequency, for example, proves only that the QRG recently appeared in connection with that station.
+
+In practical terms, the score does not replace the operator’s decision. It prevents the information already available to KST4Contest from having to be reconstructed mentally for every candidate.
+
+Related settings:
+
+- [Enabled Bands](en-Configuration#enabled-bands)
+- [Antenna Beamwidth](en-Configuration#antenna-beamwidth)
+- [Default Maximum QRB](en-Configuration#default-maximum-qrb)
+- [AirScout Settings](en-Configuration#airscout-settings)
+- [Band Upgrade Hint and Priority Boost](en-Configuration#band-upgrade-hint-after-a-log-entry)
 
 ---
 

@@ -33,7 +33,7 @@ The central table of all currently active chat users. Columns (depending on conf
 | QTF | Direction in degrees |
 | QRG | Most recent frequency detected in a chat message |
 | Tropo | Result of the band-specific tropo or path assessment |
-| Score | Current priority score |
+| Score | Current, numerically sortable priority score of the normalised base callsign |
 | Act | Minutes since the most recent activity |
 | AP | AirScout aircraft data, when enabled |
 | worked | Per-band Worked, band-opportunity and grid-square status, plus `wkdany` |
@@ -107,13 +107,35 @@ The change immediately affects the **NOT QRV @** column, band opportunities and 
 
 ![Per-band NOT-QRV marks in the Further Info panel](not_qrv_controls.png)
 
-Sked reminders for both sked partners can also be enabled here.
+The current **Priority score** of the selected station is displayed in the same section.
+
+**Sked fail** marks an unsuccessful attempt and strongly reduces the score of the normalised base callsign. **Reset fail** removes the mark. It applies to all active suffix and category variants of the station and remains active for the current program session.
+
+A sked and the corresponding **sked reminders** can be created underneath these controls. An approaching sked raises the Priority Score over time and receives very high priority immediately before the scheduled contact.
 
 ---
 
 ## Priority List
 
-Shows the top candidates calculated by the Score Service. Updates automatically in the background based on direction, distance and AP availability.
+The compact priority bar is located on the right-hand side between the user list and the Further Info section. It displays the two currently highest-ranked candidates directly in the main window:
+
+```text
+Priority:  1 CALLSIGN SCORE  2 CALLSIGN SCORE  more
+```
+
+Clicking either candidate selects the corresponding active chat member. The complete callsign, including its suffix and chat category, is used.
+
+The **more** button opens a separate window containing up to 15 candidates. The list is sorted by descending score. Double-clicking an entry selects the candidate and closes the window.
+
+![Priority Score, compact candidate list and Further Info controls](priority_score_overview.png)
+
+Stations with a score of `0` are not included in the priority list. They remain visible in the user list so that the reason for their exclusion can be examined and, for example, an incorrect NOT-QRV mark can be changed.
+
+The score is calculated for the normalised base callsign. Several active variants such as `9A0BB-2` and `9A0BB-70` may therefore display the same value in the user list. They nevertheless remain separate message targets.
+
+New messages, AirScout data, skeds and status changes request a new calculation. A periodic refresh also runs in the background. A briefly outdated order is therefore not an error.
+
+Calculation and limitations: [Priority Score and Priority List](en-Features#priority-score-and-priority-list-from-v140).
 
 ---
 
