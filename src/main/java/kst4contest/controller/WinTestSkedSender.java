@@ -46,13 +46,13 @@ public class WinTestSkedSender {
      * @param targetCallsign   callsign prepared for Win-Test
      * @param frequencyKHz     operating frequency in kHz
      * @param notes            optional notes
-     * @param modeOverride     -1 for AUTO, 0 for CW, 1 for SSB
+     * @param mode             Win-Test mode ID: 0 for CW, 1 for SSB
      */
     public void pushSkedToWinTest(ContestSked sked,
                                   String targetCallsign,
                                   double frequencyKHz,
                                   String notes,
-                                  int modeOverride) {
+                                  int mode) {
 
         try {
             sendLockSked();
@@ -62,7 +62,7 @@ public class WinTestSkedSender {
                     targetCallsign,
                     frequencyKHz,
                     notes,
-                    modeOverride
+                    mode
             );
 
             sendUnlockSked();
@@ -79,6 +79,8 @@ public class WinTestSkedSender {
                             + frequencyKHz
                             + " kHz, band="
                             + sked.getBand()
+                            + ", mode="
+                            + mode
             );
 
         } catch (Exception exception) {
@@ -131,7 +133,7 @@ public class WinTestSkedSender {
                              String targetCallsign,
                              double frequencyKHz,
                              String notes,
-                             int modeOverride) throws Exception {
+                             int mode) throws Exception {
 
         long wtTimestamp =
                 sked.getSkedTimeEpoch() / 1000L;
@@ -143,21 +145,20 @@ public class WinTestSkedSender {
         int bandId =
                 toWinTestBandId(sked.getBand());
 
-        int mode;
-
-        if (modeOverride >= 0) {
-            mode = modeOverride;
-        } else {
-            mode = isInSsbSegment(frequencyKHz)
-                    ? 1
-                    : 0;
-        }
+        /*
+         * Accept only the mode IDs supported by this UI.
+         * Any unexpected value falls back to SSB.
+         */
+        int winTestMode =
+                mode == 0
+                        ? 0
+                        : 1;
 
         String data =
                 wtTimestamp
                         + " " + frequencyTenthKHz
                         + " " + bandId
-                        + " " + mode
+                        + " " + winTestMode
                         + " \"" + targetCallsign + "\""
                         + " \"" + (notes != null ? notes : "") + "\"";
 
@@ -209,18 +210,6 @@ public class WinTestSkedSender {
             case B_10G  -> 20;
             case B_24G  -> 21;
         };
-    }
-
-    /**
-     * Very simple SSB segment heuristic.
-     * A more complete implementation would check actual mode from Win-Test STATUS.
-     */
-    private boolean isInSsbSegment(double frequencyKHz) {
-        // SSB segments (kHz ranges)
-        if (frequencyKHz >= 144300 && frequencyKHz <= 144399) return true;  // 2m SSB
-        if (frequencyKHz >= 432200 && frequencyKHz <= 432399) return true;  // 70cm SSB
-        if (frequencyKHz >= 1296200 && frequencyKHz <= 1296399) return true; // 23cm SSB
-        return false;
     }
 
     private void reportStatus(String text, boolean isError) {

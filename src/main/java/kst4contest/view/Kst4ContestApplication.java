@@ -792,30 +792,33 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		}
 
 		ChoiceBox<String> cbSkedMode = new ChoiceBox<>(
-				FXCollections.observableArrayList("AUTO", "SSB", "CW")
+				FXCollections.observableArrayList("SSB", "CW")
 		);
 
 		String configuredSkedMode =
-				chatcontroller.getChatPreferences().getLogsynch_wintestSkedMode();
+				chatcontroller.getChatPreferences()
+						.getLogsynch_wintestSkedMode();
 
-		if (configuredSkedMode == null || configuredSkedMode.isBlank()) {
-			configuredSkedMode = "AUTO";
+		if (configuredSkedMode == null
+				|| (!"SSB".equalsIgnoreCase(configuredSkedMode)
+				&& !"CW".equalsIgnoreCase(configuredSkedMode))) {
+
+			configuredSkedMode = "SSB";
 		}
 
-		String configuredSkedModeUpper =
-				configuredSkedMode.trim().toUpperCase(Locale.ROOT);
+		cbSkedMode.setValue(
+				configuredSkedMode.trim().toUpperCase(Locale.ROOT)
+		);
 
-		if (!"AUTO".equals(configuredSkedModeUpper)
-				&& !"SSB".equals(configuredSkedModeUpper)
-				&& !"CW".equals(configuredSkedModeUpper)) {
-			configuredSkedModeUpper = "AUTO";
-		}
+		cbSkedMode.setTooltip(new Tooltip(
+				"Mode transferred to Win-Test with the ADDSKED packet"
+		));
 
-		cbSkedMode.setValue(configuredSkedModeUpper);
-		cbSkedMode.setTooltip(new Tooltip("Mode for Win-Test ADDSKED packets"));
 		cbSkedMode.setOnAction(e ->
 				chatcontroller.getChatPreferences()
-						.setLogsynch_wintestSkedMode(cbSkedMode.getValue())
+						.setLogsynch_wintestSkedMode(
+								cbSkedMode.getValue()
+						)
 		);
 
 		ChoiceBox<String> cbReminderOffsets = new ChoiceBox<>(
@@ -7869,52 +7872,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			chatMemberTableFilterTextField.setPromptText("Find...");
 
 			chatMemberTableFilterTextField.setFocusTraversable(false);
-//			chatMemberTableFilterTextField.focusedProperty().addListener(new ChangeListener<Boolean>() {
-//				@Override
-//				public void changed(ObservableValue<? extends Boolean> observableValue, Boolean aBoolean, Boolean t1) {
-//					if (chatMemberTableFilterTextField.focusedProperty().getValue()) {
-//
-//						chatMemberTableFilterTextField.clear();
-//					} else {
-//						if (!chatMemberTableFilterTextField.focusedProperty().getValue() && chatMemberTableFilterTextField.textProperty().equals("")) {
-//
-//						chatMemberTableFilterTextField.setText("Find...");
-//						}
-//					}
-////					System.out.println(chatMemberTableFilterTextField.focusedProperty().getValue());
-//				}
-//			});
-//			chatMemberTableFilterTextField.textProperty().addListener(new ChangeListener<String>() {
-//
-//				Predicate<ChatMember> searchTextPredicate = new Predicate<ChatMember>() {
-//					@Override
-//					public boolean test(ChatMember chatMember) {
-//						if (chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toUpperCase()) ||
-//								chatMember.getCallSign().toUpperCase().contains(chatMemberTableFilterTextField.getText().toLowerCase())) {
-//							return true;
-//						} else
-//
-//							return false;
-//					}
-//
-//				};
-//
-//				@Override
-//				public void changed(ObservableValue<? extends String> observableValue, String s, String t1) {
-//
-//					if (chatMemberTableFilterTextField.textProperty().getValue().equals("") && !chatMemberTableFilterTextField.focusedProperty().getValue()) {
-//						chatMemberTableFilterTextField.setText("Find...");
-//						chatcontroller.getLst_chatMemberListFilterPredicates().remove(searchTextPredicate);
-//					}
-//					else {
-//						if (!chatcontroller.getLst_chatMemberListFilterPredicates().contains(searchTextPredicate)) {
-//							chatcontroller.getLst_chatMemberListFilterPredicates().add(searchTextPredicate);
-//						}
-//					}
-//
-//					System.out.println("KST4CApp " + chatMemberTableFilterTextField.textProperty().getValue().equals("") + " / " + !chatMemberTableFilterTextField.focusedProperty().getValue());
-//				}
-//			});
 
 			chatMemberTableFilterTextField.textProperty().addListener(new ChangeListener<String>() {
 

@@ -224,7 +224,7 @@ public class ChatPreferences {
 	boolean logsynch_wintestNetworkListenerEnabled = true; // default true = bisheriges Verhalten
 	String logsynch_wintestNetworkBroadcastAddress = "255.255.255.255"; // UDP broadcast address for sending to Win-Test
 	boolean logsynch_wintestNetworkSkedPushEnabled = false; // push SKEDs to Win-Test via UDP
-	String logsynch_wintestSkedMode = "SSB"; // CW, SSB or AUTO
+	String logsynch_wintestSkedMode = "SSB"; // Supported values: SSB or CW
 	boolean logsynch_wintestQrgSyncEnabled = true;  // sync QRG from Win-Test STATUS packet
 	boolean logsynch_wintestUsePassQrg = false;      // use pass frequency instead of main QRG from STATUS packet
 

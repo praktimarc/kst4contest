@@ -208,7 +208,12 @@ public class TimelineView extends Pane {
 
         diamond.setFill(colorForPotential(sked.getOpportunityPotentialPercent()));
 
-        String baseToolTipFallBack = sked.getTargetCallsign() + " (" + sked.getBand() + ")\nAz: " + sked.getTargetAzimuth();
+        String baseToolTipFallBack =
+                sked.getTargetChatCallsign()
+                        + " ("
+                        + sked.getBand()
+                        + ")\nAz: "
+                        + sked.getTargetAzimuth();
 
         if (skedTooltipExtraTextProvider != null) {
             String extra = skedTooltipExtraTextProvider.apply(sked);
@@ -220,7 +225,9 @@ public class TimelineView extends Pane {
         Tooltip t = new Tooltip(baseToolTipFallBack);
         Tooltip.install(diamond, t);
 
-        Label lbl = new Label("SKED: " + sked.getTargetCallsign());
+        Label lbl = new Label(
+                "SKED: " + sked.getTargetChatCallsign()
+        );
 //        lbl.setFont(new Font(9));
 //        lbl.setTextFill(Color.WHITE);
         lbl.setLayoutY(14);

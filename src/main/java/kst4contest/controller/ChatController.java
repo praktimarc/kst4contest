@@ -883,23 +883,29 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 					);
 				}
 
-				String modeText =
+				String configuredMode =
 						chatPreferences.getLogsynch_wintestSkedMode();
 
-				int modeOverride = -1;
-
-				if ("CW".equalsIgnoreCase(modeText)) {
-					modeOverride = 0;
-				} else if ("SSB".equalsIgnoreCase(modeText)) {
-					modeOverride = 1;
-				}
+				/*
+				 * Win-Test mode IDs:
+				 * 0 = CW
+				 * 1 = SSB
+				 *
+				 * SSB is the safe fallback for missing or obsolete settings.
+				 * The former AUTO mode was frequency-based and could not produce
+				 * reliable results on every supported VHF, UHF and SHF band.
+				 */
+				int winTestMode =
+						"CW".equalsIgnoreCase(configuredMode)
+								? 0
+								: 1;
 
 				sender.pushSkedToWinTest(
 						sked,
 						winTestCallsign,
 						frequencyKHz,
 						notes,
-						modeOverride
+						winTestMode
 				);
 
 			} catch (Exception exception) {
