@@ -3699,12 +3699,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			public ObservableValue<String> call(CellDataFeatures<ClusterMessage, String> cellDataFeatures) {
 				SimpleStringProperty locRX = new SimpleStringProperty();
 
-				if (cellDataFeatures.getValue().getSender() != null) {
+				if (cellDataFeatures.getValue().getReceiver() != null) {
 
 					locRX.setValue(cellDataFeatures.getValue().getReceiver().getQra());
 				} else {
 
-					locRX.setValue("");// TODO: Prevents a bug of not setting all values as a default
+					locRX.setValue("");
 				}
 				return locRX;
 			}

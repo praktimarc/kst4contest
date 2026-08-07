@@ -1373,9 +1373,12 @@ public class MessageBusManagementThread extends Thread {
 											newDXCListSender3.setQra(splittedMessageLine[5]);
 
 											ChatMember newDXCListReceiver3 = new ChatMember();
-//					newDXCListReceiver3.setFrequency(splittedMessageLine[4]);
 											newDXCListReceiver3.setCallSign(splittedMessageLine[4]);
-											newDXCListReceiver3.setQra(splittedMessageLine[5]);
+											/*
+											 * MA format:
+											 * MA|0|epoch|sender|receiver|sender locator|receiver locator|
+											 */
+											newDXCListReceiver3.setQra(splittedMessageLine[6]);
 
 											dxcMsg3.setSender(newDXCListSender3);
 											dxcMsg3.setReceiver(newDXCListReceiver3);
