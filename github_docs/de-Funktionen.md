@@ -313,19 +313,86 @@ Für ausgewählte Stationen in der Benutzerliste gibt es direkte Buttons, um das
 
 ---
 
-## Sked-Erinnerungen mit ALERT (ab v1.40)
+## Skeds und Sked-Erinnerungen
 
-Für jeden Chatmember kann ein Sked-Erinnerungsdienst mit automatischen Nachrichten aktiviert werden. Konfigurierbare Intervallmuster:
+> Verfügbar ab v1.40; Band-, Rufzeichen- und Win-Test-Behandlung erweitert in Nightly / v1.42.
 
-- **2+1 Minuten**: Nachrichten bei 2 min und 1 min vor dem Sked.
-- **5+2+1 Minuten**: Nachrichten bei 5, 2 und 1 min vor dem Sked.
-- **10+5+2+1 Minuten**: Nachrichten bei 10, 5, 2 und 1 min vor dem Sked.
+Ein Sked ist mehr als eine Erinnerung an eine Uhrzeit. Er muss während des laufenden Contestbetriebs rechtzeitig sichtbar werden, die vereinbarte Station priorisieren und – sofern gewünscht – die Gegenstation noch einmal an den Termin erinnern.
 
-Zusätzlich zu den Nachrichten an die Gegenstation gibt es eine **akustische und optische Benachrichtigung** für den eigenen Operator, sodass kein Sked vergessen wird.
+KST4Contest behandelt deshalb drei voneinander unabhängige Aufgaben:
 
-Aktivierung: FurtherInfo-Panel der entsprechenden Station.
+1. Der Sked wird intern gespeichert und in die Prioritätsberechnung einbezogen.
+2. Der Termin erscheint in der AP- und Sked-Timeline.
+3. Optional werden vor dem Termin automatische Privatnachrichten gesendet.
 
----
+Ist der Win-Test-Netzwerk-Listener aktiviert, versucht KST4Contest zusätzlich, den Sked an Win-Test zu übergeben. Ein Problem bei dieser Übergabe löscht oder verhindert den internen Sked nicht.
+
+### Sked anlegen
+
+Zuerst die gewünschte Station in der Benutzerliste auswählen. Die Bedienelemente befinden sich anschließend unten im Bereich **Further Info**.
+
+| Bedienelement | Funktion |
+|---|---|
+| **Sked in** | Legt fest, in wie vielen Minuten der Sked stattfinden soll. Verfügbar sind 2 bis 15 sowie 20 Minuten. |
+| **Band** | Wählt das Band des Skeds. Angeboten werden die unter **Station → my station uses …** aktivierten eigenen Bänder. |
+| **Mode** | Legt den an Win-Test zu übertragenden Mode fest. Verfügbar sind `SSB` und `CW`. Die Auswahl hat keinen Einfluss auf den internen Sked oder die Reminder-PMs. |
+| **Create sked** | Legt den internen Sked an und versucht bei aktiviertem Win-Test-Netzwerk-Listener zusätzlich die Übergabe an Win-Test. |
+| **Remind-PM in** | Aktiviert die automatischen Privatnachrichten vor dem Termin. |
+| **2+1**, **5+2+1**, **10+5+2+1** | Legt fest, wie viele Minuten vor dem Sked die Reminder-PMs gesendet werden. |
+
+![Sked-Steuerung im Further-Info-Bereich](sked_controls.png)
+
+KST4Contest versucht, ein sinnvolles Band vorzuwählen. Dafür werden nacheinander folgende Informationen verwendet:
+
+1. eine höchstens 30 Minuten alte QRG der ausgewählten Station auf einem eigenen aktivierten Band,
+2. eine eindeutige Bandangabe im Namensfeld der Station und
+3. das erste aktivierte eigene Band.
+
+Aktive Rufzeichenvarianten desselben Basisrufzeichens werden bei der Suche nach einer aktuellen Bandinformation gemeinsam betrachtet. Eine manuelle NOT-QRV-Markierung wird bei der automatischen Vorauswahl berücksichtigt. Das Band kann trotzdem ausdrücklich geändert werden, wenn der Operator bewusst eine andere Vereinbarung getroffen hat.
+
+### Auswirkung auf den Priority Score
+
+Ein eingetragener Sked erhöht den Score des normalisierten Basisrufzeichens:
+
+| Zeitraum | Sked-Anteil am Score |
+|---|---:|
+| mehr als 15 Minuten vor dem Termin | `+40` |
+| 15 bis 3 Minuten vor dem Termin | kontinuierlicher Anstieg von `+300` bis in Richtung `+1200` |
+| weniger als 3 Minuten vor bis 1 Minute nach dem Termin | `+5000` |
+| später als 1 Minute nach dem Termin | kein Sked-Boost mehr |
+
+Die starke Gewichtung unmittelbar vor dem Termin ist beabsichtigt. Ein vereinbarter Sked soll dann nicht durch eine gerade sehr aktive, aber nicht fest eingeplante Station aus der Prioritätsliste verdrängt werden.
+
+Der Score wird für das Basisrufzeichen berechnet. Ein Sked mit `DN9APW-2` beeinflusst daher auch den gemeinsamen Score weiterer aktiver Varianten von `DN9APW`. Das konkrete Nachrichtenziel bleibt trotzdem `DN9APW-2` in der beim Anlegen ausgewählten Chat-Kategorie.
+
+Fünf Minuten nach dem Termin wird der Sked aus der internen Liste entfernt.
+
+### Reminder-PMs
+
+Reminder-PMs werden nur angelegt, wenn **Remind-PM in** aktiviert ist. Je nach ausgewähltem Muster sendet KST4Contest beispielsweise zwei und eine Minute vor dem Sked folgende Privatnachricht:
+
+```text
+[KST4C Autoreminder] sked in 2 min
+```
+
+Die Nachricht geht an das vollständige sichtbare KST-Rufzeichen und in die Chat-Kategorie, in der der Sked angelegt wurde. Ein Sked für `DN9APW-2` wird daher nicht versehentlich an `DN9APW`, `DN9APW-70` oder eine gleichnamige Station in einer anderen Kategorie gesendet.
+
+Beim tatsächlichen Reminder zeigt KST4Contest zusätzlich den optischen **SKED**-Hinweis an. Ist die einfache Soundausgabe aktiviert, wird außerdem ein Hinweiston abgespielt. Das bloße Aktivieren des Reminders löst noch kein Blinken aus.
+
+Wird für dasselbe vollständige Rufzeichen ein neuer Satz Reminder aktiviert, ersetzt dieser die zuvor geplanten Reminder dieses Rufzeichens.
+
+### Speicherung und Grenzen
+
+Skeds und Reminder-Zeitpläne werden nur im Arbeitsspeicher geführt. Nach einem Neustart von KST4Contest müssen noch benötigte Termine erneut angelegt werden.
+
+Die automatische Bandvorauswahl ist eine Herleitung aus vorhandenen Chatinformationen. Sie beweist nicht, dass die Station noch auf der zuletzt genannten QRG arbeitet. Band, Uhrzeit und Mode sollten deshalb vor **Create sked** kontrolliert werden.
+
+Bedienung: [Stationsinfo-Panel](de-Benutzeroberflaeche#stationsinfo-panel-further-info)
+
+Darstellung: [AP- und Sked-Timeline](#ap-und-sked-timeline)
+
+Win-Test-Übergabe: [Log-Synchronisation – Win-Test](de-Log-Synchronisation#win-test)
+
 
 ## QSO-Monitoring (ab v1.31)
 
@@ -337,17 +404,23 @@ Konfiguration: [Konfiguration – Sniffer-Einstellungen](de-Konfiguration#sniffe
 
 ---
 
-## Win-Test-Integration (ab v1.31, vollständig ab v1.40)
+## Win-Test-Integration
 
-KST4Contest unterstützt [Win-Test](https://www.win-test.com/) vollständig als Logprogramm:
+KST4Contest verwendet für Win-Test einen eigenen Listener für das native Win-Test-Netzwerkprotokoll. Darüber werden drei voneinander getrennte Funktionen bereitgestellt:
 
-- **Log-Synchronisation**: Gearbeitete Stationen werden automatisch aus Win-Test übernommen und in der Benutzerliste markiert.
-- **Frequenz-Auswertung**: Die aktuelle TRX-Frequenz wird aus Win-Test-UDP-Paketen ausgewertet und befüllt die `MYQRG`-Variable.
-- **Sked-Übergabe (SKED Push via UDP)**: Vereinbarte Skeds aus KST4Contest können direkt an Win-Test übertragen werden, sodass das Rufzeichen der Gegenstation im Win-Test-Sked-Fenster erscheint.
+- neue QSOs einschließlich Band- und gegebenenfalls Locatorinformation übernehmen,
+- die aktuelle QRG aus Win-Test-STATUS-Paketen auswerten und
+- intern angelegte Skeds als `ADDSKED` an das Win-Test-Netzwerk übergeben.
 
-Details zur Konfiguration: [Konfiguration – Win-Test-Netzwerk-Listener](de-Konfiguration#win-test-netzwerk-listener)
+Bei der Sked-Übergabe wird die QRG nicht durch eine feste Standardfrequenz ersetzt. KST4Contest sendet nur dann einen Win-Test-Sked, wenn eine zum ausgewählten Band passende QRG ermittelt werden konnte. Der interne Sked, die Timeline und die Reminder-PMs funktionieren unabhängig davon weiter.
 
----
+Ein sichtbarer KST-Suffix wie `-2`, `-70` oder `-144` bleibt innerhalb von KST4Contest erhalten, wird für das Win-Test-Logrufzeichen jedoch entfernt. Portable Bestandteile wie `/P`, `/M` oder ein Länderpräfix bleiben bestehen.
+
+Einrichtung und genaue Datenbehandlung: [Log-Synchronisation – Win-Test](de-Log-Synchronisation#win-test)
+
+Einstellungen: [Win-Test-Netzwerk-Listener](de-Konfiguration#win-test-netzwerk-listener-ab-v131)
+
+
 
 ## PSTRotator-Interface (ab v1.31, vollständig ab v1.40)
 
@@ -482,16 +555,53 @@ Zugehörige Einstellungen:
 
 ---
 
-## AP-Timeline (ab v1.40)
+## AP- und Sked-Timeline
 
-Eine visuelle Zeitleiste zeigt für jeden möglichen AP-Ankunftsminuten-Slot bis zu 4 hochbewertete Stationen, die per Aircraft Scatter erreichbar wären. Priorisierungskriterien:
+Die Timeline stellt bevorstehende Aircraft-Scatter-Gelegenheiten und eingetragene Skeds für die nächsten 30 Minuten gemeinsam dar. Sie beantwortet damit zwei Fragen auf einen Blick:
 
-- Bevorzugt werden APs mit dem **höchsten Reflexionspotenzial** (nicht unbedingt die schnellste Ankunft).
-- Stationen, auf die die eigene Antenne nicht zeigt, werden **transparent** dargestellt.
+- Wann entsteht voraussichtlich eine interessante AP-Gelegenheit?
+- Welcher bereits vereinbarte Sked nähert sich unabhängig davon?
 
-So kann der Contest-Operator auf einem Blick sehen, welche Stationen wann und über welche Flugzeuge erreichbar sein werden.
+Weiter in der Zukunft liegende Ereignisse erscheinen rechts. Mit ablaufender Zeit wandern sie nach links in Richtung des aktuellen Zeitpunkts.
 
----
+![AP-Kandidaten und Skeds in der Timeline](sked_timeline.png)
+
+### AP-Kandidaten
+
+AP-Kandidaten erscheinen in den oberen Spuren. Pro Ankunftsminute können bis zu vier ausgewählte Kandidaten dargestellt werden. Die Auswahl berücksichtigt den Priority Score und das von AirScout gemeldete Reflexionspotenzial.
+
+Die Farbe des AP-Symbols kennzeichnet das Reflexionspotenzial:
+
+| Farbe | Reflexionspotenzial |
+|---|---:|
+| Magenta | mindestens 95 % |
+| Rot | mindestens 75 % |
+| Gelb | mindestens 50 % |
+| Blau | unter 50 % |
+
+Die Farbe ist keine QSO-Wahrscheinlichkeit. Sie gibt den von AirScout übernommenen Wert für die berechnete Reflexionsgeometrie wieder.
+
+Ein Klick auf einen AP-Kandidaten wählt den dazugehörigen aktiven Chatmember einschließlich Rufzeichensuffix und Chat-Kategorie aus. Dadurch kann unmittelbar eine passende Nachricht vorbereitet werden.
+
+### Skeds
+
+Skeds erscheinen als Rauten in der unteren Spur. Die Beschriftung verwendet das vollständige KST-Rufzeichen, beispielsweise `SKED: DN9APW-2`. Dadurch bleibt erkennbar, welcher konkrete Login für den Termin ausgewählt wurde.
+
+Der Tooltip eines Skeds zeigt mindestens:
+
+- das vollständige KST-Rufzeichen,
+- das vereinbarte Band und
+- den QTF zur Gegenstation.
+
+Sind passende AirScout-Daten vorhanden, werden zusätzlich die aktuelle AP-Erreichbarkeit und die nächste berechnete AP-Gelegenheit angezeigt.
+
+### Berücksichtigung der Antennenrichtung
+
+Liegt der QTF eines Ereignisses deutlich außerhalb der aktuellen Antennenrichtung, wird dessen Symbol transparenter dargestellt. Die Beschriftung bleibt lesbar. Liegt das Ziel nahe der Mitte des konfigurierten Antennenbereichs, wird das Symbol zusätzlich hervorgehoben.
+
+Diese Darstellung verändert weder den Sked noch den Priority Score. Sie ist eine optische Hilfe, um Kandidaten in der aktuellen Antennenrichtung schneller zu erkennen.
+
+Die Timeline ist eine Vorschau. AirScout-Daten können sich ändern, und ein eingetragener Sked garantiert weder eine freie Frequenz noch eine tatsächlich vorhandene Ausbreitungsverbindung.
 
 ## Intervall-Beacon
 

@@ -132,7 +132,24 @@ Im selben Bereich wird der aktuelle **Priority score** der ausgewählten Station
 
 Mit **Sked fail** lässt sich ein fehlgeschlagener Versuch markieren. Der Score des normalisierten Basisrufzeichens wird dadurch stark reduziert. **Reset fail** entfernt diese Markierung wieder. Die Markierung gilt für alle aktiven Suffix- und Kategorievarianten der Station und bleibt innerhalb der laufenden Programmsitzung erhalten.
 
-Darunter können ein Sked und die zugehörigen **Sked-Erinnerungen / Wecker** angelegt werden. Ein nahender Sked erhöht den Priority Score zeitabhängig; unmittelbar vor dem Termin erhält er eine sehr hohe Gewichtung.
+Darunter befinden sich die Bedienelemente zum Anlegen eines Skeds:
+
+| Bedienelement | Bedeutung |
+|---|---|
+| **Sked in** | Zeit bis zum Sked |
+| **Band** | vereinbartes Band aus den eigenen aktivierten Bändern |
+| **Mode** | `SSB` oder `CW` für eine mögliche Win-Test-Übergabe |
+| **Create sked** | internen Sked anlegen |
+| **Remind-PM in** | automatische Reminder-PMs aktivieren |
+| **2+1**, **5+2+1**, **10+5+2+1** | Zeitpunkte der Reminder-PMs vor dem Termin |
+
+![Sked-Steuerung im Further-Info-Bereich](sked_controls.png)
+
+Das vorgeschlagene Band wird aus aktuellen QRG- und Namensinformationen der Station hergeleitet. Vor dem Anlegen kann es ausdrücklich geändert werden. Die Mode-Auswahl betrifft nur die Übergabe an Win-Test; der interne Sked und die Reminder-PMs funktionieren unabhängig davon.
+
+**Create sked** legt den Termin immer zuerst in KST4Contest an. Ist der Win-Test-Netzwerk-Listener aktiv, wird anschließend zusätzlich eine Übergabe an Win-Test versucht. Kann keine zum ausgewählten Band passende QRG ermittelt werden oder ist Win-Test nicht erreichbar, bleiben der interne Sked, seine Priorisierung und gegebenenfalls angelegte Reminder erhalten.
+
+Die vollständige Herleitung und die Grenzen der Funktion sind unter [Skeds und Sked-Erinnerungen](de-Funktionen#skeds-und-sked-erinnerungen) beschrieben.
 
 ---
 

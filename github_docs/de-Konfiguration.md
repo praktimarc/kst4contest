@@ -354,20 +354,45 @@ Weitere Hintergründe: [Automatische Antworten auf Privatnachrichten](de-Funktio
 
 ## Win-Test-Netzwerk-Listener (ab v1.31)
 
-Dedizierter Empfänger für Win-Test-spezifische UDP-Pakete. Ermöglicht:
+Der Win-Test-Netzwerk-Listener verarbeitet das native Win-Test-UDP-Protokoll. Er ist vom allgemeinen QSO-UDP-Listener auf Port `12060` unabhängig und übernimmt drei Aufgaben:
 
-- **Log-Synchronisation**: Gearbeitete Stationen werden aus Win-Test übernommen und in der Benutzerliste markiert.
-- **Frequenz-Auswertung**: Die aktuelle TRX-Frequenz aus Win-Test befüllt die `MYQRG`-Variable.
-- **Sked-Übergabe (SKED Push)**: Skeds aus KST4Contest werden via UDP direkt an Win-Test übergeben. Der UDP-Broadcast-Standardport von Win-Test (9871) wird verwendet.
+- QSOs einschließlich Band- und Locatorinformation auswerten,
+- STATUS-Pakete für die eigene QRG verarbeiten und
+- Skeds an das Win-Test-Netzwerk übergeben.
 
-Einstellungen:
-- **Aktivieren/Deaktivieren**: Checkbox in den Preferences (ab v1.40).
-- **Port**: Konfigurierbarer UDP-Port für den Win-Test-Listener.
-- **Sked-UDP-Adresse und Port**: Zieladresse und Port für die SKED-Übergabe an Win-Test.
+### Einstellungen unter Log sync
 
-> **Hinweis**: Der Win-Test-Listener ist ein **zusätzlicher** Listener – der Standard-QSO-UDP-Broadcast-Listener auf Port 12060 bleibt davon unabhängig.
+| Einstellung | Funktion |
+|---|---|
+| **Receive Win-Test network based UDP log messages** | Aktiviert den Win-Test-Netzwerk-Listener. Bei aktiviertem Listener wird nach **Create sked** auch die Sked-Übergabe versucht. |
+| **UDP-Port for Win-Test listener** | Port des Win-Test-Netzwerks. Standard ist `9871`. Der Port wird auch für die Sked-Übergabe verwendet. |
+| **KST station name in Win-Test network (src of SKED packets)** | Stationsname, unter dem KST4Contest die Sked-Pakete sendet. In einem Netzwerk mit mehreren Clients sollte ein eindeutiger Name verwendet werden. |
+| **Win-Test network broadcast address** | Zieladresse für ausgehende Win-Test-Netzwerkpakete. Bei lokalem Netzwerkbetrieb muss hier eine vom Win-Test-Rechner erreichbare Broadcast-Adresse eingetragen sein. |
 
----
+Die Broadcast-Adresse ist konfigurierbar, weil `255.255.255.255` nicht in jedem Stationsnetz und nicht über jede Netzwerkschnittstelle zuverlässig weitergeleitet wird. Bei mehreren Rechnern kann stattdessen die zum Stationsnetz gehörende gerichtete Broadcast-Adresse erforderlich sein.
+
+### Einstellungen unter TRX sync
+
+| Einstellung | Funktion |
+|---|---|
+| **Win-Test STATUS QRG Sync** | Übernimmt die aktuelle Frequenz aus Win-Test-STATUS-Paketen als eigene QRG. |
+| **Use pass frequency from Win-Test STATUS** | Verwendet die übertragene Pass-Frequenz anstelle der normalen TRX-QRG. |
+| **Win-Test station name filter** | Verarbeitet nur STATUS-Pakete der angegebenen Win-Test-Station. Ein leeres Feld akzeptiert alle Stationsnamen. |
+
+Der Stationsfilter ist insbesondere bei mehreren Win-Test-Clients sinnvoll. Ohne Filter kann die zuletzt eingegangene STATUS-Meldung eines anderen Arbeitsplatzes die eigene QRG in KST4Contest überschreiben.
+
+### Sked-Übergabe
+
+Für die Sked-Übergabe gibt es keinen davon getrennten internen Sked-Modus. Ist der Listener aktiviert, versucht **Create sked** zusätzlich zur internen Anlage die Übertragung an Win-Test.
+
+KST4Contest sendet nur dann ein `ADDSKED`-Paket, wenn eine QRG ermittelt wurde, die zum ausdrücklich ausgewählten Band gehört. Kann keine passende QRG gefunden werden, bleibt der interne Sked bestehen und die Win-Test-Übergabe wird ausgelassen.
+
+Die Auswahl `SSB` oder `CW` erfolgt direkt im Further-Info-Bereich beim Anlegen des Skeds. Eine automatische Mode-Ableitung wird nicht verwendet.
+
+Nach Änderungen **Save Settings** verwenden, damit Port, Stationsname, Broadcast-Adresse und TRX-Optionen beim nächsten Programmstart wiederhergestellt werden.
+
+Datenbehandlung und QRG-Auswahl: [Log-Synchronisation – Win-Test](de-Log-Synchronisation#win-test)
+
 
 ## PSTRotator-Einstellungen (ab v1.31)
 
