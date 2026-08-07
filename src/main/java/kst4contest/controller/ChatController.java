@@ -318,6 +318,85 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 
+	/**
+	 * Chooses a useful initial band for a new sked.
+	 *
+	 * <p>Recent frequency evidence has priority over station-name information.
+	 * Manual NOT-QRV exclusions are respected. The operator can still select
+	 * another locally enabled band from the dropdown.</p>
+	 */
+	private Band resolveDefaultSkedBand(ChatMember selectedMember,
+	                                    EnumSet<Band> enabledBands) {
+
+		if (selectedMember == null || enabledBands == null || enabledBands.isEmpty()) {
+			return null;
+		}
+
+		List<ChatMember> variants =
+				chatcontroller.findActiveChatMembersByRawCall(
+						selectedMember.getCallSignRaw()
+				);
+
+		if (variants.isEmpty()) {
+			variants = List.of(selectedMember);
+		}
+
+		BandOpportunityResolver.Resolution resolution =
+				BandOpportunityResolver.resolve(
+						variants,
+						System.currentTimeMillis()
+				);
+
+		EnumSet<Band> availableBands = resolution.getAvailableBands();
+		availableBands.retainAll(enabledBands);
+
+		Band newestFrequencyBand = null;
+		long newestTimestamp = Long.MIN_VALUE;
+		long now = System.currentTimeMillis();
+
+		for (ChatMember member : variants) {
+			if (member == null || member.getKnownActiveBands() == null) {
+				continue;
+			}
+
+			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
+					: member.getKnownActiveBands().entrySet()) {
+
+				Band band = entry.getKey();
+				ChatMember.ActiveFrequencyInfo info = entry.getValue();
+
+				if (band == null
+						|| info == null
+						|| !availableBands.contains(band)
+						|| !band.isPlausible(info.frequency)) {
+					continue;
+				}
+
+				long ageMs = now - info.timestampEpoch;
+				if (ageMs < 0L
+						|| ageMs > BandOpportunityResolver.RECENT_DYNAMIC_EVIDENCE_MAX_AGE_MS) {
+					continue;
+				}
+
+				if (info.timestampEpoch > newestTimestamp) {
+					newestTimestamp = info.timestampEpoch;
+					newestFrequencyBand = band;
+				}
+			}
+		}
+
+		if (newestFrequencyBand != null) {
+			return newestFrequencyBand;
+		}
+
+		if (!availableBands.isEmpty()) {
+			return availableBands.iterator().next();
+		}
+
+		return enabledBands.iterator().next();
+	}
+
+
 
     public void stopRotator() {
         if (rotatorClient != null) {
@@ -773,24 +852,6 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private final Map<String, ChatCategory> lastInboundCategoryByCallSignRaw =
 			new java.util.concurrent.ConcurrentHashMap<>();
 
-	/** Tracks the last time WE sent a message containing a QRG to a specific callsign (UPPERCASE).
-	 *  Compared against knownActiveBands.timestampEpoch to decide whose QRG to use in a SKED. */
-	private final Map<String, Long> lastSentQRGToCallsign =
-			new java.util.concurrent.ConcurrentHashMap<>();
-
-	/** Call this whenever we send a PM to {@code receiverCallsign} that contains our QRG. */
-	public void recordOutboundQRG(String receiverCallsign) {
-		if (receiverCallsign == null) return;
-		lastSentQRGToCallsign.put(receiverCallsign.trim().toUpperCase(), System.currentTimeMillis());
-		System.out.println("[ChatController] Recorded outbound QRG to: " + receiverCallsign);
-	}
-
-	/** Returns epoch-ms of when we last sent our QRG to this callsign, or 0 if never. */
-	public long getLastSentQRGTimestamp(String callsign) {
-		if (callsign == null) return 0L;
-		return lastSentQRGToCallsign.getOrDefault(callsign.trim().toUpperCase(), 0L);
-	}
-
 	private final ScoreService scoreService = new ScoreService(this, new PriorityCalculator(), 15);
 	private ScheduledExecutorService scoreScheduler;
 	private final StationMetricsService stationMetricsService = new StationMetricsService();
@@ -814,158 +875,414 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 	/**
-	 * Pushes a sked to Win-Test via UDP broadcast (LOCKSKED / ADDSKED / UNLOCKSKED).
-	 * Runs on a background thread to avoid blocking the UI.
+	 * Pushes a sked to Win-Test via UDP broadcast.
+	 *
+	 * <p>The internal sked is independent from this handover. If no frequency can
+	 * be resolved safely for the selected band, the internal sked remains active,
+	 * but no misleading Win-Test entry is created.</p>
 	 */
 	private void pushSkedToWinTest(ContestSked sked) {
 		new Thread(() -> {
 			try {
-				InetAddress broadcastAddr = InetAddress.getByName(
-						chatPreferences.getLogsynch_wintestNetworkBroadcastAddress());
-				int port = chatPreferences.getLogsynch_wintestNetworkPort();
-				String stationName = chatPreferences.getLogsynch_wintestNetworkStationNameOfKST();
+				Double frequencyKHz = resolveSkedFrequencyKHz(sked);
 
-				WinTestSkedSender sender = new WinTestSkedSender(stationName, broadcastAddr, port, this);
-
-				// Frequency resolution:
-				// Compare WHO sent a QRG most recently in the PM conversation:
-				//   - OM sent their QRG last  → use OM's Last Known QRG (ChatMember.frequency)
-				//   - WE sent our QRG last    → use our own Win-Test QRG (MYQRG)
-				// Fallback chain if no timestamps exist: OM's Last Known QRG → hardcoded default
-				double freqKHz = -1.0;
-				final long SKED_FREQ_MAX_AGE_MS = 60 * 60 * 1000L; // 60 minutes
-
-				ChatMember targetMember = resolveSkedTargetMember(sked.getTargetCallsign());
-
-				// Collect timestamps: when did the OM last mention their QRG? When did WE last send ours?
-				long omLastQRGTimestamp = 0L;
-				double omLastQRGMhz = 0.0;
-				if (targetMember != null && sked.getBand() != null) {
-					ChatMember.ActiveFrequencyInfo fi = targetMember.getKnownActiveBands().get(sked.getBand());
-					if (fi != null && fi.frequency > 0
-							&& (System.currentTimeMillis() - fi.timestampEpoch) <= SKED_FREQ_MAX_AGE_MS) {
-						omLastQRGTimestamp = fi.timestampEpoch;
-						omLastQRGMhz = fi.frequency;
-					}
-				}
-				long ourLastQRGTimestamp = getLastSentQRGTimestamp(sked.getTargetCallsign());
-
-				// Decision: who was more recent?
-				if (omLastQRGTimestamp > 0 && omLastQRGTimestamp >= ourLastQRGTimestamp) {
-					// OM mentioned their QRG MORE RECENTLY (or at same time) → use their QRG
-					freqKHz = omLastQRGMhz * 1000.0;
-					System.out.println("[ChatController] SKED freq: OM sent last → "
-							+ omLastQRGMhz + " MHz → " + freqKHz + " kHz");
-
-				} else if (ourLastQRGTimestamp > 0) {
-					// WE sent our QRG more recently → use our Win-Test QRG
-					try {
-						String qrgStr = chatPreferences.getMYQRGFirstCat().get();
-						if (qrgStr != null && !qrgStr.isBlank()) {
-							String cleaned = qrgStr.trim().replace(".", "");
-							double parsed = Double.parseDouble(cleaned) / 100.0;
-							if (parsed > 50000) {
-								freqKHz = parsed;
-								System.out.println("[ChatController] SKED freq: WE sent last → "
-										+ freqKHz + " kHz (raw: " + qrgStr + ")");
-							}
-						}
-					} catch (NumberFormatException ignored) { }
+				if (frequencyKHz == null) {
+					reportSkippedWinTestSked(
+							sked,
+							"no recent or configured QRG matches "
+									+ sked.getBand().getDisplayLabel()
+					);
+					return;
 				}
 
-				// Fallback A: OM's Last Known QRG from KST field (if no PM QRG exchange found at all)
-				if (freqKHz < 0 && targetMember != null) {
-					try {
-						String memberQrg = targetMember.getFrequency().get();
-						if (memberQrg != null && !memberQrg.isBlank()) {
-							double mhz = Double.parseDouble(memberQrg.trim());
-							freqKHz = mhz * 1000.0;
-							System.out.println("[ChatController] SKED freq: fallback Last Known QRG → "
-									+ mhz + " MHz → " + freqKHz + " kHz");
-						}
-					} catch (NumberFormatException ignored) { }
+				String winTestCallsign =
+						toWinTestSkedCallsign(
+								sked.getTargetChatCallsign()
+						);
+
+				if (winTestCallsign == null || winTestCallsign.isBlank()) {
+					reportSkippedWinTestSked(
+							sked,
+							"the target callsign could not be converted"
+					);
+					return;
 				}
 
-				// Fallback B: hardcoded default
-				if (freqKHz < 0) {
-					freqKHz = 144300.0;
-				}
+				InetAddress broadcastAddress = InetAddress.getByName(
+						chatPreferences
+								.getLogsynch_wintestNetworkBroadcastAddress()
+				);
 
-				// Build notes string with target locator/azimuth info like reference: [JO02OB - 279°]
-				String targetLocator = resolveSkedTargetLocator(sked.getTargetCallsign());
+				int port =
+						chatPreferences.getLogsynch_wintestNetworkPort();
+
+				String stationName =
+						chatPreferences
+								.getLogsynch_wintestNetworkStationNameOfKST();
+
+				WinTestSkedSender sender = new WinTestSkedSender(
+						stationName,
+						broadcastAddress,
+						port,
+						this
+				);
+
+				String targetLocator =
+						resolveSkedTargetLocator(
+								sked.getTargetCallsign()
+						);
+
 				String notes = "sked via KST4Contest";
-				if (targetLocator != null && !targetLocator.isBlank() && sked.getTargetAzimuth() > 0) {
-					notes = String.format("[%s - %.0f°] %s", targetLocator, sked.getTargetAzimuth(), notes);
-				} else if (targetLocator != null && !targetLocator.isBlank()) {
-					notes = String.format("[%s] %s", targetLocator, notes);
+
+				if (targetLocator != null
+						&& !targetLocator.isBlank()
+						&& sked.getTargetAzimuth() > 0) {
+
+					notes = String.format(
+							"[%s - %.0f°] %s",
+							targetLocator,
+							sked.getTargetAzimuth(),
+							notes
+					);
+
+				} else if (targetLocator != null
+						&& !targetLocator.isBlank()) {
+
+					notes = String.format(
+							"[%s] %s",
+							targetLocator,
+							notes
+					);
+
 				} else if (sked.getTargetAzimuth() > 0) {
-					notes = String.format("[%.0f°] %s", sked.getTargetAzimuth(), notes);
+
+					notes = String.format(
+							"[%.0f°] %s",
+							sked.getTargetAzimuth(),
+							notes
+					);
 				}
 
-				// Determine mode: -1 = auto-detect, 0 = CW, 1 = SSB
-				String modeStr = chatPreferences.getLogsynch_wintestSkedMode();
-				int modeOverride = -1; // AUTO
-				if ("CW".equalsIgnoreCase(modeStr)) modeOverride = 0;
-				else if ("SSB".equalsIgnoreCase(modeStr)) modeOverride = 1;
+				String modeText =
+						chatPreferences.getLogsynch_wintestSkedMode();
 
-				sender.pushSkedToWinTest(sked, freqKHz, notes, modeOverride);
-			} catch (Exception e) {
-				System.out.println("[ChatController] Error pushing sked to Win-Test: " + e.getMessage());
-				e.printStackTrace();
+				int modeOverride = -1;
+
+				if ("CW".equalsIgnoreCase(modeText)) {
+					modeOverride = 0;
+				} else if ("SSB".equalsIgnoreCase(modeText)) {
+					modeOverride = 1;
+				}
+
+				sender.pushSkedToWinTest(
+						sked,
+						winTestCallsign,
+						frequencyKHz,
+						notes,
+						modeOverride
+				);
+
+			} catch (Exception exception) {
+				String message =
+						"Error pushing sked to Win-Test: "
+								+ exception.getMessage();
+
+				System.out.println(
+						"[ChatController] " + message
+				);
+
+				onThreadStatus(
+						"WT-SkedSend",
+						new ThreadStateMessage(
+								"WT-SkedSend",
+								false,
+								message,
+								true
+						)
+				);
+
+				exception.printStackTrace();
 			}
 		}, "WinTestSkedPush").start();
 	}
 
-	private ChatMember resolveSkedTargetMember(String targetCallsignRaw) {
-		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
+	/**
+	 * Resolves the frequency used for the Win-Test sked.
+	 *
+	 * <ol>
+	 *     <li>Newest QRG detected for the target station on the selected band</li>
+	 *     <li>Own QRG belonging to the target's chat category</li>
+	 *     <li>No result: do not send the Win-Test sked</li>
+	 * </ol>
+	 */
+	private Double resolveSkedFrequencyKHz(ContestSked sked) {
+		if (sked == null || sked.getBand() == null) {
 			return null;
 		}
 
-		List<ChatMember> matchingMembers = findActiveChatMembersByRawCall(targetCallsignRaw);
-		return matchingMembers.isEmpty() ? null : matchingMembers.get(0);
-	}
+		Double targetFrequencyKHz =
+				resolveRecentTargetFrequencyKHz(sked);
 
-	private String resolveSkedTargetLocator(String targetCallsignRaw) {
-		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
-			return null;
+		if (targetFrequencyKHz != null) {
+			System.out.println(
+					"[ChatController] SKED frequency from target: "
+							+ targetFrequencyKHz
+							+ " kHz on "
+							+ sked.getBand()
+			);
+			return targetFrequencyKHz;
 		}
 
-		for (ChatMember member : findActiveChatMembersByRawCall(targetCallsignRaw)) {
-			String locator = member.getQra();
-			if (locator != null && !locator.isBlank()) {
-				return locator.trim().toUpperCase(Locale.ROOT);
-			}
+		String ownQrg =
+				resolveOwnQrgForSkedCategory(
+						sked.getTargetChatCategory()
+				);
+
+		Double ownFrequencyKHz =
+				parseSkedFrequencyKHz(
+						ownQrg,
+						sked.getBand()
+				);
+
+		if (ownFrequencyKHz != null) {
+			System.out.println(
+					"[ChatController] SKED frequency from own category QRG: "
+							+ ownFrequencyKHz
+							+ " kHz on "
+							+ sked.getBand()
+			);
+			return ownFrequencyKHz;
 		}
 
 		return null;
 	}
 
-//	private ChatMember resolveSkedTargetMember(String targetCallsignRaw) {
-//		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
-//			return null;
-//		}
-//
-//		List<ChatMember> matchingMembers = findActiveChatMembersByRawCall(targetCallsignRaw);
-//		return matchingMembers.isEmpty() ? null : matchingMembers.get(0);
-//
-//	}
-//
-//	private String resolveSkedTargetLocator(String targetCallsignRaw) {
-//		if (targetCallsignRaw == null || targetCallsignRaw.isBlank()) {
-//			return null;
-//		}
-//
-//		String normalizedTargetCall = normalizeCallRaw(targetCallsignRaw);
-//
-//		for (ChatMember member : findActiveChatMembersByRawCall(targetCallsignRaw)) {
-//			String locator = member.getQra();
-//			if (locator != null && !locator.isBlank()) {
-//				return locator.trim().toUpperCase(Locale.ROOT);
-//			}
-//		}
-//
-//		return null;
-//	}
+	/**
+	 * Returns the newest QRG detected on the selected band across all active
+	 * suffix and category variants of the base callsign.
+	 */
+	private Double resolveRecentTargetFrequencyKHz(ContestSked sked) {
+		List<ChatMember> variants =
+				findActiveChatMembersByRawCall(
+						sked.getTargetCallsign()
+				);
+
+		long now = System.currentTimeMillis();
+		long newestTimestamp = Long.MIN_VALUE;
+		Double newestFrequencyKHz = null;
+
+		for (ChatMember member : variants) {
+			if (member == null || member.getKnownActiveBands() == null) {
+				continue;
+			}
+
+			ChatMember.ActiveFrequencyInfo frequencyInfo =
+					member.getKnownActiveBands().get(
+							sked.getBand()
+					);
+
+			if (frequencyInfo == null
+					|| frequencyInfo.frequency <= 0.0
+					|| !sked.getBand().isPlausible(
+					frequencyInfo.frequency
+			)) {
+				continue;
+			}
+
+			long ageMs = now - frequencyInfo.timestampEpoch;
+
+			if (ageMs < 0L
+					|| ageMs > BandOpportunityResolver
+					.RECENT_DYNAMIC_EVIDENCE_MAX_AGE_MS) {
+				continue;
+			}
+
+			if (frequencyInfo.timestampEpoch > newestTimestamp) {
+				newestTimestamp = frequencyInfo.timestampEpoch;
+				newestFrequencyKHz =
+						frequencyInfo.frequency * 1000.0;
+			}
+		}
+
+		return newestFrequencyKHz;
+	}
+
+	/**
+	 * Returns the own QRG belonging to the chat category in which the target
+	 * station was selected.
+	 */
+	private String resolveOwnQrgForSkedCategory(
+			ChatCategory targetCategory) {
+
+		if (sameChatCategory(
+				targetCategory,
+				getChatCategorySecondChat())) {
+
+			return chatPreferences
+					.getMYQRGSecondCat()
+					.get();
+		}
+
+		return chatPreferences
+				.getMYQRGFirstCat()
+				.get();
+	}
+
+	private boolean sameChatCategory(ChatCategory first,
+	                                 ChatCategory second) {
+
+		return first != null
+				&& second != null
+				&& first.getCategoryNumber()
+				== second.getCategoryNumber();
+	}
+
+	/**
+	 * Parses the QRG formats used by KST4Contest and Win-Test.
+	 *
+	 * <p>Examples: 144.300, 144.300.03, 144300 and 144300.0.</p>
+	 */
+	private Double parseSkedFrequencyKHz(String value,
+	                                     Band expectedBand) {
+
+		if (value == null
+				|| value.isBlank()
+				|| expectedBand == null) {
+			return null;
+		}
+
+		String normalized = value
+				.trim()
+				.replace(',', '.')
+				.replaceAll("\\s+", "");
+
+		try {
+			java.util.regex.Matcher groupedFrequency =
+					java.util.regex.Pattern.compile(
+							"^(\\d{2,5})\\.(\\d{3})(?:\\.(\\d{1,2}))?$"
+					).matcher(normalized);
+
+			if (groupedFrequency.matches()) {
+				double frequencyKHz =
+						Integer.parseInt(groupedFrequency.group(1))
+								* 1000.0
+								+ Integer.parseInt(
+								groupedFrequency.group(2)
+						);
+
+				String subKHzPart =
+						groupedFrequency.group(3);
+
+				if (subKHzPart != null) {
+					double subKHz =
+							Integer.parseInt(subKHzPart);
+
+					frequencyKHz +=
+							subKHzPart.length() == 1
+									? subKHz / 10.0
+									: subKHz / 100.0;
+				}
+
+				return expectedBand.isPlausible(
+						frequencyKHz / 1000.0
+				) ? frequencyKHz : null;
+			}
+
+			double numericValue =
+					Double.parseDouble(normalized);
+
+			if (expectedBand.isPlausible(numericValue)) {
+				return numericValue * 1000.0;
+			}
+
+			if (expectedBand.isPlausible(
+					numericValue / 1000.0)) {
+				return numericValue;
+			}
+
+		} catch (NumberFormatException ignored) {
+			// Invalid or unsupported QRG format.
+		}
+
+		return null;
+	}
+
+	/**
+	 * Removes KST dash suffixes while retaining ordinary amateur-radio slash
+	 * notation such as /P, /M or a country prefix.
+	 *
+	 * <p>Examples:
+	 * DN9APW-2 -> DN9APW
+	 * EA5/G8MBI/P-70 -> EA5/G8MBI/P
+	 * DN9APW-2/P -> DN9APW/P</p>
+	 */
+	private String toWinTestSkedCallsign(String chatCallsign) {
+		if (chatCallsign == null || chatCallsign.isBlank()) {
+			return null;
+		}
+
+		String normalized =
+				chatCallsign.trim().toUpperCase(Locale.ROOT);
+
+		return normalized.replaceAll(
+				"-[^/]*(?=/|$)",
+				""
+		);
+	}
+
+	private void reportSkippedWinTestSked(ContestSked sked,
+	                                      String reason) {
+
+		String target =
+				sked == null
+						? "unknown station"
+						: sked.getTargetChatCallsign();
+
+		String message =
+				"Win-Test sked not sent for "
+						+ target
+						+ ": "
+						+ reason
+						+ ". The internal KST4Contest sked remains active.";
+
+		System.out.println(
+				"[ChatController] " + message
+		);
+
+		onThreadStatus(
+				"WT-SkedSend",
+				new ThreadStateMessage(
+						"WT-SkedSend",
+						false,
+						message,
+						true
+				)
+		);
+	}
+
+	private String resolveSkedTargetLocator(
+			String targetCallsignRaw) {
+
+		if (targetCallsignRaw == null
+				|| targetCallsignRaw.isBlank()) {
+			return null;
+		}
+
+		for (ChatMember member
+				: findActiveChatMembersByRawCall(
+				targetCallsignRaw)) {
+
+			String locator = member.getQra();
+
+			if (locator != null && !locator.isBlank()) {
+				return locator
+						.trim()
+						.toUpperCase(Locale.ROOT);
+			}
+		}
+
+		return null;
+	}
 
 	public StationMetricsService getStationMetricsService() {
 		return stationMetricsService;

@@ -667,56 +667,155 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		selectedCallSignDownerSiteGridPane.add(priorityRow, 0, 5, 1, 1);
 
-		ChoiceBox<Integer> cbSkedMinutes = new ChoiceBox<>(FXCollections.observableArrayList(2, 3, 4, 5, 6,7,8,9, 10,11,12,13,14, 15, 20));
+		ChoiceBox<Integer> cbSkedMinutes = new ChoiceBox<>(
+				FXCollections.observableArrayList(
+						2, 3, 4, 5, 6, 7, 8, 9, 10,
+						11, 12, 13, 14, 15, 20
+				)
+		);
 		cbSkedMinutes.getSelectionModel().select(Integer.valueOf(5));
 
-		ChoiceBox<String> cbSkedMode = new ChoiceBox<>(FXCollections.observableArrayList("AUTO", "SSB", "CW"));
-		String configuredSkedMode = this.chatcontroller.getChatPreferences().getLogsynch_wintestSkedMode();
+		EnumSet<Band> enabledSkedBands =
+				BandOpportunityResolver.getEnabledStationBands(
+						chatcontroller.getChatPreferences()
+				);
+
+		ChoiceBox<Band> cbSkedBand = new ChoiceBox<>(
+				FXCollections.observableArrayList(enabledSkedBands)
+		);
+
+		cbSkedBand.setConverter(new StringConverter<>() {
+			@Override
+			public String toString(Band band) {
+				return band == null ? "" : bandToHumanLabel(band);
+			}
+
+			@Override
+			public Band fromString(String value) {
+				return null;
+			}
+		});
+
+		cbSkedBand.setPrefWidth(75);
+		cbSkedBand.setTooltip(new Tooltip(
+				"Band for this sked. The initial value is derived from recent "
+						+ "QRG information or the station name. Only bands enabled "
+						+ "for your own station are offered."
+		));
+
+		Band defaultSkedBand =
+				resolveDefaultSkedBand(
+						selectedCallSignInfoStageChatMember,
+						enabledSkedBands
+				);
+
+		if (defaultSkedBand != null) {
+			cbSkedBand.setValue(defaultSkedBand);
+		}
+
+		ChoiceBox<String> cbSkedMode = new ChoiceBox<>(
+				FXCollections.observableArrayList("AUTO", "SSB", "CW")
+		);
+
+		String configuredSkedMode =
+				chatcontroller.getChatPreferences().getLogsynch_wintestSkedMode();
+
 		if (configuredSkedMode == null || configuredSkedMode.isBlank()) {
 			configuredSkedMode = "AUTO";
 		}
-		String configuredSkedModeUpper = configuredSkedMode.trim().toUpperCase(java.util.Locale.ROOT);
+
+		String configuredSkedModeUpper =
+				configuredSkedMode.trim().toUpperCase(Locale.ROOT);
+
 		if (!"AUTO".equals(configuredSkedModeUpper)
 				&& !"SSB".equals(configuredSkedModeUpper)
 				&& !"CW".equals(configuredSkedModeUpper)) {
 			configuredSkedModeUpper = "AUTO";
 		}
+
 		cbSkedMode.setValue(configuredSkedModeUpper);
 		cbSkedMode.setTooltip(new Tooltip("Mode for Win-Test ADDSKED packets"));
 		cbSkedMode.setOnAction(e ->
-				chatcontroller.getChatPreferences().setLogsynch_wintestSkedMode(cbSkedMode.getValue()));
+				chatcontroller.getChatPreferences()
+						.setLogsynch_wintestSkedMode(cbSkedMode.getValue())
+		);
 
-		ChoiceBox<String> cbReminderOffsets = new ChoiceBox<>(FXCollections.observableArrayList("2+1", "5+2+1", "10+5+2+1"));
+		ChoiceBox<String> cbReminderOffsets = new ChoiceBox<>(
+				FXCollections.observableArrayList(
+						"2+1",
+						"5+2+1",
+						"10+5+2+1"
+				)
+		);
 		cbReminderOffsets.getSelectionModel().select("2+1");
 
 		CheckBox chkPmReminders = new CheckBox("Remind-PM in ");
 
 		Button btnCreateSked = new Button("Create sked");
-		btnCreateSked.setTooltip(new Tooltip("Creates a sked entry and boosts priority (ramp-up)."));
+		btnCreateSked.setTooltip(new Tooltip(
+				"Creates a sked entry and boosts priority during the approach."
+		));
 
 		btnCreateSked.setOnAction(e -> {
-			ChatMember sel = chatcontroller.getScoreService().selectedChatMemberProperty().get();
-			if (sel == null) return;
+			ChatMember selectedMember =
+					chatcontroller.getScoreService()
+							.selectedChatMemberProperty()
+							.get();
 
-			if (cbSkedMode.getValue() != null) {
-				chatcontroller.getChatPreferences().setLogsynch_wintestSkedMode(cbSkedMode.getValue());
+			if (selectedMember == null) {
+				return;
 			}
 
-			int minutes = cbSkedMinutes.getValue() == null ? 5 : cbSkedMinutes.getValue();
-			long skedTime = System.currentTimeMillis() + minutes * 60_000L;
+			Band selectedBand = cbSkedBand.getValue();
+			if (selectedBand == null) {
+				showUserInputErrorWindow(
+						"No sked band is available. Enable at least one band "
+								+ "under \"My station uses ...\" before creating a sked."
+				);
+				return;
+			}
 
-			double az = sel.getQTFdirection() != null ? sel.getQTFdirection() : 0.0;
+			if (cbSkedMode.getValue() != null) {
+				chatcontroller.getChatPreferences()
+						.setLogsynch_wintestSkedMode(cbSkedMode.getValue());
+			}
 
-			// band is not strictly required for scoring; keep current category context
-			Band band = Band.B_144; // if you want, replace with a real dropdown later
-			ContestSked sked = new ContestSked(sel.getCallSignRaw(), az, skedTime, band);
+			int minutes =
+					cbSkedMinutes.getValue() == null
+							? 5
+							: cbSkedMinutes.getValue();
+
+			long skedTime =
+					System.currentTimeMillis() + minutes * 60_000L;
+
+			double azimuth =
+					selectedMember.getQTFdirection() != null
+							? selectedMember.getQTFdirection()
+							: 0.0;
+
+			ContestSked sked = new ContestSked(
+					selectedMember.getCallSignRaw(),
+					selectedMember.getCallSign(),
+					selectedMember.getChatCategory(),
+					azimuth,
+					skedTime,
+					selectedBand
+			);
 
 			chatcontroller.addSked(sked);
-			chatcontroller.getScoreService().requestRecompute("sked-created");
+			chatcontroller.getScoreService()
+					.requestRecompute("sked-created");
 
 			if (chkPmReminders.isSelected()) {
-				List<Integer> offsets = parseMinuteOffsets(cbReminderOffsets.getValue());
-				chatcontroller.getSkedReminderService().armReminders(sel.getCallSignRaw(), sel.getChatCategory(), skedTime, offsets);
+				List<Integer> offsets =
+						parseMinuteOffsets(cbReminderOffsets.getValue());
+
+				chatcontroller.getSkedReminderService().armReminders(
+						sked.getTargetChatCallsign(),
+						sked.getTargetChatCategory(),
+						skedTime,
+						offsets
+				);
 			}
 		});
 
@@ -727,6 +826,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				new Label("min")
 		);
 		skedTimeGroup.setAlignment(Pos.CENTER_LEFT);
+
+		HBox skedBandGroup = new HBox(
+				4,
+				new Label("Band"),
+				cbSkedBand
+		);
+		skedBandGroup.setAlignment(Pos.CENTER_LEFT);
 
 		HBox skedModeGroup = new HBox(
 				4,
@@ -750,12 +856,19 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		skedRow.setAlignment(Pos.CENTER_LEFT);
 		skedRow.getChildren().addAll(
 				skedTimeGroup,
+				skedBandGroup,
 				skedModeGroup,
 				btnCreateSked,
 				skedReminderGroup
 		);
 
-		selectedCallSignDownerSiteGridPane.add(skedRow, 0, 6, 2, 1);
+		selectedCallSignDownerSiteGridPane.add(
+				skedRow,
+				0,
+				6,
+				2,
+				1
+		);
 		GridPane.setHgrow(skedRow, Priority.ALWAYS);
 
 
@@ -5453,23 +5566,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		btnSkedWarnIndicator.setTooltip(tipSkedWarnIndicator);
 	}
 
-	private void maybeShowSkedWarnIndicator(String key, ThreadStateMessage msg) {
-		if (msg == null) return;
 
-		String text = msg.getRunningInformationTextDescription();
-		if (text == null || text.isBlank()) text = msg.getRunningInformation();
-		if (text == null || text.isBlank()) return;
-
-		String nick = msg.getThreadNickName() == null ? "" : msg.getThreadNickName().toLowerCase(Locale.ROOT);
-		String k = key == null ? "" : key.toLowerCase(Locale.ROOT);
-		String t = text.toLowerCase(Locale.ROOT);
-
-		boolean isSkedRelated = k.contains("sked") || nick.contains("sked") || t.contains("reminder");
-		if (!isSkedRelated) return;
-
-		final String finalText = text;
-		Platform.runLater(() -> showBlinkingSkedWarnIndicator(finalText + " SKED!"));
-	}
 
 	private void showBlinkingSkedWarnIndicator(String text) {
 		// short text for the button; full text in tooltip
@@ -6417,7 +6514,27 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			bPaneChatWindow.setTop(flwpne_StatusBar);
 
 			initSkedWarnIndicatorButton();
+
+			chatcontroller.lastUiReminderEventProperty().addListener(
+					(observable, oldValue, reminderEvent) -> {
+						if (reminderEvent == null) {
+							return;
+						}
+
+						String text = "REMINDER: "
+								+ reminderEvent.getCallSignRaw()
+								+ "  T-"
+								+ reminderEvent.getMinutesBefore()
+								+ "m";
+
+						Platform.runLater(
+								() -> showBlinkingSkedWarnIndicator(text)
+						);
+					}
+			);
+
 			flwpne_StatusBar.getChildren().add(btnSkedWarnIndicator);
+
 
 			initBandUpgradeIndicatorButton();
 			flwpne_StatusBar.getChildren().add(btnBandUpgradeIndicator);
@@ -11384,13 +11501,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		settingsStage.show();
 
-		chatcontroller.lastUiReminderEventProperty().addListener((obs, oldVal, ev) -> {
-			if (ev == null) return;
 
-			String text = "REMINDER: " + ev.getCallSignRaw() + "  T-" + ev.getMinutesBefore() + "m";
-			Platform.runLater(() -> showBlinkingSkedWarnIndicator(text));
-
-		});
 
 		//initialize the timeline
 		Platform.runLater(this::updateTimelineVisuals);
@@ -11651,10 +11762,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
             updateStatusButton(key, threadStateMessage);
 		});
 
-		maybeShowSkedWarnIndicator(key, threadStateMessage);
 		maybeShowBandUpgradeIndicator(key, threadStateMessage);
-
-
 		//if we receive a threadstatemessage for sked warning, enable the sked warning
 
 

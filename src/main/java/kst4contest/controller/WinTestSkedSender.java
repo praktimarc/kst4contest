@@ -39,26 +39,61 @@ public class WinTestSkedSender {
     }
 
     /**
-     * Pushes a ContestSked into Win-Test by sending the LOCKSKED / ADDSKED / UNLOCKSKED
-     * sequence via UDP broadcast.
+     * Pushes a ContestSked into Win-Test by sending the
+     * LOCKSKED / ADDSKED / UNLOCKSKED sequence.
      *
-     * @param sked          the sked to push
-     * @param frequencyKHz  current operating frequency in kHz (e.g. 144321.0)
-     * @param notes         free-text notes (e.g. "[JO62QM - 123°] sked via KST")
+     * @param sked             sked to push
+     * @param targetCallsign   callsign prepared for Win-Test
+     * @param frequencyKHz     operating frequency in kHz
+     * @param notes            optional notes
+     * @param modeOverride     -1 for AUTO, 0 for CW, 1 for SSB
      */
-    public void pushSkedToWinTest(ContestSked sked, double frequencyKHz, String notes, int modeOverride) {
+    public void pushSkedToWinTest(ContestSked sked,
+                                  String targetCallsign,
+                                  double frequencyKHz,
+                                  String notes,
+                                  int modeOverride) {
+
         try {
             sendLockSked();
-            sendAddSked(sked, frequencyKHz, notes, modeOverride);
+
+            sendAddSked(
+                    sked,
+                    targetCallsign,
+                    frequencyKHz,
+                    notes,
+                    modeOverride
+            );
+
             sendUnlockSked();
 
-            reportStatus("Sked pushed to WT: " + sked.getTargetCallsign(), false);
-            System.out.println("[WinTestSkedSender] Sked pushed: " + sked.getTargetCallsign()
-                    + " at " + frequencyKHz + " kHz, band=" + sked.getBand());
-        } catch (Exception e) {
-            reportStatus("ERROR pushing sked: " + e.getMessage(), true);
-            System.out.println("[WinTestSkedSender] Error pushing sked: " + e.getMessage());
-            e.printStackTrace();
+            reportStatus(
+                    "Sked pushed to WT: " + targetCallsign,
+                    false
+            );
+
+            System.out.println(
+                    "[WinTestSkedSender] Sked pushed: "
+                            + targetCallsign
+                            + " at "
+                            + frequencyKHz
+                            + " kHz, band="
+                            + sked.getBand()
+            );
+
+        } catch (Exception exception) {
+            reportStatus(
+                    "ERROR pushing sked: "
+                            + exception.getMessage(),
+                    true
+            );
+
+            System.out.println(
+                    "[WinTestSkedSender] Error pushing sked: "
+                            + exception.getMessage()
+            );
+
+            exception.printStackTrace();
         }
     }
 
@@ -86,46 +121,54 @@ public class WinTestSkedSender {
 
     /**
      * Sends an ADDSKED message with the sked details.
-     * <p>
-     * Win-Test ADDSKED data format (from wtKST):
-     * <pre>
-     *   {epoch_seconds} {freq_in_0.1kHz} {bandId} {mode} "{callsign}" "{notes}"
-     * </pre>
-     * <p>
-     * Win-Test uses a timestamp reference of 1970-01-01 00:01:00 UTC (60s offset from Unix epoch).
-     * The C# code adds 60 seconds to compensate.
+     *
+     * <p>The wtKST implementation subtracts a reference time of
+     * 1970-01-01 00:01:00 UTC and subsequently adds 60 seconds. Both
+     * operations cancel each other out. The transmitted value is therefore
+     * an ordinary Unix timestamp and must not receive another offset here.</p>
      */
-    private void sendAddSked(ContestSked sked, double frequencyKHz, String notes, int modeOverride) throws Exception {
-        // Win-Test timestamp: epoch seconds with 60s offset
-        long epochSeconds = sked.getSkedTimeEpoch() / 1000;
-        long wtTimestamp = epochSeconds + 60;
+    private void sendAddSked(ContestSked sked,
+                             String targetCallsign,
+                             double frequencyKHz,
+                             String notes,
+                             int modeOverride) throws Exception {
 
-        // Frequency in 0.1 kHz units (Win-Test convention): multiply kHz by 10
-        long freqTenthKHz = Math.round(frequencyKHz * 10.0);
+        long wtTimestamp =
+                sked.getSkedTimeEpoch() / 1000L;
 
-        // Win-Test band ID
-        int bandId = toWinTestBandId(sked.getBand());
+        // Frequency in 0.1 kHz units.
+        long frequencyTenthKHz =
+                Math.round(frequencyKHz * 10.0);
 
-        // Mode: -1 = auto-detect from frequency, 0 = CW, 1 = SSB
+        int bandId =
+                toWinTestBandId(sked.getBand());
+
         int mode;
+
         if (modeOverride >= 0) {
             mode = modeOverride;
         } else {
-            mode = isInSsbSegment(frequencyKHz) ? 1 : 0;
+            mode = isInSsbSegment(frequencyKHz)
+                    ? 1
+                    : 0;
         }
 
-        String data = wtTimestamp
-                + " " + freqTenthKHz
-                + " " + bandId
-                + " " + mode
-                + " \"" + sked.getTargetCallsign() + "\""
-                + " \"" + (notes != null ? notes : "") + "\"";
+        String data =
+                wtTimestamp
+                        + " " + frequencyTenthKHz
+                        + " " + bandId
+                        + " " + mode
+                        + " \"" + targetCallsign + "\""
+                        + " \"" + (notes != null ? notes : "") + "\"";
 
-        WinTestMessage msg = new WinTestMessage(
+        WinTestMessage message = new WinTestMessage(
                 WinTestMessage.MessageType.ADDSKED,
-                stationName, "",
-                data);
-        sendUdp(msg);
+                stationName,
+                "",
+                data
+        );
+
+        sendUdp(message);
     }
 
     /**
