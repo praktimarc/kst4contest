@@ -583,6 +583,84 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		};
 	}
 
+	/**
+	 * Chooses a useful initial band for a new sked.
+	 *
+	 * <p>Recent frequency evidence has priority over station-name information.
+	 * Manual NOT-QRV exclusions are respected. The operator can still select
+	 * another locally enabled band from the dropdown.</p>
+	 */
+	private Band resolveDefaultSkedBand(ChatMember selectedMember,
+	                                    EnumSet<Band> enabledBands) {
+
+		if (selectedMember == null || enabledBands == null || enabledBands.isEmpty()) {
+			return null;
+		}
+
+		List<ChatMember> variants =
+				chatcontroller.findActiveChatMembersByRawCall(
+						selectedMember.getCallSignRaw()
+				);
+
+		if (variants.isEmpty()) {
+			variants = List.of(selectedMember);
+		}
+
+		BandOpportunityResolver.Resolution resolution =
+				BandOpportunityResolver.resolve(
+						variants,
+						System.currentTimeMillis()
+				);
+
+		EnumSet<Band> availableBands = resolution.getAvailableBands();
+		availableBands.retainAll(enabledBands);
+
+		Band newestFrequencyBand = null;
+		long newestTimestamp = Long.MIN_VALUE;
+		long now = System.currentTimeMillis();
+
+		for (ChatMember member : variants) {
+			if (member == null || member.getKnownActiveBands() == null) {
+				continue;
+			}
+
+			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
+					: member.getKnownActiveBands().entrySet()) {
+
+				Band band = entry.getKey();
+				ChatMember.ActiveFrequencyInfo info = entry.getValue();
+
+				if (band == null
+						|| info == null
+						|| !availableBands.contains(band)
+						|| !band.isPlausible(info.frequency)) {
+					continue;
+				}
+
+				long ageMs = now - info.timestampEpoch;
+				if (ageMs < 0L
+						|| ageMs > BandOpportunityResolver.RECENT_DYNAMIC_EVIDENCE_MAX_AGE_MS) {
+					continue;
+				}
+
+				if (info.timestampEpoch > newestTimestamp) {
+					newestTimestamp = info.timestampEpoch;
+					newestFrequencyBand = band;
+				}
+			}
+		}
+
+		if (newestFrequencyBand != null) {
+			return newestFrequencyBand;
+		}
+
+		if (!availableBands.isEmpty()) {
+			return availableBands.iterator().next();
+		}
+
+		return enabledBands.iterator().next();
+	}
+
 
 	/**
 	 * This method generates a BoderPane which shows some additional information about a callsign which had been
@@ -7350,6 +7428,17 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //			chatMemberTableFilterQTFAndQRBHbox.set
 
 			VBox chatMemberTableFilterVBoxForAllFilters= new VBox();
+
+			Button btnResetChatMemberFilters = new Button("Reset filters");
+			btnResetChatMemberFilters.getStyleClass().clear();
+			btnResetChatMemberFilters.getStyleClass().addAll(
+					"button",
+					"buttonMyQrg1"
+			);
+			btnResetChatMemberFilters.setTooltip(
+					new Tooltip("Disable all station-list filters and show every user")
+			);
+
 			chatMemberTableFilterVBoxForAllFilters.setSpacing(1);
 
 			chatMemberTableFilterVBoxForAllFilters.setMinWidth(0);
@@ -7533,19 +7622,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					"-fx-border-radius: 1;" +
 					"-fx-border-color: lightgrey;");
 
-//			chatMemberTableFilterQTFAndQRBHbox.setFillHeight(true);
-//			chatMemberTableFilterQTFAndQRBHbox.setAlignment(Pos.CENTER_LEFT);
-//			chatMemberTableFilterQTFAndQRBHbox.getChildren().add(chatMemberTableFilterQRBHBox);
-			chatMemberTableFilterQTFAndQRBHbox
-					.getChildren()
-					.add(chatMemberTableFilterQRBHBox);
+			chatMemberTableFilterQTFAndQRBHbox.getChildren().addAll(
+					btnResetChatMemberFilters,
+					chatMemberTableFilterQRBHBox
+			);
 
-
-//			HBox chatMemberTableFilterQTFHBox  = new HBox();
-//			FlowPane chatMemberTableFilterQTFHBox  = new FlowPane();
-//			chatMemberTableFilterQTFHBox.setAlignment(Pos.CENTER_LEFT);
-//			chatMemberTableFilterQTFHBox.setPrefWidth(525);
-//			chatMemberTableFilterQTFHBox.setHgap(2);
 
 			FlowPane chatMemberTableFilterQTFHBox = new FlowPane(
 					Orientation.HORIZONTAL,
@@ -7874,13 +7955,26 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				}
 			});
 
-//			HBox chatMemberTableFilterWorkedBandFiltersHbx = new HBox();
 
 			FlowPane chatMemberTableFilterWorkedBandFiltersHbx = new FlowPane(
 					Orientation.HORIZONTAL,
 					2,
 					3
 			);
+
+			HBox chatMemberTableReachabilityBox = new HBox(4);
+			chatMemberTableReachabilityBox.setAlignment(Pos.CENTER_LEFT);
+			chatMemberTableReachabilityBox.setMinWidth(0);
+
+			chatMemberTableReachabilityBox.setStyle(
+					"-fx-padding: 1;" +
+							"-fx-border-style: solid inside;" +
+							"-fx-border-width: 1;" +
+							"-fx-border-insets: 1;" +
+							"-fx-border-radius: 1;" +
+							"-fx-border-color: lightgrey;"
+			);
+
 			chatMemberTableFilterWorkedBandFiltersHbx.setAlignment(Pos.CENTER_LEFT);
 			chatMemberTableFilterWorkedBandFiltersHbx.setRowValignment(VPos.CENTER);
 			chatMemberTableFilterWorkedBandFiltersHbx.setMinWidth(0);
@@ -7932,9 +8026,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				}
 			});
 
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(new Label("Reachability:"));
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(cmbReachabilityBand);
-			chatMemberTableFilterWorkedBandFiltersHbx.getChildren().add(btnCalculateSelectedTropo);
+			chatMemberTableReachabilityBox.getChildren().addAll(
+					new Label("Reachability:"),
+					cmbReachabilityBand,
+					btnCalculateSelectedTropo
+			);
 
 			/**
 			 * In order to work the filters needs the proper band settings, which should be worked
@@ -8276,8 +8372,44 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					btnTglAsNext5Min
 			);
 
-//			chatMemberTableFilterWorkedBandFilters
+			btnResetChatMemberFilters.setOnAction(event -> {
 
+				/*
+				 * Reset the visible state of every station-list filter.
+				 *
+				 * Grid coloring and the selected reachability band are intentionally
+				 * preserved because they are display/calculation settings, not filters.
+				 */
+				List.of(
+						btnTglNewLocator,
+						btnTglReachableTropo,
+						btnTglNewBands,
+						btnTglAsNext5Min,
+						tglBtnQRBEnable,
+						btnTglwkd,
+						btnTglwkd50,
+						btnTglwkd70,
+						btnTglwkd144,
+						btnTglwkd432,
+						btnTglwkd23,
+						btnTglwkd13,
+						btnTglwkd9,
+						btnTglwkd6,
+						btnTglwkd3,
+						btnTglInactive
+				).forEach(toggleButton -> toggleButton.setSelected(false));
+
+				tglGrpQTF.selectToggle(null);
+				chatMemberTableFilterQtfEnableChkbx.setSelected(false);
+				chatMemberTableFilterTextField.clear();
+
+				/*
+				 * Programmatically changing a ToggleButton does not invoke its action
+				 * handler. Clear the predicate list explicitly so no stale predicate
+				 * can remain active.
+				 */
+				chatcontroller.getLst_chatMemberListFilterPredicates().clear();
+			});
 
 			chatMemberTableFilterTextFieldBox.getChildren().addAll(chatMemberTableFilterTextField);
 
@@ -8293,6 +8425,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			chatMemberTableFilterTextFieldAndWorkedBandsHbx.getChildren().addAll(
 					chatMemberTableFilterTextFieldBox,
+					chatMemberTableReachabilityBox,
 					chatMemberTableFilterWorkedBandFiltersHbx
 			);
 
