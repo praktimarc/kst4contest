@@ -86,35 +86,77 @@ When broadcasting the complete logbook, DXLog.net uses `contactreplace` instead 
 
 ### Win-Test
 
-Win-Test is supported with a dedicated UDP network listener that understands the native Win-Test network protocol.
+Win-Test is connected through a dedicated UDP listener for the native Win-Test network protocol. This listener is independent of the general QSO UDP listener on port `12060`.
 
-For a new QSO, KST4Contest imports the callsign and resolves the native Win-Test band ID. This includes 50 and 70 MHz. If the packet contains a valid locator, the worked grid square is also stored for the detected band.
+#### QSO and Worked synchronisation
 
-**Advantages of Win-Test Integration:**
-- **Per-band Worked data:** New QSOs set the Worked mark for the band reported by Win-Test and update the grid-square status where a locator is available.
-- Automatic QSO synchronization to mark worked stations.
-- **Sked Handover (ADDSKED):** Using the "Create sked" button in the station info panel not only creates a sked in KST4Contest but also *sends it directly via UDP to the Win-Test network as an ADDSKED packet* – automatically, as soon as the listener is active. No separate toggle is needed.
-- You can choose between "AUTO", "SSB", or "CW" sked modes.
-- **Automatic QRG resolution for SKEDs:** KST4Contest selects the sked frequency intelligently:
-  1. If the other station mentioned their QRG in a recent chat message, that frequency is used.
-  2. Otherwise, your own current QRG is used (from Win-Test STATUS or manual entry).
+For a new QSO, KST4Contest imports:
 
-**Settings in the "Log Synchronisation" tab:**
-- Enable `Receive Win-Test network based UDP log messages`.
-- `UDP-Port for Win-Test listener` (default: 9871).
-- `KST station name in Win-Test network (src of SKED packets)`: Defines the station name KST4Contest uses in the WT network (e.g. "KST").
-- `Win-Test network broadcast address`: Usually detected automatically; required to send sked packets to the network.
+- the logged callsign,
+- the native Win-Test band ID, and
+- a valid locator where one is included in the packet.
 
-**Settings in the "TRX Synchronisation" tab:**
-- `Win-Test STATUS QRG Sync`: When enabled, KST4Contest takes the current transceiver frequency from the Win-Test STATUS packet and uses it as your own QRG (MYQRG).
-- `Use pass frequency from Win-Test STATUS`: Instead of the main TRX frequency, the pass frequency contained in the STATUS packet is used as MYQRG (useful for multi-op setups that operate with a dedicated pass QRG).
-- `Win-Test station name filter`: If a name is entered here (e.g. "STN1"), KST4Contest only processes packets from that specific Win-Test instance. Leave empty to accept all.
+Band IDs for 50 and 70 MHz are processed in the same way as the VHF, UHF and SHF bands. The callsign is marked as worked globally and on the detected band. If a locator is also available, its four-character grid square is stored for that band.
 
-**Settings in Win-Test:**
-- The network in Win-Test must be active.
-- Win-Test must be configured to send/receive its broadcasts on the corresponding port (default 9871).
+The information is written to the same internal database as Worked data received through the other QSO UDP interfaces and is restored after a restart.
 
----
+#### Handing skeds over to Win-Test
+
+Pressing **Create sked** first creates an internal KST4Contest sked. If the Win-Test network listener is enabled, KST4Contest then automatically attempts to send the sked to the Win-Test network as an `ADDSKED` packet.
+
+The QRG is selected in the following order:
+
+1. KST4Contest looks for the most recent QRG of the remote station on the explicitly selected band. The QRG must be no more than 30 minutes old. Active variants of the same base callsign are evaluated together.
+2. If no such QRG is available, KST4Contest checks the local QRG of the chat category in which the sked was created. It is only used if it can be parsed and actually belongs to the selected band.
+3. If neither source provides a matching QRG, no `ADDSKED` packet is sent.
+
+A fixed replacement frequency such as `144.300` is deliberately not used. During a contest, a technically successful handover containing the wrong band or QRG is worse than a visibly omitted handover.
+
+The internal sked remains intact in every case. This also applies when the broadcast address is invalid, the network fails or no Win-Test client can be reached.
+
+#### Handling KST callsign suffixes
+
+KST suffixes often identify a particular chat login or band. They are not necessarily part of the log callsign. KST4Contest therefore removes a suffix separated by `-` before handing the callsign over to Win-Test, while preserving portable and international callsign components:
+
+| Callsign in the KST chat | Callsign passed to Win-Test |
+|---|---|
+| `DN9APW-2` | `DN9APW` |
+| `9A0BB-70` | `9A0BB` |
+| `EA5/G8MBI/P-70` | `EA5/G8MBI/P` |
+| `DN9APW-2/P` | `DN9APW/P` |
+
+The complete callsign remains available inside KST4Contest. The timeline, reminder PMs and chat category continue to refer to the login which was actually selected.
+
+#### Mode, time and notes
+
+The mode is selected explicitly as `SSB` or `CW` when the sked is created. It is not inferred automatically from the QRG because a limited list of assumed band segments cannot represent every supported VHF, UHF and SHF band reliably.
+
+KST4Contest sends the actual scheduled time without adding an extra minute. Where available, the notes include the locator and QTF together with an indication that the sked was created through KST4Contest.
+
+The handover consists of the Win-Test packets `LOCKSKED`, `ADDSKED` and `UNLOCKSKED`.
+
+![Sked handed over from KST4Contest to Win-Test](wintest_sked_handover.png)
+
+#### Settings
+
+In the **Log sync** tab:
+
+- `Receive Win-Test network based UDP log messages`
+- `UDP-Port for Win-Test listener`, default `9871`
+- `KST station name in Win-Test network (src of SKED packets)`
+- `Win-Test network broadcast address`
+
+In the **TRX sync** tab:
+
+- `Win-Test STATUS QRG Sync`
+- `Use pass frequency from Win-Test STATUS`
+- `Win-Test station name filter`
+
+The Win-Test network must be enabled in Win-Test. When several computers are used, the broadcast address must reach the relevant local network. The station name should identify the sending KST4Contest instance unambiguously within the Win-Test network.
+
+Detailed settings: [Win-Test Network Listener](en-Configuration#win-test-network-listener-from-v131)
+
+
 
 ## TRX Frequency Synchronisation
 

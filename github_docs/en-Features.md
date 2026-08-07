@@ -211,19 +211,86 @@ For selected stations in the user list, there are direct buttons to open the **Q
 
 ---
 
-## Sked Reminders with ALERT (from v1.40)
+## Skeds and Sked Reminders
 
-A sked reminder service with automatic messages can be activated for each chat member. Configurable interval patterns:
+> Available from v1.40; band, callsign and Win-Test handling extended in Nightly / v1.42.
 
-- **2+1 minutes**: Messages at 2 min and 1 min before the sked.
-- **5+2+1 minutes**: Messages at 5, 2 and 1 min before the sked.
-- **10+5+2+1 minutes**: Messages at 10, 5, 2 and 1 min before the sked.
+A sked is more than a reminder tied to a particular time. During a contest, it must become visible early enough, move the agreed station up the priority list and – if required – remind the remote station as well.
 
-In addition to the automated messages to the remote station, there is an **acoustic and visual notification** for your own operator so no sked is ever missed.
+KST4Contest therefore treats three tasks separately:
 
-Activate from the FurtherInfo panel of the corresponding station.
+1. The sked is stored internally and included in the priority calculation.
+2. The scheduled contact appears in the AP and sked timeline.
+3. Automatic private reminder messages can optionally be sent before the agreed time.
 
----
+When the Win-Test network listener is enabled, KST4Contest also attempts to hand the sked over to Win-Test. A failed handover neither removes nor prevents the internal sked.
+
+### Creating a sked
+
+First select the required station in the user list. The sked controls then appear at the bottom of the **Further Info** section.
+
+| Control | Function |
+|---|---|
+| **Sked in** | Sets the number of minutes until the sked. Available values are 2 through 15 and 20 minutes. |
+| **Band** | Selects the sked band. The dropdown contains the local bands enabled under **Station → my station uses …**. |
+| **Mode** | Sets the mode passed to Win-Test. Available values are `SSB` and `CW`. This selection does not affect the internal sked or reminder PMs. |
+| **Create sked** | Creates the internal sked and, if the Win-Test network listener is enabled, also attempts the Win-Test handover. |
+| **Remind-PM in** | Enables automatic private reminder messages before the sked. |
+| **2+1**, **5+2+1**, **10+5+2+1** | Selects how many minutes before the sked the reminder PMs are sent. |
+
+![Sked controls in the Further Info section](sked_controls.png)
+
+KST4Contest attempts to preselect a useful band. It checks the following information in this order:
+
+1. a QRG of the selected station which is no more than 30 minutes old and belongs to a locally enabled band,
+2. an unambiguous band designator in the station's name field, and
+3. the first locally enabled band.
+
+Active callsign variants belonging to the same base callsign are evaluated together when looking for recent band information. A manual NOT-QRV mark is taken into account by the automatic selection. The operator can still select another band explicitly when a different arrangement has been made.
+
+### Effect on the Priority Score
+
+A stored sked raises the score of the normalised base callsign:
+
+| Time relative to the sked | Contribution to the score |
+|---|---:|
+| more than 15 minutes before the sked | `+40` |
+| 15 to 3 minutes before the sked | continuous increase from `+300` towards `+1200` |
+| less than 3 minutes before until 1 minute after the sked | `+5000` |
+| more than 1 minute after the sked | no remaining sked boost |
+
+The strong weighting immediately around the scheduled time is intentional. An agreed sked should not disappear from the priority list merely because another station is currently very active but has no fixed appointment.
+
+The score is calculated for the base callsign. A sked created for `DN9APW-2` therefore also affects the shared score of other active `DN9APW` variants. The actual message target nevertheless remains `DN9APW-2` in the chat category selected when the sked was created.
+
+The sked is removed from the internal list five minutes after its scheduled time.
+
+### Reminder PMs
+
+Reminder PMs are only scheduled when **Remind-PM in** is enabled. Depending on the selected pattern, KST4Contest sends a private message such as the following two and one minute before the sked:
+
+```text
+[KST4C Autoreminder] sked in 2 min
+```
+
+The message is sent to the complete visible KST callsign in the chat category in which the sked was created. A sked for `DN9APW-2` is therefore not accidentally sent to `DN9APW`, `DN9APW-70` or a similarly named station in another category.
+
+When a reminder is actually triggered, KST4Contest also displays the visual **SKED** indication. If simple notification sounds are enabled, a short sound is played as well. Merely arming a reminder does not start the blinking indication.
+
+Creating a new set of reminders for the same complete callsign replaces the previously scheduled reminders for that callsign.
+
+### Storage and limitations
+
+Skeds and reminder schedules are kept in memory only. Any skeds which are still required must be recreated after restarting KST4Contest.
+
+The automatic band selection is derived from available chat information. It cannot prove that the station is still operating on the most recently mentioned QRG. Check the band, time and mode before pressing **Create sked**.
+
+Operation: [Station Info Panel](en-User-Interface#station-info-panel-further-info)
+
+Display: [AP and Sked Timeline](#ap-and-sked-timeline)
+
+Win-Test handover: [Log Synchronisation – Win-Test](en-Log-Sync#win-test)
+
 
 ## QSO Sniffer (from v1.31)
 
@@ -233,17 +300,22 @@ Configuration: [Configuration – Sniffer Settings](en-Configuration#sniffer-set
 
 ---
 
-## Win-Test Integration (from v1.31, fully configurable from v1.40)
+## Win-Test Integration
 
-KST4Contest fully supports [Win-Test](https://www.win-test.com/) as a logging programme:
+KST4Contest uses a dedicated listener for the native Win-Test network protocol. It provides three separate functions:
 
-- **Log synchronisation**: Worked stations are automatically retrieved from Win-Test and marked in the user list.
-- **Frequency parsing**: The current TRX frequency is read from Win-Test UDP packets and populates the `MYQRG` variable.
-- **Sked handover (SKED push via UDP)**: Agreed skeds from KST4Contest can be pushed directly to Win-Test, so the remote callsign appears in Win-Test's sked window.
+- importing new QSOs including band and, where available, locator information,
+- reading the current QRG from Win-Test STATUS packets, and
+- handing internally created skeds over to the Win-Test network as `ADDSKED` packets.
 
-Details: [Configuration – Win-Test Network Listener](en-Configuration#win-test-network-listener)
+The sked handover does not replace a missing QRG with a fixed default frequency. KST4Contest only sends a Win-Test sked when it can determine a QRG which belongs to the selected band. The internal sked, timeline and reminder PMs continue to work independently.
 
----
+A visible KST suffix such as `-2`, `-70` or `-144` is retained inside KST4Contest but removed from the callsign passed to the Win-Test log. Portable components such as `/P`, `/M` and country prefixes are preserved.
+
+Setup and data handling: [Log Synchronisation – Win-Test](en-Log-Sync#win-test)
+
+Settings: [Win-Test Network Listener](en-Configuration#win-test-network-listener-from-v131)
+
 
 ## PSTRotator Interface (from v1.31, fully configurable from v1.40)
 
@@ -379,16 +451,55 @@ Related settings:
 
 ---
 
-## AP Timeline (from v1.40)
+## AP and Sked Timeline
 
-A visual timeline shows up to 4 highly-scored stations per minute slot that should be workable via aircraft scatter. Prioritisation criteria:
+The timeline combines upcoming aircraft-scatter opportunities and stored skeds for the next 30 minutes. It therefore answers two different questions in the same place:
 
-- **Highest reflection potential** is preferred (not necessarily the fastest arrival).
-- Stations towards which your antenna is not pointing are shown **transparently**.
+- When is an interesting AP opportunity expected?
+- Which previously agreed sked is approaching independently of that opportunity?
 
-This gives the contest operator a quick overview of which stations will be reachable via which aircraft and at what time.
+Events further in the future appear on the right. As time passes, they move left towards the current time.
 
----
+![AP candidates and skeds in the timeline](sked_timeline.png)
+
+### AP candidates
+
+AP candidates appear in the upper lanes. Up to four selected candidates can be displayed for each aircraft arrival minute. The selection takes the Priority Score and the reflection potential reported by AirScout into account.
+
+The colour of an AP marker represents the reflection potential:
+
+| Colour | Reflection potential |
+|---|---:|
+| Magenta | at least 95% |
+| Red | at least 75% |
+| Yellow | at least 50% |
+| Blue | below 50% |
+
+The colour is not a QSO probability. It represents the AirScout value for the calculated reflection geometry.
+
+Clicking an AP candidate selects the corresponding active chat member, including its callsign suffix and chat category. A suitable message can then be prepared immediately.
+
+### Skeds
+
+Skeds appear as diamonds in the lower lane. Their labels use the complete KST callsign, for example `SKED: DN9APW-2`. This makes it clear which particular login was selected for the scheduled contact.
+
+A sked tooltip shows at least:
+
+- the complete KST callsign,
+- the agreed band, and
+- the QTF towards the remote station.
+
+Where suitable AirScout data is available, the tooltip also includes current AP reachability and the next calculated AP opportunity.
+
+### Antenna direction
+
+When the QTF of an event is clearly outside the current antenna direction, its marker becomes more transparent. The label remains readable. A target close to the centre of the configured antenna beam is highlighted.
+
+This visual effect changes neither the sked nor the Priority Score. It is simply a quick way of identifying candidates which fit the current antenna direction.
+
+The timeline is a preview. AirScout data can change, and a stored sked guarantees neither a clear frequency nor an actual propagation path.
+
+
 
 ## Interval Beacon
 

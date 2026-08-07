@@ -205,18 +205,44 @@ New settings section with the following options:
 
 ## Win-Test Network Listener (from v1.31)
 
-A dedicated listener for Win-Test-specific UDP packets. Enables:
+The Win-Test network listener processes the native Win-Test UDP protocol. It is independent of the general QSO UDP listener on port `12060` and has three separate tasks:
 
-- **Log synchronisation**: Worked stations are retrieved from Win-Test and marked in the user list.
-- **Frequency parsing**: The current TRX frequency from Win-Test populates the `MYQRG` variable.
-- **Sked handover (SKED push)**: Skeds from KST4Contest are passed directly to Win-Test via UDP. Win-Test's default UDP broadcast port (9871) is used.
+- processing QSOs including band and locator information,
+- processing STATUS packets for the local QRG, and
+- handing skeds over to the Win-Test network.
 
-Settings:
-- **Enable/Disable**: Checkbox in Preferences (from v1.40).
-- **Port**: Configurable UDP port for the Win-Test listener.
-- **Sked UDP address and port**: Target address and port for SKED handover to Win-Test.
+### Log sync settings
 
-> **Note**: The Win-Test listener is an **additional** listener – the standard QSO UDP broadcast listener on port 12060 remains independent.
+| Setting | Function |
+|---|---|
+| **Receive Win-Test network based UDP log messages** | Enables the Win-Test network listener. When the listener is enabled, pressing **Create sked** also attempts the Win-Test handover. |
+| **UDP-Port for Win-Test listener** | Port used by the Win-Test network. The default is `9871`. The same port is used for the sked handover. |
+| **KST station name in Win-Test network (src of SKED packets)** | Station name used by KST4Contest when sending sked packets. A unique name should be used in a network containing several clients. |
+| **Win-Test network broadcast address** | Destination address for outgoing Win-Test network packets. In a local network, the address must be reachable by the Win-Test computer. |
+
+The broadcast address is configurable because `255.255.255.255` is not forwarded reliably through every station network or network interface. In a multi-computer setup, the directed broadcast address belonging to the station network may be required instead.
+
+### TRX sync settings
+
+| Setting | Function |
+|---|---|
+| **Win-Test STATUS QRG Sync** | Takes the current frequency from Win-Test STATUS packets and uses it as the local QRG. |
+| **Use pass frequency from Win-Test STATUS** | Uses the transmitted pass frequency instead of the normal TRX QRG. |
+| **Win-Test station name filter** | Only processes STATUS packets from the specified Win-Test station. An empty field accepts every station name. |
+
+The station filter is particularly useful when several Win-Test clients are active. Without a filter, the most recently received STATUS packet from another operating position can overwrite the local QRG in KST4Contest.
+
+### Sked handover
+
+There is no separate internal sked mode for the Win-Test handover. When the listener is enabled, **Create sked** attempts the Win-Test transfer in addition to creating the internal sked.
+
+KST4Contest only sends an `ADDSKED` packet when it can determine a QRG which belongs to the explicitly selected band. If no matching QRG is available, the internal sked remains intact and the Win-Test handover is omitted.
+
+`SSB` or `CW` is selected directly in the Further Info section when the sked is created. No automatic mode inference is used.
+
+Click **Save Settings** after making changes so that the port, station name, broadcast address and TRX options are restored at the next start.
+
+Data handling and QRG selection: [Log Synchronisation – Win-Test](en-Log-Sync#win-test)
 
 ---
 

@@ -111,7 +111,24 @@ The current **Priority score** of the selected station is displayed in the same 
 
 **Sked fail** marks an unsuccessful attempt and strongly reduces the score of the normalised base callsign. **Reset fail** removes the mark. It applies to all active suffix and category variants of the station and remains active for the current program session.
 
-A sked and the corresponding **sked reminders** can be created underneath these controls. An approaching sked raises the Priority Score over time and receives very high priority immediately before the scheduled contact.
+The controls underneath are used to create a sked:
+
+| Control | Meaning |
+|---|---|
+| **Sked in** | Time remaining until the sked |
+| **Band** | Agreed band selected from the locally enabled bands |
+| **Mode** | `SSB` or `CW` for a possible Win-Test handover |
+| **Create sked** | Create the internal sked |
+| **Remind-PM in** | Enable automatic reminder PMs |
+| **2+1**, **5+2+1**, **10+5+2+1** | Times at which reminder PMs are sent before the sked |
+
+![Sked controls in the Further Info section](sked_controls.png)
+
+The proposed band is derived from recent QRG and name information for the station. It can be changed explicitly before creating the sked. The mode selection only affects the Win-Test handover; the internal sked and reminder PMs work independently.
+
+**Create sked** always creates the appointment inside KST4Contest first. If the Win-Test network listener is active, KST4Contest then attempts an additional handover to Win-Test. If no QRG matching the selected band can be found or Win-Test cannot be reached, the internal sked, its priority contribution and any scheduled reminders remain intact.
+
+The complete derivation and limitations are described under [Skeds and Sked Reminders](en-Features#skeds-and-sked-reminders).
 
 ---
 
