@@ -158,15 +158,58 @@ Calculation and limitations: [Priority Score and Priority List](en-Features#prio
 
 ## Cluster & QSO of Others
 
-Separate window (can be minimised). Shows the communication flow between other stations – interesting during quieter contest periods.
+## Global Message Tabs and Monitor Window
+
+Three global message tabs are located below the main user list. Unlike the **Further Info** panel, their contents do not depend on the station currently selected.
+
+| Tab | Displayed messages |
+|---|---|
+| **Public messages** | All public chat messages, including CQ calls and beacons |
+| **DXCluster messages** | DX cluster messages received from the ON4KST server |
+| **QSO of the other** | Directed messages between chat logins other than the local station |
+
+The **Public messages** tab is selected by default.
+
+![Global message tabs below the main user list](global_message_tabs.png)
+
+The **DXCluster messages** table contains the time, reporting and reported stations, locators, QRG, message text and global Worked state where these values are available in the received message.
+
+The **QSO of the other** table contains:
+
+- the complete sender and receiver callsigns,
+- the latest QRG currently known for each station,
+- the global Worked state of each station,
+- the message text, and
+- the chat category.
+
+The displayed QRG is not necessarily the frequency on which the stations intend to make a contact. It is the latest QRG currently associated with the respective chat member. The Worked state is global and not specific to the displayed QRG or band.
+
+A directed chat message in this table does not prove that a radio QSO has taken place. The table also contains sked requests, frequency exchanges and other directed messages between third-party chat logins.
+
+### Separate monitor window
+
+The DX cluster and QSO-of-the-other tables can also be displayed together in a separate window.
+
+![Separate monitor window for DX cluster traffic and directed messages between other stations](cluster_qso_monitor.png)
+
+The separate window and the tabs use the same underlying messages. Hiding the window does not stop message processing or remove messages from the tabs.
+
+Use **Windows → Hide cluster / stranger QSOs** to hide the window and **Windows → Show cluster / stranger QSOs** to restore it.
+
+If a message is too long for its table cell, moving the mouse over the cell displays the complete text in a tooltip. Links beginning with `http://`, `https://` or `www.` can be opened in the system browser.
 
 ---
 
 ## Menu
 
-### Window
-- **Use Dark Mode** (from v1.26): Toggle dark colour scheme on/off.
+### Windows
 
+- **Hide cluster / stranger QSOs** hides the separate monitor window for DX cluster messages and directed messages between other stations.
+- **Show cluster / stranger QSOs** restores the monitor window.
+- **hide options** hides the settings window.
+- **show options** restores the settings window.
+- **Use dark mode design** activates the dark colour scheme.
+- **Use default mode design** restores the default colour scheme.
 ---
 
 ## Window Sizes and Dividers

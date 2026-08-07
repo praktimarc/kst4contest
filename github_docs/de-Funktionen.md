@@ -614,15 +614,80 @@ Der Beacon ist für längeres CQ-Rufen auf einer festen Frequenz gedacht. Beim A
 
 ## Simplelogfile
 
-Dateibasierte Log-Auswertung per Regex. Details: [Log-Synchronisation](Log-Synchronisation#methode-1-universal-file-based-callsign-interpreter-simplelogfile).
+Details: [Log-Synchronisation](de-Log-Synchronisation#methode-1-universal-file-based-callsign-interpreter-simplelogfile).
 
 ---
 
-## Cluster & QSO der anderen
+## Globale Nachrichtenansichten
 
-Ein separates Fenster zeigt den QSO-Fluss zwischen anderen Stationen. Besonders interessant in ruhigeren Nacht-Stunden während des Contests, wenn weniger Verkehr herrscht.
+Das Stationsinfo-Panel und die PM-Tabelle beantworten Fragen zu einer bestimmten Station oder zur eigenen Kommunikation. Daneben gibt es Nachrichtenströme, die unabhängig von der aktuell ausgewählten Station betrachtet werden müssen.
 
-Dieses Fenster kann minimiert werden, wenn es nicht benötigt wird. Zukünftig geplant: Filterung auf Stationen im ausgewählten QTF.
+KST4Contest fasst diese globalen Informationen in drei Ansichten zusammen:
+
+| Ansicht | Inhalt |
+|---|---|
+| **Public messages** | Öffentliche Chatnachrichten, CQ-Rufe und Beacons |
+| **DXCluster messages** | Vom ON4KST-Server gelieferte DX-Cluster-Meldungen |
+| **QSO of the other** | Gerichtete Chatnachrichten zwischen zwei anderen Stationen |
+
+Die Ansichten befinden sich als Tabs im unteren Bereich des Hauptfensters. **Public messages** ist nach dem Programmstart vorausgewählt.
+
+![Globale Nachrichtentabs im Hauptfenster](global_message_tabs.png)
+
+### DXCluster messages
+
+Der Tab **DXCluster messages** zeigt DX-Cluster-Meldungen, die über die bestehende ON4KST-Verbindung empfangen werden. Je nach Inhalt der Meldung stehen folgende Informationen zur Verfügung:
+
+- Zeitpunkt,
+- sendende beziehungsweise meldende Station,
+- deren Locator,
+- gemeldete Station,
+- deren Locator,
+- QRG,
+- Meldungstext und
+- globaler Worked-Status der gemeldeten Station.
+
+Nicht jede vom Server übertragene Meldung enthält alle Felder. Ein leeres Locator- oder Nachrichtenfeld bedeutet deshalb nicht zwangsläufig einen Verarbeitungsfehler.
+
+Diese Anzeige darf nicht mit dem [integrierten lokalen DX-Cluster-Server](de-DX-Cluster-Server) verwechselt werden. Der Tab zeigt empfangene ON4KST-Clusterinformationen. Der lokale Server erzeugt dagegen aus einer erkannten Richtungsgelegenheit einen Spot und gibt ihn an ein verbundenes Logprogramm weiter.
+
+### QSO of the other
+
+Der Tab **QSO of the other** zeigt gerichtete Chatnachrichten, bei denen weder Absender noch Empfänger die eigene Station sind. Öffentliche Nachrichten an `ALL` werden nicht aufgenommen.
+
+Die Tabelle enthält:
+
+| Spalte | Bedeutung |
+|---|---|
+| **Time** | Zeitpunkt der Chatnachricht |
+| **Call TX** | Absender der Nachricht |
+| **Last QRG TX** | zuletzt für den Absender bekannte QRG |
+| **wkd TX?** | globaler Worked-Status des Absenders |
+| **Call RX** | Empfänger der Nachricht |
+| **Last QRG RX** | zuletzt für den Empfänger bekannte QRG |
+| **wkd RX?** | globaler Worked-Status des Empfängers |
+| **Message** | Inhalt der gerichteten Nachricht |
+| **Category** | Chat-Kategorie der Nachricht |
+
+Die beiden QRG-Spalten zeigen den zuletzt in KST4Contest bekannten Wert der jeweiligen Station. Das ist nicht zwangsläufig die Frequenz, auf der sich die beiden Stationen gerade verabreden. Die QRG kann aus einer früheren Nachricht stammen und sich inzwischen geändert haben.
+
+Auch die Worked-Spalten sind bewusst bandunabhängig. Ein `X` bedeutet, dass das betreffende Basisrufzeichen auf mindestens einem Band gearbeitet wurde. Daraus folgt nicht, dass es auf der in der Tabelle sichtbaren oder vermuteten QRG bereits gearbeitet wurde.
+
+Die Bezeichnung **QSO of the other** ist eine praktische Kurzform. Eine gerichtete Nachricht beweist weder, dass anschließend ein Funkkontakt zustande kam, noch dass beide Stationen tatsächlich auf derselben Frequenz arbeiten. Die Ansicht zeigt beobachtbare Koordination im Chat – nicht das Logbuch der anderen Stationen.
+
+### Zusätzliches Monitorfenster
+
+Dieselben DX-Cluster-Meldungen und gerichteten Nachrichten stehen weiterhin im separaten Fenster **Cluster & QSO of the other** zur Verfügung. Dort erscheinen die DX-Cluster-Tabelle oben und die Nachrichten zwischen anderen Stationen darunter.
+
+![Separates Cluster- und QSO-Monitorfenster](cluster_qso_monitor.png)
+
+Das separate Fenster und die Tabs verwenden dieselben zugrunde liegenden Listen. Eine Meldung wird dadurch nicht doppelt empfangen oder doppelt gespeichert. Es handelt sich lediglich um zwei Darstellungen derselben Daten.
+
+Das Monitorfenster kann über **Windows → Hide cluster / stranger QSOs** ausgeblendet und mit **Show cluster / stranger QSOs** wieder eingeblendet werden. Wer den Platz nicht benötigt, kann das Fenster daher schließen oder minimieren, ohne auf die entsprechenden Tabs im Hauptfenster verzichten zu müssen.
+
+Die vollständigen Texte abgeschnittener Nachrichten erscheinen als Tooltip. Erkannte Webadressen können wie in den übrigen Nachrichtentabellen angeklickt und im Standardbrowser geöffnet werden.
+
+Die Ansichten helfen dabei, Aktivität und Koordination anderer Stationen zu erkennen. Bei hohem Chat-Aufkommen entsteht daraus allerdings schnell mehr Information als Erkenntnis. Das separate Fenster ist deshalb vor allem dann nützlich, wenn ein bestimmter Kommunikationsfluss gezielt beobachtet werden soll.
 
 ---
 
@@ -644,9 +709,21 @@ Die Karte funktioniert in gepackten Umgebungen (AppImage, Flatpak) ohne Zugriff 
 
 ---
 
-## Optimierte Nachrichtenverarbeitung / 30.000-Nachrichten-Limit (ab v1.41)
+## Begrenzte Nachrichtenspeicher (ab v1.41)
 
-Die internen Chat- und Nachrichtentabellen sind auf **30.000 Einträge** begrenzt. Ältere Nachrichten werden automatisch verworfen, sobald das Limit erreicht wird. Damit bleiben Speicherverbrauch und Darstellungsperformance auch bei mehrtägigen Contest-Betrieb stabil.
+Chat- und DX-Cluster-Meldungen werden während des Betriebs im Arbeitsspeicher gehalten. Damit ein mehrtägiger Contest nicht zu einem unbegrenzt wachsenden Speicherverbrauch und immer langsameren Tabellen führt, besitzen beide Speicher feste Grenzen:
+
+| Nachrichtenspeicher | Maximale Größe | Größe nach dem automatischen Aufräumen |
+|---|---:|---:|
+| Chatnachrichten | 30.000 | 25.000 |
+| DX-Cluster-Meldungen | 10.000 | 8.000 |
+
+Wird die jeweilige Maximalgröße überschritten, entfernt KST4Contest die ältesten Einträge am Ende der Liste. Neue Nachrichten bleiben erhalten und werden weiterhin zuerst angezeigt.
+
+Die öffentlichen Nachrichten, PMs, Stationsinformationen und **QSO of the other** besitzen keine voneinander getrennten 30.000-Einträge-Speicher. Sie sind gefilterte Ansichten derselben globalen Chatnachrichtenliste. Auch die DX-Cluster-Tabelle im Hauptfenster und die Tabelle im separaten Monitorfenster verwenden denselben Cluster-Speicher.
+
+Die Nachrichten werden nicht dauerhaft gespeichert. Nach einem Neustart beginnen die Ansichten wieder mit leeren Listen.
+
 
 ---
 

@@ -509,13 +509,83 @@ Automatic CQ messages in the public channel at a configurable interval. Recommen
 
 ## Simplelogfile
 
-File-based log evaluation using regex. Details: [Log Synchronisation](Log-Sync#method-1-universal-file-based-callsign-interpreter-simplelogfile).
-
+File-based log evaluation using regex. Details: [Log Synchronisation](en-Log-Sync#method-1-universal-file-based-callsign-interpreter-simplelogfile).
 ---
 
-## Cluster & QSO of Others
+## Global Message Views
 
-A separate window showing the QSO flow between other stations. Particularly interesting during quieter night-time hours of a contest. This window can be minimised when not needed. Future plan: filtering to stations in your selected QTF.
+Most message tables in KST4Contest are deliberately tied either to the local station or to the station currently selected in the user list. Some message streams must, however, remain visible independently of that selection.
+
+KST4Contest therefore provides three global message tabs below the main user list:
+
+| Tab | Content |
+|---|---|
+| **Public messages** | Public chat messages, including CQ calls and beacon messages |
+| **DXCluster messages** | DX cluster messages delivered by the ON4KST server |
+| **QSO of the other** | Directed chat messages between chat logins other than the local station |
+
+**Public messages** is selected by default. Changing the selected station does not affect any of these three views.
+
+![Global message tabs below the main user list](global_message_tabs.png)
+
+### DXCluster messages
+
+The DX cluster table shows cluster messages received through the ON4KST connection. Depending on the information contained in the source message, the table displays:
+
+- the time,
+- the reporting station and its locator,
+- the reported station and its locator,
+- the QRG,
+- the message text, and
+- the global Worked state of the reported station.
+
+An empty locator or another empty field does not necessarily indicate a processing error. The corresponding information may simply be absent from the source message.
+
+This view must not be confused with the [built-in DX Cluster server](en-DX-Cluster-Server). The built-in server sends derived direction spots to connected logging software. The **DXCluster messages** tab displays cluster traffic received from ON4KST.
+
+### QSO of the other
+
+The **QSO of the other** table displays directed chat messages for which neither the sender nor the receiver is the local station. Messages addressed to `ALL` are not included.
+
+The table contains the following columns:
+
+| Column | Meaning |
+|---|---|
+| **Time** | Time of the chat message |
+| **Call TX** | Complete callsign of the sender |
+| **Last QRG TX** | Most recently detected QRG assigned to the sender |
+| **wkd TX?** | Global Worked state of the sender |
+| **Call RX** | Complete callsign of the receiver |
+| **Last QRG RX** | Most recently detected QRG assigned to the receiver |
+| **wkd RX?** | Global Worked state of the receiver |
+| **Message** | Message text |
+| **Category** | Chat category in which the message was received |
+
+The QRG columns are not a historical record of the frequency used for the displayed message. They show the latest QRG currently known for the respective chat member. The value may originate from another message and may change when a newer QRG is detected.
+
+The two Worked columns show the global callsign state. They do not indicate whether the station has already been worked on the QRG or band shown next to it.
+
+The expression “QSO of the other” is used as a compact user-interface label. A directed chat message does not prove that an actual radio QSO has taken place. It may equally be a sked request, a frequency exchange or another private message between two chat logins.
+
+### Separate monitor window
+
+The DX cluster and QSO-of-the-other tables are additionally available in a separate monitor window. It places the DX cluster table above the directed messages between other stations.
+
+![Separate monitor window for DX cluster traffic and directed messages between other stations](cluster_qso_monitor.png)
+
+The tabs and the monitor window use the same underlying message stores. Opening the separate window does not create another connection, receive the messages a second time or maintain an independent history.
+
+The window can be hidden or restored through:
+
+**Windows → Hide cluster / stranger QSOs**
+
+or:
+
+**Windows → Show cluster / stranger QSOs**
+
+The additional window is useful when these message streams should remain visible on a second monitor or while another part of the main window is being used. During periods with heavy chat traffic, the global tabs are usually more compact.
+
+When a table cell cannot display its complete message, moving the mouse over the cell shows the full text in a tooltip. Web links beginning with `http://`, `https://` or `www.` can be opened in the system browser.
 
 ---
 
@@ -537,9 +607,20 @@ The map works in packaged environments (AppImage, Flatpak) without internet acce
 
 ---
 
-## Optimised Message Handling / 30,000 Message Limit (from v1.41)
+## Bounded Message Stores (from v1.41)
 
-The internal chat and message tables are capped at **30,000 entries**. Older messages are automatically discarded when the limit is reached. This keeps memory usage and rendering performance stable during multi-day contest operations.
+KST4Contest keeps the received chat and DX cluster messages in two separate bounded memory stores. The limits apply to the stored messages, not independently to every table displaying them.
+
+| Message store | Maximum size | Size after automatic cleanup |
+|---|---:|---:|
+| Chat messages | 30,000 | 25,000 |
+| DX cluster messages | 10,000 | 8,000 |
+
+When a store exceeds its maximum size, the oldest entries are removed until the cleanup size is reached. Newer messages remain available and are displayed first.
+
+The public-message table, private-message views, station-related message views and **QSO of the other** table are filtered views of the same chat-message store. They do not each retain another 30,000 messages. The DX cluster tab and the separate monitor window likewise share the same DX cluster store.
+
+These message stores are held in memory and are not written to the internal database. After restarting KST4Contest, they are rebuilt from messages received during the new session.
 
 ---
 

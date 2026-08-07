@@ -177,16 +177,55 @@ Herleitung und Grenzen: [Prioritätsscore und Prioritätsliste](de-Funktionen#pr
 
 ---
 
-## Cluster & QSO der anderen
+## Globale Nachrichtentabs und Monitorfenster
 
-Separates Fenster (kann miniaturisiert werden). Zeigt den Kommunikationsfluss zwischen anderen Stationen – interessant in ruhigeren Phasen.
+Der untere Bereich des Hauptfensters enthält drei globale Nachrichtentabs. Ihr Inhalt ist nicht von der aktuell in der Benutzerliste ausgewählten Station abhängig.
+
+| Tab | Inhalt |
+|---|---|
+| **Public messages** | Öffentliche Chatnachrichten, CQ-Rufe und Beacons |
+| **DXCluster messages** | Über ON4KST empfangene DX-Cluster-Meldungen |
+| **QSO of the other** | Gerichtete Nachrichten zwischen zwei anderen Stationen |
+
+![Globale Nachrichtentabs im Hauptfenster](global_message_tabs.png)
+
+Im Tab **QSO of the other** werden Absender und Empfänger getrennt dargestellt. Die Spalten **Last QRG TX** und **Last QRG RX** enthalten die zuletzt für beide Stationen bekannten Frequenzen. Sie geben nicht zwingend die QRG der angezeigten Unterhaltung wieder.
+
+**wkd TX?** und **wkd RX?** zeigen den globalen Worked-Status der beiden Basisrufzeichen. Die Angaben sind nicht bandbezogen.
+
+Der Tab **DXCluster messages** zeigt den meldenden und den gemeldeten Teilnehmer, deren Locator, die QRG, den Meldungstext und den globalen Worked-Status der gemeldeten Station. Welche Felder tatsächlich gefüllt sind, hängt von der vom ON4KST-Server übertragenen Meldung ab.
+
+Nachrichtentexte bleiben einzeilig. Ist eine Zelle zu schmal, erscheint der vollständige Inhalt als Tooltip. Webadressen im Meldungstext lassen sich anklicken.
+
+### Separates Monitorfenster
+
+Zusätzlich öffnet KST4Contest das Fenster **Cluster & QSO of the other**. Es zeigt oben die DX-Cluster-Meldungen und darunter die gerichteten Nachrichten zwischen anderen Stationen.
+
+![Separates Cluster- und QSO-Monitorfenster](cluster_qso_monitor.png)
+
+Die Position des vertikalen Dividers sowie die Fenstergröße werden zusammen mit den übrigen UI-Einstellungen gespeichert. Nach einer Änderung **Save Settings** verwenden.
+
+Das Fenster lässt sich über das Menü aus- und wieder einblenden:
+
+```text
+Windows → Hide cluster / stranger QSOs
+Windows → Show cluster / stranger QSOs
+```
+
+Die Tabellen im Hauptfenster und im Monitorfenster greifen auf dieselben Daten zu. Das Ausblenden des Monitorfensters beendet daher weder den Empfang noch die Darstellung in den unteren Tabs.
+
+Herleitung und Grenzen: [Globale Nachrichtenansichten](de-Funktionen#globale-nachrichtenansichten).
 
 ---
 
 ## Menü
 
-### Window
-- **Use Dark Mode** (ab v1.26): Dunkles Farbschema aktivieren/deaktivieren.
+### Windows
+
+- **Hide cluster / stranger QSOs** beziehungsweise **Show cluster / stranger QSOs**: Blendet das zusätzliche Cluster- und QSO-Monitorfenster aus oder wieder ein.
+- **hide options** beziehungsweise **show options**: Blendet das Einstellungsfenster aus oder wieder ein.
+- **Use dark mode design**: Aktiviert das dunkle Farbschema.
+- **Use default mode design**: Aktiviert das normale helle Farbschema.
 
 ---
 
