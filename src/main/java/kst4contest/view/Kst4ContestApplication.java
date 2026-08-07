@@ -4132,7 +4132,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 		TableColumn<ChatMessage, String> workedTXCol = new TableColumn<ChatMessage, String>("wkd TX?");
-		workedRXCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
+		workedTXCol.setCellValueFactory(new Callback<CellDataFeatures<ChatMessage, String>, ObservableValue<String>>() {
 
 			@Override
 			public ObservableValue<String> call(CellDataFeatures<ChatMessage, String> cellDataFeatures) {
