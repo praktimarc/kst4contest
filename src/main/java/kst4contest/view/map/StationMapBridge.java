@@ -18,6 +18,7 @@ import java.util.Objects;
 
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import kst4contest.model.Band;
 import java.util.function.Predicate;
@@ -40,6 +41,7 @@ public final class StationMapBridge {
     private final TableView<ChatMember> chatMemberTable;
     private final StationMapView stationMapView;
     private final Consumer<ChatMember> focusChatMemberConsumer;
+    private final Supplier<Band> reachabilityBandOverrideSupplier;
 
 
 
@@ -55,16 +57,22 @@ public final class StationMapBridge {
     public StationMapBridge(ChatController chatController,
                             TableView<ChatMember> chatMemberTable,
                             StationMapView stationMapView,
-                            Consumer<ChatMember> focusChatMemberConsumer) {
+                            Consumer<ChatMember> focusChatMemberConsumer,
+                            Supplier<Band> reachabilityBandOverrideSupplier) {
 
         this.chatController = Objects.requireNonNull(chatController, "chatController");
         this.chatMemberTable = Objects.requireNonNull(chatMemberTable, "chatMemberTable");
         this.stationMapView = Objects.requireNonNull(stationMapView, "stationMapView");
-        this.focusChatMemberConsumer = Objects.requireNonNull(focusChatMemberConsumer, "focusChatMemberConsumer");
+        this.focusChatMemberConsumer = Objects.requireNonNull(
+                focusChatMemberConsumer,
+                "focusChatMemberConsumer"
+        );
+        this.reachabilityBandOverrideSupplier = Objects.requireNonNull(
+                reachabilityBandOverrideSupplier,
+                "reachabilityBandOverrideSupplier"
+        );
 
         this.refreshCoalescer.setOnFinished(event -> refreshNow());
-
-
     }
 
     public void install() {
@@ -113,6 +121,18 @@ public final class StationMapBridge {
         } else {
             Platform.runLater(this::refreshNow);
         }
+    }
+
+    /**
+     * Forces the currently selected map path to be requested again.
+     *
+     * <p>This is used by the explicit "Calc selected" action after the operator
+     * changed the reachability band. Merely changing the ComboBox still does not
+     * trigger terrain analysis.</p>
+     */
+    public void requestSelectedPathAnalysisRefresh() {
+        lastPathAnalysisRequestSignature = "";
+        requestImmediateRefresh();
     }
 
     public void focusSelectedCallsign() {
@@ -222,9 +242,12 @@ public final class StationMapBridge {
 
         ChatMember selectedMember = resolveBestChatMember(targetCallsignRaw);
 
+        Band requestedBandOverride = reachabilityBandOverrideSupplier.get();
+
         chatController.getReachabilityService().requestPathAnalysisForMap(
                 selectedMember,
                 selectedSnapshot,
+                requestedBandOverride,
                 result -> {
                     if (generation != pathAnalysisGeneration.get()) {
                         return;
@@ -232,6 +255,7 @@ public final class StationMapBridge {
                     stationMapView.setPathAnalysisResult(result);
                 }
         );
+
     }
 
     /**
@@ -259,6 +283,13 @@ public final class StationMapBridge {
             chatMemberTable.scrollTo(resolved);
 
             focusChatMemberConsumer.accept(resolved);
+
+            /*
+             * A map click is an explicit operator action. Clear the signature so a
+             * newly selected reachability band is honored even when the same station
+             * is clicked again.
+             */
+            lastPathAnalysisRequestSignature = "";
             requestImmediateRefresh();
         });
     }
@@ -315,10 +346,16 @@ public final class StationMapBridge {
 
     private double resolveAnalysisFrequencyMHz(MapCallsignRawSnapshot selectedSnapshot) {
         if (selectedSnapshot == null) {
-            return PathGeometryUtils.DEFAULT_ANALYSIS_FREQUENCY_MHZ;
+            return Double.NaN;
         }
 
-        return PathGeometryUtils.resolveAnalysisFrequencyMHz(selectedSnapshot.lastKnownFrequenciesByBand());
+        ChatMember selectedMember = resolveBestChatMember(selectedSnapshot.callSignRaw());
+        var resolution = chatController.getReachabilityService()
+                .resolveAutomaticPropagationFrequency(selectedMember);
+
+        return resolution == null
+                ? Double.NaN
+                : resolution.getAnalysisFrequencyMHz();
     }
 
 

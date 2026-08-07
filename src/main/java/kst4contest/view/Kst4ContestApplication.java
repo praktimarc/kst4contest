@@ -178,7 +178,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				chatcontroller,
 				tbl_chatMember,
 				stationMapView,
-				this::focusChatMemberAndPrepareCq
+				this::focusChatMemberAndPrepareCq,
+				() -> selectedReachabilityBandOverride
 		);
 		stationMapBridge.install();
 	}
@@ -7958,6 +7959,15 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					Band selectedBand = resolveReachabilityBandForUi(selectedMember);
 					chatcontroller.getReachabilityService().calculateSelectedStationOnDemand(selectedMember, selectedBand);
+
+					/*
+					 * If the map is already initialized, make it request the same operator-selected
+					 * band. ReachabilityService deduplicates the identical calculation key, so this
+					 * attaches the map callback without causing a second terrain API request.
+					 */
+					if (stationMapBridge != null) {
+						stationMapBridge.requestSelectedPathAnalysisRefresh();
+					}
 				}
 			});
 
@@ -7970,7 +7980,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				cmbReachabilityBand.getItems().add(band.getDisplayLabel());
 			}
 			cmbReachabilityBand.getSelectionModel().select("Auto");
-			cmbReachabilityBand.setTooltip(new Tooltip("Reachability band for Tropo column/filter. Auto uses the station's lowest session band."));
+			cmbReachabilityBand.setTooltip(new Tooltip(
+					"Reachability band for Tropo column/filter. Auto uses the current "
+							+ "QRG, station-name hints and the supported chat category."
+			));
 			cmbReachabilityBand.setOnAction(new EventHandler<ActionEvent>() {
 				@Override
 				public void handle(ActionEvent event) {
@@ -9038,6 +9051,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		TextField txtFldstn_pathAnalysisDemRootDirectory =
 				new TextField(this.chatcontroller.getChatPreferences().getStn_pathAnalysisDemRootDirectory());
+		txtFldstn_pathAnalysisDemRootDirectory.setDisable(true);
 		txtFldstn_pathAnalysisDemRootDirectory.setFocusTraversable(false);
 		txtFldstn_pathAnalysisDemRootDirectory.setTooltip(new Tooltip(
 				"Root directory that contains locally extracted Copernicus GLO-30 DEM tiles.\n" +
@@ -9058,6 +9072,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		OfflineDemImportService offlineDemImportService = new OfflineDemImportService();
 
 		Button btnUseDefaultDemDirectory = new Button("Default");
+		btnUseDefaultDemDirectory.setDisable(true);
 		btnUseDefaultDemDirectory.setFocusTraversable(false);
 		btnUseDefaultDemDirectory.setTooltip(new Tooltip(
 				"Creates and uses the default local Copernicus DEM directory below .praktiKST.\n" +
@@ -9087,6 +9102,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 		Button btnImportDemTiles = new Button("Import tiles...");
+		btnImportDemTiles.setDisable(true);
 		btnImportDemTiles.setFocusTraversable(false);
 		btnImportDemTiles.setTooltip(new Tooltip(
 				"Copies manually selected Copernicus *_DEM.tif files into the configured DEM root directory.\n" +
@@ -9938,8 +9954,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		Label lblASUdpPort =
 				new Label("AirScout UDP port [9872] — reconnect after changing:");
 
+		Label lblASAutoBand =
+				new Label("Select AirScout frequency automatically per station:");
+
 		Label lblASBandName =
-				new Label("AirScout band value [1440000 = 144 MHz]:");
+				new Label("Forced AirScout band value [1440000 = 144 MHz]:");
 
 		CheckBox chkBxEnableUDPMsgbyAS = new CheckBox();
 		chkBxEnableUDPMsgbyAS.setSelected(
@@ -10092,13 +10111,38 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				chatcontroller.getChatPreferences()
 						.getAirScout_asBandString()
 		);
+
+		CheckBox chkBxAutoAirScoutBand = new CheckBox("Auto per station");
+		chkBxAutoAirScoutBand.setSelected(
+				chatcontroller.getChatPreferences()
+						.isAirScout_autoBandSelectionEnabled()
+		);
+		chkBxAutoAirScoutBand.setTooltip(
+				new Tooltip(
+						"Uses the station's current QRG first, then station-name and "
+								+ "chat-category evidence. Disable this option only to force "
+								+ "one protocol value for every station."
+				)
+		);
+		txtFld_asQRGInt.setDisable(chkBxAutoAirScoutBand.isSelected());
+		chkBxAutoAirScoutBand.selectedProperty().addListener(
+				(observable, oldValue, newValue) -> {
+					chatcontroller.getChatPreferences()
+							.setAirScout_autoBandSelectionEnabled(newValue);
+					txtFld_asQRGInt.setDisable(newValue);
+				}
+		);
+
 		txtFld_asQRGInt.setFocusTraversable(false);
 		txtFld_asQRGInt.setTooltip(
 				new Tooltip(
-						"AirScout protocol band value, for example 1440000 for "
-								+ "144 MHz or 4320000 for 432 MHz."
+						"Fallback used only when automatic per-station selection is "
+								+ "disabled. Examples: 1440000 for 144 MHz or 4320000 "
+								+ "for 432 MHz."
 				)
 		);
+
+
 		txtFld_asQRGInt.focusedProperty().addListener(
 				(observable, oldValue, newValue) -> {
 					if (newValue) {
@@ -10133,7 +10177,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		);
 
 		Label lblASChangeNote = new Label(
-				"Server identifier, client identifier and band are applied "
+				"Server identifier, client identifier and frequency mode are applied "
 						+ "immediately. Reconnect after changing the UDP port."
 		);
 		lblASChangeNote.setWrapText(true);
@@ -10156,9 +10200,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlAirScout.add(txtFld_asClientNameString, 1, 3);
 		grdPnlAirScout.add(lblASUdpPort, 0, 4);
 		grdPnlAirScout.add(txtFld_asUDPPortInt, 1, 4);
-		grdPnlAirScout.add(lblASBandName, 0, 5);
-		grdPnlAirScout.add(txtFld_asQRGInt, 1, 5);
-		grdPnlAirScout.add(lblASChangeNote, 0, 6, 2, 1);
+		grdPnlAirScout.add(lblASAutoBand, 0, 5);
+		grdPnlAirScout.add(chkBxAutoAirScoutBand, 1, 5);
+		grdPnlAirScout.add(lblASBandName, 0, 6);
+		grdPnlAirScout.add(txtFld_asQRGInt, 1, 6);
+		grdPnlAirScout.add(lblASChangeNote, 0, 7, 2, 1);
 
 		VBox vbxAirScout = new VBox();
 		vbxAirScout.setPadding(new Insets(10, 10, 10, 10));

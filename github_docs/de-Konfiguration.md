@@ -62,6 +62,65 @@ Der Wert sollte zum eigenen Stationsaufbau und zum vorgesehenen Contestbetrieb p
 
 ---
 
+### Streckenanalyse und Link-Budget
+
+Die Streckenanalyse der Stationskarte verwendet einige Angaben aus der Stationskonfiguration. Diese Werte beschreiben das eigene Stationssetup und – soweit keine individuellen Daten der Gegenstation vorliegen – ein angenommenes Setup der Gegenstation.
+
+Folgende Einstellungen werden berücksichtigt:
+
+- **Own antenna height AGL [m]** gibt die Höhe der eigenen Antenne über dem lokalen Gelände an. Die Angabe bezieht sich auf *Above Ground Level* und nicht auf die Höhe über dem Meeresspiegel. KST4Contest addiert diesen Wert zur Geländehöhe am eigenen Standort.
+- **Own TX power [W]** gibt die verwendete Sendeleistung der eigenen Station in Watt an.
+- **Own ant. gain [dBi]** gibt den Antennengewinn der eigenen Station in dBi an.
+- **DX OM TX power [W]** gibt die für die Gegenstation angenommene Sendeleistung in Watt an.
+- **DX OM ant. gain [dBi]** gibt den für die Gegenstation angenommenen Antennengewinn in dBi an.
+
+Für die Antennenhöhe der Gegenstation verwendet KST4Contest derzeit einen festen Wert von 10 m über dem lokalen Gelände. Die Leistungs- und Antennendaten der Gegenstation sind globale Annahmen. Sie ersetzen keine individuell bekannten Stationsdaten, ermöglichen aber eine einheitliche Abschätzung, wenn keine genaueren Informationen vorliegen.
+
+Die Antennengewinne müssen in dBi angegeben werden. Falls ein Wert in dBd vorliegt, kann er näherungsweise wie folgt umgerechnet werden:
+
+`dBi = dBd + 2.15`
+
+Auch die aktuelle Antennenrichtung, die konfigurierte Strahlbreite, das maximale QRB und die für die eigene Station aktivierten Bänder beeinflussen die Darstellung oder Auswertung auf der Stationskarte. Die aktuelle QTF und die Strahlbreite bestimmen beispielsweise den eingezeichneten Antennensektor und die Hervorhebung von Stationen innerhalb dieses Bereichs.
+
+Für die Berücksichtigung der Erdkrümmung verwendet die Streckenanalyse einen festen Faktor von `k = 4/3` für den effektiven Erdradius. Das ist eine übliche Näherung für eine durchschnittliche troposphärische Refraktion. Tatsächliche Ausbreitungsbedingungen können davon deutlich abweichen.
+
+Das Link-Budget berücksichtigt unter anderem:
+
+- die Entfernung zwischen beiden Stationen,
+- die verwendete Frequenz,
+- die konfigurierte Sendeleistung,
+- die Antennengewinne,
+- geschätzte Speiseleitungsverluste,
+- den Freiraumverlust sowie
+- eine grobe Zusatzdämpfung durch Hindernisse im Streckenprofil.
+
+Die daraus berechnete Empfangsleistung und SSB- beziehungsweise CW-Marge sind technische Abschätzungen. Sie sollen dabei helfen, mögliche Verbindungen einzuordnen. Sie sind keine vollständige Feldstärkeprognose und können insbesondere aktuelle Wetterbedingungen, lokale Abschattungen, Mehrwegeausbreitung oder andere nicht bekannte Stationsparameter nicht vollständig berücksichtigen.
+
+---
+
+### Streckenanalyse und Link-Budget
+
+Die Stationskarte verwendet mehrere Werte aus dem Reiter **Station**, um das Geländeprofil und das Link-Budget zur ausgewählten Gegenstation zu berechnen.
+
+| Einstellung | Verwendung |
+|---|---|
+| **Own antenna height AGL** | Höhe der eigenen Antenne über dem lokalen Gelände in Metern |
+| **Own TX power W** | Eigene Sendeleistung in Watt |
+| **Own ant. gain dBi** | Gewinn der eigenen Antenne in dBi |
+| **DX OM TX power W** | Angenommene Sendeleistung der Gegenstation in Watt |
+| **DX OM ant. gain dBi** | Angenommener Antennengewinn der Gegenstation in dBi |
+
+**AGL** bedeutet „above ground level“. Trage hier nicht die Höhe über dem Meeresspiegel ein. Die Geländehöhe am eigenen Standort stammt bereits aus dem abgerufenen Höhenprofil; die konfigurierte Antennenhöhe wird zu diesem Wert addiert.
+
+Für die Antennenhöhe der Gegenstation verwendet KST4Contest derzeit einen festen Standardwert von 10 Metern über Grund. Eine stationsbezogene Antennenhöhe wird im ON4KST-Chat nicht übertragen.
+
+Antennengewinne müssen in `dBi` eingetragen werden. Liegt ein Wert in `dBd` vor, gilt:
+
+```text
+dBi = dBd + 2,15 dB
+
+
+
 ## Server-Einstellungen (ab v1.31)
 
 Der Chat-Server-DNS und -Port sind in den Preferences konfigurierbar:

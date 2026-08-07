@@ -245,6 +245,7 @@ public class ChatPreferences {
 	boolean AirScout_asUDPListenerEnabled = true;
 	String AirScout_asServerNameString = "AS";
 	String AirScout_asClientNameString = "KST";
+	boolean AirScout_autoBandSelectionEnabled = true;
 	String AirScout_asBandString = "1440000";
 	int AirScout_asCommunicationPort = 9872;
 
@@ -1004,6 +1005,16 @@ public class ChatPreferences {
 		return AirScout_asBandString;
 	}
 
+	public boolean isAirScout_autoBandSelectionEnabled() {
+		return AirScout_autoBandSelectionEnabled;
+	}
+
+	public void setAirScout_autoBandSelectionEnabled(
+			boolean airScoutAutoBandSelectionEnabled
+	) {
+		AirScout_autoBandSelectionEnabled = airScoutAutoBandSelectionEnabled;
+	}
+
 	public void setAirScout_asBandString(String airScout_asBandString) {
 		if (airScout_asBandString == null) {
 			AirScout_asBandString = "1440000";
@@ -1694,6 +1705,13 @@ public class ChatPreferences {
 			Element asQry_airScoutUDPPort = doc.createElement("asQry_airScoutUDPPort");
 			asQry_airScoutUDPPort.setTextContent(this.getAirScout_asCommunicationPort()+"");
 			AirScoutQuerier.appendChild(asQry_airScoutUDPPort);
+
+			Element asQry_airScoutAutoBandSelectionEnabled =
+					doc.createElement("asQry_airScoutAutoBandSelectionEnabled");
+			asQry_airScoutAutoBandSelectionEnabled.setTextContent(
+					Boolean.toString(this.isAirScout_autoBandSelectionEnabled())
+			);
+			AirScoutQuerier.appendChild(asQry_airScoutAutoBandSelectionEnabled);
 
 			Element asQry_airScoutBandValue = doc.createElement("asQry_airScoutBandValue");
 			asQry_airScoutBandValue.setTextContent(this.getAirScout_asBandString());
@@ -2508,6 +2526,14 @@ public class ChatPreferences {
 						)
 				);
 
+				setAirScout_autoBandSelectionEnabled(
+						getBoolean(
+								airScoutEl,
+								AirScout_autoBandSelectionEnabled,
+								"asQry_airScoutAutoBandSelectionEnabled"
+						)
+				);
+
 				setAirScout_asBandString(
 						getText(
 								airScoutEl,
@@ -2525,6 +2551,8 @@ public class ChatPreferences {
 								+ AirScout_asClientNameString
 								+ ", port="
 								+ AirScout_asCommunicationPort
+								+ ", automatic band selection="
+								+ AirScout_autoBandSelectionEnabled
 								+ ", band="
 								+ AirScout_asBandString
 				);

@@ -177,6 +177,56 @@ Herleitung und Grenzen: [Prioritätsscore und Prioritätsliste](de-Funktionen#pr
 
 ---
 
+## Stationskarte
+
+Die Stationskarte kann auf zwei Wegen geöffnet werden:
+
+- **Windows → Show / hide station map** öffnet oder schließt das Kartenfenster.
+- **Show on map** im **Further Info**-Bereich öffnet die Karte und zentriert sie auf die ausgewählte Station.
+
+Die Karte zeigt die Stationen, die auch nach Anwendung der aktuellen Benutzerlistenfilter noch sichtbar sind. Ein Hinweis in der Kopfzeile zeigt an, wenn eine gefilterte Ansicht aktiv ist.
+
+![Stationskarte mit ausgewählter Station und eingeblendeter Streckenanalyse](station_map_path_analysis.png)
+
+Ein einzelner Stationsmarker kann direkt angeklickt werden. KST4Contest übernimmt die Station daraufhin als aktuelle Auswahl, scrollt die Benutzerliste zum passenden Chatmember und aktualisiert den **Further Info**-Bereich.
+
+Marker, die bei der aktuellen Zoomstufe zu dicht beieinanderliegen, werden als Cluster mit einer Stationsanzahl angezeigt. Ein Klick auf einen Cluster vergrößert den betreffenden Kartenausschnitt. Erst ein anschließend sichtbarer einzelner Marker wählt eine konkrete Station aus.
+
+Für die ausgewählte Station erscheinen rechts unter **Selected station**:
+
+- Rufzeichen,
+- Locator,
+- QRB und QTF,
+- erkannte aktive Bänder,
+- gegebenenfalls `B+` für eine offene Bandmöglichkeit und
+- die zuletzt bekannten QRGs.
+
+**Trigger cluster spot** sendet für die ausgewählte Station einen einzelnen Spot an die mit dem integrierten DX-Cluster-Server verbundenen Logprogramme. Die Schaltfläche setzt deshalb einen aktivierten Cluster-Server und mindestens einen verbundenen Client voraus.
+
+Unterhalb der Karte befindet sich das Höhenprofil. Rechts werden die dazugehörigen Detailwerte angezeigt, unter anderem:
+
+- verwendete Datenquelle und Anzahl der Höhenpunkte,
+- Analysefrequenz,
+- Erdkrümmungs- beziehungsweise Refraktionsmodell,
+- Radio- und Geländehorizont,
+- Fresnel-Freiheit,
+- erkannte Hindernisse,
+- Link-Budget,
+- geschätzter Empfangspegel und
+- eine zusammenfassende Pfadbewertung.
+
+Mit **Hide path analysis** werden das Profil unterhalb der Karte und die ausführlichen Analysewerte rechts gemeinsam ausgeblendet. Der Kartenbereich erhält dadurch mehr Platz.
+
+![Stationskarte mit ausgeblendeter Pfadanalyse](station_map_compact.png)
+
+Der Hinweis **Path analysis is hidden** bleibt zusammen mit **Show path analysis** sichtbar. Die Funktion kann daher ohne Umweg wieder eingeschaltet werden. Der Zustand wird gespeichert.
+
+Der Divider zwischen Karte und Detailbereich lässt sich horizontal verschieben. Bei schmalem Detailbereich werden längere Angaben umgebrochen; falls die Höhe nicht ausreicht, erscheint dort eine vertikale Scrollleiste.
+
+Ausführliche Herleitung und Grenzen: [Stationskarte und Streckenanalyse](de-Funktionen#stationskarte-und-streckenanalyse-ab-v141)
+
+---
+
 ## Globale Nachrichtentabs und Monitorfenster
 
 Der untere Bereich des Hauptfensters enthält drei globale Nachrichtentabs. Ihr Inhalt ist nicht von der aktuell in der Benutzerliste ausgewählten Station abhängig.
@@ -226,6 +276,7 @@ Herleitung und Grenzen: [Globale Nachrichtenansichten](de-Funktionen#globale-nac
 - **hide options** beziehungsweise **show options**: Blendet das Einstellungsfenster aus oder wieder ein.
 - **Use dark mode design**: Aktiviert das dunkle Farbschema.
 - **Use default mode design**: Aktiviert das normale helle Farbschema.
+- **Show / hide station map** öffnet beziehungsweise schließt das separate Fenster mit Stationskarte und Streckenanalyse.
 
 ---
 

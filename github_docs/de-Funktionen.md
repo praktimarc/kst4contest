@@ -691,21 +691,138 @@ Die Ansichten helfen dabei, Aktivität und Koordination anderer Stationen zu erk
 
 ---
 
-## Stationskarte (ab v1.41)
+## Stationskarte und Streckenanalyse (ab v1.41)
 
-Eine interaktive OpenStreetMap-Karte zeigt die geografische Position aller aktiven Chatmember.
+Eine lange Benutzerliste beantwortet zwei geografische Fragen nur unzureichend: Wo befinden sich die eingeloggten Stationen, und welche davon liegen ungefähr in der aktuellen Antennenrichtung? Die Stationskarte überträgt deshalb die bereits bekannten Locator-, Richtungs-, Band- und Worked-Informationen in eine interaktive Kartenansicht.
 
-**Funktionen:**
+Die Karte ist keine zweite, unabhängig verwaltete Stationsliste. Sie verwendet die aktuell durch die Filter der Benutzerliste sichtbaren Chatmember. Wird beispielsweise nach Entfernung, Richtung, Worked-Status oder einem bestimmten Band gefiltert, wirkt sich dies auch auf die dargestellten Stationen aus. In der Kopfzeile der Karte wird angezeigt, wie viele Stationen sichtbar sind und ob eine gefilterte Ansicht aktiv ist.
 
-- Stationsmarker mit Rufzeichen-Labels, farblich nach Aktivität und Sked-Status
-- **Antennen-Kegel** für die eigene Station
-- **Verbindungslinie** zur aktuell ausgewählten Station
-- **Maidenhead-Raster** (QRA-Locator-Gitter als Overlay)
-- **Wegprofil-Diagramm**: Geländehöhen-Querschnitt zwischen eigener und ausgewählter Station, inklusive Fresnel-Zonen-Analyse und Horizonterkennung
-- Mehrere Terrainquellen: **Copernicus GLO-30** (hochauflösendes DEM), **Open-Meteo API**, synthetischer Fallback und **Offline-DEM-Import** für den Betrieb ohne Internetverbindung
-- Aircraft-Scatter-Weganalyse verknüpft mit den Geländedaten
+![Stationskarte mit ausgewählter Station und eingeblendeter Streckenanalyse](station_map_path_analysis.png)
 
-Die Karte funktioniert in gepackten Umgebungen (AppImage, Flatpak) ohne Zugriff auf externe CDNs: Die Kartenkacheln werden über einen lokalen Tile-Proxy abgerufen, die Leaflet.js-Bibliothek ist in der Anwendung eingebettet.
+### Welche Stationen werden dargestellt?
+
+Für einen Kartenmarker benötigt KST4Contest einen brauchbaren sechsstelligen Locator. Chatmember ohne einen solchen Locator können in der Benutzerliste vorhanden sein, erscheinen aber nicht auf der Karte.
+
+Mehrere aktive Chat-Einträge desselben Basisrufzeichens werden für die Kartenansicht zusammengefasst. Das verhindert, dass beispielsweise getrennte Logins in mehreren Chat-Kategorien mehrere Marker an derselben geografischen Position erzeugen. Als sichtbares Rufzeichen und für die Detailinformationen wird die zuletzt geeignete aktive Variante verwendet.
+
+Die Beschriftung eines Markers kann zusätzlich enthalten:
+
+- die für die Station erkannten aktiven Bänder,
+- `B+`, wenn mindestens ein eigenes aktiviertes und noch nicht gearbeitetes Band angeboten wird.
+
+Die Bandangaben verwenden dieselbe Herleitung wie die Bandspalten, der Filter **New bands** und der Priority Score. Aktuelle QRG-Erkennungen, Bandangaben im Namensfeld, Worked-Informationen und manuelle NOT-QRV-Markierungen werden daher auch in der Kartenansicht konsistent berücksichtigt.
+
+### Bedeutung der Markerfarben
+
+| Darstellung | Bedeutung |
+|---|---|
+| Blauer Rand | Station ohne eine der nachfolgenden besonderen Markierungen |
+| Gelber Rand | Das Basisrufzeichen wurde bereits auf mindestens einem Band gearbeitet |
+| Grün | Für die Station besteht eine aus gerichteten Chatnachrichten hergeleitete Richtungsgelegenheit |
+| Orange | Aktuell ausgewählte Station |
+
+Treffen mehrere Zustände gleichzeitig zu, hat die für den Betrieb wichtigere Markierung Vorrang. Eine ausgewählte Station bleibt deshalb orange; eine Richtungsgelegenheit wird grün dargestellt, auch wenn das Rufzeichen bereits gearbeitet wurde.
+
+Bei niedrigen Zoomstufen werden räumlich dicht beieinanderliegende Stationen zu einem Cluster zusammengefasst. Die Zahl im Cluster gibt die Anzahl der enthaltenen Stationen an. Ein Klick zoomt weiter hinein, wählt aber noch keine einzelne Station aus. Die aktuell ausgewählte Station und grün markierte Richtungsgelegenheiten bleiben auch bei niedriger Zoomstufe als einzelne Marker sichtbar.
+
+### Auswahl und geografische Hilfen
+
+Ein Klick auf einen einzelnen Stationsmarker:
+
+1. wählt den dazugehörigen aktiven Chatmember aus,
+2. scrollt die Benutzerliste zu diesem Eintrag,
+3. aktualisiert den **Further Info**-Bereich und
+4. bereitet das Rufzeichen wie bei einer Auswahl in der Benutzerliste als Nachrichtenziel vor.
+
+Für die ausgewählte Station zeichnet KST4Contest eine Verbindungslinie von der eigenen Station zum Ziel. Der eingezeichnete Antennensektor verwendet:
+
+- den aktuellen eigenen QTF,
+- den konfigurierten Antennen-Öffnungswinkel und
+- das konfigurierte Standard-Maximum-QRB.
+
+Das Maidenhead-Raster passt seine Genauigkeit an die Zoomstufe und den sichtbaren Kartenausschnitt an. Es dient der räumlichen Orientierung; die Position eines Stationsmarkers wird aus dem sechsstelligen Locator abgeleitet und ist deshalb keine exakte GPS-Position.
+
+### Strecken- und Geländeprofil
+
+Nach Auswahl einer Station fordert KST4Contest ein Höhenprofil zwischen dem eigenen und dem fremden Locator an. Die aktive Online-Datenquelle ist die Open-Meteo Elevation API mit Geländedaten auf Basis von **Copernicus GLO-90**.
+
+Die Online-Abfrage ist auf höchstens 100 gleichmäßig über die Strecke verteilte Höhenpunkte begrenzt. Eine 100 Kilometer lange Strecke wird damit grob im Abstand von etwa einem Kilometer abgetastet. Bei kürzeren Strecken wird der Abstand entsprechend kleiner, schmale Hindernisse können trotzdem zwischen zwei Abfragepunkten liegen.
+
+Aus den Höhenpunkten berechnet KST4Contest unter anderem:
+
+- das Geländeprofil,
+- die geometrische Sichtlinie,
+- die Erdkrümmung mit einem festen effektiven Erdradiusfaktor von `k = 4/3`,
+- den geometrischen Radiohorizont beider Stationen,
+- relevante Geländehorizonte,
+- die erste Fresnel-Zone,
+- die geringste Fresnel-Freiheit,
+- den stärksten erkannten Eingriff in die Fresnel-Zone und
+- eine grobe Einzelhindernis- beziehungsweise Knife-Edge-Abschätzung.
+
+Die eingestellte eigene Antennenhöhe wird zur lokalen Geländehöhe addiert. Für die Gegenstation wird derzeit eine feste angenommene Antennenhöhe von 10 Metern über Grund verwendet.
+
+Bewegst du die Maus über das Profil, wird der dazugehörige Abfragepunkt zusätzlich auf der Karte markiert. Dadurch lässt sich ein auffälliger Berg oder Geländeeinschnitt leichter einer geografischen Position zuordnen.
+
+### Welche Frequenz wird für die Berechnung verwendet?
+
+Die Frequenz beeinflusst insbesondere die Größe der Fresnel-Zone, die Freiraumdämpfung und das Link-Budget. KST4Contest versucht deshalb, für die ausgewählte Station eine passende Analysefrequenz zu bestimmen.
+
+Vorrangig wird eine aktuell bekannte QRG auf einem eigenen aktivierten und für die Gegenstation nutzbaren Band verwendet. Fehlt eine geeignete QRG, wird aus den vorhandenen Bandinformationen ein automatisches Analyseband hergeleitet und dessen Standardfrequenz verwendet. Manuelle NOT-QRV-Markierungen werden dabei berücksichtigt.
+
+Die tatsächlich verwendete Frequenz steht im Feld **Frequency** der Streckenanalyse. Sie sollte kontrolliert werden, wenn die automatische Zuordnung nicht zur vorgesehenen Funkverbindung passt. Eine Berechnung auf 144 MHz ist für eine geplante Verbindung auf 1296 MHz keine gleichwertige Näherung.
+
+### Link-Budget und Tropo-Spalte
+
+Zusätzlich zur geometrischen Bewertung erstellt KST4Contest eine vereinfachte Link-Budget-Abschätzung. Verwendet werden:
+
+- die konfigurierte eigene Sendeleistung,
+- der eigene Antennengewinn,
+- die angenommene Sendeleistung der Gegenstation,
+- der angenommene Antennengewinn der Gegenstation,
+- eine frequenzabhängig geschätzte Speiseleitungsdämpfung,
+- die Freiraumdämpfung und
+- gegebenenfalls eine grobe zusätzliche Hindernisdämpfung.
+
+Antennengewinne werden in `dBi` eingegeben. Ein in `dBd` bekannter Wert muss deshalb vor der Eingabe um `2,15 dB` erhöht werden.
+
+Die Berechnung betrachtet beide Übertragungsrichtungen. Der daraus abgeleitete ungünstigere SSB-Wert wird als Tropo-Marge für die Station gespeichert und kann anschließend in der **Tropo**-Spalte, beim Sortieren und durch den Filter **Tropo >=0dB** verwendet werden.
+
+Karte und Benutzerliste führen keine voneinander unabhängigen Berechnungen durch. Sie verwenden denselben Reachability-Service und denselben Ergebnisspeicher. Eine über die Karte oder mit **Calc selected** angestoßene Berechnung kann deshalb anschließend auch in der Benutzerliste erscheinen.
+
+Es wird absichtlich keine automatische Online-Geländeabfrage für jeden sichtbaren Chatmember gestartet. Eine Berechnung erfolgt durch eine ausdrückliche Auswahl in der Karte oder über **Calc selected**. Das begrenzt API-Anfragen und verhindert, dass jede Tabellenaktualisierung eine neue Serie von Höhenabfragen auslöst.
+
+### Pfadanalyse ausblenden
+
+Das Geländeprofil und die ausführliche Analyse benötigen einen erheblichen Teil der Fensterhöhe. Werden sie gerade nicht gebraucht, können beide Bereiche gemeinsam mit **Hide path analysis** ausgeblendet werden. Die Karte nutzt den frei werdenden Platz unmittelbar.
+
+![Stationskarte mit ausgeblendeter Pfadanalyse](station_map_compact.png)
+
+Mit **Show path analysis** werden Profil und Detailwerte wieder eingeblendet. Das zuletzt berechnete Ergebnis bleibt erhalten. Die gewählte Sichtbarkeit wird in den Einstellungen gespeichert und beim nächsten Programmstart wiederhergestellt.
+
+Der rechte Detailbereich ist über einen Divider in der Breite verstellbar. Er kann so weit verkleinert werden, dass mehr Platz für die Karte entsteht, ohne ein Rufzeichen mit üblicher Länge vollständig zu verdecken.
+
+### Was sagt die Streckenanalyse nicht aus?
+
+Die Auswertung ist ein geometrisches und rechnerisches Modell. Sie misst weder die tatsächliche Feldstärke noch die momentanen Ausbreitungsbedingungen.
+
+Insbesondere kennt KST4Contest nicht:
+
+- die wirkliche Antennenhöhe und den tatsächlichen Antennengewinn der Gegenstation,
+- deren Sendeleistung und Speiseleitungsverluste,
+- Gebäude, Bewuchs und andere Hindernisse, die im Höhenmodell nicht enthalten sind,
+- lokale Störungen und Empfängereigenschaften,
+- den aktuellen atmosphärischen K-Faktor,
+- Inversionsschichten oder Ducting und
+- die tatsächliche Antennenrichtung der Gegenstation.
+
+Die unter **Mechanisms** genannten Ausbreitungswege sind eine allgemeine Einordnung anhand der Geländegeometrie. Eine Nennung von Aircraft Scatter bedeutet nicht, dass aktuelle Flugzeuge aus AirScout in die Geländeanalyse eingerechnet wurden.
+
+Im Klartext: Ein freier Weg ist ein nützlicher positiver Hinweis. Ein geometrisch versperrter Weg bedeutet im VHF-, UHF- und Mikrowellenbereich aber nicht automatisch „unmöglich“. Ebenso garantiert ein positives Link-Budget kein QSO.
+
+Bedienung: [Stationskarte in der Benutzeroberfläche](de-Benutzeroberflaeche#stationskarte)
+
+Konfiguration: [Streckenanalyse und Link-Budget](de-Konfiguration#streckenanalyse-und-link-budget)
 
 ---
 

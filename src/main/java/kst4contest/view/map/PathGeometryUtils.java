@@ -1,6 +1,5 @@
 package kst4contest.view.map;
 
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -496,37 +495,7 @@ public final class PathGeometryUtils {
         }
     }
 
-    /**
-     * Resolves one usable analysis frequency from aggregated marker frequency data.
-     *
-     * <p>Strategy:
-     * <ol>
-     *     <li>Prefer 144 MHz data if available</li>
-     *     <li>Otherwise use the first parsable known station frequency</li>
-     *     <li>Otherwise use the central default frequency</li>
-     * </ol>
-     *
-     * @param frequenciesByBand known frequencies grouped by band
-     * @return resolved analysis frequency in MHz
-     */
-    public static double resolveAnalysisFrequencyMHz(Map<String, String> frequenciesByBand) {
-        if (frequenciesByBand != null && !frequenciesByBand.isEmpty()) {
-            String band144Text = frequenciesByBand.get("144");
-            double parsed144 = tryParseFrequencyMHz(band144Text);
-            if (Double.isFinite(parsed144) && parsed144 > 0.0) {
-                return parsed144;
-            }
 
-            for (String value : frequenciesByBand.values()) {
-                double parsedFrequencyMHz = tryParseFrequencyMHz(value);
-                if (Double.isFinite(parsedFrequencyMHz) && parsedFrequencyMHz > 0.0) {
-                    return parsedFrequencyMHz;
-                }
-            }
-        }
-
-        return DEFAULT_ANALYSIS_FREQUENCY_MHZ;
-    }
 
     /**
      * Small immutable geographic point used by great-circle interpolation.

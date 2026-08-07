@@ -450,8 +450,15 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 				chatPreferences.getAirScout_asClientNameString();
 		String serverIdentifier =
 				chatPreferences.getAirScout_asServerNameString();
-		String bandValue =
-				chatPreferences.getAirScout_asBandString();
+		String bandValue = resolveAirScoutBandValue(remoteChatMember);
+		if (bandValue == null) {
+			System.out.println(
+					"[AirScout, info]: Show-path request ignored because no "
+							+ "usable propagation frequency could be resolved."
+			);
+			return;
+		}
+
 		int port =
 				chatPreferences.getAirScout_asCommunicationPort();
 
@@ -496,6 +503,30 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 							+ exception.getMessage()
 			);
 		}
+	}
+
+	/**
+	 * Resolves the AirScout protocol frequency for one station. In automatic mode
+	 * this uses the same station-specific resolution as the internal path analysis;
+	 * manual mode keeps the configured forced value for compatibility.
+	 *
+	 * @param remoteChatMember target station
+	 * @return AirScout frequency in 100-Hz units, or {@code null} if auto mode has
+	 *         no safe result
+	 */
+	public String resolveAirScoutBandValue(ChatMember remoteChatMember) {
+		if (!chatPreferences.isAirScout_autoBandSelectionEnabled()) {
+			return chatPreferences.getAirScout_asBandString();
+		}
+
+		if (reachabilityService == null) {
+			return null;
+		}
+
+		var resolution = reachabilityService
+				.resolveAutomaticPropagationFrequency(remoteChatMember);
+
+		return resolution == null ? null : resolution.getAirScoutBandValue();
 	}
 
 	/**

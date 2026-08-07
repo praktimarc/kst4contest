@@ -1,6 +1,7 @@
 package kst4contest.controller;
 import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.view.map.MapCallsignRawSnapshot;
+import kst4contest.logic.PropagationFrequencyResolver;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,9 +13,7 @@ import java.util.function.Consumer;
 import javafx.application.Platform;
 import kst4contest.locatorUtils.Location;
 import kst4contest.model.Band;
-import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMember;
-import kst4contest.model.ChatPreferences;
 import kst4contest.view.map.GeometryOnlyPathAnalysisService;
 
 import kst4contest.view.map.OpenMeteoTerrainProfileProvider;
@@ -22,7 +21,6 @@ import kst4contest.view.map.PathAnalysisRequest;
 import kst4contest.view.map.PathAnalysisResult;
 import kst4contest.view.map.PathAnalysisService;
 import kst4contest.view.map.PathGeometryUtils;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
@@ -139,9 +137,11 @@ public final class ReachabilityService {
      * @param member best matching ChatMember, may be null when only a map snapshot exists
      * @param selectedSnapshot selected map snapshot
      * @param fxCallback callback executed on the JavaFX thread
+     * @param requestedBandOverride operator-selected band, or null for automatic resolution
      */
     public void requestPathAnalysisForMap(ChatMember member,
                                           MapCallsignRawSnapshot selectedSnapshot,
+                                          Band requestedBandOverride,
                                           Consumer<PathAnalysisResult> fxCallback) {
 
         String ownLocator6 = normalizeLocator6(chatController.getChatPreferences().getStn_loginLocatorMainCat());
@@ -165,22 +165,23 @@ public final class ReachabilityService {
             return;
         }
 
-        double analysisFrequencyMHz = PathGeometryUtils.resolveAnalysisFrequencyMHz(
-                selectedSnapshot.lastKnownFrequenciesByBand()
-        );
+        Band analysisBand;
+        double analysisFrequencyMHz;
 
-        Band analysisBand = Band.fromFrequency(analysisFrequencyMHz);
-        if (analysisBand != null && !isUsableAutomaticBand(member, analysisBand)) {
-            analysisFrequencyMHz = Double.NaN;
-            analysisBand = null;
-        }
+        if (requestedBandOverride != null) {
+            /*
+             * An explicit operator selection has priority over automatic propagation
+             * resolution. Exact recent QRG information on that band is still used
+             * when available; otherwise the band's default analysis frequency is used.
+             */
+            analysisBand = requestedBandOverride;
+            analysisFrequencyMHz =
+                    resolveAnalysisFrequencyForBand(member, analysisBand);
+        } else {
+            PropagationFrequencyResolver.Resolution frequencyResolution =
+                    resolveAutomaticPropagationFrequency(member);
 
-        if (!Double.isFinite(analysisFrequencyMHz)
-                || analysisFrequencyMHz <= 0.0
-                || analysisBand == null) {
-
-            Band fallbackBand = resolveAutoBand(member);
-            if (fallbackBand == null) {
+            if (frequencyResolution == null) {
                 dispatchFxCallback(
                         fxCallback,
                         PathAnalysisResult.waitingForUsableBand(
@@ -192,8 +193,9 @@ public final class ReachabilityService {
                 return;
             }
 
-            analysisBand = fallbackBand;
-            analysisFrequencyMHz = resolveAnalysisFrequencyForBand(member, fallbackBand);
+            analysisBand = frequencyResolution.getBand();
+            analysisFrequencyMHz =
+                    frequencyResolution.getAnalysisFrequencyMHz();
         }
 
         PathAnalysisRequest request = buildRequest(
@@ -236,72 +238,32 @@ public final class ReachabilityService {
     }
 
     /**
-     * Resolves the auto reachability band.
-     *
-     * <ol>
-     *     <li>Use the lowest band detected in this session.</li>
-     *     <li>If no session band exists and the station is in the microwave category, use 1296 MHz.</li>
-     *     <li>Otherwise use 144 MHz.</li>
-     * </ol>
+     * Resolves the auto reachability band through the shared propagation
+     * frequency selection used by AirScout and path analysis.
      *
      * @param member member to inspect
      * @return resolved band
      */
     public Band resolveAutoBand(ChatMember member) {
-        EnumSet<Band> enabledBands = getEnabledStationBands();
-        if (enabledBands.isEmpty()) {
-            return null;
-        }
+        PropagationFrequencyResolver.Resolution resolution =
+                resolveAutomaticPropagationFrequency(member);
+        return resolution == null ? null : resolution.getBand();
+    }
 
-        List<ChatMember> variants = resolveCallsignVariants(member);
-        BandOpportunityResolver.Resolution resolution =
-                BandOpportunityResolver.resolve(variants, System.currentTimeMillis());
-
-        EnumSet<Band> availableOfferedBands = resolution.getAvailableBands();
-        availableOfferedBands.retainAll(enabledBands);
-
-        if (!availableOfferedBands.isEmpty()) {
-            return availableOfferedBands.stream()
-                    .min(Comparator.comparingDouble(Band::getDefaultAnalysisFrequencyMHz))
-                    .orElse(null);
-        }
-
-        // Known evidence exists, but every matching band is disabled or NOT QRV.
-        if (resolution.hasBandEvidence()) {
-            return null;
-        }
-
-        EnumSet<Band> fallbackBands = EnumSet.copyOf(enabledBands);
-        fallbackBands.removeAll(resolution.getNotQrvBands());
-        if (fallbackBands.isEmpty()) {
-            return null;
-        }
-
-        if (member != null
-                && member.getChatCategory() != null
-                && member.getChatCategory().getCategoryNumber() == ChatCategory.MICROWAVE
-                && fallbackBands.contains(Band.B_1296)) {
-            return Band.B_1296;
-        }
-
-        if (member != null
-                && member.getChatCategory() != null
-                && member.getChatCategory().getCategoryNumber() == ChatCategory.FIFTYSEVENTYMHz) {
-            if (fallbackBands.contains(Band.B_50)) {
-                return Band.B_50;
-            }
-            if (fallbackBands.contains(Band.B_70)) {
-                return Band.B_70;
-            }
-        }
-
-        if (fallbackBands.contains(Band.B_144)) {
-            return Band.B_144;
-        }
-
-        return fallbackBands.stream()
-                .min(Comparator.comparingDouble(Band::getDefaultAnalysisFrequencyMHz))
-                .orElse(null);
+    /**
+     * Resolves one automatic band and exact analysis frequency for a station.
+     *
+     * @param member any active category variant of the target station
+     * @return shared propagation resolution, or {@code null} for unsupported data
+     */
+    public PropagationFrequencyResolver.Resolution resolveAutomaticPropagationFrequency(
+            ChatMember member
+    ) {
+        return PropagationFrequencyResolver.resolve(
+                resolveCallsignVariants(member),
+                getEnabledStationBands(),
+                System.currentTimeMillis()
+        );
     }
 
     /**
@@ -329,27 +291,7 @@ public final class ReachabilityService {
         return variants.isEmpty() ? List.of(member) : variants;
     }
 
-    /**
-     * Verifies that an automatically selected map/snapshot frequency belongs to a
-     * locally enabled band that is still available after NOT-QRV resolution.
-     * Manual UI band overrides are handled separately and are not changed here.
-     */
-    private boolean isUsableAutomaticBand(ChatMember member, Band band) {
-        if (band == null || !getEnabledStationBands().contains(band)) {
-            return false;
-        }
 
-        if (member == null) {
-            return true;
-        }
-
-        BandOpportunityResolver.Resolution resolution = BandOpportunityResolver.resolve(
-                resolveCallsignVariants(member),
-                System.currentTimeMillis()
-        );
-
-        return resolution.getAvailableBands().contains(band);
-    }
 
     /**
      * Stops the background executor.
@@ -541,28 +483,7 @@ public final class ReachabilityService {
         }
     }
 
-    /**
-     * Resolves the analysis frequency from a map snapshot first, because the map
-     * aggregates all visible ChatMember variants and often knows the best current
-     * frequency per band.
-     *
-     * @param member fallback member
-     * @param selectedSnapshot selected map snapshot
-     * @return analysis frequency in MHz
-     */
-    private double resolveAnalysisFrequencyForSnapshot(ChatMember member, MapCallsignRawSnapshot selectedSnapshot) {
-        if (selectedSnapshot != null) {
-            double snapshotFrequencyMHz =
-                    PathGeometryUtils.resolveAnalysisFrequencyMHz(selectedSnapshot.lastKnownFrequenciesByBand());
 
-            if (Double.isFinite(snapshotFrequencyMHz) && snapshotFrequencyMHz > 0.0) {
-                return snapshotFrequencyMHz;
-            }
-        }
-
-        Band fallbackBand = member == null ? Band.B_144 : resolveAutoBand(member);
-        return resolveAnalysisFrequencyForBand(member, fallbackBand);
-    }
 
     /**
      * Resolves the analysis frequency for one member/band pair.
@@ -575,13 +496,26 @@ public final class ReachabilityService {
      * </ol>
      */
     private double resolveAnalysisFrequencyForBand(ChatMember member, Band band) {
-        if (member != null && member.getKnownActiveBands() != null) {
-            ChatMember.ActiveFrequencyInfo activeFrequencyInfo = member.getKnownActiveBands().get(band);
+        if (band == null) {
+            return Double.NaN;
+        }
+
+        ChatMember.ActiveFrequencyInfo latestFrequencyInfo = null;
+        for (ChatMember variant : resolveCallsignVariants(member)) {
+            ChatMember.ActiveFrequencyInfo activeFrequencyInfo =
+                    variant.getKnownActiveBands().get(band);
+
             if (activeFrequencyInfo != null
                     && Double.isFinite(activeFrequencyInfo.frequency)
-                    && activeFrequencyInfo.frequency > 0.0) {
-                return activeFrequencyInfo.frequency;
+                    && activeFrequencyInfo.frequency > 0.0
+                    && (latestFrequencyInfo == null
+                    || activeFrequencyInfo.timestampEpoch > latestFrequencyInfo.timestampEpoch)) {
+                latestFrequencyInfo = activeFrequencyInfo;
             }
+        }
+
+        if (latestFrequencyInfo != null) {
+            return latestFrequencyInfo.frequency;
         }
 
         if (member != null && member.getFrequency() != null && member.getFrequency().getValue() != null) {
