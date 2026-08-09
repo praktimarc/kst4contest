@@ -282,9 +282,13 @@ Herleitung und Grenzen: [Globale Nachrichtenansichten](de-Funktionen#globale-nac
 
 ## Fenstergrößen und Divider
 
-Ab **v1.21** werden beim Klick auf **„Save Settings"** auch Fenstergrößen und Divider-Positionen aller Panels in der Konfigurationsdatei gespeichert und beim nächsten Start wiederhergestellt.
+Beim Klick auf **Save Settings** speichert KST4Contest die Größen der Programmfenster und die Positionen der relevanten Divider in der Konfigurationsdatei. Diese Werte werden beim nächsten Programmstart wiederverwendet.
 
-Bei Problemen mit der Darstellung: Konfigurationsdatei löschen → KST4Contest erstellt neue Standardwerte.
+Das Hauptfenster wird beim Start zusätzlich gegen den sichtbaren Bereich des primären Bildschirms geprüft. Ist die gespeicherte Größe zu groß, verkleinert und verschiebt KST4Contest das Fenster so, dass es wieder erreichbar bleibt. Die genaue Herleitung ist unter [Bildschirmgerechte Größe des Hauptfensters](de-Funktionen#bildschirmgerechte-größe-des-hauptfensters-ab-v141) beschrieben.
+
+Für die übrigen Programmfenster gilt diese zusätzliche Größenbegrenzung derzeit nicht. Wird beispielsweise das separate Monitorfenster nach einem Wechsel auf einen kleineren Bildschirm zu groß dargestellt, muss seine Größe manuell korrigiert und anschließend erneut mit **Save Settings** gespeichert werden.
+
+Bei einer ungünstigen Aufteilung sollten zuerst die Divider an eine brauchbare Position verschoben und die Einstellungen erneut gespeichert werden. Das Löschen der Konfigurationsdatei setzt zwar die UI-Werte zurück, entfernt aber auch die übrigen gespeicherten Programmeinstellungen und sollte deshalb nur verwendet werden, wenn sich die Oberfläche auf anderem Weg nicht mehr herstellen lässt.
 
 ---
 

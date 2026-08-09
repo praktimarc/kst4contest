@@ -828,28 +828,80 @@ Konfiguration: [Streckenanalyse und Link-Budget](de-Konfiguration#streckenanalys
 
 ## Begrenzte Nachrichtenspeicher (ab v1.41)
 
-Chat- und DX-Cluster-Meldungen werden während des Betriebs im Arbeitsspeicher gehalten. Damit ein mehrtägiger Contest nicht zu einem unbegrenzt wachsenden Speicherverbrauch und immer langsameren Tabellen führt, besitzen beide Speicher feste Grenzen:
+Während eines längeren Contests können mehrere zehntausend Chat- und DX-Cluster-Meldungen eintreffen. Würden diese Listen während der gesamten Programmlaufzeit unbegrenzt wachsen, stiege nicht nur der Speicherverbrauch. Auch das Filtern, Sortieren und Aktualisieren der darauf aufbauenden Tabellen würde zunehmend aufwendiger.
 
-| Nachrichtenspeicher | Maximale Größe | Größe nach dem automatischen Aufräumen |
+KST4Contest verwendet deshalb zwei getrennte, begrenzte Nachrichtenspeicher:
+
+| Nachrichtenspeicher | Aufräumen ab | Größe nach dem Aufräumen |
 |---|---:|---:|
-| Chatnachrichten | 30.000 | 25.000 |
-| DX-Cluster-Meldungen | 10.000 | 8.000 |
+| Chatnachrichten | mehr als 30.000 Einträge | 25.000 Einträge |
+| DX-Cluster-Meldungen | mehr als 10.000 Einträge | 8.000 Einträge |
 
-Wird die jeweilige Maximalgröße überschritten, entfernt KST4Contest die ältesten Einträge am Ende der Liste. Neue Nachrichten bleiben erhalten und werden weiterhin zuerst angezeigt.
+Neue Nachrichten werden am Anfang der jeweiligen Liste eingefügt. Wird der obere Grenzwert überschritten, entfernt KST4Contest die ältesten Einträge am Ende der Liste, bis die angegebene Zielgröße erreicht ist.
 
-Die öffentlichen Nachrichten, PMs, Stationsinformationen und **QSO of the other** besitzen keine voneinander getrennten 30.000-Einträge-Speicher. Sie sind gefilterte Ansichten derselben globalen Chatnachrichtenliste. Auch die DX-Cluster-Tabelle im Hauptfenster und die Tabelle im separaten Monitorfenster verwenden denselben Cluster-Speicher.
+### Warum gibt es zwei Grenzwerte?
 
-Die Nachrichten werden nicht dauerhaft gespeichert. Nach einem Neustart beginnen die Ansichten wieder mit leeren Listen.
+Der Speicher wird nicht nach jeder einzelnen Nachricht wieder exakt auf seine Maximalgröße verkleinert. Nach dem Aufräumen bleiben bei den Chatnachrichten 5.000 und bei den DX-Cluster-Meldungen 2.000 freie Plätze.
 
+Dadurch muss KST4Contest nicht für jede anschließend eintreffende Nachricht erneut Listeneinträge entfernen. Das Aufräumen erfolgt blockweise und damit deutlich seltener.
+
+### Welche Tabellen teilen sich einen Speicher?
+
+Die folgenden Ansichten sind gefilterte Darstellungen derselben globalen Chatnachrichtenliste:
+
+- **Public messages**,
+- die PM-Tabelle,
+- die Nachrichten im Bereich **Further Info** und
+- **QSO of the other**.
+
+Diese Tabellen speichern nicht jeweils zusätzlich bis zu 30.000 Nachrichten. Wird eine alte Chatnachricht aus dem gemeinsamen Speicher entfernt, verschwindet sie gleichzeitig aus allen darauf basierenden Ansichten.
+
+Ebenso verwenden der Tab **DXCluster messages** und die DX-Cluster-Tabelle im separaten Monitorfenster denselben Cluster-Speicher. Das zusätzliche Fenster erzeugt weder eine zweite Nachrichtenverbindung noch eine Kopie der empfangenen Meldungen.
+
+Chatnachrichten und DX-Cluster-Meldungen besitzen dagegen voneinander unabhängige Speicher und Grenzwerte. Ein hohes Aufkommen an öffentlichen Chatnachrichten verkleinert deshalb nicht den DX-Cluster-Speicher und umgekehrt.
+
+### Keine dauerhafte Historie
+
+Beide Nachrichtenspeicher liegen ausschließlich im Arbeitsspeicher. Sie werden weder in die interne Worked-Datenbank noch in eine andere lokale Nachrichtendatei geschrieben.
+
+Nach einem Neustart beginnen die Tabellen wieder mit leeren Listen und werden ausschließlich aus den neu empfangenen Meldungen aufgebaut. Die Ansichten sind damit ein Arbeitsmittel für die laufende Sitzung und kein dauerhaftes Chatarchiv.
 
 ---
 
-## Bildschirmgerechte Fenstergröße (ab v1.41)
+## Bildschirmgerechte Größe des Hauptfensters (ab v1.41)
 
-Beim Programmstart berechnet KST4Contest eine bildschirmgerechte Startgröße für das Hauptfenster:
+KST4Contest speichert die zuletzt verwendete Größe des Hauptfensters. Das ist praktisch, solange das Programm beim nächsten Start auf einem vergleichbaren Bildschirm läuft. Wurde die Anwendung zuvor auf einem größeren Monitor verwendet, kann die gespeicherte Größe auf einem kleineren Bildschirm jedoch außerhalb des sichtbaren Bereichs liegen.
 
-- Die gespeicherte Fenstergröße aus der letzten Session wird verwendet – aber **niemals größer als der aktuelle Bildschirm**.
-- Wenn KST4Contest zuletzt auf einem größeren Monitor betrieben wurde, wird das Fenster automatisch auf die aktuelle Anzeige verkleinert.
-- Das UI-Layout ist **kompakter und reaktionsfähiger auf kleineren Bildschirmen**.
+KST4Contest prüft die gespeicherte Größe deshalb beim Programmstart gegen den nutzbaren Bereich des primären Bildschirms.
 
-Damit werden unbrauchbare, abgeschnittene Fenster beim Wechsel zwischen Geräten oder Monitoren verhindert.
+### Wie wird die Startgröße bestimmt?
+
+Sofern die gespeicherten Werte gültig sind, verwendet KST4Contest zunächst die zuletzt gespeicherte Höhe und Breite. Fehlen brauchbare Werte, gilt eine Standardgröße von:
+
+- 1.234 Pixel Breite und
+- 768 Pixel Höhe.
+
+Als verfügbare Fläche verwendet KST4Contest nicht die vollständige Bildschirmauflösung, sondern den von JavaFX gemeldeten sichtbaren Bereich des primären Bildschirms. Taskleiste, Dock und vergleichbare Bereiche des Betriebssystems sind darin bereits ausgenommen.
+
+Von dieser Fläche wird zusätzlich ein Sicherheitsabstand von 40 Pixeln abgezogen. Überschreitet die gespeicherte Breite oder Höhe den verbleibenden Platz, wird nur der betreffende Wert verkleinert.
+
+Nachdem die Oberfläche mit dieser Scene-Größe aufgebaut wurde, prüft KST4Contest zusätzlich das tatsächliche native Fenster einschließlich seiner vom Betriebssystem erzeugten Rahmen und Titelleiste. Das Fenster wird bei Bedarf noch einmal verkleinert oder in den sichtbaren Bereich verschoben.
+
+Damit werden zwei unterschiedliche Fälle abgefangen:
+
+1. Die gespeicherte Inhaltsfläche ist größer als der aktuelle Bildschirm.
+2. Die Inhaltsfläche passt, das vollständige native Fenster ragt durch Rahmen oder Position trotzdem über den sichtbaren Bereich hinaus.
+
+### Was passiert mit dem Layout?
+
+Die Oberfläche wird nicht als Ganzes proportional skaliert. Stattdessen erhält das Hauptfenster weniger Platz, und die dafür vorgesehenen UI-Bereiche reagieren auf die verfügbare Breite.
+
+Die Filterleiste bleibt bei normaler Fensterbreite kompakt. Erst wenn der tatsächlich benötigte Platz nicht mehr ausreicht, werden Bedienelemente in zusätzliche Zeilen umgebrochen. Divider können weiterhin verwendet werden, um den Platz zwischen den Nachrichten- und Stationsbereichen aufzuteilen.
+
+### Grenzen der automatischen Korrektur
+
+Die Prüfung verwendet immer den **primären Bildschirm**. Sie stellt nicht die frühere Position auf einem bestimmten sekundären Monitor wieder her.
+
+Die automatische Größenbegrenzung gilt derzeit außerdem nur für das Hauptfenster. Das Einstellungsfenster, das separate Cluster- und QSO-Monitorfenster sowie weitere Zusatzfenster verwenden weiterhin ihre jeweils gespeicherten Größen, ohne dieselbe zusätzliche Prüfung gegen den primären Bildschirm.
+
+Im Klartext: Die Schutzfunktion verhindert vor allem, dass das zentrale Hauptfenster nach einem Wechsel auf einen kleineren Bildschirm unbenutzbar startet. Sie ist keine vollständige Verwaltung aller Fensterpositionen in einem wechselnden Mehrmonitor-Setup.

@@ -48,6 +48,40 @@ Enter a realistic value for your antenna's beamwidth (in degrees). This value is
 
 Maximum distance (in km) for which direction warnings should be triggered. A realistic value for DM5M is 900 km. Stations farther away are ignored for highlighting purposes.
 
+### Path Analysis and Link Budget
+
+The station map uses several values from the station settings for its path analysis. These values describe the local station setup and, where no individual information is available, an assumed setup for the remote station.
+
+The following settings are used:
+
+- **Own antenna height AGL [m]** specifies the height of the local antenna above the surrounding terrain. The value is *Above Ground Level*, not height above sea level. KST4Contest adds it to the terrain elevation at the local station.
+- **Own TX power [W]** specifies the transmit power of the local station in watts.
+- **Own ant. gain [dBi]** specifies the antenna gain of the local station in dBi.
+- **DX OM TX power [W]** specifies the transmit power assumed for the remote station.
+- **DX OM ant. gain [dBi]** specifies the antenna gain assumed for the remote station.
+
+KST4Contest currently uses a fixed antenna height of 10 metres above the local terrain for the remote station. The remote power and antenna-gain values are global assumptions. They cannot replace individually known station data, but they provide a consistent basis when no better information is available.
+
+Antenna gains must be entered in dBi. If a value is specified in dBd, it can be converted approximately as follows:
+
+`dBi = dBd + 2.15`
+
+The current antenna direction, configured beamwidth, maximum QRB and bands enabled for the local station also affect the map display or its assessment. The current QTF and beamwidth, for example, determine the displayed antenna sector and the highlighting of stations inside that sector.
+
+The path analysis uses a fixed effective Earth-radius factor of `k = 4/3`. This is a common approximation for average tropospheric refraction. Actual propagation conditions can differ considerably.
+
+The link budget takes into account:
+
+- the distance between both stations,
+- the analysis frequency,
+- the configured transmit powers,
+- the antenna gains,
+- estimated feeder losses,
+- free-space path loss, and
+- a rough additional loss caused by obstructions in the terrain profile.
+
+The resulting received power and SSB or CW margins are technical estimates. They help to classify a possible path, but they are not a complete field-strength prediction. Current weather conditions, local obstructions, multipath propagation and unknown station parameters cannot be represented completely.
+
 ---
 
 ## Server Settings (from v1.31)

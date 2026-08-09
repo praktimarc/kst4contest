@@ -156,7 +156,48 @@ Calculation and limitations: [Priority Score and Priority List](en-Features#prio
 
 ---
 
-## Cluster & QSO of Others
+## Station Map
+
+The station map is opened or closed through:
+
+**Windows → Show / hide station map**
+
+The window uses the chat members currently visible in the filtered user list. Changing the QRB, QTF, Worked, band or Reachability filters can therefore also change the stations shown on the map.
+
+A station can additionally be opened directly from the **Further Info** panel using **Show on map**. This selects the station on the map and requests the associated path analysis.
+
+Stations with the same normalised base callsign and position are combined into one marker. At lower zoom levels, nearby markers may additionally be displayed as clusters. These are display groups only; the individual chat logins remain separate message targets inside KST4Contest.
+
+Clicking a station marker:
+
+1. selects the corresponding chat member,
+2. scrolls the main user list to that entry,
+3. updates the **Further Info** panel, and
+4. prepares the complete visible callsign as the message target.
+
+The map details for the selected station include its locator, QRB, QTF, detected bands and available band opportunities. **Trigger cluster spot** sends a spot through the built-in local DX Cluster server so that connected logging software can receive the selected station and QRG.
+
+The path-analysis section shows the terrain profile and the calculated route between both stations. Depending on the available data, it includes:
+
+- the analysis frequency,
+- line-of-sight and horizon information,
+- Fresnel-zone clearance,
+- detected obstructions,
+- an estimated link budget,
+- received power and SSB margin, and
+- a short assessment of the path.
+
+Moving the mouse over the terrain profile highlights the corresponding geographical position on the map.
+
+The analysis can be hidden using **Hide path analysis** when more space is required for the map. The compact state displays **Path analysis is hidden.** together with the **Show path analysis** button.
+
+![Station map with hidden path analysis](station_map_compact.png)
+
+The selected station and map contents remain available while the analysis panel is hidden. The setting is stored and restored at the next start.
+
+Calculation method and limitations: [Station Map and Path Analysis](en-Features#station-map-and-path-analysis-from-v141).
+
+---
 
 ## Global Message Tabs and Monitor Window
 
@@ -210,6 +251,8 @@ If a message is too long for its table cell, moving the mouse over the cell disp
 - **show options** restores the settings window.
 - **Use dark mode design** activates the dark colour scheme.
 - **Use default mode design** restores the default colour scheme.
+- **Show / hide station map** opens or closes the separate station-map and path-analysis window.
+
 ---
 
 ## Window Sizes and Dividers

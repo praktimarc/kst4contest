@@ -589,23 +589,118 @@ When a table cell cannot display its complete message, moving the mouse over the
 
 ---
 
-## Station Map (from v1.41)
+## Station Map and Path Analysis (from v1.41)
 
-An interactive OpenStreetMap-based map showing the geographic position of all active chat members.
+The station map shows the geographical relationship between the local station and the chat members which are currently relevant in the main window. It is not a second, independent user list: filters applied to the chat-member table also determine which stations are passed to the map.
 
-**Features:**
+![Station map with path analysis](station_map_path_analysis.png)
 
-- Station markers with callsign labels, coloured by activity and sked state
-- Antenna **beam cone** visualisation for the own station
-- **Connection line** to the currently selected station
-- **Maidenhead grid** overlay (QRA locator grid)
-- **Path profile chart**: Terrain elevation cross-section between own station and the selected station, including Fresnel zone analysis and obstruction/horizon detection
-- Multiple terrain data sources: **Copernicus GLO-30** (high-resolution DEM), **Open-Meteo API**, synthetic fallback, and **offline DEM import** for air-gapped use
-- Aircraft scatter path analysis integrated with the terrain data
+### Stations and markers
 
-The map works in packaged environments (AppImage, Flatpak) without internet access to external CDNs: map tiles are fetched via a local tile proxy, and the Leaflet.js library is bundled inside the application.
+A station can be displayed only if a usable six-character Maidenhead locator is available. Chat entries without a sufficiently precise locator remain in the user list but cannot be positioned reliably on the map.
 
----
+Active chat variants belonging to the same normalised base callsign are combined into one map marker. This avoids several markers being placed at exactly the same position when, for example, a station is logged in with separate suffixes for different bands. The marker information includes the currently derived bands and, where applicable, open `B+` opportunities.
+
+Marker colours provide a compact status indication:
+
+| Colour | Meaning |
+|---|---|
+| Blue | Normal station marker |
+| Yellow | The callsign has already been worked on at least one band |
+| Green | The station is inside the current antenna sector and is relevant as a directional candidate |
+| Orange | Currently selected station |
+
+The selected state has the highest display priority, followed by the directional warning and Worked state. A selected station therefore remains orange even if it also meets one of the other conditions.
+
+At lower zoom levels, nearby markers are combined into screen-based clusters. This is a display function and does not merge the underlying chat members. Selected stations and important directional candidates remain individually visible where possible.
+
+Clicking a station marker selects the corresponding active chat member in the main window. KST4Contest scrolls to the entry in the user list, updates the **Further Info** panel and prepares the complete visible callsign as the message target. The chat suffix and category therefore remain relevant even though several variants may share one map marker.
+
+### Antenna sector, connection line and locator grid
+
+The map displays the local station together with the currently configured antenna direction, beamwidth and maximum QRB. These values form the visible antenna sector.
+
+Selecting a remote station adds a connection line between both locations. The Maidenhead overlay provides a geographical reference without requiring the operator to translate every locator mentally.
+
+The map does not know the actual radiation pattern, side lobes or elevation angle of the antenna. The displayed sector is therefore a geometrical representation of the configured horizontal beamwidth, not a complete antenna model.
+
+### Terrain profile
+
+For the selected path, KST4Contest requests terrain elevations from the Open-Meteo elevation service. The active provider uses Copernicus GLO-90 data and requests no more than 100 evenly distributed elevation coordinates for one path.
+
+The terrain resolution and the sampling distance are not the same thing. On a long path, the distance between two requested points can be considerably larger than the nominal resolution of the elevation model. Small terrain features may therefore remain undetected.
+
+The profile combines:
+
+- terrain elevation,
+- the geometrical line between both antennas,
+- Earth-curvature correction using an effective Earth-radius factor of `k = 4/3`,
+- the radio and terrain horizons,
+- the first Fresnel zone,
+- minimum Fresnel clearance,
+- detected Fresnel-zone intrusion, and
+- a rough knife-edge diffraction estimate for relevant obstructions.
+
+The configured **Own antenna height AGL** is added to the terrain elevation at the local station. For the remote station, KST4Contest currently assumes an antenna height of 10 metres above the local terrain.
+
+Moving the mouse over the path profile marks the corresponding position on the map. This makes it easier to identify which hill or terrain section causes a reported obstruction.
+
+### Frequency selection
+
+Fresnel clearance and link-budget results depend on frequency. KST4Contest therefore attempts to derive a usable analysis frequency from recent QRG or band information associated with the selected station.
+
+The value displayed as **Frequency** in the analysis panel is the frequency actually used for the calculation. Check it before interpreting the result. A frequency which merely belongs to a possible band is still only an approximation if the station is expected to operate elsewhere.
+
+This matters particularly on the microwave bands. The Fresnel zone becomes smaller as frequency increases, while free-space path loss and feeder loss increase. A calculation performed for the wrong band may therefore look plausible while describing a different radio path.
+
+### Link budget and propagation assessment
+
+The link-budget estimate uses:
+
+- the configured local and remote transmit powers,
+- the configured antenna gains,
+- estimated feeder losses,
+- free-space path loss, and
+- a rough additional loss derived from the terrain obstruction.
+
+Antenna gains must be entered in dBi. Values specified in dBd must first be converted.
+
+The calculation produces an estimated received power and a bidirectional SSB margin. The result is also made available to the Reachability calculation used by the **Tropo** column and the corresponding filter in the main window.
+
+The map and the table use the same `ReachabilityService` and calculation cache. A result calculated for the map can therefore also become available to the user list without repeating the complete request.
+
+KST4Contest deliberately does not request an online terrain profile for every visible chat member whenever the list changes. That would create unnecessary API traffic and make normal chat processing dependent on a large number of external requests. Select the required station on the map or use **Calc selected** when a current calculation is needed.
+
+### Compact view
+
+The lower analysis panel can be hidden with **Hide path analysis** and restored with **Show path analysis**. Its visibility is stored in the preferences and restored at the next start.
+
+The divider between the map and the analysis panel can be moved to allocate more space to either section. Hiding the analysis panel does not discard the selected station or close the map.
+
+Operation of the map window is described under [Station Map](en-User-Interface#station-map).
+
+Configuration of antenna height, power and gain is described under [Path Analysis and Link Budget](en-Configuration#path-analysis-and-link-budget).
+
+### Limits of the result
+
+The path analysis is an engineering estimate. Among other things, it does not know:
+
+- the actual antenna height and station setup of the remote operator,
+- vegetation, buildings and other clutter which is not represented in the elevation data,
+- the current refractivity profile of the atmosphere,
+- ducting, scattering or reflection conditions,
+- local interference or receiver performance, or
+- whether a detected QRG is still in use.
+
+The **Mechanisms** indication lists propagation mechanisms which may be consistent with the calculated geometry. It does not prove that one of them is currently available.
+
+Aircraft Scatter information is not currently coupled to the terrain-profile calculation. AirScout data and the path analysis may both describe the same remote station, but they remain separate assessments.
+
+OpenStreetMap tiles and the active elevation provider require an Internet connection. Leaflet and the map application itself are bundled locally, and tile requests pass through a local proxy, but this proxy is not a permanent offline map store.
+
+In plain terms: the analysis helps to identify plausible paths, obvious obstructions and incorrect assumptions. It does not replace propagation experience or a real signal.
+
+--- 
 
 ## Bounded Message Stores (from v1.41)
 
