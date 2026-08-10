@@ -50,15 +50,15 @@ Download, unterstützte Betriebssysteme und Installationswege sind im Kapitel [I
 
 ## Versionsstand dieses Handbuchs
 
-Dieses Handbuch beschreibt die stabile Version **v1.41.1**.
+Dieses Handbuch unterscheidet zwischen der veröffentlichten Stable-Version und dem aktuellen Entwicklungsstand.
 
-Funktionen oder Änderungen, die nur im aktuellen Entwicklungsstand enthalten sind, werden ausdrücklich als **Nightly / v1.42** gekennzeichnet. Fehlt eine solche Kennzeichnung, bezieht sich die Beschreibung auf die stabile Version.
+Die derzeit veröffentlichte Stable-Version ist **v1.41.1**. Funktionen oder Änderungen, die erst im Entwicklungsstand für v1.42 enthalten sind, werden ausdrücklich als **Nightly / v1.42** gekennzeichnet. Fehlt eine solche Kennzeichnung, bezieht sich die Beschreibung auf die Stable-Version.
 
-- [Aktuelle stabile Version herunterladen](https://github.com/praktimarc/kst4contest/releases/latest)
-- [Nightly-Builds und automatisierte Builds](https://github.com/praktimarc/kst4contest/actions)
-- [Versionsgeschichte](de-Changelog)
+- [Stable, Beta und Nightly herunterladen](https://kst4contest.hamradioonline.de/download/)
+- [Veröffentlichte GitHub Releases](https://github.com/praktimarc/kst4contest/releases)
+- [Versionsgeschichte und aktueller Nightly-Stand](de-Changelog)
 
-Für einen Contest ist grundsätzlich die stabile Version zu empfehlen. Nightly-Builds enthalten neuere Korrekturen und Funktionen, können sich aber zwischen zwei Builds verändern. Sie sind sinnvoll, wenn eine bestimmte Änderung getestet werden soll – weniger sinnvoll ist der erste Versuch zehn Minuten vor Contestbeginn.
+Für einen Contest ist grundsätzlich die Stable-Version zu empfehlen. Nightly-Builds enthalten neuere Korrekturen und Funktionen, können sich aber zwischen zwei Builds verändern. Sie sind sinnvoll, wenn eine konkrete Änderung getestet werden soll. Der erste Versuch zehn Minuten vor Contestbeginn ist dagegen meistens eine recht effiziente Methode, gleichzeitig Software und Operator zu testen.
 
 ---
 
@@ -80,7 +80,7 @@ Für einen Contest ist grundsätzlich die stabile Version zu empfehlen. Nightly-
 
 ## Kontakt und Support
 
-- **Download:** [Aktuelle stabile Version](https://github.com/praktimarc/kst4contest/releases/latest)
+- **Download:** [Stable, Beta und Nightly](https://kst4contest.hamradioonline.de/download/)
 - **Quellcode:** [praktimarc/kst4contest](https://github.com/praktimarc/kst4contest)
 - **Fehler und Funktionswünsche:** [GitHub Issues](https://github.com/praktimarc/kst4contest/issues)
 - **E-Mail:** praktimarc+kst4contest@gmail.com  
@@ -112,6 +112,17 @@ In Datei- und Verzeichnisnamen wird teilweise noch der technische Name `praktiKS
 
 ## Danksagungen
 
-KST4Contest wurde durch Rückmeldungen aus dem praktischen Contest-Betrieb wesentlich verbessert.
+KST4Contest wurde durch Rückmeldungen aus dem praktischen Contest-Betrieb wesentlich verbessert. Viele Funktionen entstanden nicht aus einer theoretischen Anforderungsliste, sondern aus Situationen, in denen während eines Contests eine Information fehlte, zu spät sichtbar wurde oder schlicht an der falschen Stelle stand.
 
-Besonderer Dank gilt Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), Viliam Petrik (OM0AAO, Idee zum DX-Cluster), Konrad Neitzel (DC9DJ, Projektstruktur), Andreas (DO5ALF, Webmaster von funkerportal.de), Franz van Velzen (PE0WGA, Tester), DN9APW als neuem Entwickler im Team und Master über die CI/CD pipelines sowie allen weiteren Testern und Ideengebern.
+Besonderer Dank gilt:
+
+- Gianluca Costantino (IU3OAR),
+- Alessandro Murador (IZ3VTH),
+- Reczetár István (HA1FV),
+- Viliam Petrik (OM0AAO) für die Idee zum integrierten DX-Cluster,
+- Konrad Neitzel (DC9DJ) für Unterstützung bei der Projektstruktur,
+- Andreas (DO5ALF), Webmaster von funkerportal.de,
+- Franz van Velzen (PE0WGA) für Tests sowie
+- DN9APW (Philipp Wagner), der seit Mai 2025 an der Entwicklung und den CI/CD-Pipelines mitarbeitet.
+
+Ebenso wichtig sind die Fehlermeldungen, Tests und konkreten Betriebserfahrungen aller weiteren Nutzer. Eine genaue Beschreibung eines reproduzierbaren Problems hilft dem Projekt meistens mehr als ein allgemeines „läuft gut“ – auch wenn Letzteres natürlich angenehmer zu lesen ist.

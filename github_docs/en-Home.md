@@ -50,15 +50,15 @@ Downloads, supported operating systems and installation methods are described in
 
 ## Manual version
 
-This manual describes the stable release **v1.41.1**.
+This manual describes the current stable release of KST4Contest.
 
-Features or changes that are only available in the current development version are explicitly marked as **Nightly / v1.42**. If no such label is present, the description refers to the stable release.
+Functions that are only available in a Beta or Nightly build are marked accordingly. If no such note is present, the description applies to the stable release.
 
-- [Download the current stable release](https://github.com/praktimarc/kst4contest/releases/latest)
-- [Nightly and automated builds](https://github.com/praktimarc/kst4contest/actions)
+- [Download Stable, Beta and Nightly builds](https://kst4contest.hamradioonline.de/download/)
+- [GitHub releases](https://github.com/praktimarc/kst4contest/releases)
 - [Version history](en-Changelog)
 
-For contest operation, the stable release is generally the appropriate choice. Nightly builds contain newer fixes and features, but may change between builds. They are useful when a particular change needs testing. Trying one for the first time ten minutes before a contest is less useful.
+The stable release is normally the appropriate choice for contest operation. Beta and Nightly builds contain newer fixes and functions, but may still change between builds. They are intended for testing specific changes. Ten minutes before a contest is usually not the ideal time for a first test.
 
 ---
 
@@ -80,7 +80,7 @@ For contest operation, the stable release is generally the appropriate choice. N
 
 ## Contact and support
 
-- **Download:** [Current stable release](https://github.com/praktimarc/kst4contest/releases/latest)
+- **Download:** [Stable, Beta and Nightly builds](https://kst4contest.hamradioonline.de/download/)
 - **Source code:** [praktimarc/kst4contest](https://github.com/praktimarc/kst4contest)
 - **Bug reports and feature requests:** [GitHub Issues](https://github.com/praktimarc/kst4contest/issues)
 - **Email:** praktimarc+kst4contest@gmail.com  
@@ -112,6 +112,18 @@ Some file and directory names still use the technical name `praktiKST`. They ref
 
 ## Acknowledgements
 
-KST4Contest has benefited considerably from feedback gathered during actual contest operation.
+Many functions and corrections in KST4Contest originate from observations made during actual contest operation. Reports that describe not only what happened, but also under which conditions it happened, are particularly useful.
 
-Special thanks go to Gianluca Costantino (IU3OAR), Alessandro Murador (IZ3VTH), Reczetár István (HA1FV), Viliam Petrik (OM0AAO, DX Cluster idea), Konrad Neitzel (DC9DJ, project structure), Andreas (DO5ALF, webmaster of funkerportal.de), Franz van Velzen (PE0WGA, testing), and all other testers and contributors.
+Special thanks go to:
+
+- Gianluca Costantino (IU3OAR)
+- Alessandro Murador (IZ3VTH)
+- Reczetár István (HA1FV)
+- Viliam Petrik (OM0AAO) for the DX Cluster idea
+- Konrad Neitzel (DC9DJ) for his work on the project structure
+- Andreas (DO5ALF), webmaster of funkerportal.de
+- Franz van Velzen (PE0WGA) for testing
+- Philipp (DN9APW) for further development of KST4Contest and the CI/CD infrastructure
+- all other testers and contributors who supplied reproducible reports, ideas and corrections
+
+Not every suggestion can be implemented unchanged. Nevertheless, reports from real operation remain an important basis for deciding which problems should be solved first.

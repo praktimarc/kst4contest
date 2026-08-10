@@ -13,6 +13,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import kst4contest.view.GuiUtils;
 import netscape.javascript.JSObject;
 import kst4contest.ApplicationConstants;
 import kst4contest.locatorUtils.Location;
@@ -179,6 +180,8 @@ public final class StationMapView {
 
     public StationMapView(ChatPreferences chatPreferences) {
         this.chatPreferences = Objects.requireNonNull(chatPreferences, "chatPreferences");
+        GuiUtils.applyApplicationIcon(stage);
+
         try {
             tileProxyServer = new TileProxyServer();
         } catch (IOException e) {

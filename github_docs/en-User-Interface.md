@@ -257,9 +257,14 @@ If a message is too long for its table cell, moving the mouse over the cell disp
 
 ## Window Sizes and Dividers
 
-From **v1.21**, clicking **"Save Settings"** also saves window sizes and divider positions of all panels in the configuration file, which are restored on the next start.
+When **Save Settings** is clicked, KST4Contest stores the programme-window sizes and the positions of the relevant dividers in the configuration file. These values are reused at the next start.
 
-If you encounter display problems: delete the configuration file → KST4Contest creates new default values.
+The main window is additionally checked against the visible area of the primary screen during startup. If the stored size is too large, KST4Contest reduces and moves the window so that it remains accessible. The complete process is described under [Screen-Aware Main Window Sizing](en-Features#screen-aware-main-window-sizing-from-v141).
+
+The other programme windows do not currently use this additional size restriction. If, for example, the separate monitor window appears too large after moving to a smaller screen, its size must be corrected manually and stored again using **Save Settings**.
+
+If the layout has become inconvenient, first move the dividers back to usable positions and save the settings again. Deleting the configuration file also resets the UI values, but it removes the other stored programme settings as well. It should therefore be used only when the interface cannot be restored in another way.
+
 
 ---
 

@@ -1,18 +1,90 @@
 ---
 layout: base.njk
 title: KST4Contest Manual
-description: Online manual for KST4Contest, the contest-optimized ON4KST chat client.
+description: Technical user manual for KST4Contest, covering installation, station setup, ON4KST operation, AirScout, logger interfaces, path analysis and known limitations.
 ---
 
 <section class="hero">
+  <span class="eyebrow">Documentation</span>
   <h1>KST4Contest Manual</h1>
+
   <p>
-    User documentation for installation, configuration, features,
-    AirScout integration, log synchronization and contest workflow.
+    The manual describes the controls and interfaces of KST4Contest as well as
+    the reasoning behind functions that derive information from chat messages,
+    station data or external programs. Where a result depends on incomplete
+    information, the corresponding limitations are described as well.
   </p>
 
   <div class="actions">
-    <a class="button" href="/manual/en/">English Manual</a>
+    <a class="button" href="/manual/en/">English manual</a>
     <a class="button secondary" href="/manual/de/">Deutsches Handbuch</a>
+    <a class="button ghost" href="/download/">Download KST4Contest</a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <span class="eyebrow">Where to start</span>
+    <h2>Select the section that matches your current task</h2>
+  </div>
+
+  <div class="grid">
+    <article class="card">
+      <h3>Install KST4Contest</h3>
+      <p>
+        Select a Stable, Beta or Nightly build and install the application on
+        Windows, Linux or macOS.
+      </p>
+      <div class="actions">
+        <a class="button" href="/download/">Downloads</a>
+        <a class="button secondary" href="/manual/en/installation/">English instructions</a>
+        <a class="button ghost" href="/manual/de/installation/">Deutsche Anleitung</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Configure a station</h3>
+      <p>
+        Set the callsign, locator, available bands, chat categories and the
+        interfaces used in the station setup.
+      </p>
+      <div class="actions">
+        <a class="button secondary" href="/manual/en/configuration/">English configuration</a>
+        <a class="button ghost" href="/manual/de/konfiguration/">Deutsche Konfiguration</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Understand functions and limitations</h3>
+      <p>
+        Read how KST4Contest derives band information, priorities, reachability
+        and other operating aids, and where manual verification is still
+        required.
+      </p>
+      <div class="actions">
+        <a class="button secondary" href="/manual/en/features/">English functions</a>
+        <a class="button ghost" href="/manual/de/funktionen/">Deutsche Funktionen</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="cta-panel">
+    <div>
+      <span class="eyebrow">Choosing a build</span>
+      <h2>Stable for operation, Beta or Nightly for testing</h2>
+      <p>
+        The Stable build is normally the appropriate choice for contest
+        operation. Beta and Nightly builds are useful when a specific correction
+        or new function needs to be tested. Test them before the contest rather
+        than during its first minutes.
+      </p>
+    </div>
+
+    <div class="actions">
+      <a class="button" href="/download/">Open downloads</a>
+      <a class="button secondary" href="/roadmap/">View roadmap</a>
+    </div>
   </div>
 </section>

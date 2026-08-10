@@ -1,6 +1,7 @@
 package kst4contest.view;
 import kst4contest.utils.VersionUtils;
 
+import javafx.scene.image.Image;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -4439,6 +4440,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			TextField txt_chatMessageUserInput
 	) {
 		Stage stage = new Stage();
+		GuiUtils.applyApplicationIcon(stage);
+
 		stage.setTitle("Top priority candidates");
 
 		ListView<kst4contest.controller.ScoreService.TopCandidate> listView = new ListView<>();
@@ -6376,7 +6379,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	@Override
 	public void start(Stage primaryStage) throws InterruptedException, IOException, URISyntaxException {
 
-
+		GuiUtils.applyApplicationIcon(primaryStage);
 
 		VBox pnl_inputAndSendButtons = new VBox(); //gets the sendtext field, send button and the timeline
 		timelineView = new TimelineView();
@@ -8505,6 +8508,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 * Window Cluster & qso of the other
 		 */
 		clusterAndQSOMonStage = new Stage();
+		GuiUtils.applyApplicationIcon(clusterAndQSOMonStage);
+
 //		clusterAndQSOMonStage.initStyle(StageStyle.UTILITY);
 		clusterAndQSOMonStage.setTitle("Cluster & QSO of the other");
 		SplitPane pnl_directedMSGWin = new SplitPane();
@@ -8558,6 +8563,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 * Window updates
 		 */
 		stage_updateStage = new Stage();
+		GuiUtils.applyApplicationIcon(stage_updateStage);
 
 		stage_updateStage.setTitle("Update information");
 
@@ -8695,6 +8701,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 *
 		 ****************************************************************************/
 		settingsStage = new Stage();
+		GuiUtils.applyApplicationIcon(settingsStage);
+
 		settingsStage.setTitle("Change Client Settings");
 
 		BorderPane optionsPanel = new BorderPane();

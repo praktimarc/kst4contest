@@ -1,13 +1,65 @@
 package kst4contest.view;
 
 import kst4contest.controller.ChatController;
-import kst4contest.model.ChatMember;
-
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javafx.scene.image.Image;
+import javafx.stage.Stage;
+
+import java.net.URL;
+
 public class GuiUtils {
+
+	private static final String APPLICATION_ICON_RESOURCE = "/icons/kst4contest.png";
+
+	private static Image applicationIcon;
+
+	/**
+	 * Applies the common KST4Contest application icon to a JavaFX stage.
+	 *
+	 * <p>The icon is loaded only once and reused for all application windows.
+	 * A missing icon resource must never prevent a window from opening.</p>
+	 *
+	 * @param stage stage that should receive the application icon
+	 */
+	public static void applyApplicationIcon(Stage stage) {
+
+		if (stage == null) {
+			return;
+		}
+
+		Image icon = getApplicationIcon();
+
+		if (icon != null && !stage.getIcons().contains(icon)) {
+			stage.getIcons().add(icon);
+		}
+	}
+
+	/**
+	 * Loads and caches the common KST4Contest application icon.
+	 *
+	 * @return application icon or null if the resource is unavailable
+	 */
+	private static Image getApplicationIcon() {
+
+		if (applicationIcon != null) {
+			return applicationIcon;
+		}
+
+		URL iconUrl = GuiUtils.class.getResource(APPLICATION_ICON_RESOURCE);
+
+		if (iconUrl == null) {
+			System.err.println(
+					"Application icon resource not found: "
+							+ APPLICATION_ICON_RESOURCE
+			);
+			return null;
+		}
+
+		applicationIcon = new Image(iconUrl.toExternalForm());
+		return applicationIcon;
+	}
 
 	private static final String PTRN_CALLSIGNSYNTAX = "^(?:[A-Z]{1,2}[0-9]|[0-9][A-Z])[0-9A-Z]{1,3}$";
 	/**

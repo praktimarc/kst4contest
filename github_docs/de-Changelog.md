@@ -4,25 +4,168 @@
 
 Versionsverlauf von KST4Contest / PraktiKST.
 
+Die veröffentlichten Stable-Versionen und ihre Programmpakete stehen unter [GitHub Releases](https://github.com/praktimarc/kst4contest/releases). Zusätzlich enthält diese Seite die Änderungen des aktuellen Entwicklungsstands, soweit sie bereits implementiert und geprüft wurden.
+
 ---
 
-letzter Changelog bitte aus GitHub entnehmen. Der bisherige Changelog
+## v1.42 – Nightly / in Entwicklung
 
-## v1.42 (2026-08)
-- **QRG-Erkennung präzisiert**: Vollständige und relative Frequenzangaben werden weiterhin erkannt. Nackte dreistellige Zahlen werden nur noch mit erkennbarem Frequenzkontext ausgewertet, damit Signalrapporte, Bandangaben und andere Zahlen keine falsche QRG erzeugen.
-- **Stationsbezogener Bandkontext**: Bei relativen Frequenzen verwendet KST4Contest zuerst einen höchstens 30 Minuten alten Bandkontext desselben Absenders. Erst danach greift das globale Fallback-Band.
-- **Fallback-Band als Dropdown**: Das globale Fallback kann nur noch aus den tatsächlich unterstützten Bändern ausgewählt werden und gilt für die gesamte QRG-Erkennung, nicht nur für DX-Cluster-Spots.
-- **QRG-Anzeige vereinheitlicht**: Frequenzen werden in der Benutzerliste und den Nachrichtentabellen mit mindestens drei Nachkommastellen dargestellt.
+> Stand dieses Abschnitts: 10. August 2026.  
+> v1.42 ist noch kein veröffentlichtes Stable-Release. Bis zur Freigabe können weitere Änderungen hinzukommen.
 
-## v1.41
-**Stationskarte, Performance, Reaktionsfähiges UI**
+v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, Worked-Status, NOT-QRV-Markierungen, Rufzeichensuffixe und Frequenzen werden dadurch konsistenter in der Benutzerliste, der Stationskarte, der Prioritätsberechnung und den externen Schnittstellen verwendet.
 
-**Neu:**
-- **Stationskarte**: Interaktive OpenStreetMap-Karte zeigt die geografische Position aller aktiven Chatmember. Enthält Stationsmarker, Antennen-Kegel, Verbindungslinie zur ausgewählten Station, Maidenhead-Raster-Overlay und ein Wegprofil-Diagramm mit Geländehöhen-Analyse (Fresnel-Zonen, Horizonterkennung). Geländedaten aus Copernicus GLO-30, Open-Meteo API oder Offline-DEM-Import. Aircraft-Scatter-Weganalyse integriert. Funktioniert in AppImage und Flatpak ohne externe CDN-Verbindung (lokaler Tile-Proxy, eingebettetes Leaflet.js).
+### Neu
 
-**Geändert:**
-- **Nachrichten-Tabellen-Limit auf 30.000 erhöht**: Chat- und Nachrichtentabellen sind auf 30.000 Einträge begrenzt. Ältere Nachrichten werden automatisch verworfen, was die Performance bei mehrtägigem Contest-Betrieb stabil hält.
-- **Bildschirmgerechte Fenstergröße**: Beim Start wird das Hauptfenster auf den aktuellen Bildschirm angepasst. Wenn KST4Contest zuletzt auf einem größeren Monitor betrieben wurde, wird das Fenster automatisch verkleinert. Das UI-Layout ist kompakter und reaktionsfähiger auf kleineren Bildschirmen.
+- **Gemeinsame Herleitung verfügbarer Bänder:** Ein zentraler `BandOpportunityResolver` wertet aktuelle QRGs, Bandangaben im Namensfeld, aktive Rufzeichenvarianten, Worked-Informationen und NOT-QRV-Markierungen gemeinsam aus. Benutzerliste, **New bands**, Band-Upgrade-Hinweis, Priority Score, Stationskarte und automatische Bandauswahl verwenden damit dieselbe Grundlage.
+
+- **Erweiterte Bandanzeige:** Die Bandspalten unterscheiden jetzt:
+  - `X` für auf diesem Band gearbeitet,
+  - `a` für ein angebotenes, noch nicht gearbeitetes Band einer insgesamt neuen Station,
+  - `B+` für ein angebotenes, noch nicht gearbeitetes Band einer bereits auf einem anderen Band gearbeiteten Station und
+  - `o` für ein auf diesem Band bereits gearbeitetes Locator-Großfeld.
+
+  Die Anzeigen können kombiniert werden, beispielsweise als `ao` oder `B+o`. Die zusätzlichen Kennzeichnungen `a` und `o` lassen sich in den GUI-Einstellungen separat ausblenden.
+
+- **Unterstützung für 50 und 70 MHz:** Beide Bänder stehen in der Stationskonfiguration, den Worked- und NOT-QRV-Funktionen, der Benutzerliste, den Filtern, der internen Datenbank, der UCXLog-Auswertung und dem Win-Test-Listener zur Verfügung. Bereits gespeicherte Datenbanken werden um die benötigten Spalten ergänzt.
+
+- **Globale Nachrichtentabs:** Öffentliche Nachrichten, ON4KST-DX-Cluster-Meldungen und gerichtete Nachrichten zwischen anderen Stationen können direkt im Hauptfenster angezeigt werden. Das bisherige separate Monitorfenster bleibt zusätzlich verfügbar und verwendet dieselben Nachrichtenspeicher.
+
+- **Manuelle QTF-Eingabe:** Die aktuelle Antennenrichtung kann auch ohne PSTRotator direkt in KST4Contest geändert werden.
+
+- **Filter zurücksetzen:** Ein eigener Reset-Button entfernt die aktiven Filterprädikate der Benutzerliste zuverlässig.
+
+- **Kartencluster:** Räumlich dicht beieinanderliegende Stationen werden bei niedrigen Zoomstufen zusammengefasst. Die ausgewählte Station und relevante Richtungsgelegenheiten bleiben einzeln sichtbar.
+
+- **Ausblendbare Streckenanalyse:** Geländeprofil und Analysebereich der Stationskarte können vollständig ausgeblendet werden. Die Auswahl wird gespeichert und beim nächsten Programmstart wiederhergestellt.
+
+### Geändert
+
+- **QRG-Erkennung präzisiert:** Vollständige und relative Frequenzangaben werden weiterhin erkannt. Nackte dreistellige Zahlen gelten nur noch bei erkennbarem Frequenzkontext als QRG. Signalrapporte, Bandangaben und andere Zahlen erzeugen dadurch seltener falsche Frequenzen.
+
+- **Stationsbezogener Frequenzkontext:** Bei relativen QRGs verwendet KST4Contest zuerst einen höchstens 30 Minuten alten Bandkontext derselben Station. Erst wenn dieser fehlt, wird das global konfigurierte Fallback-Band verwendet.
+
+- **Fallback-Band als Dropdown:** Das globale Fallback kann nur noch aus unterstützten Bandwerten ausgewählt werden. Es betrifft die gesamte QRG-Erkennung und nicht nur DX-Cluster-Spots.
+
+- **Einheitliche QRG-Darstellung:** Frequenzen werden in Benutzer- und Nachrichtentabellen mit mindestens drei Nachkommastellen dargestellt.
+
+- **Bandabhängige AirScout- und Streckenberechnung:** KST4Contest leitet für jede Station eine möglichst realistische Frequenz aus der aktuellen QRG und den bekannten Bandinformationen ab. AirScout erhält kanonische Bandwerte. Die frühere Zwischenlösung mit 430 MHz wurde durch 432 MHz ersetzt.
+
+- **Gemeinsame Frequenzherleitung:** AirScout, **Calc selected** und die Pfadanalyse der Stationskarte verwenden denselben `PropagationFrequencyResolver`. Ein im Reachability-Dropdown ausdrücklich gewähltes Band wird bei manuellen Berechnungen berücksichtigt.
+
+- **Rufzeichenvarianten getrennt verarbeitet:** Aktive Chatmember werden durch das vollständige Rufzeichen einschließlich Suffix und die Chat-Kategorie unterschieden. `DN9APW`, `DN9APW-2` oder vergleichbare Logins bleiben dadurch getrennte Nachrichtenziele.
+
+- **Gemeinsame Basisinformationen:** Worked-Flags, NOT-QRV-Informationen und der Priority Score werden weiterhin für Varianten desselben Basisrufzeichens gemeinsam ausgewertet. Getrennte Nachrichtenziele führen damit nicht zu widersprüchlichen Worked-Daten.
+
+- **Priority Score korrigiert:** Stationen ohne gemeinsames verfügbares Band oder mit übersteuernder NOT-QRV-Markierung werden nicht mehr als Prioritätskandidaten angeboten. Bandgelegenheiten bereits gearbeiteter Stationen können einen eigenen Priority Boost erhalten.
+
+- **Sked-Erstellung erweitert:** Das Band wird aus den lokal aktivierten Bändern gewählt. Für die Win-Test-Übergabe wird `SSB` oder `CW` ausdrücklich ausgewählt, statt den Mode unzuverlässig aus dem Band abzuleiten.
+
+- **Win-Test-Sked-Übergabe präzisiert:** Die QRG muss zum gewählten Band passen. Sichtbare KST-Suffixe werden für das Logziel entfernt, portable Bestandteile bleiben erhalten und die Zeitangaben der `ADDSKED`-Pakete werden korrekt erzeugt. Ein Fehler bei der Übergabe entfernt den internen KST4Contest-Sked nicht.
+
+- **Exakte Sked-Ziele:** Timeline und automatische Erinnerungen verwenden das vollständige sichtbare KST-Rufzeichen. Ein Sked für `DN9APW-2` wird nicht versehentlich an eine andere Variante desselben Basisrufzeichens gesendet.
+
+- **Beacon und Autoantwort überarbeitet:** Beide Chat-Kategorien verwenden einen gemeinsamen Timer, behalten aber getrennte Aktivierungsschalter und Texte. Das zulässige Mindestintervall beträgt zwei Minuten; Nachrichtentexte sind auf 120 Zeichen begrenzt. Die gespeicherte Beacon-Aktivierung wird beim Start aus der Konfiguration übernommen.
+
+- **Variablen zentral aufgelöst:** Nachrichtenvariablen für Beacons, Shortcuts, Snippets und andere automatisch erzeugte Texte werden über einen gemeinsamen Resolver verarbeitet.
+
+- **Nachrichtentabellen verbessert:** Abgeschnittene Nachrichtentexte erhalten einen Tooltip mit dem vollständigen Inhalt. Erkannte Webadressen können im Systembrowser geöffnet werden.
+
+- **Kompaktere Filterleiste:** Die Filter bleiben bei normaler Breite in einer kompakten Anordnung und werden erst dann umgebrochen, wenn der tatsächlich verfügbare Platz nicht mehr ausreicht. Der mittlere Divider kann dadurch weiter verschoben werden.
+
+- **DXLog-Gesamtlog übernommen:** Der UCXLog-kompatible UDP-Listener verarbeitet neben `contactinfo` auch `contactreplace`. Dadurch kann ein von DXLog.net als vollständiges Log ausgesendeter Datenbestand eingelesen werden.
+
+- **Versionserkennung verbessert:** Versionsnummern werden semantisch verglichen, damit beispielsweise Patch-Versionen und Nightly-Stände nicht mehr durch eine einfache Fließkommazahl falsch eingeordnet werden.
+
+### Behoben
+
+- **Langzeitfehler der Stationsauswahl:** Die vom Message-Thread verwalteten Chatmember wurden von der JavaFX-Ansicht entkoppelt. Gleichzeitige Änderungen der Daten und Tabellenansicht führen dadurch nicht mehr nach längerer Laufzeit zu fehlerhaften Auswahlmodellen oder Concurrent-Modification-Problemen.
+
+- **Keine Phantom-Chatmember durch UM3:** Historische oder zusätzliche Servermeldungen erzeugen keine Benutzerlisteneinträge für Stationen, die nicht tatsächlich im Chat angemeldet sind.
+
+- **Nachrichten an Rufzeichen mit Suffix:** Mehrere gleichzeitig angemeldete Varianten desselben Basisrufzeichens überschreiben sich nicht mehr gegenseitig. Damit wurde [Issue #73](https://github.com/praktimarc/kst4contest/issues/73) behoben.
+
+- **DX-Cluster-Locatoren:** Sender und gemeldete Station erhalten nicht mehr versehentlich denselben Locator. Damit wurde [Issue #48](https://github.com/praktimarc/kst4contest/issues/48) behoben.
+
+- **Worked-Anzeige in „QSO of the other“:** Die Worked-Spalten verwenden wieder die jeweils richtige sendende beziehungsweise empfangende Station.
+
+- **Fehlende SECONDAP-Daten:** Eine nicht vorhandene zweite Aircraft-Scatter-Gelegenheit führt beim Bearbeiten der Anzeige nicht mehr zu einer ungültigen Textauswahl und JavaFX-Exception.
+
+- **Historische Rufzeichen:** Das Hervorheben oder Anklicken eines Rufzeichens, das nicht mehr in der aktuellen Benutzerliste vorhanden ist, läuft nicht mehr in eine Exception.
+
+- **Win-Test-Sked-Zeit und Rufzeichen:** Zeitstempel, Band-QRG-Zuordnung sowie die Behandlung von KST-Suffixen und portablen Rufzeichen wurden korrigiert.
+
+- **Filter-Reset:** Alle Filterprädikate werden tatsächlich entfernt; der sichtbare Zustand des Buttons entspricht wieder dem wirksamen Filterzustand.
+
+### Dokumentation und Auslieferung
+
+- Das deutsche und englische Handbuch wurde systematisch mit dem Quellcode abgeglichen, erweitert und mit aktuellen Screenshots versehen. Die Dokumentation erklärt nicht nur die Bedienelemente, sondern auch Herleitung, Datenquellen und Grenzen der Funktionen.
+
+- Für Arch Linux stehen `kst4contest-bin`, `kst4contest` und `kst4contest-git` im AUR zur Verfügung.
+
+- Die Downloadseite unterscheidet Stable, Beta und Nightly und bietet die jeweils tatsächlich vorhandenen Pakete für Windows, Linux und macOS an.
+
+- Nightly-Pakete werden automatisiert aus dem aktuellen `main`-Branch gebaut. Stable- und Beta-Releases verwenden reproduzierbare Paketnamen für die unterstützten Plattformen.
+
+### Bekannte Grenzen
+
+- Die aktive Geländedatenquelle verwendet Open-Meteo mit Copernicus-GLO-90-Daten und höchstens 100 Höhenpunkten pro Strecke.
+
+- Der atmosphärische K-Faktor ist derzeit fest auf `4/3` eingestellt.
+
+- Für die Gegenstation wird eine Antennenhöhe von 10 Metern über Grund angenommen.
+
+- Aircraft-Scatter-Daten aus AirScout und die Geländeanalyse der Stationskarte sind weiterhin getrennte Bewertungen.
+
+- Eine genauere Konfiguration von Stationshöhe, Frequenz und K-Faktor wird in [Issue #74](https://github.com/praktimarc/kst4contest/issues/74) weiterverfolgt.
+
+---
+
+## v1.41.1 (2026-07-08)
+
+**Hotfix für Texteingabe und Fokusverhalten**
+
+### Behoben
+
+- Das Nachrichteneingabefeld wurde nach einiger Zeit beziehungsweise bei bestimmten UI-Aktualisierungen unerwartet geleert.
+- Beim Filtern oder Auswählen einer Station wurde der Eingabefokus unbeabsichtigt wieder in das Sendefeld verschoben.
+
+Die korrigierte Version ist als [Release v1.41.1](https://github.com/praktimarc/kst4contest/releases/tag/v1.41.1) verfügbar.
+
+---
+
+
+## v1.41.0 (2026-07-01)
+
+**Stationskarte, begrenzte Nachrichtenspeicher und bildschirmgerechtes Hauptfenster**
+
+### Neu
+
+- **Stationskarte:** Eine interaktive OpenStreetMap-Karte stellt aktive Chatmember mit brauchbarem Locator geografisch dar.
+
+- **Antennensektor und Verbindungslinie:** Die Karte zeigt den aktuellen eigenen QTF, den konfigurierten Antennen-Öffnungswinkel, das maximale QRB und die Verbindung zur ausgewählten Station.
+
+- **Maidenhead-Raster:** Ein an die Zoomstufe angepasstes Locator-Raster erleichtert die geografische Einordnung.
+
+- **Geländeprofil:** Für ausgewählte Stationen kann ein Höhenprofil über die Open-Meteo Elevation API berechnet werden. Die aktive Datenquelle verwendet Copernicus GLO-90 und höchstens 100 gleichmäßig verteilte Abfragepunkte.
+
+- **Geometrische Streckenanalyse:** Die Auswertung berücksichtigt Sichtlinie, Erdkrümmung mit `k = 4/3`, Radio- und Geländehorizont, erste Fresnel-Zone und eine grobe Hindernisabschätzung.
+
+- **Lokaler Karten-Proxy:** Leaflet wird mit der Anwendung ausgeliefert. Kartenkacheln werden über einen lokalen Proxy geladen, damit keine externe JavaScript-Bibliothek zur Laufzeit nachgeladen werden muss. Für die OpenStreetMap-Kacheln und die Online-Höhendaten ist weiterhin eine Internetverbindung erforderlich.
+
+### Geändert
+
+- **Begrenzte Nachrichtenspeicher:** Die globale Chatnachrichtenliste wird oberhalb von 30.000 Einträgen auf 25.000 verkleinert. Der getrennte DX-Cluster-Speicher wird oberhalb von 10.000 Einträgen auf 8.000 verkleinert.
+
+- **Bildschirmgerechte Startgröße:** Das Hauptfenster wird beim Start gegen den sichtbaren Bereich des primären Bildschirms geprüft und bei Bedarf verkleinert oder verschoben.
+
+- **Kompaktere Benutzeroberfläche:** Mehrere Bereiche wurden für kleinere Bildschirme und verstellbare Divider angepasst.
+
+### Einordnung der Kartenfunktion
+
+Die Stationskarte und AirScout können dieselbe Gegenstation betreffen, führen aber getrennte Berechnungen durch. Aircraft-Scatter-Flugzeuge werden nicht in das Geländeprofil eingerechnet.
+
+Im Quellcode vorhandene Klassen für Copernicus GLO-30, Offline-DEM-Import und weitere Terrain-Provider waren in v1.41 nicht Bestandteil der aktiv verwendeten Berechnungskette. Die tatsächlich verwendete Online-Höhenquelle ist Open-Meteo auf Basis von Copernicus GLO-90.
 
 ---
 

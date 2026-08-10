@@ -704,27 +704,80 @@ In plain terms: the analysis helps to identify plausible paths, obvious obstruct
 
 ## Bounded Message Stores (from v1.41)
 
-KST4Contest keeps the received chat and DX cluster messages in two separate bounded memory stores. The limits apply to the stored messages, not independently to every table displaying them.
+During a long contest, KST4Contest may receive tens of thousands of chat and DX cluster messages. If these lists were allowed to grow without limit for the complete runtime, memory consumption would not be the only problem. Filtering, sorting and updating the tables built on top of them would also become increasingly expensive.
 
-| Message store | Maximum size | Size after automatic cleanup |
+KST4Contest therefore uses two separate bounded message stores:
+
+| Message store | Clean-up starts above | Size after clean-up |
 |---|---:|---:|
-| Chat messages | 30,000 | 25,000 |
-| DX cluster messages | 10,000 | 8,000 |
+| Chat messages | 30,000 entries | 25,000 entries |
+| DX cluster messages | 10,000 entries | 8,000 entries |
 
-When a store exceeds its maximum size, the oldest entries are removed until the cleanup size is reached. Newer messages remain available and are displayed first.
+New messages are inserted at the beginning of the respective list. When the upper limit is exceeded, KST4Contest removes the oldest entries from the end until the specified target size is reached.
 
-The public-message table, private-message views, station-related message views and **QSO of the other** table are filtered views of the same chat-message store. They do not each retain another 30,000 messages. The DX cluster tab and the separate monitor window likewise share the same DX cluster store.
+### Why are there two thresholds?
 
-These message stores are held in memory and are not written to the internal database. After restarting KST4Contest, they are rebuilt from messages received during the new session.
+The store is not reduced to its maximum size again after every single incoming message. After a clean-up, the chat-message store has room for another 5,000 entries and the DX cluster store for another 2,000.
+
+KST4Contest therefore removes old entries in batches instead of modifying the end of the list again for every subsequent message. The clean-up runs much less frequently as a result.
+
+### Which tables share a store?
+
+The following views are filtered representations of the same global chat-message list:
+
+- **Public messages**,
+- the private-message table,
+- the messages in the **Further Info** panel, and
+- **QSO of the other**.
+
+These tables do not each retain another 30,000 messages. When an old chat message is removed from the shared store, it disappears from all views based on that store at the same time.
+
+The **DXCluster messages** tab and the DX cluster table in the separate monitor window likewise use the same cluster-message store. Opening the additional window neither creates a second message connection nor duplicates the received messages.
+
+The chat and DX cluster stores are independent of each other. Heavy public-chat traffic therefore does not reduce the capacity available for DX cluster messages, and vice versa.
+
+### No permanent history
+
+Both message stores exist in memory only. They are written neither to the internal Worked database nor to another local message file.
+
+After restarting KST4Contest, the tables begin with empty lists and are rebuilt exclusively from newly received messages. These views are working tools for the current session, not a permanent chat archive.
 
 ---
 
-## Screen-Aware Window Sizing (from v1.41)
+## Screen-Aware Main Window Sizing (from v1.41)
 
-On startup, KST4Contest calculates a screen-aware size for the main window:
+KST4Contest stores the most recently used size of the main window. This is useful as long as the application is started on a comparable display the next time. If it was previously used on a larger monitor, however, the stored size may extend beyond the visible area of a smaller screen.
 
-- The stored window size from the previous session is used – but **never larger than the current screen**.
-- If KST4Contest was last used on a larger monitor, the window is automatically scaled down to fit the current display without clipping.
-- The UI layout is more **compact and responsive on smaller screens**, showing the same information in less space.
+KST4Contest therefore checks the stored size against the usable area of the primary screen during startup.
 
-This prevents unusable oversized windows when switching between machines or monitors.
+### How is the startup size determined?
+
+If the stored values are valid, KST4Contest initially uses the last saved height and width. If no usable values are available, the following default size is used:
+
+- 1,234 pixels wide and
+- 768 pixels high.
+
+KST4Contest does not use the complete screen resolution as the available area. It uses the visual bounds reported by JavaFX for the primary screen. Taskbars, docks and similar operating-system areas are already excluded from these bounds.
+
+An additional safety margin of 40 pixels is subtracted. If the stored width or height exceeds the remaining space, only the affected value is reduced.
+
+After the user interface has been built with this content size, KST4Contest checks the complete native operating-system window, including its title bar and borders. The window is reduced or moved into the visible area again if necessary.
+
+This catches two different cases:
+
+1. The stored content area is larger than the current screen.
+2. The content area fits, but the complete native window still extends beyond the visible area because of its borders or position.
+
+### What happens to the layout?
+
+The complete interface is not scaled proportionally. Instead, the main window receives less space and the UI areas designed for this situation react to the available width.
+
+The filter bar remains compact at normal window sizes. Its controls wrap into additional rows only when their actual required width no longer fits. The dividers can still be used to distribute the available space between the message and station areas.
+
+### Limits of the automatic correction
+
+The check always uses the **primary screen**. It does not restore the previous position on a particular secondary monitor.
+
+The automatic size restriction currently applies to the main window only. The settings window, the separate cluster and QSO monitor window and other auxiliary windows continue to use their stored sizes without the same additional check against the primary screen.
+
+In plain terms: the protection mainly prevents the central main window from becoming unusable after moving to a smaller display. It is not a complete window-position manager for a changing multi-monitor setup.

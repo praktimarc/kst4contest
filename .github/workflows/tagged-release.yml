@@ -46,7 +46,16 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          jpackage --type app-image --name praktiKST --input target/dist-libs --main-jar app.jar --main-class kst4contest.view.Kst4ContestApplication --module-path target/dist-libs --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec --dest dist
+          jpackage `
+            --type app-image `
+            --name praktiKST `
+            --icon packaging/icons/kst4contest.ico `
+            --input target/dist-libs `
+            --main-jar app.jar `
+            --main-class kst4contest.view.Kst4ContestApplication `
+            --module-path target/dist-libs `
+            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec `
+            --dest dist
 
       - name: Create Windows ZIP
         shell: pwsh
@@ -90,6 +99,7 @@ jobs:
           jpackage \
             --type app-image \
             --name KST4Contest \
+            --icon src/main/resources/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -168,6 +178,7 @@ jobs:
           jpackage \
             --type deb \
             --name KST4Contest \
+            --icon src/main/resources/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -220,6 +231,7 @@ jobs:
           jpackage \
             --type rpm \
             --name KST4Contest \
+            --icon src/main/resources/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -272,6 +284,7 @@ jobs:
           jpackage \
             --type app-image \
             --name KST4Contest \
+            --icon src/main/resources/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -381,6 +394,7 @@ jobs:
           jpackage \
             --type app-image \
             --name KST4Contest \
+            --icon src/main/resources/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -510,6 +524,7 @@ jobs:
           jpackage \
             --type dmg \
             --name KST4Contest \
+            --icon packaging/icons/kst4contest.icns \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
