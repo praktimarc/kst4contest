@@ -1167,27 +1167,31 @@ public class MessageBusManagementThread extends Thread {
 
 												if (client.getChatPreferences().isNotify_dxClusterServerEnabled()) {
 													try {
-														if (newMessageArrived.getSender().getFrequency() != null) {
-															//TODO: testing for next version 3.33: additional information will be displayed in cluster if there is such information
+														ChatMember sender = newMessageArrived.getSender();
+
+														String detectedFrequency = sender.getFrequency() == null
+																? null
+																: sender.getFrequency().getValue();
+
+														if (detectedFrequency != null && !detectedFrequency.isBlank()) {
+															/*
+															 * The DX Cluster spot must not depend on AirScout data. A known
+															 * frequency and a valid directional opportunity are sufficient.
+															 * Available AP information is added only as an optional comment.
+															 */
 															ChatMember onlyForSpottingObject = new ChatMember();
-															onlyForSpottingObject.setCallSign(newMessageArrived.getSender().getCallSign());
-															onlyForSpottingObject.setFrequency(newMessageArrived.getSender().getFrequency());
+															onlyForSpottingObject.setCallSign(sender.getCallSign());
+															onlyForSpottingObject.setFrequency(sender.getFrequency());
+															onlyForSpottingObject.setQra(
+																	buildDxClusterSpotComment(sender)
+															);
 
-															if (newMessageArrived.getSender().getAirPlaneReflectInfo().getAirPlanesReachableCntr() > 0) {
-																onlyForSpottingObject.setQra(newMessageArrived.getSender().getQra() + " , AP: " +
-																		newMessageArrived.getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0).getArrivingDurationMinutes() + "min, " +
-																		newMessageArrived.getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(0).getPotential() + "%");
+															this.client
+																	.getDxClusterServer()
+																	.broadcastSingleDXClusterEntryToLoggers(
+																			onlyForSpottingObject
+																	);
 
-																if (newMessageArrived.getSender().getAirPlaneReflectInfo().getAirPlanesReachableCntr() > 1) {
-																	onlyForSpottingObject.setQra(newMessageArrived.getSender().getQra() + "; " +
-																			newMessageArrived.getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(1).getArrivingDurationMinutes() + "min, " +
-																			newMessageArrived.getSender().getAirPlaneReflectInfo().getRisingAirplanes().get(1).getPotential() + "%");
-																}
-															} else {
-																onlyForSpottingObject.setQra(newMessageArrived.getSender().getQra());
-															}
-
-															this.client.getDxClusterServer().broadcastSingleDXClusterEntryToLoggers(onlyForSpottingObject);
 														}
 													} catch (Exception exception) {
 														System.out.println("[MSGBUSMGT, ERROR:] DXCluster messageserver error while processing spot for 0: " + newMessageArrived.getSender().getCallSign() + " // " + exception.getMessage());
@@ -1692,6 +1696,70 @@ public class MessageBusManagementThread extends Thread {
 
 //			checkIfMessageInhibitsFrequency(messageToProcess);
 		}
+	}
+
+
+	/**
+	 * Builds the comment transmitted with a local DX Cluster spot.
+	 *
+	 * <p>The station locator is always retained. AirScout information is optional:
+	 * a missing response, an empty aircraft list or an incomplete aircraft entry
+	 * must never prevent the spot itself from being sent.</p>
+	 *
+	 * @param sender station for which the DX Cluster spot is generated
+	 * @return locator with up to two optional AP entries
+	 */
+	private String buildDxClusterSpotComment(ChatMember sender) {
+		if (sender == null) {
+			return "";
+		}
+
+		String locator = sender.getQra() == null
+				? ""
+				: sender.getQra().trim();
+
+		AirPlaneReflectionInfo reflectionInfo =
+				sender.getAirPlaneReflectInfo();
+
+		if (reflectionInfo == null
+				|| reflectionInfo.getRisingAirplanes() == null
+				|| reflectionInfo.getRisingAirplanes().isEmpty()) {
+			return locator;
+		}
+
+		ArrayList<String> aircraftComments = new ArrayList<>();
+
+		int aircraftCount = Math.min(
+				2,
+				reflectionInfo.getRisingAirplanes().size()
+		);
+
+		for (int index = 0; index < aircraftCount; index++) {
+			AirPlane aircraft =
+					reflectionInfo.getRisingAirplanes().get(index);
+
+			if (aircraft == null) {
+				continue;
+			}
+
+			aircraftComments.add(
+					aircraft.getArrivingDurationMinutes()
+							+ "min, "
+							+ aircraft.getPotential()
+							+ "%"
+			);
+		}
+
+		if (aircraftComments.isEmpty()) {
+			return locator;
+		}
+
+		String apComment =
+				"AP: " + String.join("; ", aircraftComments);
+
+		return locator.isEmpty()
+				? apComment
+				: locator + " , " + apComment;
 	}
 
 	/**
