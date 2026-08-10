@@ -83,12 +83,13 @@ public class PriorityCalculator {
         // --------------------------------------------------------------------
         double score = 100.0;
 
-//        if (!member.isWorked()) {
-//            score += 200.0;
-//        }
-
-        //"worked" for scoring is derived ONLY from per-band flags (worked144/432/...)
-//        EnumSet<Band> workedBandsForScoring = getWorkedBands(member);
+        /*
+         * A manual Sked-fail mark represents an explicit operator decision. The
+         * penalty is therefore applied after all positive contributions, including
+         * an imminent sked. Applying it earlier would allow the later sked boost to
+         * almost completely cancel the failure mark.
+         */
+        boolean manualSkedFailed = false;
 
         if (workedBandsForScoring.isEmpty()) {
             score += 200.0; // never worked on any supported band -> higher priority
@@ -190,9 +191,11 @@ public class PriorityCalculator {
                 }
 
                 // Manual sked fail (path likely bad) => strong, permanent penalty until reset
-                if (mx.manualSkedFailed) {
-                    score *= 0.15;
-                }
+                /*
+                 * Remember the explicit failure state here. The actual penalty is applied
+                 * after the sked contribution has been calculated.
+                 */
+                manualSkedFailed = mx.manualSkedFailed;
             }
         }
 
@@ -226,8 +229,23 @@ public class PriorityCalculator {
         // --------------------------------------------------------------------
         // 8) Legacy penalty: failed attempts in ChatMember
         // --------------------------------------------------------------------
+        // --------------------------------------------------------------------
+// 8) Legacy penalty: failed attempts in ChatMember
+// --------------------------------------------------------------------
         if (member.getFailedQSOAttempts() > 0) {
             score = score / (member.getFailedQSOAttempts() + 1);
+        }
+
+// --------------------------------------------------------------------
+// 9) Explicit operator override: manual Sked fail
+// --------------------------------------------------------------------
+        if (manualSkedFailed) {
+            /*
+             * Apply the penalty to the complete result. This includes an imminent
+             * sked and prevents its strong time-dependent boost from cancelling the
+             * operator's explicit failure assessment.
+             */
+            score *= 0.15;
         }
 
         return Math.max(0.0, score);

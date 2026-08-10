@@ -4388,10 +4388,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	/**
 	 * Resolves and selects a priority candidate.
 	 *
-	 * If the station is currently visible in the member table, selecting it there is
-	 * preferred because the existing table-selection listener then keeps the rest of
-	 * the UI in sync. If the station is filtered out, we still show FurtherInfo and
-	 * prepare the /cq text so the priority list remains useful with active filters.
+	 * <p>The common selection helper is used deliberately. It updates Further Info,
+	 * prepares the directed message and selects the corresponding table row when
+	 * the row is currently visible. A candidate hidden by an active table filter
+	 * remains usable without changing or resetting that filter.</p>
 	 */
 	private void selectTopCandidate(
 			kst4contest.controller.ScoreService.TopCandidate candidate,
@@ -4408,25 +4408,17 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			return;
 		}
 
-//		if (tbl_chatMember.getItems().contains(resolved)) {
-//			tbl_chatMember.getSelectionModel().select(resolved);
-//			tbl_chatMember.scrollTo(resolved);
-//		} else {
-//			selectedCallSignInfoStageChatMember = resolved;
-//			chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
-//
-//			selectedCallSignFurtherInfoPane.getChildren().setAll(generateFurtherInfoAbtSelectedCallsignBP(resolved));
-//			txt_chatMessageUserInput.clear();
-//			txt_chatMessageUserInput.setText("/cq " + resolved.getCallSign() + " ");
-//			txt_chatMessageUserInput.requestFocus();
-//			txt_chatMessageUserInput.selectEnd();
-//		}
-
-		tbl_chatMember.getSelectionModel().select(resolved); //new mechanic for selectionchange events due to textfield
-		//manipulation...
-
-		// Keep ScoreService selection in sync even if the visible table selection path was used.
-		chatcontroller.getScoreService().setSelectedChatMember(resolved);
+		/*
+		 * This is an explicit operator action and therefore follows the same path
+		 * as a timeline click. The exact callsign and category stored in the
+		 * TopCandidate remain authoritative.
+		 *
+		 * focusChatMemberAndPrepareCq() also handles candidates which are currently
+		 * hidden by a FilteredList. In that case the table row cannot be selected,
+		 * but Further Info, ScoreService selection and the prepared /cq message are
+		 * still updated.
+		 */
+		focusChatMemberAndPrepareCq(resolved);
 	}
 
 	/**
