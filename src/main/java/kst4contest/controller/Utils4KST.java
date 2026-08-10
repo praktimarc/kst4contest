@@ -101,102 +101,143 @@ public class Utils4KST {
 	}
 
 	/**
-	 * Normalizes a chatmembers frequency-string for cluster usage<br/>
-	 * <b>returns a frequency String in KHz like = "144300" or "144300.0" to match DXC protocol needs</b>
+	 * Converts a frequency detected in a chat message into the kHz representation
+	 * used by the DX Cluster protocol.
 	 *
-	 * @param optionalPrefix: if there is a value like ".300", it have to be decided, wich ".300": 144.300, 432.300, 1296.300 .... prefix means for example "144."
+	 * <p>Complete frequencies with two to five MHz digits are supported, for
+	 * example 50.200, 144.205, 1296.338, 10368.100 and 24048.100. An optional
+	 * second fractional group is retained as sub-kHz precision, for example
+	 * 144.205.2 becomes 144205.2 kHz.</p>
+	 *
+	 * <p>Relative values such as .205 or 205 use the configured fallback-band
+	 * prefix. The method only performs this fallback conversion after the general
+	 * message parser has already accepted the value as a frequency.</p>
+	 *
+	 * @param qrgString frequency as detected by the chat parser
+	 * @param optionalPrefix fallback MHz prefix for relative frequencies
+	 * @return frequency in kHz for a DX Cluster spot, or an empty string if the
+	 *         value cannot be converted safely
 	 */
-	public static String normalizeFrequencyString(String qrgString, SimpleStringProperty optionalPrefix) {
-
-//        final String PTRN_QRG_CAT2 = "(([0-9]{3,4}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
-
-		try {
-			qrgString = qrgString.replace(" ","");
-		} catch (Exception e) {
-			System.out.println("UTILS: QRG NULL, nothing to convert");
-//			e.printStackTrace();
+	public static String normalizeFrequencyString(
+			String qrgString,
+			SimpleStringProperty optionalPrefix
+	) {
+		if (qrgString == null || qrgString.isBlank()) {
+			return "";
 		}
 
+		/*
+		 * A comma is accepted as a decimal separator. Spaces are removed so older
+		 * stored formats such as "432 088" remain usable.
+		 */
+		String normalizedValue = qrgString
+				.trim()
+				.replace(" ", "")
+				.replace(',', '.');
 
-		final String PTRN_QRG_CAT2_wholeQRGMHz4Digits = "(([0-9]{4}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)"; //1296.300.3 etc
-		final String PTRN_QRG_CAT2_wholeQRGMHz3Digits = "(([0-9]{3}[\\.|,| ]?[0-9]{3})([\\.][\\d]{1,2})?)"; //144.300.3 etc
-		final String PTRN_QRG_CAT2_QRGwithoutPrefix = "((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)"; //144.300.3 etc
+		/*
+		 * Complete frequency with an explicit separator:
+		 *
+		 * 50.200
+		 * 144.205
+		 * 1296.338
+		 * 10368.100
+		 * 144.205.2
+		 */
+		Matcher completeFrequencyMatcher = Pattern.compile(
+				"^(\\d{2,5})\\.(\\d{1,3})(?:\\.(\\d{1,2}))?$"
+		).matcher(normalizedValue);
 
-		String stringAggregation = "";
-
-		if (testPattern(qrgString, PTRN_QRG_CAT2_wholeQRGMHz4Digits)) {//case 1296.200 or 1296.200.2 etc.
-			stringAggregation = qrgString;
-
-			stringAggregation = stringAggregation.replace(".","");
-			stringAggregation = stringAggregation.replace(",","");
-			stringAggregation = stringAggregation.replace(" ", "");
-
-			if (stringAggregation.length() == 8) {
-				String stringAggregationNew = stringAggregation.substring(0, stringAggregation.length()-1) + "." + stringAggregation.substring(stringAggregation.length()-1, stringAggregation.length());
-				stringAggregation = stringAggregationNew + ".0";
-				return stringAggregation;
-
-			} else if (stringAggregation.length() == 9) {
-				String stringAggregationNew = stringAggregation.substring(0, stringAggregation.length()-2) + "." + stringAggregation.substring(stringAggregation.length()-2, stringAggregation.length());
-				stringAggregation = stringAggregationNew;
-				return stringAggregation;
-			}
-
-		} else
-
-		if (testPattern(qrgString, PTRN_QRG_CAT2_wholeQRGMHz3Digits)) { //case 144.300 or 144.300.2
-			stringAggregation = qrgString;
-
-			stringAggregation = stringAggregation.replace(".","");
-			stringAggregation = stringAggregation.replace(",","");
-			stringAggregation = stringAggregation.replace(" ", "");
-
-			if (stringAggregation.length() == 6) {
-				stringAggregation = stringAggregation + ".0";
-				return stringAggregation;
-			}
-				if (stringAggregation.length() == 7) {
-				String stringAggregationNew = stringAggregation.substring(0, stringAggregation.length()-1) + "." + stringAggregation.substring(stringAggregation.length()-1, stringAggregation.length());
-				stringAggregation = stringAggregationNew + ".0";
-				return stringAggregation;
-
-			} else if (stringAggregation.length() == 8) {
-				String stringAggregationNew = stringAggregation.substring(0, stringAggregation.length()-2) + "." + stringAggregation.substring(stringAggregation.length()-2, stringAggregation.length());
-				stringAggregation = stringAggregationNew;
-				return stringAggregation;
-			}
-		}
-		else
-
-		if (testPattern(qrgString, PTRN_QRG_CAT2_QRGwithoutPrefix)) { //case ".050 or .300 or something like that"
-			stringAggregation = qrgString;
-
-			stringAggregation = stringAggregation.replace(".", "");
-			stringAggregation = stringAggregation.replace(",", "");
-			stringAggregation = stringAggregation.replace(" ", "");
-
-			if (stringAggregation.length() == 3) { // like 050 or 300
-				String stringAggregationNew = optionalPrefix.getValue() + stringAggregation;
-				stringAggregation = stringAggregationNew + ".0";
-				return stringAggregation;
-
-			} else if (stringAggregation.length() == 4) { //like 050.2 --> 0502
-
-				stringAggregation = optionalPrefix.getValue() + stringAggregation;
-				String stringAggregationNew = stringAggregation.substring(0, stringAggregation.length() - 1) + "." + stringAggregation.substring(stringAggregation.length() - 1, stringAggregation.length());
-				stringAggregation = stringAggregationNew;
-				return stringAggregation;
-
-			} else if (stringAggregation.length() == 5) { //like 050.20 --> 05020
-
-				stringAggregation = optionalPrefix.getValue() + stringAggregation;
-				String stringAggregationNew = stringAggregation.substring(0, stringAggregation.length() - 2) + "." + stringAggregation.substring(stringAggregation.length() - 2, stringAggregation.length());
-				stringAggregation = stringAggregationNew;
-				return stringAggregation;
-			}
+		if (completeFrequencyMatcher.matches()) {
+			return formatDxClusterFrequency(
+					completeFrequencyMatcher.group(1),
+					completeFrequencyMatcher.group(2),
+					completeFrequencyMatcher.group(3)
+			);
 		}
 
-		return stringAggregation; //if nothing else helps
+		/*
+		 * Compact complete frequency retained for compatibility:
+		 *
+		 * 144205
+		 * 1296338
+		 * 10368100
+		 * 432088.2
+		 */
+		Matcher compactFrequencyMatcher = Pattern.compile(
+				"^(\\d{2,5})(\\d{3})(?:\\.(\\d{1,2}))?$"
+		).matcher(normalizedValue);
+
+		if (compactFrequencyMatcher.matches()) {
+			return formatDxClusterFrequency(
+					compactFrequencyMatcher.group(1),
+					compactFrequencyMatcher.group(2),
+					compactFrequencyMatcher.group(3)
+			);
+		}
+
+		/*
+		 * Relative frequency. Values above 499 are deliberately rejected, matching
+		 * the previous behaviour and preventing a report such as 599 from becoming
+		 * a plausible-looking cluster frequency.
+		 */
+		Matcher relativeFrequencyMatcher = Pattern.compile(
+				"^\\.?([0-4]\\d{2})(?:\\.(\\d{1,2}))?$"
+		).matcher(normalizedValue);
+
+		if (!relativeFrequencyMatcher.matches()) {
+			return "";
+		}
+
+		String fallbackPrefix = optionalPrefix == null
+				? null
+				: optionalPrefix.getValue();
+
+		if (fallbackPrefix == null) {
+			return "";
+		}
+
+		fallbackPrefix = fallbackPrefix.trim();
+
+		if (!fallbackPrefix.matches("\\d{2,5}")) {
+			return "";
+		}
+
+		return formatDxClusterFrequency(
+				fallbackPrefix,
+				relativeFrequencyMatcher.group(1),
+				relativeFrequencyMatcher.group(2)
+		);
+	}
+
+	/**
+	 * Formats an MHz part, a fractional MHz part and optional sub-kHz digits as a
+	 * DX Cluster frequency in kHz.
+	 *
+	 * <p>The fractional MHz part is padded on the right because 144.2 means
+	 * 144.200 MHz, while 144.21 means 144.210 MHz.</p>
+	 *
+	 * @param mhzPart complete MHz part
+	 * @param fractionalMhzPart one to three digits following the first separator
+	 * @param subKhzPart optional digits following a second separator
+	 * @return DX Cluster frequency in kHz
+	 */
+	private static String formatDxClusterFrequency(
+			String mhzPart,
+			String fractionalMhzPart,
+			String subKhzPart
+	) {
+		String paddedFraction =
+				(fractionalMhzPart + "000").substring(0, 3);
+
+		String subKhz = subKhzPart == null
+				? "0"
+				: subKhzPart;
+
+		return mhzPart
+				+ paddedFraction
+				+ "."
+				+ subKhz;
 	}
 
 }
