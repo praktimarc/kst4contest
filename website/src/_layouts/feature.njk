@@ -1,40 +1,44 @@
 ---
 layout: base.njk
+lang: en
 ---
 
 <section class="hero">
-  <p class="badge">{{ category }} · since {{ since }}</p>
+  <p class="eyebrow">{{ category }} · available since {{ since }}</p>
   <h1>{{ title }}</h1>
   <p class="lead">{{ summary }}</p>
+
+  <div class="actions">
+    <a class="button secondary" href="/features/">← All functions</a>
+    <a class="button ghost" href="/manual/en/">Open the manual</a>
+  </div>
 </section>
 
 <section class="section narrow">
   <article class="card content-card">
-    <div class="feature-icon large">{{ icon }}</div>
+    <div class="feature-icon large" aria-hidden="true">{{ icon }}</div>
 
     {{ content | safe }}
 
-    {% if tagsList %}
-      <h2>Keywords</h2>
-      <div class="tag-list">
-        {% for tag in tagsList %}
-          <span>{{ tag }}</span>
-        {% endfor %}
-      </div>
-    {% endif %}
-
     {% if related %}
-      <h2>Related features</h2>
+      <h2>Related functions</h2>
+
       <div class="actions">
         {% for slug in related %}
           {% for item in collections.sortedFeatures %}
             {% if item.fileSlug == slug %}
-              <a class="button secondary" href="{{ item.url }}">{{ item.data.title }}</a>
+              <a class="button secondary" href="{{ item.url }}">
+                {{ item.data.title }}
+              </a>
             {% endif %}
           {% endfor %}
         {% endfor %}
       </div>
     {% endif %}
+
+    <p>
+      <a href="/features/">← Back to all functions</a>
+    </p>
   </article>
 </section>
 
@@ -44,15 +48,29 @@ layout: base.njk
   "@type": "TechArticle",
   "headline": "{{ title }}",
   "description": "{{ summary }}",
-  "about": "KST4Contest",
-  "url": "https://kst4contest.hamradioonline.de{{ page.url }}",
-  "author": {
-    "@type": "Person",
-    "name": "Praktimarc"
+  {% if tagsList %}
+  "keywords": "{{ tagsList | join(', ') }}",
+  {% endif %}
+  "about": {
+    "@type": "SoftwareApplication",
+    "name": "KST4Contest",
+    "url": "https://kst4contest.hamradioonline.de/"
   },
+  "url": "https://kst4contest.hamradioonline.de{{ page.url }}",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Marc Fröhlich (DO5AMF)"
+    },
+    {
+      "@type": "Person",
+      "name": "Philipp (DN9APW)"
+    }
+  ],
   "publisher": {
     "@type": "Organization",
-    "name": "KST4Contest"
+    "name": "KST4Contest Project",
+    "url": "https://kst4contest.hamradioonline.de/"
   }
 }
 </script>

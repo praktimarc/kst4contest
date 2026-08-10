@@ -1,28 +1,119 @@
 ---
 layout: base.njk
-title: KST4Contest Features
-description: Contest-optimized ON4KST features for VHF, UHF and SHF operation.
+lang: en
+title: KST4Contest Functions
+description: Technical overview of the KST4Contest functions for ON4KST chat processing, candidate evaluation, sked planning, AirScout and logger integration.
 ---
 
 <section class="hero">
-  <p class="badge">Features</p>
-  <h1>Contest tools, not just chat windows.</h1>
+  <p class="eyebrow">Functions</p>
+  <h1>How KST4Contest supports the contest workflow</h1>
+
   <p class="lead">
-    KST4Contest combines ON4KST chat, candidate scoring, AirScout workflow,
-    sked handling, log synchronization and operator decision support.
+    KST4Contest combines ON4KST messages with station, band, Worked, sked,
+    AirScout and logger information. The individual functions use this shared
+    context instead of treating every message or interface as an isolated
+    event.
   </p>
+
+  <p>
+    Some information is received directly from another program. Other
+    information must be derived from chat messages, station names or the
+    current operating state. The distinction matters: a detected band or a
+    calculated priority is useful context, but not automatically a confirmed
+    fact.
+  </p>
+
+  <div class="actions">
+    <a class="button" href="/manual/en/features/">Read the technical description</a>
+    <a class="button secondary" href="/manual/en/configuration/">Open configuration</a>
+    <a class="button ghost" href="/download/">Download KST4Contest</a>
+  </div>
 </section>
 
 <section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Shared context</p>
+    <h2>Why the functions affect each other</h2>
+    <p>
+      A newly detected frequency can change the known bands of a station. This
+      can affect its Worked state, filters, priority, map path and a later sked
+      handover. The same principle applies to information received from a
+      logger or entered manually.
+    </p>
+  </div>
+
   <div class="grid">
-    {% for feature in collections.features %}
+    <article class="card">
+      <h3>Received information</h3>
+      <p>
+        ON4KST messages, logger packets, Win-Test network data and AirScout
+        responses provide information at different levels of detail. Missing
+        fields are not automatically equivalent to negative information.
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Derived information</h3>
+      <p>
+        Bands, frequencies, activity and candidate priorities may be derived
+        from several sources. Explicit NOT-QRV information overrules a merely
+        inferred band opportunity.
+      </p>
+    </article>
+
+    <article class="card">
+      <h3>Operator decision</h3>
+      <p>
+        Scores, filters, AP windows and path assessments reduce the amount of
+        information that must be evaluated manually. They do not guarantee a
+        contact or replace checking the actual operating situation.
+      </p>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Function overview</p>
+    <h2>Functions in their intended order</h2>
+    <p>
+      The pages below explain the operating problem behind each function, the
+      information it uses and the limitations that remain.
+    </p>
+  </div>
+
+  <div class="grid">
+    {% for feature in collections.sortedFeatures %}
       <article class="card feature-card">
         <div class="feature-icon">{{ feature.data.icon }}</div>
         <p class="eyebrow">{{ feature.data.category }}</p>
-        <h3><a href="{{ feature.url }}">{{ feature.data.title }}</a></h3>
+        <h3>
+          <a href="{{ feature.url }}">{{ feature.data.title }}</a>
+        </h3>
         <p>{{ feature.data.summary }}</p>
-        <a href="{{ feature.url }}">Learn more →</a>
+        <a href="{{ feature.url }}">Read how it works →</a>
       </article>
     {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="cta-panel">
+    <p class="eyebrow">Technical details</p>
+    <h2>The manual remains the authoritative description</h2>
+
+    <p>
+      These pages provide a practical overview. Configuration parameters,
+      interface requirements, exact behaviour and version-specific limitations
+      are documented in the manual. Where the short description and the manual
+      differ, the manual should be corrected first. Two competing descriptions
+      of the same function would not improve matters.
+    </p>
+
+    <div class="actions">
+      <a class="button" href="/manual/en/">Open the English manual</a>
+      <a class="button secondary" href="/manual/de/">Deutsches Handbuch</a>
+    </div>
   </div>
 </section>
