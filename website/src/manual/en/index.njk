@@ -1,24 +1,107 @@
 ---
 layout: base.njk
-title: KST4Contest English Manual
-description: English user manual for KST4Contest.
+lang: en
+title: KST4Contest – English Manual
+description: Technical user manual covering installation, configuration, ON4KST operation, AirScout, log synchronisation and the other functions of KST4Contest.
 ---
 
 <section class="hero">
+  <p class="eyebrow">Documentation</p>
   <h1>English Manual</h1>
-  <p>The manual is maintained centrally in GitHub and published as Wiki, PDF and online documentation.</p>
+
+  <p>
+    This manual describes more than the controls of KST4Contest. It also
+    explains how band information, priorities, reachability and other operating
+    aids are derived, and where the available data does not support an
+    unambiguous result.
+  </p>
+
+  <div class="actions">
+    <a class="button" href="/manual/en/installation/">Installation</a>
+    <a class="button secondary" href="/manual/en/configuration/">Configuration</a>
+    <a class="button ghost" href="/manual/en/features/">Functions</a>
+  </div>
 </section>
 
 <section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Start with the task</p>
+    <h2>Where should you begin?</h2>
+    <p>
+      Each chapter can be used separately. For a new installation, however,
+      the following order is usually more useful than starting with an isolated
+      detail.
+    </p>
+  </div>
+
+  <div class="grid">
+    <article class="card">
+      <h3>Install KST4Contest</h3>
+      <p>
+        Select the appropriate build, install the application and verify that it
+        starts correctly on the computer intended for contest operation.
+      </p>
+      <div class="actions">
+        <a class="button" href="/download/">Select a build</a>
+        <a class="button secondary" href="/manual/en/installation/">Open installation</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Configure the station</h3>
+      <p>
+        Enter the callsign, locator, available bands and chat categories. Then
+        configure only the interfaces that are actually part of the station
+        setup.
+      </p>
+      <div class="actions">
+        <a class="button secondary" href="/manual/en/configuration/">Open configuration</a>
+        <a class="button ghost" href="/manual/en/log-sync/">Log synchronisation</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Interpret the displayed information</h3>
+      <p>
+        Priorities, band information, AP assessments and reachability are
+        derived from several sources. The corresponding chapters explain which
+        information is used and where its limitations begin.
+      </p>
+      <div class="actions">
+        <a class="button secondary" href="/manual/en/features/">Open functions</a>
+        <a class="button ghost" href="/manual/en/user-interface/">User interface</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">All chapters</p>
+    <h2>Complete English manual</h2>
+    <p>
+      This list is generated automatically from the Markdown files in
+      <code>github_docs</code>. Changes to the central manual are therefore also
+      included in the online documentation.
+    </p>
+  </div>
+
   <div class="grid">
     {% for manual in collections.manualPages %}
       {% if manual.lang == "en" %}
-        <div class="card">
-          <h3><a href="/manual/en/{{ manual.slug }}/">{{ manual.title }}</a></h3>
+        <article class="card">
+          <h3>
+            <a href="/manual/en/{{ manual.slug }}/">{{ manual.title }}</a>
+          </h3>
+
           {% if manual.summary %}
             <p>{{ manual.summary }}</p>
           {% endif %}
-        </div>
+
+          <p>
+            <a href="/manual/en/{{ manual.slug }}/">Open chapter →</a>
+          </p>
+        </article>
       {% endif %}
     {% endfor %}
   </div>

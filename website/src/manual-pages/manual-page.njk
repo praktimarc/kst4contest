@@ -5,14 +5,33 @@ pagination:
   alias: manual
 permalink: "/manual/{{ manual.lang }}/{{ manual.slug }}/"
 layout: base.njk
+lang: "{{ manual.lang }}"
 title: "{{ manual.title }} | KST4Contest Manual"
-description: "KST4Contest manual page: {{ manual.title }}"
+description: "{{ manual.summary }}"
 ---
 
 <section class="section">
   <div class="card manual-content">
-    <p><a href="/manual/{{ manual.lang }}/">← Back to manual overview</a></p>
-    <h1>{{ manual.title }}</h1>
+    {% if manual.lang == "de" %}
+      <p>
+        <a href="/manual/de/">← Zurück zur deutschen Handbuchübersicht</a>
+      </p>
+    {% else %}
+      <p>
+        <a href="/manual/en/">← Back to the English manual overview</a>
+      </p>
+    {% endif %}
+
     {{ manual.content | markdown | safe }}
+
+    {% if manual.lang == "de" %}
+      <p>
+        <a href="/manual/de/">← Zurück zur deutschen Handbuchübersicht</a>
+      </p>
+    {% else %}
+      <p>
+        <a href="/manual/en/">← Back to the English manual overview</a>
+      </p>
+    {% endif %}
   </div>
 </section>

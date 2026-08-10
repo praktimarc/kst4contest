@@ -1,24 +1,107 @@
 ---
 layout: base.njk
-title: KST4Contest Deutsches Handbuch
-description: Deutsches Benutzerhandbuch für KST4Contest.
+lang: de
+title: KST4Contest – Deutsches Handbuch
+description: Technisches Benutzerhandbuch für Installation, Konfiguration, ON4KST-Betrieb, AirScout, Log-Synchronisation und die weiteren Funktionen von KST4Contest.
 ---
 
 <section class="hero">
+  <p class="eyebrow">Dokumentation</p>
   <h1>Deutsches Handbuch</h1>
-  <p>Das Handbuch wird zentral in GitHub gepflegt und als Wiki, PDF und Online-Dokumentation veröffentlicht.</p>
+
+  <p>
+    Dieses Handbuch beschreibt nicht nur die Bedienelemente von KST4Contest.
+    Es erklärt auch, wie Bandinformationen, Prioritäten, Erreichbarkeit und
+    weitere Betriebshilfen hergeleitet werden und an welchen Stellen die
+    verfügbaren Daten keine eindeutige Aussage erlauben.
+  </p>
+
+  <div class="actions">
+    <a class="button" href="/manual/de/installation/">Installation</a>
+    <a class="button secondary" href="/manual/de/konfiguration/">Konfiguration</a>
+    <a class="button ghost" href="/manual/de/funktionen/">Funktionen</a>
+  </div>
 </section>
 
 <section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Einstieg nach Aufgabe</p>
+    <h2>Wo solltest du anfangen?</h2>
+    <p>
+      Die Kapitel können einzeln verwendet werden. Bei einer neuen Installation
+      ist die folgende Reihenfolge jedoch meist sinnvoller, als direkt in einer
+      Detailfunktion zu beginnen.
+    </p>
+  </div>
+
+  <div class="grid">
+    <article class="card">
+      <h3>KST4Contest neu installieren</h3>
+      <p>
+        Wähle den passenden Build, installiere die Anwendung und prüfe, ob sie
+        auf dem vorgesehenen Contest-Rechner korrekt startet.
+      </p>
+      <div class="actions">
+        <a class="button" href="/download/">Build auswählen</a>
+        <a class="button secondary" href="/manual/de/installation/">Installation öffnen</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Die eigene Station einrichten</h3>
+      <p>
+        Trage Rufzeichen, Locator, verwendete Bänder und Chatkategorien ein.
+        Richte anschließend nur die Schnittstellen ein, die im Stationsaufbau
+        tatsächlich verwendet werden.
+      </p>
+      <div class="actions">
+        <a class="button secondary" href="/manual/de/konfiguration/">Konfiguration öffnen</a>
+        <a class="button ghost" href="/manual/de/log-synchronisation/">Log-Synchronisation</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3>Die Anzeigen richtig einordnen</h3>
+      <p>
+        Prioritäten, Bandinformationen, AP-Bewertungen und Erreichbarkeit werden
+        aus mehreren Quellen abgeleitet. Die entsprechenden Kapitel erklären,
+        welche Informationen dafür verwendet werden und wo die Grenzen liegen.
+      </p>
+      <div class="actions">
+        <a class="button secondary" href="/manual/de/funktionen/">Funktionen öffnen</a>
+        <a class="button ghost" href="/manual/de/benutzeroberflaeche/">Benutzeroberfläche</a>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Alle Kapitel</p>
+    <h2>Vollständiges deutsches Handbuch</h2>
+    <p>
+      Die Liste wird automatisch aus den Markdown-Dateien im Verzeichnis
+      <code>github_docs</code> erzeugt. Änderungen am zentralen Handbuch werden
+      dadurch auch in die Online-Dokumentation übernommen.
+    </p>
+  </div>
+
   <div class="grid">
     {% for manual in collections.manualPages %}
       {% if manual.lang == "de" %}
-        <div class="card">
-          <h3><a href="/manual/de/{{ manual.slug }}/">{{ manual.title }}</a></h3>
+        <article class="card">
+          <h3>
+            <a href="/manual/de/{{ manual.slug }}/">{{ manual.title }}</a>
+          </h3>
+
           {% if manual.summary %}
             <p>{{ manual.summary }}</p>
           {% endif %}
-        </div>
+
+          <p>
+            <a href="/manual/de/{{ manual.slug }}/">Kapitel öffnen →</a>
+          </p>
+        </article>
       {% endif %}
     {% endfor %}
   </div>

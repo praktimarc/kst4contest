@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="{{ lang or 'en' }}">
 <head>
   <meta charset="utf-8">
   <title>{{ title or "KST4Contest" }}</title>
@@ -15,7 +15,7 @@
   <meta property="og:description" content="{{ description or 'ON4KST chat, candidate selection, sked planning and station software in one VHF, UHF and SHF contest workflow.' }}">
   <meta property="og:url" content="https://kst4contest.hamradioonline.de{{ page.url }}">
   <meta property="og:site_name" content="KST4Contest">
-  <meta property="og:locale" content="en_GB">
+  <meta property="og:locale" content="{{ 'de_DE' if lang == 'de' else 'en_GB' }}">
   <meta property="og:image" content="https://kst4contest.hamradioonline.de/assets/social/kst4contest-og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
