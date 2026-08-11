@@ -79,6 +79,8 @@ public final class StationMapBridge {
         stationMapView.setOnCallsignRawSelected(this::handleMapCallsignSelection);
         stationMapView.setOnTriggerClusterSpot(this::handleExplicitClusterSpot);
 
+        stationMapView.setOnResetView(this::handleMapReset);
+
         chatController.getLst_chatMemberSortedFilteredList().addListener(
                 (ListChangeListener<ChatMember>) change -> scheduleRefresh()
         );
@@ -96,6 +98,35 @@ public final class StationMapBridge {
         );
 
         requestImmediateRefresh();
+    }
+
+    private void handleMapReset() {
+        Runnable resetAction = () -> {
+            /*
+             * Ignore an analysis result that may still arrive for the
+             * previously selected station.
+             */
+            pathAnalysisGeneration.incrementAndGet();
+            lastPathAnalysisRequestSignature = "";
+
+            /*
+             * Clear the application's central station selection.
+             */
+            chatController.getScoreService().setSelectedChatMember(null);
+
+            /*
+             * Keep the main station table synchronized with the central selection.
+             */
+            chatMemberTable.getSelectionModel().clearSelection();
+
+            requestImmediateRefresh();
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            resetAction.run();
+        } else {
+            Platform.runLater(resetAction);
+        }
     }
 
     public void showWindow() {

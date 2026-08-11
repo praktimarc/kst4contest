@@ -87,14 +87,15 @@ public final class StationMapView {
     private final Button pathAnalysisVisibilityButton = new Button();
     private final Tooltip pathAnalysisVisibilityTooltip = new Tooltip();
 
+    private final Button resetViewButton = new Button("Reset view");
+    private final Tooltip statusTooltip = new Tooltip();
 
-    private final Label detailCallsignValue = new Label("-");
-    private final Label detailLocatorValue = new Label("-");
-    private final Label detailQrbValue = new Label("-");
-    private final Label detailQtfValue = new Label("-");
-    private final Label detailBandsValue = new Label("-");
-    private final TextArea detailFrequenciesArea = new TextArea();
-    private final Label detailAirplanesValue = new Label("-");
+    private Runnable onResetView;
+
+    private double lastDetailDividerPosition = 0.65;
+
+
+
     private final Button triggerClusterSpotButton = new Button("Trigger cluster spot");
 
     private final Label detailPathFromLocatorValue = new Label("-");
@@ -210,6 +211,11 @@ public final class StationMapView {
         this.onTriggerClusterSpot = onTriggerClusterSpot;
     }
 
+    public void setOnResetView(Runnable onResetView) {
+        this.onResetView = onResetView;
+    }
+
+
     public void showWindow() {
 
         applyThemeFromPreferences();
@@ -282,10 +288,6 @@ public final class StationMapView {
 
         stage.setTitle("Station Map");
 
-        detailFrequenciesArea.setEditable(false);
-        detailFrequenciesArea.setWrapText(true);
-        detailFrequenciesArea.setPrefRowCount(4);
-
         detailPathEndpointsValue.setWrapText(true);
         detailPathEndpointsValue.setMaxWidth(Double.MAX_VALUE);
 
@@ -299,9 +301,20 @@ public final class StationMapView {
         detailPathMechanismsValue.setMaxWidth(Double.MAX_VALUE);
 
         triggerClusterSpotButton.setDisable(true);
+        triggerClusterSpotButton.setVisible(false);
+        triggerClusterSpotButton.setManaged(false);
+        triggerClusterSpotButton.setMinWidth(Region.USE_PREF_SIZE);
+
         triggerClusterSpotButton.setOnAction(event -> {
             if (detailCallsignRaw != null && onTriggerClusterSpot != null) {
                 onTriggerClusterSpot.accept(detailCallsignRaw);
+            }
+        });
+
+        resetViewButton.setMinWidth(Region.USE_PREF_SIZE);
+        resetViewButton.setOnAction(event -> {
+            if (onResetView != null) {
+                onResetView.run();
             }
         });
 
@@ -377,7 +390,7 @@ public final class StationMapView {
         );
 
         pathAnalysisSection = createPathAnalysisSection();
-        detailPane = new VBox(10, createSelectedStationSection(), pathAnalysisSection);
+        detailPane = new VBox(10, pathAnalysisSection);
 
         detailPane.setPadding(new Insets(10));
 
@@ -489,20 +502,25 @@ public final class StationMapView {
      * must always have an obvious way to restore a previously hidden analysis.
      */
     private HBox createMapHeader() {
-        // The status may be shortened before the show/hide control is ever clipped.
         statusLabel.setMinWidth(0);
         statusLabel.setMaxWidth(Double.MAX_VALUE);
         statusLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+        statusLabel.setTooltip(statusTooltip);
 
         HBox header = new HBox(
                 10,
                 statusLabel,
+                triggerClusterSpotButton,
+                resetViewButton,
                 pathAnalysisHiddenHintLabel,
                 pathAnalysisVisibilityButton
         );
+
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(8));
+
         HBox.setHgrow(statusLabel, Priority.ALWAYS);
+
         return header;
     }
 
@@ -523,6 +541,7 @@ public final class StationMapView {
 
         pathAnalysisSection.setVisible(visible);
         pathAnalysisSection.setManaged(visible);
+        updateDetailPanePresence(visible);
 
         pathAnalysisHiddenHintLabel.setVisible(!visible);
         pathAnalysisHiddenHintLabel.setManaged(!visible);
@@ -567,45 +586,6 @@ public final class StationMapView {
                 : MINIMUM_HEIGHT_WITHOUT_PATH_ANALYSIS;
     }
 
-    private VBox createSelectedStationSection() {
-        GridPane detailGrid = new GridPane();
-        detailGrid.setHgap(8);
-        detailGrid.setVgap(6);
-
-        configureCompactGrid(detailGrid);
-
-        int row = 0;
-
-        detailGrid.add(new Label("Station:"), 0, row);
-        detailGrid.add(detailCallsignValue, 1, row++);
-
-        detailGrid.add(new Label("Locator:"), 0, row);
-        detailGrid.add(detailLocatorValue, 1, row++);
-
-        detailGrid.add(new Label("Path:"), 0, row);
-        Label compactPathValue = new Label();
-        compactPathValue.textProperty().bind(
-                detailQrbValue.textProperty()
-                        .concat(" / ")
-                        .concat(detailQtfValue.textProperty())
-        );
-        detailGrid.add(compactPathValue, 1, row++);
-
-        detailGrid.add(new Label("Bands:"), 0, row);
-        detailGrid.add(detailBandsValue, 1, row++);
-
-        // Frequencies are useful, but they consume vertical space. Keep them compact.
-        detailFrequenciesArea.setPrefRowCount(2);
-        detailGrid.add(new Label("QRG:"), 0, row);
-        detailGrid.add(detailFrequenciesArea, 1, row++);
-
-        return new VBox(8,
-                new Label("Selected station"),
-                new Separator(Orientation.HORIZONTAL),
-                detailGrid,
-                triggerClusterSpotButton
-        );
-    }
 
     /**
      * ensures that the labels remains visible
@@ -950,58 +930,107 @@ public final class StationMapView {
 
     private void updateStatusLabel() {
         StringBuilder text = new StringBuilder();
-        text.append("Showing ").append(lastSnapshots.size()).append(" visible stations");
+
+        text.append("Showing ")
+                .append(lastSnapshots.size())
+                .append(" visible stations");
 
         if (filteredViewActive) {
             text.append(" | filtered view active");
         }
 
-        statusLabel.setText(text.toString());
+        MapCallsignRawSnapshot selectedSnapshot = lastSelectedSnapshot;
+
+        if (selectedSnapshot != null) {
+            text.append(" | Selected: ")
+                    .append(selectedSnapshot.displayCallSign());
+
+            if (!selectedSnapshot.locator6().isBlank()) {
+                text.append(" | ")
+                        .append(selectedSnapshot.locator6());
+            }
+
+            text.append(" | ")
+                    .append(String.format(
+                            Locale.US,
+                            "%.0f km / %.0f°",
+                            selectedSnapshot.qrbKm(),
+                            selectedSnapshot.qtfDeg()
+                    ));
+
+            String bandText = selectedSnapshot.bandSummary().isBlank()
+                    ? "-"
+                    : selectedSnapshot.bandSummary();
+
+            if (selectedSnapshot.offersSelectedBand()) {
+                bandText += " B+";
+            }
+
+            text.append(" | Bands: ")
+                    .append(bandText);
+
+            String frequencies = selectedSnapshot.detailFrequencyText();
+
+            if (frequencies != null && !frequencies.isBlank()) {
+                frequencies = frequencies
+                        .replace('\n', ' ')
+                        .replace('\r', ' ')
+                        .replaceAll("\\s+", " ")
+                        .trim();
+
+                text.append(" | QRG: ")
+                        .append(frequencies);
+            }
+        }
+
+        String statusText = text.toString();
+
+        statusLabel.setText(statusText);
+        statusTooltip.setText(statusText);
     }
 
     private void updateDetailPanel(MapCallsignRawSnapshot selectedSnapshot) {
         if (selectedSnapshot == null) {
-            clearSelectedStationPanel();
+            detailCallsignRaw = null;
+
+            triggerClusterSpotButton.setDisable(true);
+            triggerClusterSpotButton.setVisible(false);
+            triggerClusterSpotButton.setManaged(false);
+
             clearPathAnalysisPanel();
             return;
         }
 
-        updateSelectedStationPanel(selectedSnapshot);
-
-        if (selectedSnapshot == null) {
-            updatePathAnalysisPanel(PathAnalysisResult.waitingForSelection(homeLocator6));
-        } else {
-            updatePathAnalysisPanel(lastPathAnalysisResult);
-        }
-
-    }
-
-    private void clearSelectedStationPanel() {
-        detailCallsignRaw = null;
-        detailCallsignValue.setText("-");
-        detailLocatorValue.setText("-");
-        detailQrbValue.setText("-");
-        detailQtfValue.setText("-");
-        detailBandsValue.setText("-");
-        detailFrequenciesArea.setText("-");
-        detailAirplanesValue.setText("-");
-        triggerClusterSpotButton.setDisable(true);
-    }
-
-    private void updateSelectedStationPanel(MapCallsignRawSnapshot selectedSnapshot) {
         detailCallsignRaw = selectedSnapshot.callSignRaw();
-        detailCallsignValue.setText(selectedSnapshot.displayCallSign());
-        detailLocatorValue.setText(selectedSnapshot.locator6());
-        detailQrbValue.setText(String.format(Locale.US, "%.0f km", selectedSnapshot.qrbKm()));
-        detailQtfValue.setText(String.format(Locale.US, "%.0f°", selectedSnapshot.qtfDeg()));
-        String bandText = selectedSnapshot.bandSummary().isBlank() ? "-" : selectedSnapshot.bandSummary();
-        if (selectedSnapshot.offersSelectedBand()) {
-            bandText += " B+";
-        }
-        detailBandsValue.setText(bandText);
-        detailFrequenciesArea.setText(selectedSnapshot.detailFrequencyText());
-        detailAirplanesValue.setText(String.valueOf(selectedSnapshot.reachableAirplanes()));
+
         triggerClusterSpotButton.setDisable(false);
+        triggerClusterSpotButton.setVisible(true);
+        triggerClusterSpotButton.setManaged(true);
+
+        updatePathAnalysisPanel(lastPathAnalysisResult);
+    }
+
+    private void updateDetailPanePresence(boolean visible) {
+        if (mainSplitPane == null || detailScrollPane == null) {
+            return;
+        }
+
+        if (visible) {
+            if (!mainSplitPane.getItems().contains(detailScrollPane)) {
+                mainSplitPane.getItems().add(detailScrollPane);
+
+                Platform.runLater(() ->
+                        mainSplitPane.setDividerPositions(lastDetailDividerPosition)
+                );
+            }
+        } else {
+            if (!mainSplitPane.getDividers().isEmpty()) {
+                lastDetailDividerPosition =
+                        mainSplitPane.getDividers().get(0).getPosition();
+            }
+
+            mainSplitPane.getItems().remove(detailScrollPane);
+        }
     }
 
     private void clearPathAnalysisPanel() {
@@ -1331,13 +1360,13 @@ public final class StationMapView {
             mainSplitPane.setStyle("-fx-background-color: #2b3035;");
             detailPane.setStyle("-fx-background-color: #31373c; -fx-border-color: #4c565c; -fx-border-width: 0 0 0 1;");
             statusLabel.setStyle("-fx-background-color: #373e43; -fx-text-fill: lightgray; -fx-padding: 8 10 8 10; -fx-background-radius: 4;");
-            detailFrequenciesArea.setStyle("-fx-control-inner-background: #444b50; -fx-text-fill: lightgray;");
+//            detailFrequenciesArea.setStyle("-fx-control-inner-background: #444b50; -fx-text-fill: lightgray;");
         } else {
             rootPane.setStyle("-fx-background-color: #f2f2f2;");
             mainSplitPane.setStyle("-fx-background-color: #f2f2f2;");
             detailPane.setStyle("-fx-background-color: #f7f7f7; -fx-border-color: #d0d0d0; -fx-border-width: 0 0 0 1;");
             statusLabel.setStyle("-fx-background-color: #f7f7f7; -fx-text-fill: #333333; -fx-padding: 8 10 8 10; -fx-background-radius: 4;");
-            detailFrequenciesArea.setStyle("");
+//            detailFrequenciesArea.setStyle("");
         }
     }
 
