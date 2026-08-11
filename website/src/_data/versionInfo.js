@@ -5,16 +5,93 @@ const REPO = "praktimarc/kst4contest";
 const API = `https://api.github.com/repos/${REPO}`;
 const LABEL_MAP = { enhancement: "added", bug: "fixed" };
 
+const GITHUB_API_ATTEMPTS = 3;
+
+function wait(milliseconds) {
+    return new Promise(
+        (resolve) => setTimeout(resolve, milliseconds)
+    );
+}
+
 async function githubGet(urlPath) {
-    const headers = { Accept: "application/vnd.github+json" };
+    const headers = {
+        Accept: "application/vnd.github+json"
+    };
+
     if (process.env.GITHUB_TOKEN) {
-        headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+        headers.Authorization =
+            `Bearer ${process.env.GITHUB_TOKEN}`;
     }
-    const res = await fetch(`${API}${urlPath}`, { headers });
-    if (!res.ok) {
-        throw new Error(`GitHub API ${urlPath} failed: ${res.status}`);
+
+    let lastError = null;
+
+    for (
+        let attempt = 1;
+        attempt <= GITHUB_API_ATTEMPTS;
+        attempt++
+    ) {
+        try {
+            const res = await fetch(
+                `${API}${urlPath}`,
+                {
+                    headers,
+                    signal: AbortSignal.timeout(15000)
+                }
+            );
+
+            if (res.ok) {
+                return res.json();
+            }
+
+            const rateLimitRemaining =
+                res.headers.get("x-ratelimit-remaining");
+
+            const rateLimitReset =
+                res.headers.get("x-ratelimit-reset");
+
+            const rateLimitInfo =
+                rateLimitRemaining === null
+                    ? ""
+                    : `, rate limit remaining `
+                    + rateLimitRemaining
+                    + (
+                        rateLimitReset
+                            ? `, reset ${rateLimitReset}`
+                            : ""
+                    );
+
+            lastError = new Error(
+                `GitHub API ${urlPath} failed with `
+                + `HTTP ${res.status}${rateLimitInfo}`
+            );
+
+            // Authentication and permission errors do not
+            // become valid by retrying.
+            if (
+                ![408, 429].includes(res.status)
+                && res.status < 500
+            ) {
+                throw lastError;
+            }
+        } catch (err) {
+            lastError = err;
+
+            // Do not hide an invalid or expired token behind
+            // repeated requests.
+            if (
+                /HTTP (401|403|404)/.test(err.message)
+            ) {
+                throw err;
+            }
+        }
+
+        if (attempt < GITHUB_API_ATTEMPTS) {
+            await wait(attempt * 500);
+        }
     }
-    return res.json();
+
+    throw lastError
+    || new Error(`GitHub API ${urlPath} failed`);
 }
 
 // UpdateChecker.java parses <versionNumber> with Double.parseDouble() and
@@ -108,25 +185,64 @@ function loadLegacySections() {
 // UpdateChecker.java) from GitHub releases + closed issues, falling back to
 // version-history.xml for releases that predate GitHub Releases.
 module.exports = async function () {
-    const fallback = '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n<praktiKST></praktiKST>';
-
     try {
         const historyEntries = loadHistoryEntries();
 
-        const rawReleases = await githubGet("/releases?per_page=100");
-        const releases = rawReleases
-            .map((r) => ({
-                tagName: r.tag_name,
-                publishedAt: r.published_at || "",
-                name: r.name || r.tag_name,
-                body: r.body || "",
-                isPrerelease: r.prerelease
-            }))
-            .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1));
+        const rawReleases =
+            await githubGet("/releases?per_page=100");
 
-        const stableReleases = releases.filter((r) => !r.isPrerelease);
+        if (!Array.isArray(rawReleases)) {
+            throw new Error(
+                "GitHub releases response was not an array"
+            );
+        }
+
+        const releases = rawReleases
+            .map((release) => ({
+                tagName: release.tag_name,
+                publishedAt: release.published_at || "",
+                name:
+                    release.name
+                    || release.tag_name,
+                body: release.body || "",
+                isPrerelease: release.prerelease,
+                isDraft: release.draft
+            }))
+            .sort(
+                (first, second) =>
+                    first.publishedAt
+                    < second.publishedAt
+                        ? 1
+                        : -1
+            );
+
+        const stableReleases = releases.filter(
+            (release) =>
+                !release.isPrerelease
+                && !release.isDraft
+        );
+
         const stable = stableReleases[0];
-        const ghVersions = new Set(stableReleases.map((r) => toAppVersionNumber(r.tagName)));
+
+        if (
+            !stable
+            || !stable.tagName
+            || !stable.publishedAt
+        ) {
+            throw new Error(
+                "GitHub did not return "
+                + "a published Stable release"
+            );
+        }
+
+        const ghVersions = new Set(
+            stableReleases.map(
+                (release) =>
+                    toAppVersionNumber(
+                        release.tagName
+                    )
+            )
+        );
 
         const parts = [];
         parts.push('<?xml version="1.0" encoding="UTF-8" standalone="no"?>');
@@ -203,7 +319,14 @@ module.exports = async function () {
         parts.push("</praktiKST>");
         return parts.join("\n");
     } catch (err) {
-        console.warn(`[versionInfo] Could not generate version info XML, using empty fallback: ${err.message}`);
-        return fallback;
+        throw new Error(
+            "[versionInfo] Could not generate "
+            + "a complete update feed. "
+            + "The website build has been aborted "
+            + "so that the existing production feed "
+            + "remains untouched: "
+            + err.message,
+            { cause: err }
+        );
     }
 };

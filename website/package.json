@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "start": "eleventy --serve",
-    "build": "eleventy"
+    "build": "eleventy && npm run validate:version-info",
+    "validate:version-info": "node scripts/validate-version-info.js",
+    "test": "node --test test/*.test.js"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.0.0"
