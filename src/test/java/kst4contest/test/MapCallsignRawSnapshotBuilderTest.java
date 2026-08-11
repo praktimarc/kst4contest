@@ -16,6 +16,70 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class MapCallsignRawSnapshotBuilderTest {
 
     @Test
+    void explicitStationNameQrgIsShownInMapSnapshot() {
+        ChatMember station =
+                buildStation(
+                        "G0JSB",
+                        "Phil 432.357",
+                        "IO91AA",
+                        1_000L
+                );
+
+        MapCallsignRawSnapshot snapshot =
+                new MapCallsignRawSnapshotBuilder()
+                        .buildSnapshots(
+                                List.of(station),
+                                null,
+                                EnumSet.of(Band.B_432)
+                        )
+                        .get(0);
+
+        assertEquals(
+                "432",
+                snapshot.bandSummary()
+        );
+
+        assertEquals(
+                "432.357",
+                snapshot
+                        .lastKnownFrequenciesByBand()
+                        .get("432")
+        );
+    }
+
+    @Test
+    void recentDynamicQrgWinsOverStationNameQrgInMap() {
+        ChatMember station =
+                buildStation(
+                        "G0JSB",
+                        "Phil 432.357",
+                        "IO91AA",
+                        1_000L
+                );
+
+        station.addKnownFrequency(
+                Band.B_432,
+                432.335
+        );
+
+        MapCallsignRawSnapshot snapshot =
+                new MapCallsignRawSnapshotBuilder()
+                        .buildSnapshots(
+                                List.of(station),
+                                null,
+                                EnumSet.of(Band.B_432)
+                        )
+                        .get(0);
+
+        assertEquals(
+                "432.335",
+                snapshot
+                        .lastKnownFrequenciesByBand()
+                        .get("432")
+        );
+    }
+
+    @Test
     void marksSnapshotWhenNameAdvertisesSelectedBand() {
         ChatMember station = buildStation("DL1ABC", "QRV 2-70-23", "JN58TD", 1_000L);
 

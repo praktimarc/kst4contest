@@ -113,10 +113,30 @@ public final class BandOpportunityResolver {
             return detectedBands;
         }
 
+        /*
+         * Explicit band descriptions:
+         * 2m, 70cm, 23cm, 432, 1296, ...
+         */
         for (Map.Entry<Band, Pattern> entry : STATION_NAME_BAND_PATTERNS.entrySet()) {
             if (entry.getValue().matcher(stationName).find()) {
                 detectedBands.add(entry.getKey());
             }
+        }
+
+        /*
+         * Explicit full QRGs in name field:
+         * 432.357 -> 432 MHz
+         * 1296.210 -> 1296 MHz
+         * etc.
+         */
+        for (FrequencyTextParser.DetectedFrequency detectedFrequency
+                : FrequencyTextParser.findExplicitFrequencies(
+                stationName
+        )) {
+
+            detectedBands.add(
+                    detectedFrequency.getBand()
+            );
         }
 
         return detectedBands;

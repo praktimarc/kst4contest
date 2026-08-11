@@ -26,6 +26,7 @@ public final class PropagationFrequencyResolver {
     /** Explains why a frequency was selected. */
     public enum Source {
         CURRENT_QRG,
+        STATION_NAME_QRG,
         STATION_NAME,
         DUAL_CATEGORY_FALLBACK,
         CHAT_CATEGORY
@@ -87,6 +88,20 @@ public final class PropagationFrequencyResolver {
                     latestQrg.band,
                     latestQrg.frequencyMHz,
                     Source.CURRENT_QRG
+            );
+        }
+
+        FrequencyCandidate stationNameQrg =
+                findUniqueStationNameQrg(
+                        supportedVariants,
+                        usableBands
+                );
+
+        if (stationNameQrg != null) {
+            return new Resolution(
+                    stationNameQrg.band,
+                    stationNameQrg.frequencyMHz,
+                    Source.STATION_NAME_QRG
             );
         }
 
@@ -171,6 +186,73 @@ public final class PropagationFrequencyResolver {
 
         return latest;
     }
+
+
+    /**
+     * Resolves one exact station-name QRG only when the evidence is unambiguous.
+     *
+     * <p>The same QRG repeated in several category variants counts only once.
+     * If different explicit QRGs are advertised, no run frequency is guessed and
+     * the caller continues with normal band-name/category resolution.</p>
+     */
+    private static FrequencyCandidate findUniqueStationNameQrg(
+            List<ChatMember> variants,
+            EnumSet<Band> usableBands
+    ) {
+        java.util.LinkedHashMap<String, FrequencyCandidate> uniqueCandidates =
+                new java.util.LinkedHashMap<>();
+
+        for (ChatMember variant : variants) {
+            if (variant == null) {
+                continue;
+            }
+
+            for (FrequencyTextParser.DetectedFrequency detectedFrequency
+                    : FrequencyTextParser.findExplicitFrequencies(
+                    variant.getName()
+            )) {
+
+                Band band =
+                        detectedFrequency.getBand();
+
+                if (!usableBands.contains(band)) {
+                    continue;
+                }
+
+                double frequencyMHz =
+                        detectedFrequency.getFrequencyMHz();
+
+                String key =
+                        band.name()
+                                + "|"
+                                + Double.toString(frequencyMHz);
+
+                uniqueCandidates.putIfAbsent(
+                        key,
+                        new FrequencyCandidate(
+                                band,
+                                frequencyMHz,
+                                Long.MIN_VALUE
+                        )
+                );
+
+                /*
+                 * More than one different exact QRG means that we cannot safely
+                 * identify one run frequency.
+                 */
+                if (uniqueCandidates.size() > 1) {
+                    return null;
+                }
+            }
+        }
+
+        return uniqueCandidates.size() == 1
+                ? uniqueCandidates.values()
+                  .iterator()
+                  .next()
+                : null;
+    }
+
 
     private static boolean isSupportedVariant(ChatMember member) {
         if (member == null || member.getChatCategory() == null) {

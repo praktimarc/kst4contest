@@ -16,6 +16,113 @@ class PropagationFrequencyResolverTest {
 
     private static final long NOW = 10_000_000L;
 
+
+    @Test
+    void exactStationNameQrgWinsOverBandAndCategoryFallback() {
+        ChatMember station =
+                station(
+                        ChatCategory.VUHF,
+                        "Phil 432.357"
+                );
+
+        PropagationFrequencyResolver.Resolution resolution =
+                resolve(
+                        List.of(station),
+                        EnumSet.of(
+                                Band.B_144,
+                                Band.B_432
+                        )
+                );
+
+        assertEquals(
+                Band.B_432,
+                resolution.getBand()
+        );
+
+        assertEquals(
+                432.357,
+                resolution.getAnalysisFrequencyMHz(),
+                0.000_001
+        );
+
+        assertEquals(
+                PropagationFrequencyResolver.Source.STATION_NAME_QRG,
+                resolution.getSource()
+        );
+    }
+
+    @Test
+    void recentChatQrgWinsOverExactStationNameQrg() {
+        ChatMember station =
+                station(
+                        ChatCategory.VUHF,
+                        "Phil 432.357"
+                );
+
+        addCurrentQrg(
+                station,
+                Band.B_432,
+                432.335,
+                NOW - 1_000L
+        );
+
+        PropagationFrequencyResolver.Resolution resolution =
+                resolve(
+                        List.of(station),
+                        EnumSet.of(Band.B_432)
+                );
+
+        assertEquals(
+                432.335,
+                resolution.getAnalysisFrequencyMHz(),
+                0.000_001
+        );
+
+        assertEquals(
+                PropagationFrequencyResolver.Source.CURRENT_QRG,
+                resolution.getSource()
+        );
+    }
+
+    @Test
+    void multipleStationNameQrgsAreNotTreatedAsOneRunFrequency() {
+        ChatMember station =
+                station(
+                        ChatCategory.EMEJT65,
+                        "QRV 432.357 1296.210"
+                );
+
+        PropagationFrequencyResolver.Resolution resolution =
+                resolve(
+                        List.of(station),
+                        EnumSet.of(
+                                Band.B_432,
+                                Band.B_1296
+                        )
+                );
+
+        /*
+         * Both bands are known, but no exact run QRG is guessed.
+         * Existing station-name band selection therefore chooses the
+         * lowest usable advertised band.
+         */
+        assertEquals(
+                Band.B_432,
+                resolution.getBand()
+        );
+
+        assertEquals(
+                432.0,
+                resolution.getAnalysisFrequencyMHz(),
+                0.000_001
+        );
+
+        assertEquals(
+                PropagationFrequencyResolver.Source.STATION_NAME,
+                resolution.getSource()
+        );
+    }
+
     @Test
     void currentQrgWinsOverNameAndCategoryFallback() {
         ChatMember station = station(ChatCategory.MICROWAVE, "QRV 3cm");

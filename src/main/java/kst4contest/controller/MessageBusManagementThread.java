@@ -18,6 +18,7 @@ import kst4contest.ApplicationConstants;
 import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.locatorUtils.Location;
 import kst4contest.model.*;
+import kst4contest.logic.FrequencyTextParser;
 
 /**
  *
@@ -58,7 +59,7 @@ public class MessageBusManagementThread extends Thread {
 	 * would be converted into plausible but incorrect frequencies.
 	 */
 	private static final Pattern SMART_FREQUENCY_PATTERN = Pattern.compile(
-			"(?<![\\d])(\\d{3,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?)(?![\\d])"
+			"(?<![\\d])(\\d{2,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?)(?![\\d])"
 					+ "|(?<![\\d])([.,]\\d{3}(?:[.,]\\d{1,3})?)(?![\\d])"
 					+ "|(?<=\\s|^)(\\d{3})(?=\\s|$)"
 	);
@@ -319,16 +320,28 @@ public class MessageBusManagementThread extends Thread {
 
 						try {
 							String reconstructed =
-									candidateBand.getPrefix() + "." + foundRaw;
-							double candidateFrequency = Double.parseDouble(
-									normalizeFrequencyString(reconstructed)
-							);
+									candidateBand.getPrefix()
+											+ "."
+											+ foundRaw;
 
-							if (candidateBand.isPlausible(candidateFrequency)
+							FrequencyTextParser.DetectedFrequency detectedFrequency =
+									FrequencyTextParser.parseExplicitFrequency(
+											reconstructed
+									);
+
+							if (detectedFrequency != null
+									&& detectedFrequency.getBand() == candidateBand
 									&& info.timestampEpoch > bestTimestamp) {
-								finalDetectedFrequency = candidateFrequency;
-								finalDetectedBand = candidateBand;
-								bestTimestamp = info.timestampEpoch;
+
+								finalDetectedFrequency =
+										detectedFrequency.getFrequencyMHz();
+
+								finalDetectedBand =
+										candidateBand;
+
+								bestTimestamp =
+										info.timestampEpoch;
+
 							}
 						} catch (NumberFormatException ignored) {
 							// Try the next known band.
@@ -357,27 +370,40 @@ public class MessageBusManagementThread extends Thread {
 
 					try {
 						String reconstructed =
-								fallbackBand.getPrefix() + "." + foundRaw;
-						double candidateFrequency = Double.parseDouble(
-								normalizeFrequencyString(reconstructed)
-						);
+								fallbackBand.getPrefix()
+										+ "."
+										+ foundRaw;
 
-						if (fallbackBand.isPlausible(candidateFrequency)) {
-							finalDetectedFrequency = candidateFrequency;
-							finalDetectedBand = fallbackBand;
+						FrequencyTextParser.DetectedFrequency detectedFrequency =
+								FrequencyTextParser.parseExplicitFrequency(
+										reconstructed
+								);
+
+						if (detectedFrequency != null
+								&& detectedFrequency.getBand() == fallbackBand) {
+
+							finalDetectedFrequency =
+									detectedFrequency.getFrequencyMHz();
+
+							finalDetectedBand =
+									fallbackBand;
 						}
 					} catch (NumberFormatException ignored) {
 						// The matched value cannot be converted into a frequency.
 					}
 				}
 			} else {
-				try {
-					finalDetectedFrequency = Double.parseDouble(
-							normalizeFrequencyString(foundRaw)
-					);
-					finalDetectedBand = Band.fromFrequency(finalDetectedFrequency);
-				} catch (NumberFormatException ignored) {
-					// Continue with the next possible match in the message.
+				FrequencyTextParser.DetectedFrequency detectedFrequency =
+						FrequencyTextParser.parseExplicitFrequency(
+								foundRaw
+						);
+
+				if (detectedFrequency != null) {
+					finalDetectedFrequency =
+							detectedFrequency.getFrequencyMHz();
+
+					finalDetectedBand =
+							detectedFrequency.getBand();
 				}
 			}
 
@@ -462,22 +488,22 @@ public class MessageBusManagementThread extends Thread {
 	 * Example: "144.210.10" -> "144.21010"
 	 * Example: "144.210"    -> "144.210"
 	 */
-	private String normalizeFrequencyString(String rawInput) {
-		// Input is already guaranteed to have only dots as separators (commas replaced earlier)
-
-		int firstDotIndex = rawInput.indexOf(".");
-
-		if (firstDotIndex != -1) {
-			// Check if there are more dots after the first one
-			String decimalPart = rawInput.substring(firstDotIndex + 1);
-			if (decimalPart.contains(".")) {
-				// Remove all subsequent dots to make it a valid double
-				decimalPart = decimalPart.replace(".", "");
-				return rawInput.substring(0, firstDotIndex) + "." + decimalPart;
-			}
-		}
-		return rawInput;
-	}
+//	private String normalizeFrequencyString(String rawInput) {
+//		// Input is already guaranteed to have only dots as separators (commas replaced earlier)
+//
+//		int firstDotIndex = rawInput.indexOf(".");
+//
+//		if (firstDotIndex != -1) {
+//			// Check if there are more dots after the first one
+//			String decimalPart = rawInput.substring(firstDotIndex + 1);
+//			if (decimalPart.contains(".")) {
+//				// Remove all subsequent dots to make it a valid double
+//				decimalPart = decimalPart.replace(".", "");
+//				return rawInput.substring(0, firstDotIndex) + "." + decimalPart;
+//			}
+//		}
+//		return rawInput;
+//	}
 
 
 	/**

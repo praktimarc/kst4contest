@@ -15,6 +15,39 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class BandOpportunityResolverTest {
 
     @Test
+    void explicitStationNameFrequencyProvidesBandEvidence() {
+        ChatMember station = new ChatMember();
+        station.setName("Phil 432.357");
+
+        BandOpportunityResolver.Resolution resolution =
+                BandOpportunityResolver.resolve(
+                        List.of(station),
+                        System.currentTimeMillis()
+                );
+
+        assertEquals(
+                EnumSet.of(Band.B_432),
+                resolution.getOfferedBands()
+        );
+    }
+
+    @Test
+    void relativeStationNameFrequencyDoesNotProvideBandEvidence() {
+        ChatMember station = new ChatMember();
+        station.setName("Mike .180");
+
+        BandOpportunityResolver.Resolution resolution =
+                BandOpportunityResolver.resolve(
+                        List.of(station),
+                        System.currentTimeMillis()
+                );
+
+        assertTrue(
+                resolution.getOfferedBands().isEmpty()
+        );
+    }
+
+    @Test
     void resolvesCommonShorthandBandsFromStationName() {
         EnumSet<Band> bands = BandOpportunityResolver.detectBandsFromStationName(
                 "Peter QRV 2-70-23/13/9/6/3"

@@ -15,6 +15,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import kst4contest.logic.FrequencyTextParser;
 
 /**
  * Builds immutable map snapshots from the currently visible chat members.
@@ -204,6 +205,92 @@ public final class MapCallsignRawSnapshotBuilder {
                     ));
                 }
             }
+
+        }
+
+        /*
+         * A QRG explicitly contained in the current station name does not expire.
+         *
+         * Recent dynamic QRG evidence has priority. Therefore station-name QRGs fill
+         * only bands for which no recent dynamic frequency is available.
+         *
+         * Different explicit QRGs for the same band are considered ambiguous and are
+         * not reduced to one arbitrary run frequency.
+         */
+        Map<Band, Map<String, FrequencyTextParser.DetectedFrequency>>
+                stationNameFrequenciesByBand =
+                new EnumMap<>(Band.class);
+
+        for (ChatMember variant : variants) {
+            if (variant == null) {
+                continue;
+            }
+
+            for (FrequencyTextParser.DetectedFrequency detectedFrequency
+                    : FrequencyTextParser.findExplicitFrequencies(
+                    variant.getName()
+            )) {
+
+                Band band =
+                        detectedFrequency.getBand();
+
+                if (availableBands == null
+                        || !availableBands.contains(band)) {
+                    continue;
+                }
+
+                stationNameFrequenciesByBand
+                        .computeIfAbsent(
+                                band,
+                                ignored -> new LinkedHashMap<>()
+                        )
+                        .putIfAbsent(
+                                Double.toString(
+                                        detectedFrequency.getFrequencyMHz()
+                                ),
+                                detectedFrequency
+                        );
+            }
+        }
+
+        for (Map.Entry<
+                Band,
+                Map<String, FrequencyTextParser.DetectedFrequency>>
+                entry : stationNameFrequenciesByBand.entrySet()) {
+
+            Band band = entry.getKey();
+
+            /*
+             * A recent QRG detected from chat always wins.
+             */
+            if (latestByBand.containsKey(band)) {
+                continue;
+            }
+
+            /*
+             * Do not guess when several different QRGs were published for the
+             * same band.
+             */
+            if (entry.getValue().size() != 1) {
+                continue;
+            }
+
+            FrequencyTextParser.DetectedFrequency detectedFrequency =
+                    entry.getValue()
+                            .values()
+                            .iterator()
+                            .next();
+
+            latestByBand.put(
+                    band,
+                    new FrequencyCandidate(
+                            band,
+                            formatFrequency(
+                                    detectedFrequency.getFrequencyMHz()
+                            ),
+                            Long.MIN_VALUE
+                    )
+            );
         }
 
         LinkedHashMap<String, String> ordered = new LinkedHashMap<>();

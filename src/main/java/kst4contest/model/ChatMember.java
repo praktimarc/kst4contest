@@ -518,6 +518,7 @@ public class ChatMember {
 		this.frequency = frequency;
 	}
 
+
 	public long getActivityTimeLastInEpoch() {
 		return activityTimeLastInEpoch;
 	}
@@ -594,6 +595,40 @@ public class ChatMember {
 //		}
 	}
 
+
+	/**
+	 * Initializes the compatibility frequency only when no frequency is known yet.
+	 *
+	 * <p>This is used for an explicit QRG contained in the ON4KST station name.
+	 * A subsequently detected chat QRG may overwrite this initial value, but a
+	 * station-name QRG never replaces an already known frequency.</p>
+	 *
+	 * @param frequencyMhz explicit station-name frequency
+	 * @return true when the frequency was initialized
+	 */
+	public boolean initializeFrequencyIfEmpty(double frequencyMhz) {
+		if (!Double.isFinite(frequencyMhz)
+				|| frequencyMhz <= 0.0) {
+			return false;
+		}
+
+		if (frequency == null) {
+			frequency = new SimpleStringProperty();
+		}
+
+		String currentFrequency = frequency.get();
+
+		if (currentFrequency != null
+				&& !currentFrequency.isBlank()) {
+			return false;
+		}
+
+		frequency.set(
+				Double.toString(frequencyMhz)
+		);
+
+		return true;
+	}
 
 	/**
 	 * Sets all worked information of this object to false. Scope: GUI, Reset Button

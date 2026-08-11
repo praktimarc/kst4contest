@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.nio.charset.StandardCharsets;
-
+import kst4contest.logic.FrequencyTextParser;
 
 
 
@@ -1490,6 +1490,38 @@ private ObservableList<String>
 		);
 	}
 
+
+	/**
+	 * Uses one unambiguous explicit QRG from the current station name as the
+	 * initial compatibility frequency.
+	 *
+	 * <p>Multiple explicit QRGs are valid band evidence, but there is no safe
+	 * assumption which one is the current run frequency. Therefore the legacy
+	 * frequency property is initialized only when exactly one explicit QRG exists.</p>
+	 */
+	private void initializeFrequencyFromStationNameIfUnambiguous(
+			ChatMember member
+	) {
+		if (member == null) {
+			return;
+		}
+
+		List<FrequencyTextParser.DetectedFrequency> detectedFrequencies =
+				FrequencyTextParser.findExplicitFrequencies(
+						member.getName()
+				);
+
+		if (detectedFrequencies.size() != 1) {
+			return;
+		}
+
+		member.initializeFrequencyIfEmpty(
+				detectedFrequencies
+						.get(0)
+						.getFrequencyMHz()
+		);
+	}
+
 	/**
 	 * Adds or replaces an active chat member in the worker-thread model and mirrors
 	 * that change to the JavaFX list. This is the only supported path for ON4KST
@@ -1500,6 +1532,8 @@ private ObservableList<String>
 		if (key == null) {
 			return;
 		}
+
+		initializeFrequencyFromStationNameIfUnambiguous(member);
 
 		activeChatMembersByCallAndCategory.put(key, member);
 
@@ -1683,6 +1717,9 @@ private ObservableList<String>
 		}
 
 		activeMember.setName(updatedMember.getName());
+		initializeFrequencyFromStationNameIfUnambiguous(
+				activeMember
+		);
 		activeMember.setQra(updatedMember.getQra());
 		activeMember.setState(updatedMember.getState());
 		activeMember.setLastActivity(updatedMember.getLastActivity());
