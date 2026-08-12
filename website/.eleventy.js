@@ -71,6 +71,14 @@ function getManualPageOrder(lang, slug) {
     return index >= 0 ? index : 999;
 }
 
+function githubCompatibleSlug(value) {
+    return (value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+        .replace(/\s+/g, "-");
+}
+
 function rewriteManualLinks(content, lang) {
     return (content || "")
 
@@ -157,6 +165,7 @@ module.exports = function (eleventyConfig) {
         linkify: true,
         typographer: true
     }).use(markdownItAnchor, {
+        slugify: githubCompatibleSlug,
         permalink: markdownItAnchor.permalink.headerLink()
     });
 
