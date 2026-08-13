@@ -445,6 +445,7 @@
                                 <addmodule>java.sql</addmodule>
                                 <addmodule>java.net.http</addmodule>
                                 <addmodule>jdk.crypto.ec</addmodule>
+                                <addmodule>jdk.net</addmodule>
                             </addmodules>
                             <mainclass>${main.class}</mainclass>
                             <input>${project.build.directory}/modules</input>
