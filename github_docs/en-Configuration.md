@@ -40,7 +40,7 @@ After a change, click **Save Settings** and restart KST4Contest. Band columns an
 
 ### Antenna Beamwidth
 
-Enter a realistic value for your antenna's beamwidth (in degrees). This value is used for the [Sked Direction Highlighting](Features#sked-direction-highlighting). A test value of 50° has proven effective; DM5M uses quads with 69°.
+Enter a realistic value for your antenna's beamwidth (in degrees). This value is used for the [Sked Direction Highlighting](en-Features#sked-direction-highlighting). A test value of 50° has proven effective; DM5M uses quads with 69°.
 
 > **Do not** enter fantasy values – the direction calculations will become useless.
 
@@ -50,66 +50,82 @@ Maximum distance (in km) for which direction warnings should be triggered. A rea
 
 ### Path Analysis and Link Budget
 
-The station map uses several values from the station settings for its path analysis. These values describe the local station setup and, where no individual information is available, an assumed setup for the remote station.
+The station map uses several values from the **Station** tab to calculate the terrain profile and link budget for the selected remote station. Enter the local station data as realistically as possible. The remote-station values remain global assumptions unless more accurate information is available.
 
-The following settings are used:
+| Setting | Use |
+|---|---|
+| **Own antenna height AGL** | Height of the local antenna above the surrounding terrain in metres |
+| **Own TX power W** | Local transmit power in watts |
+| **Own ant. gain dBi** | Gain of the local antenna in dBi |
+| **DX OM TX power W** | Assumed transmit power of the remote station in watts |
+| **DX OM ant. gain dBi** | Assumed antenna gain of the remote station in dBi |
 
-- **Own antenna height AGL [m]** specifies the height of the local antenna above the surrounding terrain. The value is *Above Ground Level*, not height above sea level. KST4Contest adds it to the terrain elevation at the local station.
-- **Own TX power [W]** specifies the transmit power of the local station in watts.
-- **Own ant. gain [dBi]** specifies the antenna gain of the local station in dBi.
-- **DX OM TX power [W]** specifies the transmit power assumed for the remote station.
-- **DX OM ant. gain [dBi]** specifies the antenna gain assumed for the remote station.
+**AGL** means *Above Ground Level*. Do not enter the height above sea level. The terrain elevation at the local station already comes from the elevation profile; KST4Contest adds the configured antenna height to this value.
 
-KST4Contest currently uses a fixed antenna height of 10 metres above the local terrain for the remote station. The remote power and antenna-gain values are global assumptions. They cannot replace individually known station data, but they provide a consistent basis when no better information is available.
+For the remote station, KST4Contest currently uses a fixed antenna height of 10 metres above the local terrain. Its transmit power and antenna gain come from the two **DX OM** fields. These values are deliberately assumptions: ON4KST provides neither the actual antenna height nor the complete station data of the remote operator.
 
-Antenna gains must be entered in dBi. If a value is specified in dBd, it can be converted approximately as follows:
+Antenna gains must be entered in `dBi`. Add `2.15 dB` before entering a value specified in `dBd`:
 
-`dBi = dBd + 2.15`
+```text
+dBi = dBd + 2.15 dB
+```
 
-The current antenna direction, configured beamwidth, maximum QRB and bands enabled for the local station also affect the map display or its assessment. The current QTF and beamwidth, for example, determine the displayed antenna sector and the highlighting of stations inside that sector.
+The current QTF, configured antenna beamwidth and default maximum QRB affect the map display. The bands enabled for the local station and the frequency derived for the remote station also affect the selection of the analysis frequency.
 
-The path analysis uses a fixed effective Earth-radius factor of `k = 4/3`. This is a common approximation for average tropospheric refraction. Actual propagation conditions can differ considerably.
+For the terrain profile, KST4Contest uses the antenna heights, elevation model and Earth curvature with a fixed effective Earth-radius factor of `k = 4/3`. The link budget additionally includes:
 
-The link budget takes into account:
-
-- the distance between both stations,
-- the analysis frequency,
-- the configured transmit powers,
-- the antenna gains,
-- estimated feeder losses,
+- distance and the current analysis frequency,
+- transmit powers and antenna gains in both directions,
+- frequency-dependent estimated feeder losses,
 - free-space path loss, and
-- a rough additional loss caused by obstructions in the terrain profile.
+- a rough additional loss caused by the relevant obstruction in the terrain profile.
 
-The resulting received power and SSB or CW margins are technical estimates. They help to classify a possible path, but they are not a complete field-strength prediction. Current weather conditions, local obstructions, multipath propagation and unknown station parameters cannot be represented completely.
+The calculation is performed in both directions. The weaker direction determines the common SSB or CW margin. Optimistic power or antenna values therefore improve the displayed result, but they do not improve the real radio path.
+
+The results remain engineering estimates. Current propagation conditions, local obstructions, vegetation, buildings, interference and unknown station parameters can change the actual result considerably. Operation, frequency selection and the limits of the calculation are described under [Station Map and Path Analysis](en-Features#station-map-and-path-analysis-from-v141).
 
 ---
 
 ## Server Settings (from v1.31)
 
-The chat server DNS and port are configurable in the Preferences:
+The connection details for the ON4KST chat server are shown at the top of the **Station** tab. They normally do not need to be changed.
 
-- **Server DNS**: Default `www.on4kst.org` (changed from `www.on4kst.info` in v1.31 hotfix).
-- **Port**: Default port of the ON4KST server.
+| Setting | Meaning |
+|---|---|
+| **ON4KST server** | DNS name or IP address of the chat server; the software default is `www.on4kst.org` |
+| **Port** | TCP port of the chat server; the default is `23001` |
 
-A change is only needed if the server moves or an alternative endpoint is used.
+`www.on4kst.info` may also remain in an existing, working configuration. There is no reason to change it merely because the displayed name differs from the software default, provided that the chat connection remains reliable.
+
+These values apply only to the outgoing ON4KST chat connection. They do not change the local DX cluster server or any connection to AirScout, PSTRotator or logging software.
+
+The port must be between `1` and `65535`. An invalid entry is rejected and replaced with the last valid value. An incorrect server name or port, on the other hand, prevents KST4Contest from connecting to the chat.
+
+Changing either value does not alter an existing TCP connection. Disconnect and reconnect the chat, or restart KST4Contest. Then use **Save Settings** so that the values are retained for the next program start.
 
 ---
 
 ## Log Sync Settings
 
-Three methods are available for automatically marking worked stations. Details: [Log Synchronisation](en-Log-Sync).
+The **Log sync** tab selects the sources from which KST4Contest imports worked stations. The three input paths provide different levels of detail:
 
-### Universal File Based Callsign Interpreter (Simplelogfile)
+![Log synchronisation settings](client_settings_window_logsync.png)
 
-Interprets any log file using regex for callsign patterns. No band information is available. Suitable as a fallback or for log programs that are not directly supported.
+| Input path | Data used | Result in KST4Contest |
+|---|---|---|
+| **Simplelogfile** | Callsigns read from a selected file | global Worked status, but no band or locator information |
+| **General QSO UDP listener** | QSO packets from UCXLog, QARTest, N1MM+ and DXLog.net | global and per-band Worked status plus worked grid square where both band and locator are transmitted |
+| **Win-Test network listener** | native Win-Test network packets | global and per-band Worked status, locator information and, depending on the settings, QRG synchronisation and sked handover |
 
-### Network Listener for Logger's QSO UDP Broadcast
+The file-based interpreter is mainly useful when the logging application provides no supported network interface. A callsign match alone, however, contains neither a reliable band nor a locator. Use one of the network listeners wherever possible if per-band information is required.
 
-**Recommended method.** KST4Contest listens for UDP packets sent by the logging software to the broadcast address when a QSO is saved. Stations are marked with band information. UDP port: default **12060**. (Used by UCXLog, N1MM+, QARTest, DXLog.net, etc.).
+The general QSO UDP listener is the recommended interface for UCXLog, QARTest, N1MM+ and DXLog.net. QSO and `RadioInfo` packets use the same configurable UDP port; the default is `12060`. Separate options in **Log sync** and **TRX sync** determine whether the received QSO and frequency information is processed.
 
-### Win-Test Network Listener (Additional UDP Listener)
+Win-Test uses its own network protocol and therefore has a separate listener. Its default port is `9871`. If this port is changed while the listener is enabled, KST4Contest restarts the Win-Test listener on the new port. After changing the shared UDP port `12060`, KST4Contest must instead be restarted completely.
 
-A dedicated network listener for Win-Test. KST4Contest receives and processes Win-Test-specific UDP packets (including sked handovers) on the configured port.
+All enabled input paths may be used in parallel. Their Worked information is merged into the same internal database; identical reports do not create separate Worked states. KST4Contest must be running when a QSO is saved unless the logging application can resend the existing log.
+
+Configuration of the individual logging applications, band and locator handling, and the Win-Test sked handover are described under [Log Synchronisation](en-Log-Sync).
 
 ---
 
@@ -188,7 +204,7 @@ The two options serve different purposes:
 
 The Priority Boost is only one factor in the complete calculation. Distance, antenna direction, recent activity, AirScout data, skeds and negative hints may still change the final order. Enabling the option therefore guarantees neither a particular score nor a particular position in the priority list.
 
-The other score weights currently have no separate user-interface controls. Several existing settings nevertheless provide input data for the calculation, particularly the [enabled bands](#enabled-bands), [antenna beamwidth](#antenna-beamwidth), [default maximum QRB](#default-maximum-qrb) and [AirScout settings](#airscout-settings).
+The other score weights currently have no separate user-interface controls. Several existing settings nevertheless provide input data for the calculation, particularly the [active bands](#active-bands), [antenna beamwidth](#antenna-beamwidth), [default maximum QRB](#default-maximum-qrb) and [AirScout settings](#airscout-settings).
 
 The complete calculation is described under [Priority Score and Priority List](en-Features#priority-score-and-priority-list-from-v140).
 
@@ -201,7 +217,7 @@ Further explanation: [Band Upgrade Hint after a Log Entry](en-Features#band-upgr
 
 ## Shortcut Settings
 
-Configuration of quick-access buttons that appear directly in the main window. Clicking a button inserts the configured text into the send field. All [variables](Macros-and-Variables#variables) can be used.
+Configuration of quick-access buttons that appear directly in the main window. Clicking a button inserts the configured text into the send field. All [variables](en-Macros-and-Variables#variables) can be used.
 
 ---
 

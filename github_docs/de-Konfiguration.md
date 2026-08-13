@@ -64,43 +64,7 @@ Der Wert sollte zum eigenen Stationsaufbau und zum vorgesehenen Contestbetrieb p
 
 ### Streckenanalyse und Link-Budget
 
-Die Streckenanalyse der Stationskarte verwendet einige Angaben aus der Stationskonfiguration. Diese Werte beschreiben das eigene Stationssetup und – soweit keine individuellen Daten der Gegenstation vorliegen – ein angenommenes Setup der Gegenstation.
-
-Folgende Einstellungen werden berücksichtigt:
-
-- **Own antenna height AGL [m]** gibt die Höhe der eigenen Antenne über dem lokalen Gelände an. Die Angabe bezieht sich auf *Above Ground Level* und nicht auf die Höhe über dem Meeresspiegel. KST4Contest addiert diesen Wert zur Geländehöhe am eigenen Standort.
-- **Own TX power [W]** gibt die verwendete Sendeleistung der eigenen Station in Watt an.
-- **Own ant. gain [dBi]** gibt den Antennengewinn der eigenen Station in dBi an.
-- **DX OM TX power [W]** gibt die für die Gegenstation angenommene Sendeleistung in Watt an.
-- **DX OM ant. gain [dBi]** gibt den für die Gegenstation angenommenen Antennengewinn in dBi an.
-
-Für die Antennenhöhe der Gegenstation verwendet KST4Contest derzeit einen festen Wert von 10 m über dem lokalen Gelände. Die Leistungs- und Antennendaten der Gegenstation sind globale Annahmen. Sie ersetzen keine individuell bekannten Stationsdaten, ermöglichen aber eine einheitliche Abschätzung, wenn keine genaueren Informationen vorliegen.
-
-Die Antennengewinne müssen in dBi angegeben werden. Falls ein Wert in dBd vorliegt, kann er näherungsweise wie folgt umgerechnet werden:
-
-`dBi = dBd + 2.15`
-
-Auch die aktuelle Antennenrichtung, die konfigurierte Strahlbreite, das maximale QRB und die für die eigene Station aktivierten Bänder beeinflussen die Darstellung oder Auswertung auf der Stationskarte. Die aktuelle QTF und die Strahlbreite bestimmen beispielsweise den eingezeichneten Antennensektor und die Hervorhebung von Stationen innerhalb dieses Bereichs.
-
-Für die Berücksichtigung der Erdkrümmung verwendet die Streckenanalyse einen festen Faktor von `k = 4/3` für den effektiven Erdradius. Das ist eine übliche Näherung für eine durchschnittliche troposphärische Refraktion. Tatsächliche Ausbreitungsbedingungen können davon deutlich abweichen.
-
-Das Link-Budget berücksichtigt unter anderem:
-
-- die Entfernung zwischen beiden Stationen,
-- die verwendete Frequenz,
-- die konfigurierte Sendeleistung,
-- die Antennengewinne,
-- geschätzte Speiseleitungsverluste,
-- den Freiraumverlust sowie
-- eine grobe Zusatzdämpfung durch Hindernisse im Streckenprofil.
-
-Die daraus berechnete Empfangsleistung und SSB- beziehungsweise CW-Marge sind technische Abschätzungen. Sie sollen dabei helfen, mögliche Verbindungen einzuordnen. Sie sind keine vollständige Feldstärkeprognose und können insbesondere aktuelle Wetterbedingungen, lokale Abschattungen, Mehrwegeausbreitung oder andere nicht bekannte Stationsparameter nicht vollständig berücksichtigen.
-
----
-
-### Streckenanalyse und Link-Budget
-
-Die Stationskarte verwendet mehrere Werte aus dem Reiter **Station**, um das Geländeprofil und das Link-Budget zur ausgewählten Gegenstation zu berechnen.
+Die Stationskarte verwendet mehrere Werte aus dem Reiter **Station**, um das Geländeprofil und das Link-Budget zur ausgewählten Gegenstation zu berechnen. Die Angaben zum eigenen Stationsaufbau sollten deshalb möglichst realistisch sein. Bei der Gegenstation handelt es sich dagegen um globale Annahmen, solange keine genaueren Daten vorliegen.
 
 | Einstellung | Verwendung |
 |---|---|
@@ -110,27 +74,33 @@ Die Stationskarte verwendet mehrere Werte aus dem Reiter **Station**, um das Gel
 | **DX OM TX power W** | Angenommene Sendeleistung der Gegenstation in Watt |
 | **DX OM ant. gain dBi** | Angenommener Antennengewinn der Gegenstation in dBi |
 
-**AGL** bedeutet „above ground level“. Trage hier nicht die Höhe über dem Meeresspiegel ein. Die Geländehöhe am eigenen Standort stammt bereits aus dem abgerufenen Höhenprofil; die konfigurierte Antennenhöhe wird zu diesem Wert addiert.
+**AGL** bedeutet *Above Ground Level*. Trage hier nicht die Höhe über dem Meeresspiegel ein. Die Geländehöhe am eigenen Standort stammt bereits aus dem Höhenprofil; KST4Contest addiert die konfigurierte Antennenhöhe zu diesem Wert.
 
-Für die Antennenhöhe der Gegenstation verwendet KST4Contest derzeit einen festen Standardwert von 10 Metern über Grund. Eine stationsbezogene Antennenhöhe wird im ON4KST-Chat nicht übertragen.
+Für die Gegenstation verwendet KST4Contest derzeit eine feste Antennenhöhe von 10 Metern über dem lokalen Gelände. Sendeleistung und Antennengewinn der Gegenstation stammen aus den beiden **DX OM**-Feldern. Diese Werte sind bewusst nur Annahmen: Der ON4KST-Chat überträgt weder die tatsächliche Antennenhöhe noch die vollständigen Stationsdaten der Gegenstation.
 
-Antennengewinne müssen in `dBi` eingetragen werden. Liegt ein Wert in `dBd` vor, gilt:
+Antennengewinne müssen in `dBi` eingetragen werden. Liegt ein Wert in `dBd` vor, muss vor der Eingabe `2.15 dB` addiert werden:
 
 ```text
-dBi = dBd + 2,15 dB
+dBi = dBd + 2.15 dB
+```
 
+Die aktuelle QTF, der konfigurierte Antennen-Öffnungswinkel und das Standard-Maximum-QRB beeinflussen die Darstellung der Stationskarte. Die für die eigene Station aktivierten Bänder und die für die Gegenstation hergeleitete Frequenz wirken sich zusätzlich auf die Auswahl der Analysefrequenz aus.
 
+Für das Geländeprofil berücksichtigt KST4Contest die Antennenhöhen, das Höhenmodell und die Erdkrümmung mit einem festen effektiven Erdradiusfaktor von `k = 4/3`. Das Link-Budget verwendet außerdem:
 
-## Server-Einstellungen (ab v1.31)
+- die Entfernung und die aktuelle Analysefrequenz,
+- die Sendeleistungen und Antennengewinne beider Stationen,
+- frequenzabhängig geschätzte Speiseleitungsverluste,
+- die Freiraumdämpfung und
+- eine grobe zusätzliche Dämpfung durch das maßgebliche Hindernis im Geländeprofil.
 
-Der Chat-Server-DNS und -Port sind in den Preferences konfigurierbar:
+Die Berechnung erfolgt für beide Übertragungsrichtungen. Für die gemeinsame SSB- beziehungsweise CW-Marge ist die ungünstigere Richtung maßgeblich. Zu optimistische Leistungs- oder Antennenwerte verbessern daher zwar das angezeigte Ergebnis, nicht aber den realen Funkweg.
 
-- **Server-DNS**: Standard `www.on4kst.org` (ab v1.31 geändert von `www.on4kst.info`).
-- **Port**: Standardport des ON4KST-Servers.
-
-Eine Änderung ist nur notwendig, wenn der Server umzieht oder ein alternativer Endpunkt genutzt wird.
+Die Werte bleiben technische Abschätzungen. Aktuelle Ausbreitungsbedingungen, lokale Abschattungen, Bewuchs, Gebäude, Störungen und nicht bekannte Stationsparameter können das tatsächliche Ergebnis deutlich verändern. Bedienung, Frequenzauswahl und Grenzen der Berechnung sind unter [Stationskarte und Streckenanalyse](de-Funktionen#stationskarte-und-streckenanalyse-ab-v141) beschrieben.
 
 ---
+
+
 
 ## Log-Sync-Einstellungen
 
@@ -283,7 +253,7 @@ Doppelte oder syntaktisch ungültige Rufzeichen werden nicht übernommen. Die Li
 
 ## Shortcut Settings (Schnellzugriff-Schaltflächen)
 
-Konfiguration von Schnellzugriff-Schaltflächen, die direkt im Hauptfenster erscheinen. Ein Klick auf eine Schaltfläche fügt den konfigurierten Text in das Sendfeld ein. Alle [Variablen](Makros-und-Variablen#variablen) können verwendet werden.
+Konfiguration von Schnellzugriff-Schaltflächen, die direkt im Hauptfenster erscheinen. Ein Klick auf eine Schaltfläche fügt den konfigurierten Text in das Sendfeld ein. Alle [Variablen](de-Makros-und-Variablen#variablen) können verwendet werden.
 
 ---
 

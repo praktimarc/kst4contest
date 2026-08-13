@@ -389,7 +389,7 @@ Die automatische Bandvorauswahl ist eine Herleitung aus vorhandenen Chatinformat
 
 Bedienung: [Stationsinfo-Panel](de-Benutzeroberflaeche#stationsinfo-panel-further-info)
 
-Darstellung: [AP- und Sked-Timeline](#ap-und-sked-timeline)
+Darstellung: [AP- und Sked-Timeline](#ap--und-sked-timeline)
 
 Win-Test-Übergabe: [Log-Synchronisation – Win-Test](de-Log-Synchronisation#win-test)
 

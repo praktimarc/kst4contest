@@ -107,7 +107,7 @@ Die Flugzeugdaten können direkt in Nachrichten eingefügt werden:
 - `FIRSTAP` → z. B. `a very big AP in 1 min`
 - `SECONDAP` → z. B. `Next big AP in 9 min`
 
-Details: [Makros und Variablen](Makros-und-Variablen#variablen)
+Details: [Makros und Variablen](de-Makros-und-Variablen#variablen)
 
 ---
 

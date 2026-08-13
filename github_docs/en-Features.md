@@ -28,7 +28,7 @@ The calculation is based on the following logic:
 
 The calculation does not include topographic path calculations – this is a deliberate simplification. It may be added in a future version.
 
-> Configuration: [Configuration – Antenna Beamwidth](Configuration#antenna-beamwidth)
+> Configuration: [Configuration – Antenna Beamwidth](en-Configuration#antenna-beamwidth)
 
 ---
 
@@ -443,7 +443,7 @@ In practical terms, the score does not replace the operator’s decision. It pre
 
 Related settings:
 
-- [Enabled Bands](en-Configuration#enabled-bands)
+- [Active Bands](en-Configuration#active-bands)
 - [Antenna Beamwidth](en-Configuration#antenna-beamwidth)
 - [Default Maximum QRB](en-Configuration#default-maximum-qrb)
 - [AirScout Settings](en-Configuration#airscout-settings)
@@ -503,7 +503,7 @@ The timeline is a preview. AirScout data can change, and a stored sked guarantee
 
 ## Interval Beacon
 
-Automatic CQ messages in the public channel at a configurable interval. Recommended: use the `MYQRG` variable so the current frequency is always accurate. Details: [Configuration – Beacon Settings](Configuration#beacon-settings).
+Automatic CQ messages in the public channel at a configurable interval. Recommended: use the `MYQRG` variable so the current frequency is always accurate. Details: [Configuration – Beacon Settings](en-Configuration#beacon-settings).
 
 ---
 

@@ -107,7 +107,7 @@ Aircraft data can be inserted directly into messages:
 - `FIRSTAP` → e.g. `a very big AP in 1 min`
 - `SECONDAP` → e.g. `Next big AP in 9 min`
 
-Details: [Macros and Variables](Macros-and-Variables#variables)
+Details: [Macros and Variables](en-Macros-and-Variables#variables)
 
 ---
 
