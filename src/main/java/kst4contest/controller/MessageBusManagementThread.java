@@ -19,6 +19,8 @@ import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.locatorUtils.Location;
 import kst4contest.model.*;
 import kst4contest.logic.FrequencyTextParser;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.LongPredicate;
 
 /**
  *
@@ -37,6 +39,11 @@ public class MessageBusManagementThread extends Thread {
 	private PrintWriter writer;
 	//	private Socket socket;
 	private ChatController client;
+
+	private final long connectionSessionId;
+	private final LinkedBlockingQueue<ChatMessage> receiveQueue;
+	private final LongPredicate connectionSessionIsActive;
+
 	//	private File fileLogRAW;
 //	private TimerTask userActualizationTask; // Is used as a temporary userout-print
 //	private TimerTask userActualizationTask; //kst4contest.test 4 23001
@@ -118,9 +125,22 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	public MessageBusManagementThread(ChatController client, ThreadStatusCallback callBack) {
+		this(client, callBack, 0L, client.getMessageRXBus(), ignored -> true);
+	}
+
+	public MessageBusManagementThread(
+			ChatController client,
+			ThreadStatusCallback callBack,
+			long connectionSessionId,
+			LinkedBlockingQueue<ChatMessage> receiveQueue,
+			LongPredicate connectionSessionIsActive
+	) {
 
 		this.callBackToController = callBack;
 		this.client = client;
+		this.connectionSessionId = connectionSessionId;
+		this.receiveQueue = receiveQueue;
+		this.connectionSessionIsActive = connectionSessionIsActive;
 
 		ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
 		callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
@@ -522,7 +542,8 @@ public class MessageBusManagementThread extends Thread {
 
 		messageToProcess.setMessageText(reduce);
 
-		if (messageToProcess.getMessageText().isEmpty()) {
+		if (messageToProcess.getMessageText() == null
+				|| messageToProcess.getMessageText().isEmpty()) {
 //			System.out.println("[MSGBUSMGTT:] ###################### no processable data");
 		} else {
 
@@ -754,6 +775,50 @@ public class MessageBusManagementThread extends Thread {
 		return fallbackReceiver;
 	}
 
+	private boolean validateInboundUserFrame(String[] fields) {
+		if (fields == null || fields.length < 6) {
+			logRejectedInboundUserFrame(
+					"Ignoring truncated ON4KST user frame", fields);
+			return false;
+		}
+		if (fields[2] == null || fields[2].isBlank()) {
+			logRejectedInboundUserFrame(
+					"Ignoring ON4KST user frame with empty callsign", fields);
+			return false;
+		}
+		try {
+			On4KstProtocol.category(Integer.parseInt(fields[1]));
+			On4KstProtocol.locator(fields[4]);
+			Integer.parseInt(fields[5]);
+			return true;
+		} catch (IllegalArgumentException invalidUser) {
+			logRejectedInboundUserFrame(
+					"Ignoring malformed ON4KST user '" + fields[2]
+							+ "': " + invalidUser.getMessage(), fields);
+			return false;
+		}
+	}
+
+	/**
+	 * Records a rejected user frame without writing the complete raw frame or user
+	 * name to the diagnostic log.
+	 *
+	 * <p>The opcode, category and callsign are sufficient to identify the offending
+	 * list position. Omitting the remaining fields avoids unnecessary disclosure of
+	 * free-form profile text.</p>
+	 */
+	private void logRejectedInboundUserFrame(String reason, String[] fields) {
+		String opcode = fields != null && fields.length > 0 ? fields[0] : "UNKNOWN";
+		String category = fields != null && fields.length > 1 ? fields[1] : "UNKNOWN";
+		String callsign = fields != null && fields.length > 2 ? fields[2] : "UNKNOWN";
+		client.onOn4KstConnectionWarning(
+				reason + "; opcode=" + opcode
+						+ ", category=" + category
+						+ ", callsign=" + callsign
+						+ ", fieldCount=" + (fields == null ? 0 : fields.length));
+	}
+
+
 	/**
 	 * Processes received messages via port 23001 (improved telnet Interface)
 	 *
@@ -808,23 +873,33 @@ public class MessageBusManagementThread extends Thread {
 		 * here we have a helper list for identifying questions for my qrg which can be autoanswered later
 		 */
 
-		if (messageToProcess.getMessageText().isEmpty()) {
-//			System.out.println("[MSGBUSMGTT:] no processable data");
-
+		if (messageToProcess.getMessageText() == null
+				|| messageToProcess.getMessageText().isEmpty()) {
+			// No processable data.
 		} else {
 
-			if (messageToProcess.getMessageText().contains(SRVR_LOGSTAT)) {
-				String logstatMessage[];
-				logstatMessage = messageToProcess.getMessageText().split("\\|");
-				if (logstatMessage[1].contains(SRVR_LOGINOK)) {
-					this.client.setConnectedAndLoggedIn(true);
-				} else {
-					this.client.setConnectedAndNOTLoggedIn(true);
-					this.client.setConnectedAndLoggedIn(false);
-				}
+			if (messageToProcess.getMessageText().startsWith(SRVR_LOGSTAT + "|")) {
+				String[] logstatMessage =
+						messageToProcess.getMessageText().split("\\|", -1);
+				this.client.onOn4KstLogstat(
+						connectionSessionId,
+						logstatMessage);
 			}
 
-			String splittedMessageLine[] = messageToProcess.getMessageText().split("\\|");
+			String[] splittedMessageLine =
+					messageToProcess.getMessageText().split("\\|");
+
+			String opcode = splittedMessageLine.length == 0
+					? ""
+					: splittedMessageLine[0];
+
+			if ((INITIALUSERLISTENTRY.equals(opcode)
+					|| USERENTEREDCHAT.equals(opcode)
+					|| USERENTEREDCHAT2.equals(opcode))
+					&& !validateInboundUserFrame(splittedMessageLine)) {
+				return;
+			}
+//			String splittedMessageLine[] = messageToProcess.getMessageText().split("\\|");
 
 			/**
 			 * Initializes the Userlist if entry fits UA0
@@ -832,7 +907,7 @@ public class MessageBusManagementThread extends Thread {
 			 *
 			 *
 			 */
-			if (splittedMessageLine[0].contains(INITIALUSERLISTENTRY)) {
+			if (splittedMessageLine[0].equals(INITIALUSERLISTENTRY)) {
 //				System.out.println("MSGBUS: User detected");
 
 				ChatMember newMember = new ChatMember();
@@ -853,7 +928,9 @@ public class MessageBusManagementThread extends Thread {
 
 
 				if (!client.getChatPreferences().getStn_loginCallSign().equals(newMember.getCallSign())) {
-					this.client.addOrUpdateActiveChatMember(newMember); // the own call will not be in the list
+					this.client.stageInitialOn4KstChatMember(
+							connectionSessionId,
+							newMember);
 //					this.client.getReachabilityService().ensureAutoTropoMarginCalculated(newMember);
 					// Reachability is calculated on demand only: map click, selected station, or manual request.
 				}
@@ -877,7 +954,8 @@ public class MessageBusManagementThread extends Thread {
 			 * UA2|2|W5ADD|Parker|EM40WL|2|
 			 *
 			 */
-				if (splittedMessageLine[0].contains(USERENTEREDCHAT) || splittedMessageLine[0].contains(USERENTEREDCHAT2)) {
+				if (splittedMessageLine[0].equals(USERENTEREDCHAT)
+						|| splittedMessageLine[0].equals(USERENTEREDCHAT2)) {
 //				System.out.println("MSGBUS: User detected");
 
 
@@ -1640,18 +1718,29 @@ public class MessageBusManagementThread extends Thread {
 													/**
 													 * Userinfo-update: UE|2|22562|
 													 */
-														if (splittedMessageLine[0].contains(SRVR_USERLISTEND)) {
+														if (SRVR_USERLISTEND.equals(opcode)) {
+															if (splittedMessageLine.length < 2) {
+																System.out.println(
+																		"[MSGBUSMGT, Warning:] Ignoring malformed UE frame: "
+																				+ messageToProcess.getMessageText());
+																return;
+															}
 
-															// No worthy information, count of users
-														} else
+															this.client.onOn4KstInitialUserListCompleted(
+																	connectionSessionId,
+																	util_getChatCategoryByCategoryNrString(
+																			splittedMessageLine[1]));
 
-														if (splittedMessageLine[0].contains(SRVR_DXCEND)) {
+														} else if (SRVR_DXCEND.equals(opcode)) {
 
-															// No worthy information, count of users
-														} else
+															// DF marks the end of the initial DX-cluster data.
+															// The frame contains no data that needs to be published.
 
-														if (splittedMessageLine[0].contains(SRVR_COMMUNICATIONK)) {
-															// No worthy information, end of srvrmsgs
+														} else if (SRVR_COMMUNICATIONK.equals(opcode)) {
+
+															// CK is a regular server delimiter/acknowledgement.
+															// It is intentionally accepted without further processing.
+
 														} else
 
 															//-> LOGSTAT|114|Wrong password!|
@@ -1931,13 +2020,17 @@ public class MessageBusManagementThread extends Thread {
 		while (true) {
 
 			try {
-				messageTextRaw = client.getMessageRXBus().take();
+				messageTextRaw = receiveQueue.take();
 
-				if (messageTextRaw.getMessageText().equals(ApplicationConstants.DISCONNECT_RDR_POISONPILL) && messageTextRaw.getMessageSenderName().equals(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
-					client.getMessageRXBus().clear();
+				if (ApplicationConstants.DISCONNECT_RDR_POISONPILL.equals(messageTextRaw.getMessageText())
+						&& ApplicationConstants.DISCONNECT_RDR_POISONPILL.equals(messageTextRaw.getMessageSenderName())) {
+					receiveQueue.clear();
 					break;
 				}
 				else {
+					if (!connectionSessionIsActive.test(connectionSessionId)) {
+						break;
+					}
 					messageLine = messageTextRaw.getMessageText();
 
 					/***********************************************

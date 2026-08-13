@@ -1,289 +1,173 @@
 package kst4contest.controller;
 
-import java.io.*;
-import java.net.*;
-import java.nio.charset.Charset;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Consumer;
+import java.util.function.LongPredicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import kst4contest.ApplicationConstants;
+import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMessage;
 
 /**
- * This thread is responsible for sending content to the chat. As we only use
- * the tx function, there is no content in run() method
+ * Serializes and writes exactly one immutable ON4KST connection session.
  *
- *
+ * <p>The writer owns one private queue and appends exactly one CR/LF terminator
+ * per frame. All category selection and delimiter validation happens before bytes
+ * reach the socket.</p>
  */
 public class WriteThread extends Thread {
-	private PrintWriter writer;
-	private Socket socket;
-	private ChatController client;
-	private OutputStream output;
-
-	private ChatMessage messageToBeSend;
-
-	public WriteThread(Socket socket, ChatController client) throws InterruptedException {
-		this.socket = socket;
-		this.client = client;
-
-		try {
-			output = socket.getOutputStream();
-
-			writer = new PrintWriter(output, true, StandardCharsets.UTF_8);
-
-		} catch (IOException ex) {
-			System.out.println("Error getting output stream: " + ex.getMessage());
-			ex.printStackTrace();
-		}
-	}
+	private static final Logger LOGGER =
+			Logger.getLogger(WriteThread.class.getName());
+	private final long sessionId;
+	private final Socket socket;
+	private final LinkedBlockingQueue<ChatMessage> transmitQueue;
+	private final LongPredicate sessionIsActive;
+	private final Consumer<Throwable> connectionFailure;
+	private final Consumer<String> rejectedFrame;
+	private final BufferedWriter writer;
+	private final int defaultCategory;
 
 	/**
-	 * This method is used to send a message to the server, raw formatted. E.g. for
-	 * the keepalive message. This method sends only in the main message-Category. To send it in a category
-	 * "defined by Chatmessage", use txByRxmsgCatOrigin(Chatmessage "toBeSend")
-	 * 
-	 * @param messageToServer
-	 * @throws InterruptedException
-	 */
-	public void tx(ChatMessage messageToServer) throws InterruptedException {
-
-//	   	writer.println(messageToServer.getMessage()); //kst4contest.test 4 23001
-//	   	writer.flush(); //kst4contest.test 4 23001
-		System.out.println(messageToServer.getMessageText() + "< sended to the writer");
-		writer.println(messageToServer.getMessageText());
-
-	}
-
-
-	/**
-	 * This method is used to send a message directly to a receiver in a special chatcategory. The receivers category
-	 * will be read out of the Chatmessage.getChatCategory method. <b> The message text will be modified to fit kst
-	 * messageformat</b>
+	 * Compatibility constructor for the pre-session controller path.
 	 *
-	 * @param messageToServer
-	 * @throws InterruptedException
+	 * @deprecated new connections should be created by
+	 *             {@link On4KstConnectionManager}
 	 */
-	public void txByRxmsgCatOrigin(ChatMessage messageToServer) throws InterruptedException {
-
-//	   	writer.println(messageToServer.getMessage()); //kst4contest.test 4 23001
-//	   	writer.flush(); //kst4contest.test 4 23001
-
-		String originalMessageText = messageToServer.getMessageText() + "";
-
-		String newMessageText = "";
-
-		newMessageText = ("MSG|" + messageToServer.getChatCategory().getCategoryNumber()
-				+ "|0|" + originalMessageText + "|0|"); //original before 1.26
-
-
-		System.out.println(newMessageText + "< sended to the writer (DIRECTED REPLY)");
-		writer.println(newMessageText);
-
+	@Deprecated
+	public WriteThread(Socket socket, ChatController client) throws IOException {
+		this(0L, socket, client.getMessageTXBus(),
+				client.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber(),
+				ignored -> true,
+				ignored -> { }, System.out::println);
 	}
 
 	/**
-	 * This method gets a textmessage to the chat and adds some characters to hit
-	 * the neccessarry format to send a message in the on4kst chat either to another
-	 * station or to the public.
-	 * 
-	 * @param messageToServer
-	 * @throws InterruptedException
+	 * Creates the writer for one connection generation.
+	 *
+	 * @param sessionId immutable id of the owning socket session
+	 * @param socket connected ON4KST socket
+	 * @param transmitQueue private transmit queue belonging to this session
+	 * @param defaultCategory fallback category for unqualified chat messages
+	 * @param sessionIsActive guard against writes from an obsolete session
+	 * @param connectionFailure callback for socket and unexpected runtime errors
+	 * @param rejectedFrame callback for locally rejected protocol content
+	 * @throws IOException if the socket output stream cannot be opened
 	 */
-	public void txKSTFormatted(ChatMessage messageToServer) throws InterruptedException {
+	public WriteThread(
+			long sessionId,
+			Socket socket,
+			LinkedBlockingQueue<ChatMessage> transmitQueue,
+			int defaultCategory,
+			LongPredicate sessionIsActive,
+			Consumer<Throwable> connectionFailure,
+			Consumer<String> rejectedFrame
+	) throws IOException {
+		this.sessionId = sessionId;
+		this.socket = socket;
+		this.transmitQueue = transmitQueue;
+		this.defaultCategory = defaultCategory;
+		this.sessionIsActive = sessionIsActive;
+		this.connectionFailure = connectionFailure;
+		this.rejectedFrame = rejectedFrame;
+		this.writer = new BufferedWriter(new OutputStreamWriter(
+				socket.getOutputStream(), StandardCharsets.UTF_8));
+	}
 
-//		writer.println(messageToServer.getMessageText());
-		messageToBeSend = messageToServer;
+	@Override
+	public void run() {
+		Thread.currentThread().setName("WriteToOn4Kst-" + sessionId);
+		LOGGER.log(Level.FINE,
+				"ON4KST writer started for session {0}", sessionId);
 
 		try {
-
-			messageToBeSend = client.getMessageTXBus().take();
-//			this.client.getmesetChatsetServerready(true);
-
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-
-		String messageLine = messageToBeSend.getMessageText();
-
-		if (messageToBeSend.isMessageDirectedToServer()) {
-			/**
-			 * We have to check if we only commands the server (keepalive) or want do talk
-			 * to the community
-			 */
-
-			try {
-				tx(messageToBeSend);
-				System.out.println("BUS: tx: " + messageToBeSend.getMessageText());
-
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-		} else {
-
-			ChatMessage ownMSG = new ChatMessage();
-
-//		ownMSG.setMessageText(
-//				"MSG|" + this.client.getCategory().getCategoryNumber() + "|0|" + messageLine + "|0|");
-
-			ownMSG.setMessageText("MSG|" + this.client.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber()
-					+ "|0|" + messageLine + "|0|"); //original before 1.26
-
-			try {
-				tx(ownMSG);
-				System.out.println("BUS: tx: " + ownMSG.getMessageText());
-
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-		if (messageToBeSend.equals("/QUIT")) {
-			try {
-				this.client.getReadThread().terminateConnection();
-				this.client.getReadThread().interrupt();
-				this.client.getWriteThread().terminateConnection();
-				this.client.getWriteThread().interrupt();
-				this.interrupt();
-
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
-
-	}
-
-	public boolean terminateConnection() throws IOException {
-
-		this.output.close();
-		this.socket.close();
-
-		return true;
-	}
-
-	public void run() {
-		Thread.currentThread().setName("WriteToTelnetThread");
-
-		while (true) {
-			try {
-				messageToBeSend = client.getMessageTXBus().take();
-
-				if (messageToBeSend.getMessageText().equals(ApplicationConstants.DISCONNECT_RDR_POISONPILL)
-						&& messageToBeSend.getMessageSenderName().equals(ApplicationConstants.DISCONNECT_RDR_POISONPILL)) {
-					client.getMessageRXBus().clear();
-					this.interrupt();
+			while (!isInterrupted() && sessionIsActive.test(sessionId)) {
+				ChatMessage message = transmitQueue.take();
+				if (isPoisonPill(message)) {
 					break;
-				} else {
-					String messageLine = messageToBeSend.getMessageText();
-
-					if (messageToBeSend.isMessageDirectedToServer()) {
-						/**
-						 * We have to check if we only commands the server (keepalive) or want do talk
-						 * to the community
-						 */
-
-						try {
-							tx(messageToBeSend);
-							System.out.println("BUS: tx: " + messageToBeSend.getMessageText());
-
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-
-					} else { //message is not directed to the server, it´s directed to all or to a station
-
-						if (messageToBeSend.getChatCategory() == this.client.getChatCategoryMain() || messageToBeSend.getChatCategory() == this.client.getChatCategorySecondChat()) {
-
-							txByRxmsgCatOrigin(messageToBeSend);
-
-						} else { //default bhv if destination cat is not detectable
-
-
-							ChatMessage ownMSG = new ChatMessage();
-
-							ownMSG.setMessageText(
-									"MSG|" + this.client.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber() + "|0|"
-											+ messageLine + "|0|");
-
-							try {
-								tx(ownMSG);
-								System.out.println("WT: tx (raw): " + ownMSG.getMessageText());
-
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-						}
-					}
+				}
+				if (!sessionIsActive.test(sessionId)) {
+					break;
 				}
 
-				System.out.println("WritheTh: got message out of the queue: " + messageToBeSend.getMessageText());
-
-//			this.client.getmesetChatsetServerready(true);
-
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-				client.getMessageTXBus().clear();
-			} 
-
-//			String messageLine = messageTextRaw.getMessageText();
-//
-//			if (messageTextRaw.isMessageDirectedToServer()) {
-//				/**
-//				 * We have to check if we only commands the server (keepalive) or want do talk
-//				 * to the community
-//				 */
-//
-//				try {
-//					tx(messageTextRaw);
-//					System.out.println("BUS: tx: " + messageTextRaw.getMessageText());
-//
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//
-//			} else {
-//
-//				ChatMessage ownMSG = new ChatMessage();
-//
-////		ownMSG.setMessageText(
-////				"MSG|" + this.client.getCategory().getCategoryNumber() + "|0|" + messageLine + "|0|");
-//
-//				ownMSG.setMessageText(
-//						"MSG|" + this.client.getChatPreferences().getLoginChatCategory().getCategoryNumber() + "|0|"
-//								+ messageLine + "|0|");
-//
-//				try {
-//					tx(ownMSG);
-//					System.out.println("BUS: tx: " + ownMSG.getMessageText());
-//
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//			}
+				try {
+					writeFrame(formatFrame(message));
+				} catch (IllegalArgumentException invalidFrame) {
+					LOGGER.log(Level.FINE,
+							"Rejected outbound ON4KST frame in session {0}: {1}",
+							new Object[] {sessionId, invalidFrame.getMessage()});
+					rejectedFrame.accept(invalidFrame.getMessage());
+				}
 			}
-//		if (messageTextRaw.equals("/QUIT")) {
-//			try {
-//				this.client.getReadThread().terminateConnection();
-//				this.client.getReadThread().interrupt();
-//				this.client.getWriteThread().terminateConnection();
-//				this.client.getWriteThread().interrupt();
-//				this.interrupt();
-//
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
+		} catch (InterruptedException interrupted) {
+			Thread.currentThread().interrupt();
+		} catch (IOException exception) {
+			if (sessionIsActive.test(sessionId)) {
+				LOGGER.log(Level.FINE,
+						"ON4KST write failed for session " + sessionId,
+						exception);
+				connectionFailure.accept(exception);
+			}
+		} catch (RuntimeException exception) {
+			if (sessionIsActive.test(sessionId)) {
+				LOGGER.log(Level.SEVERE,
+						"Unexpected ON4KST writer failure for session "
+								+ sessionId,
+						exception);
+				connectionFailure.accept(exception);
+			}
+		} finally {
+			LOGGER.log(Level.FINE,
+					"ON4KST writer stopped for session {0}", sessionId);
+		}
+	}
 
-		
-//		while (true) {
-//
-//		}
+	private String formatFrame(ChatMessage message) {
+		if (message == null) {
+			throw new IllegalArgumentException("Cannot send an empty ON4KST message");
+		}
 
+		if (message.isMessageDirectedToServer()) {
+			return On4KstProtocol.normalizeRawFrame(message.getMessageText());
+		}
+
+		ChatCategory category = message.getChatCategory();
+		return On4KstProtocol.chatMessage(
+				category == null ? defaultCategory : category.getCategoryNumber(),
+				message.getMessageText());
+	}
+
+	private void writeFrame(String frame) throws IOException {
+		writer.write(frame);
+		writer.write("\r\n");
+		writer.flush();
+	}
+
+	private boolean isPoisonPill(ChatMessage message) {
+		return message != null
+				&& ApplicationConstants.DISCONNECT_RDR_POISONPILL.equals(
+				message.getMessageText())
+				&& ApplicationConstants.DISCONNECT_RDR_POISONPILL.equals(
+				message.getMessageSenderName());
+	}
+
+	/**
+	 * Interrupts the write loop and closes the session socket.
+	 *
+	 * @return always {@code true} after a successful close
+	 * @throws IOException if closing the writer or socket fails
+	 */
+	public boolean terminateConnection() throws IOException {
+		interrupt();
+		writer.close();
+		socket.close();
+		return true;
 	}
 }
+

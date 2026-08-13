@@ -1,5 +1,6 @@
 package kst4contest.view;
 import kst4contest.utils.VersionUtils;
+import kst4contest.controller.On4KstConnectionState;
 
 import javafx.scene.image.Image;
 import java.io.File;
@@ -81,6 +82,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	// Enables optional color highlighting of the QRA/grid cell.
 // The status text itself remains visible independently of this flag.
+
+	private static final Logger LOGGER = Logger.getLogger(
+			Kst4ContestApplication.class.getName());
+
 	private boolean gridSquareHighlightEnabled = false;
 
 
@@ -112,6 +117,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	private StationMapView stationMapView; //view class for the avl stn map
 	private StationMapBridge stationMapBridge; //bridge for mapping actions between map and view
+
+	private final Button btnConnectionStateIndicator = new Button("LINK");
+	private final Tooltip tipConnectionStateIndicator = new Tooltip();
+	private On4KstConnectionState lastDisplayedConnectionState;
+	private String lastDisplayedConnectionDetail = "";
 
 	private final Button btnBandUpgradeIndicator = new Button("BAND+");
 	private final Tooltip tipBandUpgradeIndicator = new Tooltip();
@@ -5320,8 +5330,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				menuItemOptionsAwayBack.setDisable(false);
 				menuItemOptionsSetFrequencyAsName.setDisable(false);
 
-				chatcontroller.setConnectedAndLoggedIn(true);
-				chatcontroller.setDisconnected(false);
+//				chatcontroller.setConnectedAndLoggedIn(true);
+//				chatcontroller.setDisconnected(false);
 
 			} catch (InterruptedException | IOException e) {
 				e.printStackTrace();
@@ -5643,6 +5653,121 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		btnSkedWarnIndicator.setTooltip(tipSkedWarnIndicator);
 	}
 
+	private void initConnectionStateIndicatorButton() {
+		LOGGER.fine("Initializing compact ON4KST connection-state indicator");
+
+		btnConnectionStateIndicator.setMouseTransparent(true);
+		btnConnectionStateIndicator.setFocusTraversable(false);
+		btnConnectionStateIndicator.setMnemonicParsing(false);
+		btnConnectionStateIndicator.setMinSize(44, 22);
+		btnConnectionStateIndicator.setPrefSize(44, 22);
+		btnConnectionStateIndicator.setMaxSize(44, 22);
+		btnConnectionStateIndicator.setTooltip(tipConnectionStateIndicator);
+		btnConnectionStateIndicator.setAccessibleText(
+				"ON4KST connection state");
+		FlowPane.setMargin(
+				btnConnectionStateIndicator, new Insets(2, 4, 2, 4));
+
+		updateConnectionStateIndicator(
+				chatcontroller.getOn4KstConnectionState(),
+				"No ON4KST connection");
+	}
+
+	private void updateConnectionStateIndicator(
+			On4KstConnectionState state,
+			String detail
+	) {
+		if (!Platform.isFxApplicationThread()) {
+			LOGGER.warning(
+					"Connection indicator update arrived outside the JavaFX thread; "
+							+ "rescheduling it safely");
+			Platform.runLater(() -> updateConnectionStateIndicator(state, detail));
+			return;
+		}
+
+		On4KstConnectionState effectiveState = state == null
+				? On4KstConnectionState.DISCONNECTED : state;
+		String stateDetail = detail == null || detail.isBlank()
+				? effectiveState.name() : detail;
+		logConnectionIndicatorTransition(effectiveState, stateDetail);
+
+		tipConnectionStateIndicator.setText(
+				"ON4KST link: " + effectiveState.name() + "\n" + stateDetail);
+		btnConnectionStateIndicator.setAccessibleHelp(stateDetail);
+
+		String commonStyle =
+				"-fx-font-size: 10px;"
+						+ "-fx-font-weight: bold;"
+						+ "-fx-padding: 1 5 1 5;"
+						+ "-fx-background-radius: 6;"
+						+ "-fx-border-radius: 6;"
+						+ "-fx-border-width: 2;";
+
+		switch (effectiveState) {
+			case ONLINE -> {
+				btnConnectionStateIndicator.setText("LINK");
+				btnConnectionStateIndicator.setStyle(
+						commonStyle
+								+ "-fx-background-color: #238636;"
+								+ "-fx-border-color: #56d364;"
+								+ "-fx-text-fill: white;"
+								+ "-fx-effect: dropshadow(three-pass-box, "
+								+ "rgba(35,134,54,0.55), 5, 0.25, 0, 0);");
+			}
+
+			case CONNECTING, WAITING_FOR_LOGIN_PROMPT, AUTHENTICATING,
+			     SYNCING_MAIN_CHAT, SYNCING_SECOND_CHAT, STOPPING -> {
+				btnConnectionStateIndicator.setText("LINK…");
+				btnConnectionStateIndicator.setStyle(
+						commonStyle
+								+ "-fx-background-color: #ffb300;"
+								+ "-fx-border-color: #ffe082;"
+								+ "-fx-text-fill: #1b1b1b;"
+								+ "-fx-effect: dropshadow(three-pass-box, "
+								+ "rgba(255,179,0,0.65), 6, 0.3, 0, 0);");
+			}
+
+			case DISCONNECTED, RECONNECT_WAIT -> {
+				btnConnectionStateIndicator.setText("LINK!");
+				btnConnectionStateIndicator.setStyle(
+						commonStyle
+								+ "-fx-background-color: #d50000;"
+								+ "-fx-border-color: #ff6b6b;"
+								+ "-fx-text-fill: white;"
+								+ "-fx-effect: dropshadow(three-pass-box, "
+								+ "rgba(255,0,0,0.95), 10, 0.55, 0, 0);");
+			}
+		}
+	}
+
+	private void logConnectionIndicatorTransition(
+			On4KstConnectionState newState,
+			String newDetail
+	) {
+		boolean stateChanged = newState != lastDisplayedConnectionState;
+		boolean detailChanged = !Objects.equals(
+				newDetail, lastDisplayedConnectionDetail);
+		if (!stateChanged && !detailChanged) {
+			return;
+		}
+
+		On4KstConnectionState previousState = lastDisplayedConnectionState;
+		Level logLevel = switch (newState) {
+			case DISCONNECTED, RECONNECT_WAIT -> Level.WARNING;
+			default -> Level.INFO;
+		};
+
+		LOGGER.log(logLevel,
+				"ON4KST connection indicator: {0} -> {1}; detail: {2}",
+				new Object[] {
+						previousState == null ? "UNINITIALIZED" : previousState,
+						newState,
+						newDetail
+				});
+
+		lastDisplayedConnectionState = newState;
+		lastDisplayedConnectionDetail = newDetail;
+	}
 
 
 	private void showBlinkingSkedWarnIndicator(String text) {
@@ -6590,6 +6715,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
             flwpne_StatusBar.getChildren().add(mainScreenMenuBar);
 			bPaneChatWindow.setTop(flwpne_StatusBar);
 
+			initConnectionStateIndicatorButton();
+			flwpne_StatusBar.getChildren().add(btnConnectionStateIndicator);
+
 			initSkedWarnIndicatorButton();
 
 			chatcontroller.lastUiReminderEventProperty().addListener(
@@ -6949,9 +7077,25 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						}
 
 						else {
-							chatState = "DISCONNECTED!";
+							On4KstConnectionState connectionState =
+									chatcontroller.getOn4KstConnectionState();
+
+							chatState = switch (connectionState) {
+								case RECONNECT_WAIT ->
+										"CONNECTION LOST – reconnect scheduled";
+								case CONNECTING ->
+										"Connecting to ON4KST…";
+								case WAITING_FOR_LOGIN_PROMPT, AUTHENTICATING ->
+										"Connected – authenticating with ON4KST…";
+								case SYNCING_MAIN_CHAT, SYNCING_SECOND_CHAT ->
+										"Connected – synchronizing ON4KST chat data…";
+								default ->
+										"DISCONNECTED!";
+							};
+
 							chatcontroller.getChatPreferences().setChatState(chatState);
 						}
+
 						if (chatcontroller.isDisconnected()) {
 							chatState = "DISCONNECTED!";
 							chatcontroller.getChatPreferences().setChatState(chatState);
@@ -11578,8 +11722,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				txtFldstn_maxQRBDefault.setDisable(true);
 				btnOptionspnlConnect.setDisable(true);
 				btnOptionspnlDisconnect.setDisable(false);
-				chatcontroller.setConnectedAndLoggedIn(true);
-				chatcontroller.setDisconnected(false);
+//				chatcontroller.setConnectedAndLoggedIn(true);
+//				chatcontroller.setDisconnected(false);
 				station_chkBxEnableSecondChat.setDisable(true);
 				stn_choiceBxChatChategorySecond.setDisable(true);
 			}
@@ -11882,7 +12026,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			String logDir = Path.of(System.getProperty("user.home"), ".praktiKST").toString();
 			new File(logDir).mkdirs();
 			FileHandler fileHandler = new FileHandler(logDir + "/kst4contest-errors.log", true);
-			fileHandler.setLevel(Level.SEVERE);
+			// Connection loss/reconnect diagnostics are warnings, not fatal crashes.
+			fileHandler.setLevel(Level.WARNING);
 			fileHandler.setFormatter(new SimpleFormatter());
 			Logger rootLogger = Logger.getLogger("");
 			rootLogger.addHandler(fileHandler);
@@ -11892,17 +12037,77 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
     @Override
-    public void onThreadStatusChanged(String key, ThreadStateMessage threadStateMessage) {
+	public void onThreadStatusChanged(
+			String key,
+		    ThreadStateMessage threadStateMessage
+	) {
+		if (threadStateMessage == null) {
+			LOGGER.log(Level.WARNING,
+					"Ignoring empty thread-status update from source {0}",
+					key == null ? "UNKNOWN" : key);
+			return;
+		}
+		if (key == null || key.isBlank()) {
+			LOGGER.log(Level.WARNING,
+					"Ignoring thread-status update without a source key. Detail: {0}",
+					threadStateMessage.getRunningInformation());
+			return;
+		}
 
-        Platform.runLater(() -> {
-            updateStatusButton(key, threadStateMessage);
-		});
+		if ("ON4KST".equalsIgnoreCase(key)) {
+			String detail = threadStateMessage.getRunningInformation();
+			Platform.runLater(() -> updateConnectionStateIndicator(
+					chatcontroller.getOn4KstConnectionState(), detail));
+			return;
+		}
 
+		Platform.runLater(() -> updateStatusButton(key, threadStateMessage));
 		maybeShowBandUpgradeIndicator(key, threadStateMessage);
-		//if we receive a threadstatemessage for sked warning, enable the sked warning
+	}
 
 
-    }
+	public void onConnectionStateChanged(
+			On4KstConnectionState state,
+			String detail
+	) {
+		On4KstConnectionState effectiveState = state;
+		if (effectiveState == null) {
+			LOGGER.log(Level.WARNING,
+					"Received ON4KST connection callback without a state; "
+							+ "treating it as disconnected. Detail: {0}",
+					detail);
+			effectiveState = On4KstConnectionState.DISCONNECTED;
+		}
+
+		On4KstConnectionState stateToDisplay = effectiveState;
+		Platform.runLater(() -> {
+			boolean active = stateToDisplay.isConnectionAttemptActive();
+			boolean online = stateToDisplay.isOnline();
+			updateConnectionStateIndicator(stateToDisplay, detail);
+
+			if (menuItemFileConnect != null) {
+				menuItemFileConnect.setDisable(active);
+			}
+			if (menuItemFileDisconnect != null) {
+				menuItemFileDisconnect.setDisable(!active);
+			}
+			if (menuItemOptionsAwayBack != null) {
+				menuItemOptionsAwayBack.setDisable(!online);
+			}
+			if (menuItemOptionsSetFrequencyAsName != null) {
+				menuItemOptionsSetFrequencyAsName.setDisable(!online);
+			}
+			if (btnOptionspnlConnect != null) {
+				btnOptionspnlConnect.setDisable(active);
+			}
+			if (sendButton != null) {
+				sendButton.setDisable(!online);
+			}
+			if (txt_chatMessageUserInput != null) {
+				txt_chatMessageUserInput.setDisable(!online);
+			}
+		});
+	}
 
 
 	/**

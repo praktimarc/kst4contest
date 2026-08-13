@@ -35,6 +35,8 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.nio.charset.StandardCharsets;
 import kst4contest.logic.FrequencyTextParser;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 
@@ -56,6 +58,9 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	 * MHz................12 Your choice :
 	 * 
 	 */
+
+	private static final Logger LOGGER =
+			Logger.getLogger(ChatController.class.getName());
 
 	private static final boolean DEBUG_BAND_UPGRADE_HINT = true; //for new band hint
 
@@ -85,6 +90,9 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	boolean connectedAndNOTLoggedIn;
 	boolean disconnected;
 	boolean disconnectionPerformedByUser = false;
+
+	private final On4KstConnectionManager on4KstConnectionManager =
+			new On4KstConnectionManager(this);
 
 
     public boolean isDisconnectionPerformedByUser() {
@@ -140,6 +148,15 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		return disconnected;
 	}
 
+	/**
+	 * Returns the authoritative ON4KST lifecycle state.
+	 *
+	 * @return current connection, authentication or synchronization state
+	 */
+	public On4KstConnectionState getOn4KstConnectionState() {
+		return on4KstConnectionManager.getState();
+	}
+
 	public void setDisconnected(boolean disconnected) {
 		this.disconnected = disconnected;
 	}
@@ -160,6 +177,112 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
             statusListener.onThreadStatusChanged(threadName, threadStateMessage);
         } else System.out.println("ERRRRRRRRRRRRRRRRRRRRRRRRRRRÖRRRRRRRRRRRRRRRRRRR");
     }
+
+	/**
+	 * Publishes one authoritative connection-state transition to legacy controller
+	 * flags, generic worker status listeners and the dedicated UI callback.
+	 *
+	 * <p>The compatibility flags remain derived values. No caller may set them to
+	 * infer socket health; only the connection manager owns that decision.</p>
+	 *
+	 * @param state new lifecycle state
+	 * @param detail human-readable progress or failure reason
+	 * @param critical whether the transition should be emphasized as an error
+	 */
+	void updateOn4KstConnectionState(
+			On4KstConnectionState state,
+			String detail,
+			boolean critical
+	) {
+		setConnectedAndLoggedIn(state == On4KstConnectionState.ONLINE);
+		setConnectedAndNOTLoggedIn(
+				state.isConnectionAttemptActive()
+						&& state != On4KstConnectionState.ONLINE);
+		setDisconnected(state == On4KstConnectionState.DISCONNECTED);
+
+		ThreadStateMessage status = new ThreadStateMessage(
+				"ON4KST", state.isConnectionAttemptActive(), detail, critical);
+		status.setRunningInformationTextDescription(state.name());
+		onThreadStatus("ON4KST", status);
+
+		if (statusListener != null) {
+			statusListener.onConnectionStateChanged(state, detail);
+		}
+	}
+
+	/**
+	 * Installs all resources belonging to one successfully opened connection
+	 * generation.
+	 *
+	 * <p>The session-id check prevents a slow connection attempt from overwriting a
+	 * newer socket and its queues.</p>
+	 */
+	synchronized void installOn4KstSession(
+			long connectionSessionId,
+			Socket sessionSocket,
+			LinkedBlockingQueue<ChatMessage> receiveQueue,
+			LinkedBlockingQueue<ChatMessage> transmitQueue,
+			ReadThread sessionReadThread,
+			WriteThread sessionWriteThread,
+			MessageBusManagementThread sessionMessageProcessor
+	) {
+		if (!on4KstConnectionManager.isActiveSession(connectionSessionId)) {
+			return;
+		}
+		this.socket = sessionSocket;
+		this.messageRXBus = receiveQueue;
+		this.messageTXBus = transmitQueue;
+		this.readThread = sessionReadThread;
+		this.writeThread = sessionWriteThread;
+		this.messageProcessor = sessionMessageProcessor;
+	}
+
+	void onOn4KstLogstat(long connectionSessionId, String[] fields) {
+		on4KstConnectionManager.onLogstat(connectionSessionId, fields);
+	}
+
+	void stageInitialOn4KstChatMember(
+			long connectionSessionId,
+			ChatMember member
+	) {
+		on4KstConnectionManager.stageInitialChatMember(
+				connectionSessionId, member);
+	}
+
+	void onOn4KstInitialUserListCompleted(
+			long connectionSessionId,
+			ChatCategory category
+	) {
+		on4KstConnectionManager.onInitialUserListCompleted(
+				connectionSessionId, category);
+	}
+
+	void onOn4KstConnectionOnline() {
+		scheduleBeaconTimer(INITIAL_BEACON_DELAY_MILLIS);
+	}
+
+	void onOn4KstConnectionLost() {
+		stopBeaconTimer();
+	}
+
+	void onOn4KstOutboundFrameRejected(String reason) {
+		onOn4KstConnectionWarning("Outbound frame rejected locally: " + reason);
+	}
+
+	/**
+	 * Receives a non-fatal ON4KST diagnostic, writes it to the persistent warning
+	 * log and forwards it to the status UI.
+	 *
+	 * @param warning sanitized diagnostic text; passwords and raw chat frames must
+	 *                never be included
+	 */
+	void onOn4KstConnectionWarning(String warning) {
+		LOGGER.log(Level.WARNING, "ON4KST warning: {0}", warning);
+		ThreadStateMessage status = new ThreadStateMessage(
+				"ON4KST", true, warning, false);
+		status.setRunningInformationTextDescription("WARNING");
+		onThreadStatus("ON4KST", status);
+	}
 
 
     /********************************************************************************
@@ -573,6 +696,16 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	 */
 	public void disconnect(String action) {
 
+		/*
+		 * New connections are owned by the session manager. Keep the historic cleanup
+		 * below as a compatibility fallback, but do not let it manipulate resources
+		 * belonging to a replacement session.
+		 */
+		if (on4KstConnectionManager != null) {
+			disconnectManaged(action);
+			return;
+		}
+
 //		stopContextLoop(); //stops thread for calculating sked priorities
 
 		stopScoreScheduler();
@@ -757,16 +890,77 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 				}
 
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (Exception e2) {
-				// TODO Auto-generated catch block
 				e2.printStackTrace();
 			}
 
 		}
 
 	}
+
+	private void disconnectManaged(String action) {
+		setDisconnectionPerformedByUser(true);
+		on4KstConnectionManager.stopByUser();
+		clearActiveChatMembers();
+		runOnFxThread(() -> lst_clusterMemberList.clear());
+
+		stopBeaconTimer();
+		stopScoreScheduler();
+		stopDxClusterServer();
+		cancelTimer(userActualizationtimer);
+		userActualizationtimer = null;
+		cancelTimer(ASQueryTimer);
+		ASQueryTimer = null;
+
+		stopUdpReader(readUDPbyUCXThread,
+				chatPreferences.getLogsynch_ucxUDPWkdCallListenerPort());
+		readUDPbyUCXThread = null;
+		stopUdpReader(readUDPByWintestThread,
+				chatPreferences.getLogsynch_wintestNetworkPort());
+		stopWintestUdpListener();
+		stopUdpReader(airScoutUDPReaderThread,
+				chatPreferences.getAirScout_asCommunicationPort());
+		airScoutUDPReaderThread = null;
+
+		if (ApplicationConstants.DISCSTRING_DISCONNECT_AND_CLOSE.equals(action)) {
+			if (dbHandler != null) {
+				dbHandler.closeDBConnection();
+			}
+			if (rotatorClient != null) {
+				rotatorClient.stopRotor();
+				rotatorClient.stop();
+				rotatorClient = null;
+			}
+		}
+	}
+
+	private void cancelTimer(Timer timer) {
+		if (timer != null) {
+			timer.cancel();
+			timer.purge();
+		}
+	}
+
+	private void stopUdpReader(Thread readerThread, int listenerPort) {
+		if (readerThread != null) {
+			readerThread.interrupt();
+		}
+		try (DatagramSocket datagramSocket = new DatagramSocket()) {
+			datagramSocket.setBroadcast(true);
+			byte[] poison = ApplicationConstants.DISCONNECT_RDR_POISONPILL.getBytes(
+					StandardCharsets.UTF_8);
+			DatagramPacket packet = new DatagramPacket(
+					poison, poison.length,
+					InetAddress.getByName("255.255.255.255"), listenerPort);
+			datagramSocket.send(packet);
+		} catch (IOException exception) {
+			System.out.println("[ChatController, warning]: could not wake UDP reader on port "
+					+ listenerPort + ": " + exception.getMessage());
+		}
+	}
+
+
 
 //	private ObservableList<ContestSked> activeSkeds = FXCollections.observableArrayList();
 //	public ObservableList<ContestSked> getActiveSkeds() {
@@ -1416,6 +1610,10 @@ private ObservableList<String>
 	private final List<ChatMessage> pendingChatMessages = new ArrayList<>();
 	private boolean chatMessageFlushScheduled = false;
 
+	private static final int RECENT_INBOUND_MESSAGE_KEYS_MAX = 5_000;
+	private final LinkedHashMap<String, Boolean> recentInboundMessageKeys =
+			new LinkedHashMap<>();
+
 	/*
 	 * Same idea for DXCluster messages.
 	 */
@@ -1570,6 +1768,55 @@ private ObservableList<String>
 	public void clearActiveChatMembers() {
 		activeChatMembersByCallAndCategory.clear();
 		runOnFxThread(() -> lst_chatMemberList.clear());
+	}
+
+	/**
+	 * Atomically replaces one category after its terminating UE frame arrived.
+	 * Partial UA0 snapshots are never exposed to the TableView.
+	 *
+	 * @param connectionSessionId session that produced the completed snapshot
+	 * @param category chat category whose members are being replaced
+	 * @param completeMembers validated members staged before the UE terminator
+	 */
+	public void replaceActiveChatMembersForCategory(
+			long connectionSessionId,
+			ChatCategory category,
+			Collection<ChatMember> completeMembers
+	) {
+		if (category == null
+				|| !on4KstConnectionManager.isActiveSession(connectionSessionId)) {
+			return;
+		}
+
+		int categoryNumber = category.getCategoryNumber();
+		List<ChatMember> safeMembers = completeMembers == null
+				? List.of() : new ArrayList<>(completeMembers);
+		for (ChatMember member : safeMembers) {
+			initializeFrequencyFromStationNameIfUnambiguous(member);
+		}
+
+		activeChatMembersByCallAndCategory.entrySet().removeIf(entry -> {
+			ChatMember member = entry.getValue();
+			return member != null && member.getChatCategory() != null
+					&& member.getChatCategory().getCategoryNumber() == categoryNumber;
+		});
+		for (ChatMember member : safeMembers) {
+			String key = buildActiveChatMemberKey(member);
+			if (key != null) {
+				activeChatMembersByCallAndCategory.put(key, member);
+			}
+		}
+
+		runOnFxThread(() -> {
+			if (!on4KstConnectionManager.isActiveSession(connectionSessionId)) {
+				return;
+			}
+			lst_chatMemberList.removeIf(member -> member != null
+					&& member.getChatCategory() != null
+					&& member.getChatCategory().getCategoryNumber() == categoryNumber);
+			lst_chatMemberList.addAll(safeMembers);
+			fireUserListUpdate("Complete ON4KST user list received");
+		});
 	}
 
 	/**
@@ -1913,6 +2160,9 @@ private ObservableList<String>
 		if (message == null) {
 			return;
 		}
+		if (isDuplicateInboundMessage(message)) {
+			return;
+		}
 
 		synchronized (pendingChatMessagesLock) {
 			pendingChatMessages.add(message);
@@ -1925,6 +2175,47 @@ private ObservableList<String>
 		}
 
 		Platform.runLater(this::flushPendingChatMessagesToUi);
+	}
+
+	/**
+	 * Suppresses the small replay overlap deliberately requested after a reconnect.
+	 *
+	 * <p>The manager asks for messages beginning one timestamp before the last known
+	 * message so that a boundary message cannot be lost. This bounded key cache
+	 * removes the expected duplicate without growing for the lifetime of the
+	 * application.</p>
+	 */
+	private boolean isDuplicateInboundMessage(ChatMessage message) {
+		String timestamp = message.getMessageGeneratedTime();
+		if (timestamp == null || timestamp.isBlank()) {
+			return false;
+		}
+
+		String sender = message.getSender() == null
+				? "" : String.valueOf(message.getSender().getCallSign());
+		String receiver = message.getReceiver() == null
+				? "" : String.valueOf(message.getReceiver().getCallSign());
+		int category = message.getChatCategory() == null
+				? -1 : message.getChatCategory().getCategoryNumber();
+		String key = category + "|" + timestamp + "|" + sender + "|"
+				+ receiver + "|" + String.valueOf(message.getMessageText());
+
+		synchronized (recentInboundMessageKeys) {
+			if (recentInboundMessageKeys.containsKey(key)) {
+				return true;
+			}
+			recentInboundMessageKeys.put(key, Boolean.TRUE);
+			while (recentInboundMessageKeys.size()
+					> RECENT_INBOUND_MESSAGE_KEYS_MAX) {
+				Iterator<String> iterator = recentInboundMessageKeys.keySet().iterator();
+				if (!iterator.hasNext()) {
+					break;
+				}
+				iterator.next();
+				iterator.remove();
+			}
+			return false;
+		}
 	}
 
 	private void flushPendingChatMessagesToUi() {
@@ -2615,6 +2906,10 @@ private ObservableList<String>
 	 */
 	public void execute() throws InterruptedException, IOException {
 
+		if (on4KstConnectionManager != null) {
+			executeManaged();
+			return;
+		}
 
 		chatController = this;
 
@@ -2837,6 +3132,50 @@ private ObservableList<String>
 
 	}
 
+	private synchronized void executeManaged() throws IOException {
+		chatController = this;
+		setDisconnectionPerformedByUser(false);
+		startScoreScheduler();
+
+		if (readUDPbyUCXThread == null || !readUDPbyUCXThread.isAlive()) {
+			readUDPbyUCXThread = new ReadUDPbyUCXMessageThread(
+					chatPreferences.getLogsynch_ucxUDPWkdCallListenerPort(),
+					this, this);
+			readUDPbyUCXThread.setName("readUDPbyUCXThread");
+			readUDPbyUCXThread.start();
+		}
+
+		if (chatPreferences.isLogsynch_wintestNetworkListenerEnabled()) {
+			startWintestUdpListener();
+		}
+
+		if (airScoutUDPReaderThread == null || !airScoutUDPReaderThread.isAlive()) {
+			airScoutUDPReaderThread = new ReadUDPbyAirScoutMessageThread(
+					chatPreferences.getAirScout_asCommunicationPort(),
+					this, this);
+			airScoutUDPReaderThread.setName("airscoutudpreaderThread");
+			airScoutUDPReaderThread.start();
+		}
+
+		cancelTimer(userActualizationtimer);
+		userActualizationtimer = new Timer("UserActualizationTimer", true);
+		userActualizationtimer.schedule(
+				new UserActualizationTask(this), 4_000L, 60_000L);
+
+		cancelTimer(ASQueryTimer);
+		ASQueryTimer = new Timer("AirScoutQueryTimer", true);
+		ASQueryTimer.schedule(
+				new AirScoutPeriodicalAPReflectionInquirerTask(this),
+				10_000L, 60_000L);
+
+		if (chatPreferences.isStn_pstRotatorEnabled() && rotatorClient == null) {
+			initRotor();
+		}
+		startDxClusterServerIfEnabled();
+		on4KstConnectionManager.start();
+	}
+
+
 
 	/**
 	 * Returns the background reachability service used by the station table.
@@ -2963,6 +3302,11 @@ private ObservableList<String>
 	 * @throws IOException
 	 */
 	public void initialize23001() throws InterruptedException, IOException {
+
+		if (on4KstConnectionManager != null) {
+			on4KstConnectionManager.start();
+			return;
+		}
 
 		messageTXBus.clear();
 
