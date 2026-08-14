@@ -48,6 +48,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $addModules = & java packaging/AddModules.java
+          if ($LASTEXITCODE -ne 0) { throw "Failed to resolve --add-modules from module-info.java" }
           jpackage `
             --type app-image `
             --name praktiKST `
@@ -56,7 +58,7 @@ jobs:
             --main-jar app.jar `
             --main-class kst4contest.view.Kst4ContestApplication `
             --module-path target/dist-libs `
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net `
+            --add-modules $addModules `
             --dest dist
 
       - name: Create Windows ZIP
@@ -98,6 +100,7 @@ jobs:
       - name: Build app-image with jpackage
         run: |
           mkdir -p dist
+          ADD_MODULES="$(java packaging/AddModules.java)"
           jpackage \
             --type app-image \
             --name KST4Contest \
@@ -106,7 +109,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+            --add-modules "$ADD_MODULES" \
             --dest dist
 
       - name: Create AppDir metadata
@@ -177,6 +180,7 @@ jobs:
       - name: Build Debian package
         run: |
           mkdir -p dist
+          ADD_MODULES="$(java packaging/AddModules.java)"
           jpackage \
             --type deb \
             --name KST4Contest \
@@ -185,7 +189,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+            --add-modules "$ADD_MODULES" \
             --linux-package-deps "libgstreamer1.0-0,libgstreamer-plugins-base1.0-0,gstreamer1.0-plugins-good" \
             --dest dist
           DEB="$(ls dist/*.deb | head -n 1)"
@@ -230,6 +234,7 @@ jobs:
       - name: Build Fedora package
         run: |
           mkdir -p dist
+          ADD_MODULES="$(java packaging/AddModules.java)"
           jpackage \
             --type rpm \
             --name KST4Contest \
@@ -238,7 +243,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+            --add-modules "$ADD_MODULES" \
             --linux-package-deps "gstreamer1,gstreamer1-plugins-base,gstreamer1-plugins-good" \
             --dest dist
           RPM="$(ls dist/*.rpm | head -n 1)"
@@ -283,6 +288,7 @@ jobs:
       - name: Build app-image with jpackage
         run: |
           mkdir -p dist
+          ADD_MODULES="$(java packaging/AddModules.java)"
           jpackage \
             --type app-image \
             --name KST4Contest \
@@ -291,7 +297,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+            --add-modules "$ADD_MODULES" \
             --dest dist
 
       - name: Build Arch Linux package artifact
@@ -393,6 +399,7 @@ jobs:
           ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
           cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
           mkdir -p target/flatpak-src
+          ADD_MODULES="$(java packaging/AddModules.java)"
           jpackage \
             --type app-image \
             --name KST4Contest \
@@ -401,7 +408,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+            --add-modules "$ADD_MODULES" \
             --dest target/flatpak-src
 
       - name: Create Flatpak manifest
@@ -523,6 +530,7 @@ jobs:
       - name: Build macOS DMG with jpackage
         run: |
           mkdir -p dist
+          ADD_MODULES="$(java packaging/AddModules.java)"
           jpackage \
             --type dmg \
             --name KST4Contest \
@@ -531,7 +539,7 @@ jobs:
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
             --module-path target/dist-libs \
-            --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+            --add-modules "$ADD_MODULES" \
             --dest dist
 
         env:

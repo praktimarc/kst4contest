@@ -56,6 +56,7 @@
         <javafx.maven.plugin>0.0.8</javafx.maven.plugin>
         <spotbugs.maven.plugin>4.9.8.2</spotbugs.maven.plugin>
         <spotbugs.version>4.9.8</spotbugs.version>
+        <exec.maven.plugin>3.1.0</exec.maven.plugin>
 
         <!-- other properties -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -203,6 +204,36 @@
                                     <version>${required.maven.version}</version>
                                 </requireMavenVersion>
                             </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--
+                Fails the build whenever the jpackage module list below drifts
+                from the requires clauses in src/main/java/module-info.java.
+                This is bound to validate rather than to a workflow trigger so
+                it also fires on direct pushes to main, on local builds and in
+                the AUR PKGBUILDs, which never run the pull request check.
+            -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>${exec.maven.plugin}</version>
+                <executions>
+                    <execution>
+                        <id>verify-packaging-module-list</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>${java.home}/bin/java</executable>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <arguments>
+                                <argument>packaging/AddModules.java</argument>
+                                <argument>--verify-pom</argument>
+                            </arguments>
                         </configuration>
                     </execution>
                 </executions>
@@ -436,16 +467,26 @@
                                     </dependencyset>
                                 </dependencysets>
                             </modulepath>
+                            <!--
+                                Keep in sync with the requires clauses in
+                                src/main/java/module-info.java. The packaging
+                                scripts derive this list automatically via
+                                packaging/AddModules.java, and the PR check
+                                runs that helper in its pom verification mode
+                                so this block cannot drift unnoticed.
+                            -->
                             <addmodules>
-                                <addmodule>javafx.controls</addmodule>
-                                <addmodule>javafx.graphics</addmodule>
-                                <addmodule>javafx.fxml</addmodule>
-                                <addmodule>javafx.web</addmodule>
-                                <addmodule>javafx.media</addmodule>
-                                <addmodule>java.sql</addmodule>
+                                <addmodule>java.desktop</addmodule>
                                 <addmodule>java.net.http</addmodule>
+                                <addmodule>java.sql</addmodule>
+                                <addmodule>javafx.controls</addmodule>
+                                <addmodule>javafx.fxml</addmodule>
+                                <addmodule>javafx.media</addmodule>
+                                <addmodule>javafx.web</addmodule>
                                 <addmodule>jdk.crypto.ec</addmodule>
+                                <addmodule>jdk.jsobject</addmodule>
                                 <addmodule>jdk.net</addmodule>
+                                <addmodule>jdk.xml.dom</addmodule>
                             </addmodules>
                             <mainclass>${main.class}</mainclass>
                             <input>${project.build.directory}/modules</input>

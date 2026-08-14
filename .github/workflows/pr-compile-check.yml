@@ -27,5 +27,8 @@ jobs:
       - name: Ensure mvnw is executable
         run: chmod +x mvnw
 
+      - name: Verify packaging module list matches module-info.java
+        run: java packaging/AddModules.java --verify-pom
+
       - name: Compile
         run: ./mvnw -B -DskipTests compile

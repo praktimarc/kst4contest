@@ -26,6 +26,14 @@ build() {
     cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
 
     mkdir -p dist
+    # This PKGBUILD builds from a released source tarball, which may predate
+    # packaging/AddModules.java. Older tarballs carry the same list in pom.xml,
+    # which the build keeps in sync with module-info.java from v1.42.0 onwards.
+    if [ -f packaging/AddModules.java ]; then
+        ADD_MODULES="$(java packaging/AddModules.java)"
+    else
+        ADD_MODULES="$(sed -n 's:.*<addmodule>\(.*\)</addmodule>.*:\1:p' pom.xml | paste -sd,)"
+    fi
     jpackage \
         --type app-image \
         --name KST4Contest \
@@ -33,7 +41,7 @@ build() {
         --main-jar app.jar \
         --main-class kst4contest.view.Kst4ContestApplication \
         --module-path target/dist-libs \
-        --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
+        --add-modules "$ADD_MODULES" \
         --dest dist
 }
 
