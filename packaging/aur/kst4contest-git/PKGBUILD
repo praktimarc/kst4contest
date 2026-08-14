@@ -40,7 +40,7 @@ build() {
         --main-jar app.jar \
         --main-class kst4contest.view.Kst4ContestApplication \
         --module-path target/dist-libs \
-        --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec \
+        --add-modules javafx.controls,javafx.graphics,javafx.fxml,javafx.web,javafx.media,java.sql,java.net.http,jdk.crypto.ec,jdk.net \
         --dest dist
 }
 

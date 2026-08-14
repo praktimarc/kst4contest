@@ -285,7 +285,10 @@ final class On4KstConnectionManager {
             scheduler.schedule(
                     () -> sendLogin(token), LOGIN_FALLBACK_MILLIS,
                     TimeUnit.MILLISECONDS);
-        } catch (Exception exception) {
+        } catch (Throwable exception) {
+            // Errors must be caught as well: an Error escaping here would be
+            // swallowed by the scheduler and leave the state machine stuck in
+            // CONNECTING without any reconnect attempt or user visible failure.
             try {
                 socket.close();
             } catch (IOException ignored) {
@@ -699,7 +702,9 @@ final class On4KstConnectionManager {
             socket.setOption(ExtendedSocketOptions.TCP_KEEPIDLE, 45);
             socket.setOption(ExtendedSocketOptions.TCP_KEEPINTERVAL, 15);
             socket.setOption(ExtendedSocketOptions.TCP_KEEPCOUNT, 3);
-        } catch (UnsupportedOperationException | IOException exception) {
+        } catch (UnsupportedOperationException | IOException | LinkageError exception) {
+            // LinkageError covers runtime images built without the jdk.net module;
+            // the connection stays usable, only kernel side keepalive is missing.
             LOGGER.log(Level.INFO,
                     "Platform does not support configurable TCP keepalive; "
                             + "application heartbeat remains active", exception);
