@@ -10,12 +10,14 @@ Die veröffentlichten Stable-Versionen und ihre Programmpakete stehen unter [Git
 
 ## v1.42 – Nightly / in Entwicklung
 
-> Stand dieses Abschnitts: 10. August 2026.  
+> Stand dieses Abschnitts: 14. August 2026.  
 > v1.42 ist noch kein veröffentlichtes Stable-Release. Bis zur Freigabe können weitere Änderungen hinzukommen.
 
 v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, Worked-Status, NOT-QRV-Markierungen, Rufzeichensuffixe und Frequenzen werden dadurch konsistenter in der Benutzerliste, der Stationskarte, der Prioritätsberechnung und den externen Schnittstellen verwendet.
 
 ### Neu
+
+- **Sichtbarer ON4KST-Verbindungsstatus:** Ein kompakter `LINK`-Indicator im Hauptfenster zeigt den tatsächlichen Zustand der ON4KST-Verbindung an. Grün bedeutet vollständig angemeldet und synchronisiert, Gelb kennzeichnet Verbindungsaufbau und Synchronisation, Rot eine unterbrochene Verbindung, einen Fehler oder die Wartezeit vor dem nächsten Verbindungsversuch.
 
 - **Gemeinsame Herleitung verfügbarer Bänder:** Ein zentraler `BandOpportunityResolver` wertet aktuelle QRGs, Bandangaben im Namensfeld, aktive Rufzeichenvarianten, Worked-Informationen und NOT-QRV-Markierungen gemeinsam aus. Benutzerliste, **New bands**, Band-Upgrade-Hinweis, Priority Score, Stationskarte und automatische Bandauswahl verwenden damit dieselbe Grundlage.
 
@@ -40,6 +42,10 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 - **Ausblendbare Streckenanalyse:** Geländeprofil und Analysebereich der Stationskarte können vollständig ausgeblendet werden. Die Auswahl wird gespeichert und beim nächsten Programmstart wiederhergestellt.
 
 ### Geändert
+
+- **Sessionbezogene ON4KST-Verbindungssteuerung:** Socket, Reader, Writer, Messagebus und Warteschlangen gehören jetzt zu einer eindeutig identifizierten Verbindungssession. Veraltete Threads einer abgelösten Verbindung können dadurch keine Daten mehr verarbeiten oder die neue Verbindung schließen. `ONLINE` wird erst nach bestätigtem Login und vollständig empfangenen Benutzerlisten gemeldet. Verbindungsaufbau, Login und Synchronisation besitzen feste Zeitlimits; Heartbeats, ausbleibende Eingangsdaten, EOF sowie Lese- und Schreibfehler werden überwacht und lösen bei Bedarf einen kontrollierten Neuaufbau mit Backoff aus.
+
+- **ON4KST-Protokollbefehle abgesichert:** Ausgehende Befehle werden zentral aufgebaut und auf gültige Kategorien, Locatoren und unerlaubte Frame-Trennzeichen geprüft. Da ON4KST pro TCP-Session nur einen Locator verwaltet, wird für beide Chat-Kategorien der Hauptlocator verwendet und eine abweichende zweite Konfiguration protokolliert, statt widersprüchliche Befehle an den Server zu senden.
 
 - **QRG-Erkennung präzisiert:** Vollständige und relative Frequenzangaben werden weiterhin erkannt. Nackte dreistellige Zahlen gelten nur noch bei erkennbarem Frequenzkontext als QRG. Signalrapporte, Bandangaben und andere Zahlen erzeugen dadurch seltener falsche Frequenzen.
 
@@ -78,6 +84,16 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 - **Versionserkennung verbessert:** Versionsnummern werden semantisch verglichen, damit beispielsweise Patch-Versionen und Nightly-Stände nicht mehr durch eine einfache Fließkommazahl falsch eingeordnet werden.
 
 ### Behoben
+
+- **Zuverlässige Benutzerliste beim Login:** Ungültige oder unvollständige `UA0`-Teilnehmerdatensätze werden einzeln verworfen und protokolliert, ohne die Verarbeitung der alphabetisch folgenden Teilnehmer abzubrechen. Die gültigen Einträge werden zunächst pro Kategorie gesammelt und erst mit dem ersten zugehörigen `UE`-Abschlussframe vollständig veröffentlicht.
+
+- **Benutzerliste verschwindet nach dem Login:** ON4KST kann nach Namens-, Status- oder anderen Live-Änderungen weitere `UE`-Frames für dieselbe Kategorie senden. Wiederholte Abschlussframes werden jetzt erkannt und ignoriert, damit eine bereits gefüllte Benutzerliste nicht durch eine leere Momentaufnahme ersetzt wird.
+
+- **Fehlgeschlagener Erstaufbau und Verbindungsverlust:** Wenn beim Programmstart keine Verbindung zum Server hergestellt werden kann, läuft KST4Contest nicht mehr in eine Endlos- oder Busy-Wait-Schleife. Die Oberfläche bleibt bedienbar und weitere Versuche erfolgen mit begrenztem Backoff. Auch ein vom Server geschlossener oder über längere Zeit stummer Socket wird zuverlässig erkannt.
+
+- **Messagebus-Protokollierung:** Bereits korrekt verarbeitete ON4KST-Frames werden nicht mehr zusätzlich als `Critical, detected unhandled Chatmessage` gemeldet. Nur tatsächlich unbekannte Telegramme erreichen noch diesen Logzweig.
+
+- **Passwort im Fehlerlog:** Das ON4KST-Passwort wird beim Verbindungsaufbau nicht mehr im Klartext in die Konsole oder Logdatei geschrieben.
 
 - **Langzeitfehler der Stationsauswahl:** Die vom Message-Thread verwalteten Chatmember wurden von der JavaFX-Ansicht entkoppelt. Gleichzeitige Änderungen der Daten und Tabellenansicht führen dadurch nicht mehr nach längerer Laufzeit zu fehlerhaften Auswahlmodellen oder Concurrent-Modification-Problemen.
 

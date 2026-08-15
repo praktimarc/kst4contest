@@ -3549,7 +3549,7 @@ private ObservableList<String>
 	/**
 	 * Reloads the worked/not-QRV state from the internal database and applies the
 	 * result both to the active chatmember list and to the database table list in the
-	 * settings dialog. UI-bound list modifications are executed on the JavaFX thread.
+	 * settings dialog. UI-bound list modifications are executed on the JavaFX thread..
 	 */
 	public void refreshWorkedStateAndDatabaseListFromDatabase() {
 

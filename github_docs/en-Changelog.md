@@ -10,12 +10,14 @@ Published Stable versions and their application packages are available under [Gi
 
 ## v1.42 – Nightly / in development
 
-> Status of this section: 10 August 2026.  
+> Status of this section: 14 August 2026.  
 > v1.42 is not a published Stable release yet. Further changes may be added before release.
 
 v1.42 brings several previously separate calculations together. Band information, Worked status, NOT-QRV marks, callsign suffixes and frequencies are now used more consistently by the user list, station map, priority calculation and external interfaces.
 
 ### Added
+
+- **Visible ON4KST connection state:** A compact `LINK` indicator in the main window displays the actual state of the ON4KST connection. Green means fully authenticated and synchronised, yellow indicates connection setup or synchronisation, and red indicates a lost connection, an error or the delay before the next connection attempt.
 
 - **Shared band-opportunity calculation:** A central `BandOpportunityResolver` evaluates recent QRGs, band designators in station names, active callsign variants, Worked information and NOT-QRV marks. The user list, **New bands**, band-upgrade hint, Priority Score, station map and automatic band selection now use the same basis.
 
@@ -40,6 +42,10 @@ v1.42 brings several previously separate calculations together. Band information
 - **Hideable path analysis:** The terrain profile and analysis section of the station map can be hidden completely. The selected state is stored and restored at the next application start.
 
 ### Changed
+
+- **Session-based ON4KST connection lifecycle:** Each socket, reader, writer, message bus and queue now belongs to an explicitly identified connection session. Delayed threads from an obsolete connection can therefore no longer process data or close its replacement. `ONLINE` is reported only after the login has been accepted and all requested user lists have been received. Connection setup, login and synchronisation use bounded timeouts, while heartbeats, missing inbound traffic, EOF and read or write failures trigger controlled reconnect attempts with backoff where appropriate.
+
+- **Validated ON4KST protocol commands:** Outgoing frames are built centrally and checked for valid categories, locators and prohibited frame delimiters. Because ON4KST maintains one locator per TCP session, the main locator is used for both chat categories and a conflicting secondary configuration is logged instead of sending contradictory commands to the server.
 
 - **More precise QRG recognition:** Complete and relative frequency references continue to be recognised. Bare three-digit numbers are treated as QRGs only when a frequency context is available. Signal reports, band designators and unrelated numbers therefore produce fewer false frequencies.
 
@@ -78,6 +84,14 @@ v1.42 brings several previously separate calculations together. Band information
 - **Improved version comparison:** Versions are compared semantically so that patch releases and Nightly versions are not misclassified by conversion to a floating-point number.
 
 ### Fixed
+
+- **Reliable initial user list:** Invalid or incomplete `UA0` member records are rejected and logged individually without preventing alphabetically following members from being processed. Valid entries are staged per category and published as one complete snapshot when the first corresponding `UE` end marker is received.
+
+- **User list disappearing after login:** ON4KST may send additional `UE` frames for the same category after name, state or other live updates. Repeated end markers are now detected and ignored so that an already populated user list cannot be replaced by an empty snapshot.
+
+- **Failed initial connection and lost sockets:** An unavailable server during startup no longer sends KST4Contest into an endless or busy-wait loop. The user interface remains responsive and further attempts use bounded reconnect backoff. Sockets closed by the server, or connections without inbound traffic for an excessive period, are also detected reliably.
+
+- **Message-bus diagnostics:** Correctly processed ON4KST frames are no longer reported additionally as `Critical, detected unhandled Chatmessage`. Only genuinely unknown frames reach the fallback diagnostic branch.
 
 - **Long-running station-selection failure:** Chat members managed by the message thread have been decoupled from the JavaFX view. Simultaneous data and table updates therefore no longer cause broken selection models or concurrent-modification problems after longer runtimes.
 

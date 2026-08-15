@@ -15,7 +15,6 @@ import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -165,18 +164,79 @@ public class ReadUDPByWintestThread extends Thread {
     }
 
     /**
-     * Parse Win-Test STATUS packets and update own QRG from WT station.
+     * Formats a frequency from a Win-Test STATUS packet for use as MYQRG.
      *
-     * Parsing model (tokenized with quotes preserved):
-     * parts[0] = "STATUS"
-     * parts[1] = station name (example: "STN1")
-     * parts[5] = val2 (used to derive mode: 1 => SSB, else CW)
-     * parts[7] = frequency in 0.1 kHz units (example: 1443210 => 144321.0)
+     * <p>Win-Test transmits the frequency in units of 0.1 kHz. KST4Contest
+     * displays frequencies as {@code MHz.kHz.10Hz}, for example
+     * {@code 144.300.00} or {@code 10368.100.00}. The MHz part may contain
+     * between one and five digits. Deriving its length from the complete value
+     * avoids separate and incomplete handling for individual bands.</p>
+     *
+     * @param frequencyIn100Hz frequency received from Win-Test in units of
+     *                         0.1 kHz, equivalent to 100 Hz
+     * @return frequency formatted for MYQRG
+     * @throws IllegalArgumentException if the supplied frequency is not positive
+     *                                  or too small to be formatted
+     * @throws ArithmeticException if the supplied value exceeds the supported
+     *                             numeric range
+     */
+    private String helper_formatWinTestFrequency(long frequencyIn100Hz) {
+        if (frequencyIn100Hz <= 0) {
+            throw new IllegalArgumentException(
+                    "Win-Test frequency must be greater than zero"
+            );
+        }
+
+        /*
+         * Multiplication by ten creates a digit sequence whose final five
+         * digits represent kHz and 10-Hz groups:
+         *
+         * 1443210   -> 14432100   -> 144.321.00
+         * 103681000 -> 1036810000 -> 10368.100.00
+         */
+        long frequencyIn10Hz = Math.multiplyExact(
+                frequencyIn100Hz,
+                10L
+        );
+
+        String frequencyDigits = Long.toString(frequencyIn10Hz);
+
+        if (frequencyDigits.length() < 6) {
+            throw new IllegalArgumentException(
+                    "Win-Test frequency is too small: " + frequencyIn100Hz
+            );
+        }
+
+        int mhzEndIndex = frequencyDigits.length() - 5;
+        int khzEndIndex = frequencyDigits.length() - 2;
+
+        return frequencyDigits.substring(0, mhzEndIndex)
+                + "."
+                + frequencyDigits.substring(mhzEndIndex, khzEndIndex)
+                + "."
+                + frequencyDigits.substring(khzEndIndex);
+    }
+
+    /**
+     * Parses a Win-Test STATUS packet and optionally updates MYQRG.
+     *
+     * <p>The packet is tokenised while preserving quoted station names.
+     * The configured station-name filter is applied before any frequency is
+     * processed. An empty filter accepts STATUS packets from every Win-Test
+     * station.</p>
+     *
+     * <p>The main frequency is read from token 7. If pass-frequency use is
+     * enabled and token 11 contains a valid frequency, the pass frequency is
+     * used instead. A missing or invalid pass frequency deliberately falls
+     * back to the main frequency.</p>
+     *
+     * @param msg complete Win-Test STATUS packet
      */
     private void parseStatus(String msg) {
         try {
             ArrayList<String> parts = new ArrayList<>();
             Matcher matcher = STATUS_TOKEN_PATTERN.matcher(msg);
+
             while (matcher.find()) {
                 if (matcher.group(1) != null) {
                     parts.add(matcher.group(1));
@@ -186,86 +246,106 @@ public class ReadUDPByWintestThread extends Thread {
             }
 
             if (parts.size() < 8) {
-                System.out.println("[WinTest] STATUS too short: " + msg);
+                System.out.println(
+                        "[WinTest] STATUS too short: " + msg
+                );
                 return;
             }
 
-            String stn = parts.get(1);
-            String stationFilter = client.getChatPreferences().getLogsynch_wintestNetworkStationNameOfWintestClient1();
-            if (stationFilter != null && !stationFilter.isBlank() && !stn.equalsIgnoreCase(stationFilter)) {
+            String stationName = parts.get(1);
+            String stationFilter = client
+                    .getChatPreferences()
+                    .getLogsynch_wintestNetworkStationNameOfWintestClient1();
+
+            if (stationFilter != null
+                    && !stationFilter.isBlank()
+                    && !stationName.equalsIgnoreCase(stationFilter)) {
                 return;
             }
 
-            String val2 = parts.get(5);
-            String freqRaw = parts.get(7);
-            double freqFloat = Integer.parseInt(freqRaw) / 10.0;
+            String modeValue = parts.get(5);
+            long mainFrequencyRaw = Long.parseLong(parts.get(7));
+            double mainFrequencyKHz = mainFrequencyRaw / 10.0;
 
             String mode;
-            if ("1".equals(val2)) {
-                mode = freqFloat > 10000.0 ? "usb" : "lsb";
+
+            if ("1".equals(modeValue)) {
+                mode = mainFrequencyKHz > 10000.0 ? "usb" : "lsb";
             } else {
                 mode = "cw";
             }
 
-            // Format as MMM.KKK.HH display format (e.g. 144.300.00) consistent with UCX thread
-            // freqFloat is in kHz (e.g. 144300.0), convert to Hz-string for formatting
-            long freqHzTimes100 = Math.round(freqFloat * 100.0); // e.g. 14430000
-            String hzStr = String.valueOf(freqHzTimes100);
-            String formattedQRG;
-            if (hzStr.length() == 8) {
-                // 144MHz range: 14430000 -> 144.300.00
-                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 3), hzStr.substring(3, 6), hzStr.substring(6, 8));
-            } else if (hzStr.length() == 9) {
-                // 1296MHz range: 129600000 -> 1296.000.00
-                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 4), hzStr.substring(4, 7), hzStr.substring(7, 9));
-            } else if (hzStr.length() == 7) {
-                // 70MHz range: 7010000 -> 70.100.00
-                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 2), hzStr.substring(2, 5), hzStr.substring(5, 7));
-            } else if (hzStr.length() == 6) {
-                // 50MHz range: 5030000 but 6 digits: 503000 -> 5.030.00
-                formattedQRG = String.format("%s.%s.%s", hzStr.substring(0, 1), hzStr.substring(1, 4), hzStr.substring(4, 6));
-            } else {
-                formattedQRG = String.format(Locale.US, "%.1f", freqFloat); // fallback
-            }
-            // Parse pass frequency from parts[11] if available (WT STATUS format)
-            String formattedPassQRG = null;
+            String formattedMainQrg =
+                    helper_formatWinTestFrequency(mainFrequencyRaw);
+
+            /*
+             * Token 11 may contain the pass frequency, depending on the
+             * Win-Test STATUS packet. Small numeric flag values must not be
+             * interpreted as frequencies.
+             */
+            String formattedPassQrg = null;
+
             if (parts.size() > 11) {
                 try {
-                    String passFreqRaw = parts.get(11);
-                    double passFreqFloat = Integer.parseInt(passFreqRaw) / 10.0;
-                    if (passFreqFloat > 100) { // Must be a valid radio frequency (> 100 kHz), protects against parsing boolean flag tokens
-                        long passFreqHzTimes100 = Math.round(passFreqFloat * 100.0);
-                        String passHzStr = String.valueOf(passFreqHzTimes100);
-                        if (passHzStr.length() == 8) {
-                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 3), passHzStr.substring(3, 6), passHzStr.substring(6, 8));
-                        } else if (passHzStr.length() == 9) {
-                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 4), passHzStr.substring(4, 7), passHzStr.substring(7, 9));
-                        } else if (passHzStr.length() == 7) {
-                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 2), passHzStr.substring(2, 5), passHzStr.substring(5, 7));
-                        } else if (passHzStr.length() == 6) {
-                            formattedPassQRG = String.format("%s.%s.%s", passHzStr.substring(0, 1), passHzStr.substring(1, 4), passHzStr.substring(4, 6));
-                        } else {
-                            formattedPassQRG = String.format(Locale.US, "%.1f", passFreqFloat);
-                        }
+                    long passFrequencyRaw =
+                            Long.parseLong(parts.get(11));
+                    double passFrequencyKHz =
+                            passFrequencyRaw / 10.0;
+
+                    if (passFrequencyKHz > 100.0) {
+                        formattedPassQrg =
+                                helper_formatWinTestFrequency(
+                                        passFrequencyRaw
+                                );
                     }
-                } catch (Exception ignored) {
-                    // parts[11] not a valid frequency, leave formattedPassQRG as null
+                } catch (NumberFormatException
+                         | IllegalArgumentException
+                         | ArithmeticException ignored) {
+                    /*
+                     * Token 11 does not contain a usable frequency.
+                     * The main frequency remains the safe fallback.
+                     */
                 }
             }
 
-            if (this.client.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()) {
-                final String qrgToSet = (this.client.getChatPreferences().isLogsynch_wintestUsePassQrg() && formattedPassQRG != null)
-                        ? formattedPassQRG
-                        : formattedQRG;
-                // JavaFX StringProperty must be updated on the FX Application Thread
-                Platform.runLater(() -> this.client.getChatPreferences().getMYQRGFirstCat().set(qrgToSet));
+            boolean usePassQrg = client
+                    .getChatPreferences()
+                    .isLogsynch_wintestUsePassQrg();
+
+            final String qrgToSet =
+                    usePassQrg && formattedPassQrg != null
+                            ? formattedPassQrg
+                            : formattedMainQrg;
+
+            if (client
+                    .getChatPreferences()
+                    .isLogsynch_wintestQrgSyncEnabled()) {
+                Platform.runLater(
+                        () -> client
+                                .getChatPreferences()
+                                .getMYQRGFirstCat()
+                                .set(qrgToSet)
+                );
             }
 
-            System.out.println("[WinTest STATUS] stn=" + stn + ", mode=" + mode + ", qrg=" + formattedQRG
-                    + (formattedPassQRG != null ? ", passQrg=" + formattedPassQRG : "")
-                    + ", syncActive=" + this.client.getChatPreferences().isLogsynch_wintestQrgSyncEnabled());
-        } catch (Exception e) {
-            System.out.println("[WinTest] STATUS parsing error: " + e.getMessage());
+            System.out.println(
+                    "[WinTest STATUS] stn=" + stationName
+                            + ", mode=" + mode
+                            + ", qrg=" + formattedMainQrg
+                            + (formattedPassQrg != null
+                            ? ", passQrg=" + formattedPassQrg
+                            : "")
+                            + ", selectedQrg=" + qrgToSet
+                            + ", syncActive="
+                            + client
+                            .getChatPreferences()
+                            .isLogsynch_wintestQrgSyncEnabled()
+            );
+        } catch (Exception exception) {
+            System.out.println(
+                    "[WinTest] STATUS parsing error: "
+                            + exception.getMessage()
+            );
         }
     }
 
