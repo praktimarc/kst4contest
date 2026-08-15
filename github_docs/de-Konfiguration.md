@@ -191,7 +191,128 @@ Nach Abschluss der Konfiguration **Save Settings** verwenden.
 
 ## AirScout-Einstellungen
 
-Konfiguration der Schnittstelle zu AirScout für die Flugzeug-Scatter-Erkennung. Details: [AirScout-Integration](de-AirScout-Integration).
+Im Reiter **AirScout** wird die UDP-Verbindung zwischen KST4Contest und AirScout eingerichtet. KST4Contest fordert dort keine allgemeinen Flugzeugdaten an, sondern übermittelt die aktuell relevanten Stationspfade. AirScout berechnet die dazu passenden Flugzeuge und sendet das Ergebnis an die anfragende KST4Contest-Instanz zurück.
+
+Vorausgesetzt wird AirScout `0.9.9.5` oder neuer.
+
+![AirScout-Einstellungen in KST4Contest](as_plane_feed_3.png){ width=85% }
+
+### Einstellungen der UDP-Verbindung
+
+| Einstellung | Standardwert | Verwendung |
+|---|---:|---|
+| **Enable AirScout UDP integration** | deaktiviert | Aktiviert das Senden von AirScout-Anfragen und die Verarbeitung der Antworten |
+| **AirScout server identifier** | `AS` | Logischer Name der angesprochenen AirScout-Instanz |
+| **KST4Contest client identifier** | `KST` | Logischer Name dieser KST4Contest-Instanz |
+| **AirScout UDP port** | `9872` | Gemeinsamer UDP-Port für Anfragen und Antworten |
+| **Select AirScout frequency automatically per station** | aktiviert | Ermittelt Band und Frequenz für jede Gegenstation aus dem aktuellen Stationskontext |
+| **Forced AirScout band value** | `1440000` | Verwendet bei deaktivierter Automatik einen festen AirScout-Bandwert für alle Stationen |
+
+Ist **Enable AirScout UDP integration** deaktiviert, sendet KST4Contest keine AirScout-Anfragen und verwirft eingehende AirScout-Antworten. Der UDP-Empfänger kann trotzdem gebunden bleiben, damit sich die Funktion während einer laufenden Verbindung wieder einschalten lässt.
+
+KST4Contest verwendet für ausgehende AirScout-Pakete die Broadcast-Adresse `255.255.255.255`. Eine Ziel-IP wird deshalb nicht separat konfiguriert. AirScout und KST4Contest müssen den verwendeten UDP-Broadcast empfangen können; Router leiten einen solchen Broadcast normalerweise nicht in ein anderes Netz weiter. Bei Problemen sollten daher zuerst der UDP-Port, die lokale Firewall und die Netzzuordnung geprüft werden.
+
+### Automatische Bandauswahl pro Station
+
+**Auto per station** ist die empfohlene Einstellung. KST4Contest verwendet dann nicht einen festen Bandwert für alle Gegenstationen, sondern leitet eine geeignete Frequenz aus den verfügbaren Informationen ab.
+
+Die Quellen werden in folgender Reihenfolge ausgewertet:
+
+1. die zuletzt erkannte, höchstens 30 Minuten alte QRG der Gegenstation,
+2. eine eindeutige vollständige QRG im Namensfeld eines aktiven Chat-Eintrags,
+3. eindeutige Bandangaben im Namensfeld,
+4. 432 MHz, wenn dieselbe Station gleichzeitig in der VHF/UHF- und Microwave-Kategorie aktiv ist und 432 MHz für die eigene Station aktiviert wurde,
+5. das niedrigste für die eigene Station aktivierte Band, das zur unterstützten Chat-Kategorie passt.
+
+Aktive Chat-Varianten desselben Basisrufzeichens werden gemeinsam ausgewertet. Die Einträge `CALLSIGN`, `CALLSIGN-2` und `CALLSIGN-432` können dadurch gemeinsam zur Bandherleitung beitragen, bleiben für die Nachrichtenverarbeitung aber getrennte Chat-Teilnehmer.
+
+Nur Bänder, die unter **My station uses …** aktiviert wurden, kommen für die automatische Auswahl infrage. Ein manuell gesetztes NOT-QRV-Kennzeichen schließt das betreffende Band aus und hat Vorrang vor automatisch erkannten QRG- oder Namensinformationen.
+
+Unterstützt werden die Chat-Kategorien für 50/70 MHz, VHF/UHF, Microwave und EME/JT65. Andere ON4KST-Kategorien werden für die AirScout-Bandherleitung ignoriert. Kann keine ausreichend belastbare Frequenz bestimmt werden, sendet KST4Contest für diese Station keine Anfrage. Ein beliebiger Rückfall auf 144 MHz würde zwar ein syntaktisch vollständiges Paket erzeugen, aber nicht zwangsläufig eine sinnvolle Berechnung.
+
+Die automatische AirScout-Auswahl verwendet dieselbe Herleitung wie die interne Streckenanalyse. Damit bewerten beide Funktionen den Stationspfad auf derselben fachlichen Grundlage.
+
+### Festes AirScout-Band
+
+Wird **Auto per station** deaktiviert, verwendet KST4Contest den unter **Forced AirScout band value** eingetragenen Wert für alle Stationen.
+
+Der Wert wird in der von der AirScout-UDP-Schnittstelle verwendeten Einheit eingetragen:
+
+| Band | AirScout-Wert |
+|---|---:|
+| 50 MHz | `500000` |
+| 70 MHz | `700000` |
+| 144 MHz | `1440000` |
+| 432 MHz | `4320000` |
+| 1296 MHz | `12960000` |
+| 2320 MHz | `23200000` |
+| 3400 MHz | `34000000` |
+| 5760 MHz | `57600000` |
+| 10368 MHz | `103680000` |
+| 24048 MHz | `240480000` |
+
+Im festen Modus wird weder die zuletzt erkannte QRG noch das im Namen genannte Band der Gegenstation berücksichtigt. Diese Einstellung ist deshalb hauptsächlich für einen eindeutig auf ein Band begrenzten Stationsbetrieb oder zur Fehlersuche sinnvoll.
+
+### Server- und Client-Identifier
+
+Die Identifier gehören zum AirScout-Protokoll und sind keine DNS-Namen oder IP-Adressen.
+
+Ausgehende Anfragen enthalten zunächst den Client- und anschließend den Server-Identifier:
+
+```text
+"KST" "AS"
+```
+
+AirScout antwortet in umgekehrter Reihenfolge:
+
+```text
+"AS" "KST"
+```
+
+KST4Contest verarbeitet eine Antwort nur, wenn beide Identifier exakt mit der aktuellen Konfiguration übereinstimmen. Der Vergleich unterscheidet zwischen Groß- und Kleinschreibung.
+
+Die Identifier dürfen nicht leer sein und keine Anführungszeichen oder Zeilenumbrüche enthalten.
+
+Werden mehrere KST4Contest-Instanzen im selben Netz betrieben, sollte jede einen eigenen Client-Identifier erhalten, beispielsweise:
+
+```text
+KST-144
+KST-432
+```
+
+Bei mehreren AirScout-Instanzen müssen zusätzlich unterschiedliche Server-Identifier verwendet werden. Dadurch wird verhindert, dass die Antwort für einen Arbeitsplatz von einer anderen KST4Contest-Instanz verarbeitet wird.
+
+### Welche Stationen werden angefragt?
+
+KST4Contest startet die erste periodische AirScout-Abfrage ungefähr zehn Sekunden nach dem Aufbau der Chat-Verbindung. Weitere Abfragen folgen im Abstand von 60 Sekunden.
+
+Eine aktive Station wird nur berücksichtigt, wenn:
+
+- ein verwendbares Rufzeichen vorhanden ist,
+- ein Locator vorhanden ist,
+- die Entfernung berechnet werden konnte,
+- die Entfernung kleiner als das konfigurierte **Maximum-QRB** ist und
+- ein verwendbares Band bestimmt werden konnte.
+
+Mehrere aktive Chat-Einträge desselben Basisrufzeichens erzeugen nicht für jeden Suffix eine eigene identische Pfadberechnung. Die zurückgegebenen AirScout-Informationen werden anschließend wieder den passenden aktiven Chat-Varianten zugeordnet.
+
+Die Auswahl begrenzt nicht nur den Netzwerkverkehr. Sie verhindert außerdem, dass AirScout dauerhaft Pfade berechnet, die außerhalb des für die eigene Station vorgesehenen Arbeitsbereichs liegen.
+
+### Übernahme geänderter Einstellungen
+
+Folgende Änderungen werden nach Verlassen des Eingabefeldes beziehungsweise Betätigen der Checkbox sofort für neue Pakete verwendet:
+
+- Aktivierung oder Deaktivierung der AirScout-Integration,
+- Server-Identifier,
+- Client-Identifier,
+- automatische oder feste Bandauswahl und
+- fester Bandwert.
+
+Nach einer Änderung des UDP-Ports muss die Chat-Verbindung getrennt und neu aufgebaut oder KST4Contest neu gestartet werden. Der bereits laufende UDP-Empfänger bleibt sonst weiterhin an den vorherigen Port gebunden.
+
+Zum dauerhaften Speichern anschließend **Save Settings** verwenden.
+
+Die Einrichtung der AirScout-Seite, die Anzeige der Flugzeuge und die Bedeutung der AP-Daten sind unter [AirScout-Integration](de-AirScout-Integration) beschrieben.
 
 ---
 
