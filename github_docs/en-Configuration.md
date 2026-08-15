@@ -131,12 +131,104 @@ Configuration of the individual logging applications, band and locator handling,
 
 ## TRX Sync Settings
 
-Receives the current transceiver frequency from the logging software via UDP. This enables the automatic population of the `MYQRG` variable. Useful for:
+TRX synchronisation imports the current frequency from the logging application and makes it available in KST4Contest as the local QRG of the first chat category. QSO and frequency synchronisation may use the same UDP receiver, but they remain separate functions: receiving a `RadioInfo` packet does not mark a station as worked, and receiving a QSO packet does not automatically change the local QRG.
 
-- Quickly inserting your own QRG into chat messages.
-- Automatic CQ beacon with current frequency.
+![TRX synchronisation settings](client_settings_window_trxsync.png)
 
-> **Note for multi-setup**: When running two logging programs on two computers but only one KST4Contest instance, only one logging program should send frequency packets. KST4Contest cannot distinguish between sources.
+### Available QRG Sources
+
+| Source | Setting | Behaviour |
+|---|---|---|
+| **General RadioInfo listener** | `Update MYQRG from RadioInfo messages received on the shared log-sync port` | Processes compatible `RadioInfo` packets on the UDP port shared with QSO synchronisation. The default port is `12060`. |
+| **Win-Test STATUS** | `Win-Test STATUS QRG Sync` | Processes the main or pass frequency from native Win-Test `STATUS` packets. The Win-Test listener uses its separately configured port, which defaults to `9871`. |
+| **Manual entry** | Disable both automatic QRG sources | The local QRG can be entered manually in the main window. |
+
+The general listener is intended for logging applications which transmit compatible `RadioInfo` packets. Depending on their individual configuration, this includes UCXLog, N1MM+, QARTest and DXLog.net. QSO and `RadioInfo` packets use the same port configured under **Log sync**, but separate options determine whether KST4Contest processes QSO information, TRX information or both packet types.
+
+Restart KST4Contest after changing the shared UDP port. Changes to the two QRG-sync checkboxes take effect immediately.
+
+### Which QRG Is Updated?
+
+Both automatic sources update `MYQRG` only. This is the local QRG of the first or primary chat category.
+
+If a second chat is enabled, its QRG remains independent. It is not derived from incoming TRX packets and is available through `SECONDQRG`. The first category can therefore follow the logging application's frequency automatically while a separate QRG is entered manually for the second category.
+
+As soon as at least one automatic QRG source is enabled, the first category's QRG field in the main window is bound to the received value. Manual entry becomes available again when both the general RadioInfo listener and Win-Test STATUS synchronisation are disabled.
+
+### Main or Pass Frequency from Win-Test
+
+By default, KST4Contest uses the main frequency contained in the Win-Test `STATUS` packet.
+
+Enable `Use pass frequency from Win-Test STATUS` to use the packet's pass frequency instead. This is useful, for example, when Win-Test maintains a different frequency during split operation and that is the frequency which should be announced in the chat.
+
+If the packet does not contain a valid pass frequency, KST4Contest automatically falls back to the main frequency. A missing pass frequency therefore neither clears `MYQRG` nor replaces it with an obviously incorrect number.
+
+Frequencies use a consistent KST4Contest display format, for example:
+
+```text
+50.300.00
+144.300.00
+1296.100.00
+10368.100.00
+```
+
+The number of digits before the first dot is derived from the frequency. Microwave frequencies with four or five MHz digits are therefore formatted correctly as well.
+
+### Selecting the Win-Test Station
+
+Several stations in a Win-Test network may transmit `STATUS` packets at the same time. `Win-Test station name filter` selects the station which is allowed to update the local QRG in KST4Contest.
+
+Example:
+
+```text
+STN1
+```
+
+The comparison is case-insensitive. If the field is empty, `STATUS` packets from every Win-Test station are accepted.
+
+In a multi-operator setup, set the filter to the station name of the operating position which actually belongs to this KST4Contest instance. Otherwise, a packet from another position may replace the QRG currently being displayed.
+
+### Using MYQRG and SECONDQRG
+
+The synchronised QRG can be used in every text processed by the common KST4Contest variable resolver. This includes:
+
+- the send field,
+- shortcuts,
+- snippets, and
+- automatic beacons.
+
+`MYQRG` contains the complete QRG of the first chat category. `MYQRGSHORT` uses only its first seven characters. `SECONDQRG` contains the separately entered QRG of the second chat category.
+
+Examples:
+
+```text
+I am calling cq at MYQRG
+cq on MYQRGSHORT
+second chat qrg SECONDQRG
+```
+
+The values are inserted when the message text is resolved. If the logging application changes frequency between two beacon runs, the next message already uses the updated value.
+
+The local QRG may also be used as a fallback when handing a sked over to Win-Test. This only happens if the QRG can be parsed and belongs to the band explicitly selected for the sked. See [Log Synchronisation](en-Log-Sync#handing-skeds-over-to-win-test) for details.
+
+Further information about text variables: [Macros and Variables](en-Macros-and-Variables#variables).
+
+### Multiple Loggers or Radios
+
+Every enabled QRG source writes to the same `MYQRG` value. KST4Contest does not currently assign incoming `RadioInfo` or `STATUS` packets to a particular radio or chat category.
+
+If the general RadioInfo listener and Win-Test synchronisation are enabled at the same time, the most recently processed packet therefore determines the displayed QRG. The same applies when several logging applications send frequency packets to one KST4Contest instance.
+
+For a setup containing several radios:
+
+- QSO packets may be received from several logging applications.
+- Frequency packets should only be transmitted by the source which is intended to control `MYQRG`.
+- A Win-Test network should additionally use the station-name filter.
+- If two completely independent QRG synchronisations are required, two separate KST4Contest instances provide the clearer arrangement.
+
+In other words, combining several Worked sources is useful. Combining several simultaneously transmitting frequency sources merely creates a contest over which packet arrived last.
+
+Click **Save Settings** after completing the configuration.
 
 ---
 

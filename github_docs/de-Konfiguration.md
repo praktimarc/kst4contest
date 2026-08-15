@@ -122,14 +122,72 @@ Dedizierter Netzwerk-Erkenner für Win-Test. KST4Contest empfängt und verarbeit
 
 ## TRX-Sync-Einstellungen
 
-Empfängt die aktuelle Frequenz des Transceivers vom Logprogramm via UDP. Ermöglicht die automatische Befüllung der Variable `MYQRG`. Nützlich für:
+Die TRX-Synchronisation übernimmt die aktuelle Frequenz aus dem Logprogramm und stellt sie in KST4Contest als eigene QRG der ersten Chat-Kategorie bereit. QSO- und Frequenzsynchronisation verwenden teilweise denselben UDP-Empfänger, sind funktional aber voneinander getrennt: Ein empfangenes `RadioInfo`-Paket markiert keine Station als gearbeitet, und ein QSO-Paket ändert nicht automatisch die eigene QRG.
 
-- Schnelles Einfügen der eigenen QRG in Chat-Nachrichten.
-- Automatische CQ-Baken mit aktueller Frequenz.
+![Einstellungen für die TRX-Synchronisation](client_settings_window_trxsync.png)
 
-> **Hinweis für Multi-Setup**: Wenn zwei Logprogramme an zwei Computern betrieben werden, aber nur eine KST4Contest-Instanz, darf nur ein Logprogramm die Frequenzpakete senden. KST4Contest kann nicht zwischen den Quellen unterscheiden.
+### Verfügbare QRG-Quellen
+
+| Quelle | Aktivierung | Verhalten |
+|---|---|---|
+| **Allgemeiner RadioInfo-Listener** | `Update MYQRG from RadioInfo messages received on the shared log-sync port` | Verarbeitet kompatible `RadioInfo`-Pakete auf dem gemeinsam mit der QSO-Synchronisation verwendeten UDP-Port. Der Standardport ist `12060`. |
+| **Win-Test STATUS** | `Win-Test STATUS QRG Sync` | Verarbeitet die Haupt- oder Pass-Frequenz aus nativen Win-Test-`STATUS`-Paketen. Der Win-Test-Listener verwendet seinen separat konfigurierten Port, standardmäßig `9871`. |
+| **Manuelle Eingabe** | Beide automatischen QRG-Quellen deaktivieren | Die eigene QRG kann im Hauptfenster von Hand eingetragen werden. |
+
+Der allgemeine Listener ist für Logprogramme vorgesehen, die kompatible `RadioInfo`-Pakete senden. Dazu gehören – abhängig von deren jeweiliger Konfiguration – UCXLog, N1MM+, QARTest und DXLog.net. QSO- und `RadioInfo`-Pakete verwenden denselben unter **Log sync** konfigurierten Port. Dort wird jedoch getrennt festgelegt, ob KST4Contest QSO-Informationen, TRX-Informationen oder beide Paketarten verarbeitet.
+
+Wird der gemeinsame UDP-Port geändert, muss KST4Contest neu gestartet werden. Eine reine Änderung der Checkboxen wird dagegen sofort berücksichtigt.
+
+### Welche QRG wird aktualisiert?
+
+Beide automatischen Quellen aktualisieren ausschließlich `MYQRG`. Das ist die eigene QRG der ersten beziehungsweise primären Chat-Kategorie.
+
+Bei aktiviertem zweiten Chat bleibt dessen QRG davon unabhängig. Sie wird nicht aus den empfangenen TRX-Paketen abgeleitet und steht als `SECONDQRG` zur Verfügung. Dadurch kann beispielsweise die erste Kategorie automatisch der Frequenz des Logprogramms folgen, während für die zweite Kategorie eine eigene QRG von Hand eingetragen wird.
+
+Sobald mindestens eine automatische QRG-Quelle aktiviert ist, wird das QRG-Feld der ersten Kategorie im Hauptfenster an den empfangenen Wert gebunden. Eine manuelle Eingabe in dieses Feld ist wieder möglich, wenn sowohl der allgemeine RadioInfo-Listener als auch die Win-Test-STATUS-Synchronisation deaktiviert sind.
+
+### Haupt- oder Pass-Frequenz aus Win-Test
+
+Standardmäßig verwendet KST4Contest die Hauptfrequenz des empfangenen Win-Test-`STATUS`-Pakets.
+
+Die Option `Use pass frequency from Win-Test STATUS` verwendet stattdessen die im Paket enthaltene Pass-Frequenz. Das ist beispielsweise sinnvoll, wenn Win-Test im Split-Betrieb eine abweichende Frequenz führt und genau diese im Chat als Arbeitsfrequenz veröffentlicht werden soll.
+
+Enthält das Paket keine gültige Pass-Frequenz, fällt KST4Contest automatisch auf die Hauptfrequenz zurück. Eine fehlende Pass-Frequenz löscht daher weder `MYQRG` noch ersetzt sie den Wert durch eine offensichtlich falsche Zahl.
+
+Die Frequenzen werden einheitlich im KST4Contest-Format dargestellt, beispielsweise:
+
+```text
+50.300.00
+144.300.00
+1296.100.00
+10368.100.00
+```
+
+Die Werte werden erst beim Auflösen des Nachrichtentextes eingesetzt. Ändert das Logprogramm zwischen zwei Beacon-Läufen die Frequenz, verwendet die nächste Nachricht bereits den aktualisierten Wert.
+
+Die eigene QRG kann außerdem als Fallback für die Übergabe eines Skeds an Win-Test verwendet werden. Das geschieht nur, wenn die QRG auswertbar ist und zum ausdrücklich ausgewählten Sked-Band gehört. Einzelheiten stehen unter [Log-Synchronisation](de-Log-Synchronisation#skeds-an-win-test-übergeben).
+
+Weitere Informationen zu den Textvariablen: [Makros und Variablen](de-Makros-und-Variablen#variablen).
+
+### Mehrere Logger oder Funkgeräte
+
+Alle aktivierten QRG-Quellen schreiben in denselben Wert `MYQRG`. KST4Contest ordnet eingehende `RadioInfo`- oder `STATUS`-Pakete derzeit weder einem bestimmten Funkgerät noch einer Chat-Kategorie zu.
+
+Sind der allgemeine RadioInfo-Listener und die Win-Test-Synchronisation gleichzeitig aktiviert, bestimmt deshalb das zuletzt verarbeitete Paket die angezeigte QRG. Dasselbe gilt, wenn mehrere Logger ihre Frequenzpakete an dieselbe KST4Contest-Instanz senden.
+
+Für ein Setup mit mehreren Funkgeräten gilt daher:
+
+- QSO-Pakete dürfen von mehreren Loggern empfangen werden.
+- Frequenzpakete sollten nur von der Quelle gesendet werden, die `MYQRG` tatsächlich steuern soll.
+- In einem Win-Test-Netzwerk sollte zusätzlich der Stationsfilter verwendet werden.
+- Werden zwei vollständig unabhängige QRG-Synchronisationen benötigt, sind zwei getrennte KST4Contest-Instanzen die eindeutigere Lösung.
+
+Anders ausgedrückt: Mehrere Worked-Quellen lassen sich sinnvoll zusammenführen. Mehrere gleichzeitig sendende Frequenzquellen erzeugen dagegen keine zusätzliche Information, sondern lediglich einen Wettbewerb darum, welches Paket zuletzt angekommen ist.
+
+Nach Abschluss der Konfiguration **Save Settings** verwenden.
 
 ---
+
 
 ## AirScout-Einstellungen
 
