@@ -298,8 +298,7 @@ public class ReadUDPByWintestThread extends Thread {
                                         passFrequencyRaw
                                 );
                     }
-                } catch (NumberFormatException
-                         | IllegalArgumentException
+                } catch (IllegalArgumentException
                          | ArithmeticException ignored) {
                     /*
                      * Token 11 does not contain a usable frequency.
