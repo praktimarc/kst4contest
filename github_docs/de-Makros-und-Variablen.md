@@ -166,13 +166,38 @@ Die globalen Variablen werden bei jedem Timer-Lauf neu ausgewertet. Dadurch kann
 Der vollständig aufgelöste Nachrichtentext darf höchstens 120 Zeichen enthalten. Weitere Angaben zum gemeinsamen Intervall und zum Verhalten beider Chat-Kategorien stehen unter [Konfiguration – Beacon Settings](de-Konfiguration#beacon-settings-automatischer-beacon).
 
 ---
-## Beispiel-Workflow mit Makros im Contest
+## Beispiel-Workflow mit Makros im Contest## Variablen im Beacon
 
-1. Station in der Benutzerliste auswählen → Rufzeichen ist nun vorausgewählt.
-2. `Ctrl+1` drücken → Snippet „Hi OM, try sked?" wird als PM adressiert.
-3. Enter drücken → Nachricht wird gesendet.
-4. Station antwortet mit Frequenz → QRG-Spalte wird automatisch befüllt.
-5. `Ctrl+2` → Snippet „I am calling cq ur dir, pse lsn to me at 144.388" (MYQRG aufgelöst).
-6. Enter → Gesendet.
+Ein öffentlicher Beacon besitzt keine ausgewählte Gegenstation. Deshalb können hier ausschließlich Variablen sinnvoll verwendet werden, die von der eigenen Station und ihrer aktuellen Konfiguration abhängen:
 
-Ohne manuelle Tipparbeit, ohne Fehler, ohne Unterbrechung des CQ-Rufens.
+| Variable | Wert im Beacon |
+|---|---|
+| `MYQRG` | aktuelle QRG der ersten Chat-Kategorie |
+| `MYQRGSHORT` | auf sieben Zeichen gekürzte QRG der ersten Kategorie |
+| `SECONDQRG` | aktuelle QRG der zweiten Chat-Kategorie |
+| `MYLOCATOR` | eigener vollständiger Locator |
+| `MYLOCATORSHORT` | eigener vierstelliger Locator |
+| `MYCALL` | eigenes Rufzeichen |
+| `MYQTF` | aktuelle Antennenrichtung |
+
+`QRZNAME`, `FIRSTAP` und `SECONDAP` benötigen eine ausgewählte Gegenstation. In einem öffentlichen Beacon werden sie daher nicht aufgelöst.
+
+Eine mögliche Konfiguration für die erste Kategorie ist:
+
+```text
+calling cq at MYQRGSHORT, ant MYQTF deg, loc MYLOCATOR
+```
+
+Für den Beacon der zweiten Kategorie muss `SECONDQRG` verwendet werden, wenn dort eine andere Frequenz veröffentlicht werden soll:
+
+```text
+calling cq at SECONDQRG, ant MYQTF deg, loc MYLOCATOR
+```
+
+Die globalen Variablen werden bei jedem Timer-Lauf neu ausgewertet. Dadurch kann eine vom Logprogramm aktualisierte QRG bereits in der nächsten Beacon-Nachricht erscheinen.
+
+Der vollständig aufgelöste Text muss mindestens ein gültiges Zeichen enthalten und darf höchstens 120 Zeichen lang sein. Das Protokoll-Trennzeichen `|` und Zeilenumbrüche sind nicht zulässig. Ist der Text beim vorgesehenen Versand noch leer oder ungültig, wird dieser Beacon-Lauf ausgelassen.
+
+Weitere Angaben zum gemeinsamen Intervall und zum Verhalten beider Chat-Kategorien stehen unter [Konfiguration – Beacon Settings](de-Konfiguration#beacon-settings-automatischer-beacon).
+
+---

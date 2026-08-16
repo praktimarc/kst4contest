@@ -549,9 +549,80 @@ The complete list of available placeholders and their limitations is described u
 
 ## Beacon Settings
 
-Configuration of an automatic interval beacon in the public chat channel. Recommended: use the `MYQRG` variable in the text so the current frequency is always up to date. Interval and text are freely configurable.
+![Beacon settings](client_settings_window_beacon.png)
 
-> **Tip**: Enable the beacon when calling CQ and quickly disable it in the settings window when not calling.
+A beacon sends a public CQ message at regular intervals. It is intended for operating situations in which the local station calls CQ on a fixed frequency for an extended period. Other stations receive current QRG information without requiring the operator to enter the same message repeatedly.
+
+KST4Contest uses one shared timer for both chat categories. Each category nevertheless has its own enable setting and message template:
+
+- **Enable CQ beacon** enables the beacon for the respective category.
+- **Beacon message** contains the public message for that category.
+- **Shared beacon interval** sets the common interval used by both categories.
+
+When both beacons are enabled, they are sent one after the other in their respective categories during the same timer run. The second beacon is only considered while the second chat is enabled and connected.
+
+### Interval and timer behaviour
+
+The interval is entered in whole minutes. The minimum permitted value is one minute.
+
+After the chat connection has been established, KST4Contest performs the first beacon check after approximately ten seconds. The configured interval applies after that initial check.
+
+Changing the interval while connected restarts the countdown with the new value. The change itself does not cause an immediate beacon message.
+
+Both categories use the same timer. Separate intervals for the primary and secondary chat cannot be configured.
+
+### Message text and variables
+
+A beacon may use the [global variables](en-Macros-and-Variables#variables-in-the-beacon) which depend only on the local station:
+
+- `MYQRG`
+- `MYQRGSHORT`
+- `SECONDQRG`
+- `MYLOCATOR`
+- `MYLOCATORSHORT`
+- `MYCALL`
+- `MYQTF`
+
+A suitable message for the primary chat category is:
+
+```text
+calling cq at MYQRGSHORT, ant MYQTF deg, loc MYLOCATOR
+```
+
+Use `SECONDQRG` for the second chat if it operates on a different frequency:
+
+```text
+calling cq at SECONDQRG, ant MYQTF deg, loc MYLOCATOR
+```
+
+Variables are resolved again on every timer run. If the logging software changes the QRG stored in `MYQRG`, the next beacon can already contain the updated value. The message template does not have to be edited.
+
+`MYQRG` and `MYQRGSHORT` always refer to the primary chat category. Enabling or selecting the second chat does not change this assignment.
+
+Station-specific variables such as `QRZNAME`, `FIRSTAP` and `SECONDAP` require a selected remote station. A public beacon has no such destination, so these variables are not resolved in beacon messages.
+
+### Message validation
+
+KST4Contest validates both the configured template and the message which remains after all variables have been resolved.
+
+The following restrictions apply:
+
+- The final message must not be empty.
+- It must not exceed 120 characters.
+- The protocol separator `|` is not permitted.
+- Line breaks are not permitted.
+
+An invalid entry is not accepted as the new beacon configuration. If a template becomes invalid only after resolving its variables, for example because the resulting text exceeds 120 characters, that beacon run is skipped.
+
+A template which consists only of a temporarily empty global variable may still be stored. This can happen during startup before the first QRG has been received from the logger. KST4Contest does not send an empty message while the variable has no usable value.
+
+### When should the beacon be disabled?
+
+The beacon is useful only while its QRG matches the actual operation. Leaving it enabled while searching the band or changing frequencies frequently may cause other stations to look for the local station on an obsolete frequency.
+
+In plain terms: the beacon saves work while calling CQ on a fixed QRG. It should be disabled while moving around the band.
+
+Changes take effect during the current connection. Use **Save Settings** afterwards to retain the enable settings, message templates and interval for the next program start.
 
 ---
 

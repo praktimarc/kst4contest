@@ -605,12 +605,20 @@ Die Timeline ist eine Vorschau. AirScout-Daten können sich ändern, und ein ein
 
 ## Intervall-Beacon
 
-KST4Contest kann wiederkehrende CQ-Nachrichten in den öffentlichen Chat senden. Beide Chat-Kategorien verwenden ein gemeinsames Intervall, besitzen aber jeweils einen eigenen Aktivierungsschalter und Nachrichtentext. Globale Variablen wie `MYQRG`, `SECONDQRG` oder `MYLOCATOR` werden unmittelbar vor jeder Aussendung aktualisiert.
- 
+KST4Contest kann wiederkehrende CQ-Nachrichten in den öffentlichen Chat senden. Der Beacon ist für längeres CQ-Rufen auf einer festen Frequenz gedacht: Die eigene QRG wird regelmäßig veröffentlicht, ohne dass derselbe Text von Hand wiederholt werden muss.
 
-Der Beacon ist für längeres CQ-Rufen auf einer festen Frequenz gedacht. Beim Absuchen oder häufigen Wechseln der QRG sollte er ausgeschaltet werden, damit keine inzwischen falsche Frequenz verbreitet wird. Details: [Konfiguration – Beacon Settings](de-Konfiguration#beacon-settings-automatischer-beacon).
+Beide Chat-Kategorien verwenden ein gemeinsames Intervall, besitzen aber jeweils einen eigenen Aktivierungsschalter und Nachrichtentext. Der zweite Beacon wird nur gesendet, wenn auch der zweite Chat aktiviert und verbunden ist.
+
+Globale Variablen wie `MYQRG`, `SECONDQRG`, `MYLOCATOR` oder `MYQTF` werden unmittelbar vor jeder Aussendung neu aufgelöst. Eine zwischenzeitlich vom Logprogramm aktualisierte QRG kann dadurch bereits im nächsten Beacon erscheinen.
+
+Vor dem Versand prüft KST4Contest den vollständig aufgelösten Nachrichtentext. Leere Nachrichten, Zeilenumbrüche, das Protokoll-Trennzeichen `|` und Texte mit mehr als 120 Zeichen werden nicht gesendet.
+
+Beim Absuchen oder häufigen Wechseln der QRG sollte der Beacon ausgeschaltet werden. Eine automatisch verbreitete Frequenz ist nur dann hilfreich, wenn dort tatsächlich jemand hört und ruft.
+
+Konfiguration, Timer-Verhalten und verfügbare Variablen: [Konfiguration – Beacon Settings](de-Konfiguration#beacon-settings-automatischer-beacon).
 
 ---
+
 
 ## Simplelogfile
 

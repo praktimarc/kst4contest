@@ -503,9 +503,20 @@ The timeline is a preview. AirScout data can change, and a stored sked guarantee
 
 ## Interval Beacon
 
-Automatic CQ messages in the public channel at a configurable interval. Recommended: use the `MYQRG` variable so the current frequency is always accurate. Details: [Configuration – Beacon Settings](en-Configuration#beacon-settings).
+KST4Contest can send recurring CQ messages to the public chat. The beacon is intended for longer periods of calling CQ on a fixed frequency: it publishes the local QRG regularly without requiring the operator to enter the same text again.
+
+Both chat categories use one shared interval, but each category has its own enable setting and message template. The second beacon is only sent while the second chat is enabled and connected.
+
+Global variables such as `MYQRG`, `SECONDQRG`, `MYLOCATOR` and `MYQTF` are resolved immediately before every transmission. A QRG updated by the logging software can therefore appear in the next beacon.
+
+Before transmission, KST4Contest validates the completely resolved message. Empty messages, line breaks, the protocol separator `|` and messages exceeding 120 characters are not sent.
+
+Disable the beacon while searching the band or changing QRG frequently. An automatically published frequency is useful only while somebody is actually listening and calling there.
+
+Configuration, timer behaviour and available variables: [Configuration – Beacon Settings](en-Configuration#beacon-settings).
 
 ---
+
 
 ## Simplelogfile
 

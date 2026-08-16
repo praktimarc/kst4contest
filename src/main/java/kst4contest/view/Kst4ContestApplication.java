@@ -4933,40 +4933,51 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 	/**
-	 * Validates and stores one beacon text.
+	 * Validates and stores one beacon template.
 	 *
-	 * <p>The final text is checked after global variables have been resolved.
-	 * Otherwise a template with at most 120 characters could still exceed the
-	 * server limit after values such as MYQRG or MYLOCATOR were inserted.</p>
+	 * <p>The template is checked against the same protocol and length rules which
+	 * are applied by the timer before transmission. A variable-only template may
+	 * temporarily resolve to an empty value and can still be stored; the timer will
+	 * not send it until a usable value is available.</p>
 	 *
 	 * @param textField field containing the configured beacon template
 	 * @param mainCategory {@code true} for the main category, {@code false} for
 	 *                     the optional second category
 	 */
-	private void applyBeaconTextSetting(TextField textField, boolean mainCategory) {
-		String configuredText = textField.getText() == null ? "" : textField.getText();
-		String resolvedText = messageVariableResolver.resolveGlobalVariables(configuredText);
+	private void applyBeaconTextSetting(
+			TextField textField,
+			boolean mainCategory
+	) {
+		String configuredText =
+				textField.getText() == null
+						? ""
+						: textField.getText();
 
-		if (resolvedText != null
-				&& resolvedText.length() <= ChatController.MAX_BEACON_TEXT_LENGTH) {
+		try {
+			chatcontroller.validateBeaconTemplate(configuredText);
+
 			if (mainCategory) {
-				chatcontroller.getChatPreferences().setBcn_beaconTextMainCat(configuredText);
+				chatcontroller.getChatPreferences()
+						.setBcn_beaconTextMainCat(configuredText);
 			} else {
-				chatcontroller.getChatPreferences().setBcn_beaconTextSecondCat(configuredText);
+				chatcontroller.getChatPreferences()
+						.setBcn_beaconTextSecondCat(configuredText);
 			}
-			return;
+		} catch (IllegalArgumentException exception) {
+			String previousText =
+					mainCategory
+							? chatcontroller.getChatPreferences()
+							  .getBcn_beaconTextMainCat()
+							: chatcontroller.getChatPreferences()
+							  .getBcn_beaconTextSecondCat();
+
+			textField.setText(previousText);
+
+			alertWindowEvent(
+					"The beacon message is invalid: "
+							+ exception.getMessage()
+			);
 		}
-
-		String previousText = mainCategory
-				? chatcontroller.getChatPreferences().getBcn_beaconTextMainCat()
-				: chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat();
-
-		textField.setText(previousText);
-		alertWindowEvent(
-				"The resolved beacon message must not exceed "
-						+ ChatController.MAX_BEACON_TEXT_LENGTH
-						+ " characters."
-		);
 	}
 
 	/**

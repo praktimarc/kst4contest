@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import java.util.TimerTask;
 
+import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ThreadStateMessage;
 
@@ -12,6 +13,10 @@ import kst4contest.model.ThreadStateMessage;
  * interval. Their enable flags and message templates remain independent. Every
  * run reads the current preferences, resolves global message variables and
  * sends only the categories which are currently enabled.</p>
+ *
+ * <p>Beacon messages use the regular outbound chat-message pipeline. They are
+ * not assembled as raw ON4KST frames, because that would bypass the common
+ * category, delimiter and message-text validation.</p>
  */
 public class BeaconTask extends TimerTask {
 
@@ -39,35 +44,40 @@ public class BeaconTask extends TimerTask {
 		Thread.currentThread().setName("BeaconTask");
 		reportStatus(THREAD_NICKNAME, true, "initialized", false);
 
-		MessageVariableResolver variableResolver =
-				new MessageVariableResolver(chatController.getChatPreferences());
-
-		sendMainCategoryBeacon(variableResolver);
-		sendSecondCategoryBeacon(variableResolver);
+		sendMainCategoryBeacon();
+		sendSecondCategoryBeacon();
 	}
 
 	/**
 	 * Sends the main-category beacon if it is currently enabled.
 	 */
-	private void sendMainCategoryBeacon(MessageVariableResolver variableResolver) {
-		if (!chatController.getChatPreferences().isBcn_beaconsEnabledMainCat()) {
-			reportStatus(THREAD_NICKNAME + " 1", false, "off", false);
+	private void sendMainCategoryBeacon() {
+		if (!chatController.getChatPreferences()
+				.isBcn_beaconsEnabledMainCat()) {
+			reportStatus(
+					THREAD_NICKNAME + " 1",
+					false,
+					"off",
+					false
+			);
 			return;
 		}
 
-		String resolvedText = variableResolver.resolveGlobalVariables(
-				chatController.getChatPreferences().getBcn_beaconTextMainCat()
-		);
 		ChatMessage beaconMessage = buildBeaconMessage(
 				chatController.getChatPreferences()
-						.getLoginChatCategoryMain()
-						.getCategoryNumber(),
-				resolvedText,
+						.getLoginChatCategoryMain(),
+				chatController.getChatPreferences()
+						.getBcn_beaconTextMainCat(),
 				"main category"
 		);
 
 		if (beaconMessage == null) {
-			reportStatus(THREAD_NICKNAME + " 1", false, "invalid text", true);
+			reportStatus(
+					THREAD_NICKNAME + " 1",
+					false,
+					"invalid text",
+					true
+			);
 			return;
 		}
 
@@ -76,37 +86,50 @@ public class BeaconTask extends TimerTask {
 						+ " [BeaconTask, Info]: Sending main-category CQ: "
 						+ beaconMessage.getMessageText()
 		);
+
 		chatController.getMessageTXBus().add(beaconMessage);
-		reportStatus(THREAD_NICKNAME + " 1", true, "on", false);
+
+		reportStatus(
+				THREAD_NICKNAME + " 1",
+				true,
+				"on",
+				false
+		);
 	}
 
 	/**
 	 * Sends the second-category beacon if the second login and its beacon are
 	 * currently enabled.
 	 */
-	private void sendSecondCategoryBeacon(
-			MessageVariableResolver variableResolver
-	) {
-		if (!chatController.getChatPreferences().isLoginToSecondChatEnabled()
+	private void sendSecondCategoryBeacon() {
+		if (!chatController.getChatPreferences()
+				.isLoginToSecondChatEnabled()
 				|| !chatController.getChatPreferences()
 				.isBcn_beaconsEnabledSecondCat()) {
-			reportStatus(THREAD_NICKNAME + " 2", false, "off", false);
+			reportStatus(
+					THREAD_NICKNAME + " 2",
+					false,
+					"off",
+					false
+			);
 			return;
 		}
 
-		String resolvedText = variableResolver.resolveGlobalVariables(
-				chatController.getChatPreferences().getBcn_beaconTextSecondCat()
-		);
 		ChatMessage beaconMessage = buildBeaconMessage(
 				chatController.getChatPreferences()
-						.getLoginChatCategorySecond()
-						.getCategoryNumber(),
-				resolvedText,
+						.getLoginChatCategorySecond(),
+				chatController.getChatPreferences()
+						.getBcn_beaconTextSecondCat(),
 				"second category"
 		);
 
 		if (beaconMessage == null) {
-			reportStatus(THREAD_NICKNAME + " 2", false, "invalid text", true);
+			reportStatus(
+					THREAD_NICKNAME + " 2",
+					false,
+					"invalid text",
+					true
+			);
 			return;
 		}
 
@@ -115,47 +138,65 @@ public class BeaconTask extends TimerTask {
 						+ " [BeaconTask, Info]: Sending second-category CQ: "
 						+ beaconMessage.getMessageText()
 		);
+
 		chatController.getMessageTXBus().add(beaconMessage);
-		reportStatus(THREAD_NICKNAME + " 2", true, "on", false);
+
+		reportStatus(
+				THREAD_NICKNAME + " 2",
+				true,
+				"on",
+				false
+		);
 	}
 
 	/**
-	 * Builds the server-directed message after validating the resolved payload.
+	 * Resolves and validates one beacon before placing it in the regular outbound
+	 * message queue.
 	 *
-	 * <p>The resolved text is checked rather than only the configured template
-	 * because inserted values can increase the final message length.</p>
+	 * <p>The returned message contains only the public-chat payload and its chat
+	 * category. {@link WriteThread} creates the final ON4KST frame through
+	 * {@link On4KstProtocol#chatMessage(int, String)}. This prevents a configurable
+	 * beacon text from bypassing the common protocol validation.</p>
 	 *
-	 * @param categoryNumber ON4KST category number
-	 * @param resolvedText fully resolved beacon payload
+	 * @param category target ON4KST chat category
+	 * @param configuredText configured beacon template
 	 * @param categoryDescription text used in diagnostic output
-	 * @return prepared message, or {@code null} if the payload is invalid
+	 * @return prepared message, or {@code null} if the category or text is invalid
 	 */
 	private ChatMessage buildBeaconMessage(
-			int categoryNumber,
-			String resolvedText,
+			ChatCategory category,
+			String configuredText,
 			String categoryDescription
 	) {
-		if (resolvedText == null
-				|| resolvedText.length() > ChatController.MAX_BEACON_TEXT_LENGTH) {
-			int actualLength = resolvedText == null ? 0 : resolvedText.length();
+		try {
+			if (category == null) {
+				throw new IllegalArgumentException(
+						"No chat category is configured."
+				);
+			}
+
+			On4KstProtocol.category(category.getCategoryNumber());
+
+			String resolvedText =
+					chatController.resolveAndValidateBeaconText(
+							configuredText
+					);
+
+			ChatMessage beaconMessage = new ChatMessage();
+			beaconMessage.setMessageText(resolvedText);
+			beaconMessage.setChatCategory(category);
+			beaconMessage.setMessageDirectedToServer(false);
+
+			return beaconMessage;
+		} catch (IllegalArgumentException exception) {
 			System.out.println(
 					"[BeaconTask, Warning]: Beacon for "
 							+ categoryDescription
-							+ " was not sent because the resolved text contains "
-							+ actualLength
-							+ " characters; maximum is "
-							+ ChatController.MAX_BEACON_TEXT_LENGTH
-							+ "."
+							+ " was not queued: "
+							+ exception.getMessage()
 			);
 			return null;
 		}
-
-		ChatMessage beaconMessage = new ChatMessage();
-		beaconMessage.setMessageText(
-				"MSG|" + categoryNumber + "|0|" + resolvedText + "|0|"
-		);
-		beaconMessage.setMessageDirectedToServer(true);
-		return beaconMessage;
 	}
 
 	/**
@@ -173,6 +214,9 @@ public class BeaconTask extends TimerTask {
 				information,
 				criticalState
 		);
-		callbackToController.onThreadStatus(THREAD_NICKNAME, stateMessage);
+		callbackToController.onThreadStatus(
+				THREAD_NICKNAME,
+				stateMessage
+		);
 	}
 }

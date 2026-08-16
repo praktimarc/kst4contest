@@ -140,15 +140,40 @@ Replaced by the current antenna direction in words (e.g. `north`, `north east`, 
 
 ## Variables in the Beacon
 
-All variables can also be used in the **automatic beacon** (interval messages). Recommended beacon configuration:
+A public beacon has no selected remote station. It can therefore make meaningful use only of variables which depend on the local station and its current configuration:
 
-```
-calling cq at MYQRG, loc MYLOCATOR, GL all!
+| Variable | Value used in the beacon |
+|---|---|
+| `MYQRG` | current QRG of the primary chat category |
+| `MYQRGSHORT` | first seven characters of the primary QRG |
+| `SECONDQRG` | current QRG of the second chat category |
+| `MYLOCATOR` | complete configured locator of the local station |
+| `MYLOCATORSHORT` | four-character locator of the local station |
+| `MYCALL` | configured local callsign |
+| `MYQTF` | current antenna heading |
+
+`QRZNAME`, `FIRSTAP` and `SECONDAP` require a selected remote station. They are therefore not resolved in a public beacon.
+
+A suitable configuration for the primary category is:
+
+```text
+calling cq at MYQRGSHORT, ant MYQTF deg, loc MYLOCATOR
 ```
 
-Since KST4Contest automatically reads QRG data from chat messages: if other stations also use KST4Contest, they will immediately see your QRG in the QRG column of their user list.
+For the second category, use `SECONDQRG` if that category should publish a different frequency:
+
+```text
+calling cq at SECONDQRG, ant MYQTF deg, loc MYLOCATOR
+```
+
+Global variables are evaluated again on every timer run. A QRG updated by the logging software can therefore appear in the next beacon message.
+
+The completely resolved text must contain at least one valid character and must not exceed 120 characters. The protocol separator `|` and line breaks are not permitted. If the text is still empty or invalid when transmission is due, that beacon run is skipped.
+
+The common interval and the behaviour of both chat categories are described under [Configuration – Beacon Settings](en-Configuration#beacon-settings).
 
 ---
+
 
 ## Example Contest Workflow with Macros
 

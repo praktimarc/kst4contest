@@ -2827,6 +2827,82 @@ private ObservableList<String>
 		this.dbHandler = dbHandler;
 	}
 
+
+	/**
+	 * Validates a configured beacon template before it is stored.
+	 *
+	 * <p>The template itself must be a non-empty, protocol-safe message. Global
+	 * variables are resolved as far as their values are currently available.
+	 * A template which temporarily resolves to an empty string, for example
+	 * {@code MYQRG} before a frequency is known, remains valid. The timer performs
+	 * the stricter final validation immediately before transmission.</p>
+	 *
+	 * @param configuredText configured beacon template
+	 * @throws IllegalArgumentException if the template contains invalid protocol
+	 *                                  content or currently resolves to more than
+	 *                                  {@value MAX_BEACON_TEXT_LENGTH} characters
+	 */
+	public void validateBeaconTemplate(String configuredText) {
+		String normalizedTemplate =
+				On4KstProtocol.messageText(configuredText);
+
+		String resolvedText =
+				new MessageVariableResolver(chatPreferences)
+						.resolveGlobalVariables(normalizedTemplate);
+
+		/*
+		 * A template consisting only of a variable such as MYQRG may temporarily
+		 * resolve to an empty value. It can still be stored because the value may
+		 * become available through TRX synchronisation before the timer runs.
+		 */
+		if (resolvedText == null || resolvedText.isBlank()) {
+			return;
+		}
+
+		validateResolvedBeaconText(resolvedText);
+	}
+
+	/**
+	 * Resolves and validates the final beacon text immediately before transmission.
+	 *
+	 * <p>This is deliberately stricter than {@link #validateBeaconTemplate(String)}.
+	 * A timer run must never queue an empty message merely because a dynamic value
+	 * is not available at that moment.</p>
+	 *
+	 * @param configuredText configured beacon template
+	 * @return normalized text which may safely pass through the regular ON4KST
+	 *         message pipeline
+	 * @throws IllegalArgumentException if the resolved message is empty, too long
+	 *                                  or contains an ON4KST delimiter
+	 */
+	public String resolveAndValidateBeaconText(String configuredText) {
+		String resolvedText =
+				new MessageVariableResolver(chatPreferences)
+						.resolveGlobalVariables(configuredText);
+
+		return validateResolvedBeaconText(resolvedText);
+	}
+
+	/**
+	 * Applies the message-text and length rules to a fully resolved beacon.
+	 */
+	private String validateResolvedBeaconText(String resolvedText) {
+		String normalizedText =
+				On4KstProtocol.messageText(resolvedText);
+
+		if (normalizedText.length() > MAX_BEACON_TEXT_LENGTH) {
+			throw new IllegalArgumentException(
+					"The resolved beacon message contains "
+							+ normalizedText.length()
+							+ " characters; maximum is "
+							+ MAX_BEACON_TEXT_LENGTH
+							+ "."
+			);
+		}
+
+		return normalizedText;
+	}
+
 	/**
 	 * Starts the shared beacon timer with the interval currently stored in the
 	 * preferences.

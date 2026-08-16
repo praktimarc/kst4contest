@@ -533,7 +533,7 @@ Eine vollständige Übersicht der verfügbaren Platzhalter und ihrer Grenzen ste
 
 ![Beacon-Einstellungen](client_settings_window_beacon.png)
 
-Ein Beacon sendet in regelmäßigen Abständen eine öffentliche CQ-Nachricht. Er ist für Betriebssituationen gedacht, in denen die eigene Station über längere Zeit auf einer festen Frequenz ruft. Andere Stationen erhalten dadurch eine aktuelle QRG-Information, ohne dass der Operator denselben Text wiederholt von Hand in den Chat schreiben muss.
+Ein Beacon sendet in regelmäßigen Abständen eine öffentliche CQ-Nachricht. Er ist für Betriebssituationen gedacht, in denen die eigene Station über längere Zeit auf einer festen Frequenz ruft. Andere Stationen erhalten dadurch eine aktuelle QRG-Information, ohne dass der Operator denselben Text immer wieder von Hand in den Chat schreiben muss.
 
 KST4Contest verwendet einen gemeinsamen Timer für beide Chat-Kategorien. Aktivierung und Nachrichtentext werden trotzdem getrennt konfiguriert:
 
@@ -547,21 +547,56 @@ Sind beide Beacons aktiviert, werden sie beim selben Timer-Lauf nacheinander in 
 
 Das Intervall wird in ganzen Minuten angegeben. Der kleinste zulässige Wert ist eine Minute.
 
-Nach dem Aufbau der Chat-Verbindung prüft KST4Contest die Beacons erstmals nach ungefähr zehn Sekunden. Anschließend gilt das eingestellte Intervall. Wird der Wert während einer laufenden Verbindung geändert, beginnt der Countdown mit dem neuen Intervall erneut. Die Änderung selbst löst keine sofortige Nachricht aus.
+Nach dem Aufbau der Chat-Verbindung prüft KST4Contest die Beacons erstmals nach ungefähr zehn Sekunden. Anschließend gilt das eingestellte Intervall.
+
+Wird das Intervall während einer laufenden Verbindung geändert, beginnt der Countdown mit dem neuen Wert erneut. Die Änderung selbst löst keine sofortige Beacon-Nachricht aus.
+
+Beide Kategorien verwenden denselben Timer. Unterschiedliche Intervalle für den ersten und zweiten Chat können deshalb nicht eingestellt werden.
 
 ### Nachrichtentext und Variablen
 
-Ein Beacon darf nach der Variablenauflösung höchstens 120 Zeichen enthalten. KST4Contest prüft deshalb nicht nur das eingetragene Template, sondern den tatsächlich zu sendenden Text.
+Ein Beacon darf die [globalen Variablen](de-Makros-und-Variablen#variablen-im-beacon) verwenden, die sich ausschließlich auf die eigene Station beziehen:
 
-Im Beacon können alle [globalen Variablen](de-Makros-und-Variablen#variablen-im-beacon) verwendet werden, beispielsweise:
+- `MYQRG`
+- `MYQRGSHORT`
+- `SECONDQRG`
+- `MYLOCATOR`
+- `MYLOCATORSHORT`
+- `MYCALL`
+- `MYQTF`
+
+Eine mögliche Nachricht für die erste Chat-Kategorie ist:
 
 ```text
-calling cq at MYQRG, ant MYQTF deg, loc MYLOCATOR
+calling cq at MYQRGSHORT, ant MYQTF deg, loc MYLOCATOR
 ```
 
-Die Variablen werden bei jedem Timer-Lauf neu aufgelöst. Ändert die Logsoftware zwischenzeitlich die in `MYQRG` gespeicherte Frequenz, verwendet bereits der nächste Beacon den neuen Wert.
+Für den zweiten Chat muss `SECONDQRG` verwendet werden, wenn dessen Frequenz von der ersten Kategorie abweicht:
 
-Stationsbezogene Variablen wie `QRZNAME`, `FIRSTAP` oder `SECONDAP` benötigen dagegen eine ausgewählte Gegenstation. Da ein öffentlicher Beacon keine Gegenstation adressiert, werden diese Variablen im Beacon nicht aufgelöst.
+```text
+calling cq at SECONDQRG, ant MYQTF deg, loc MYLOCATOR
+```
+
+Die Variablen werden bei jedem Timer-Lauf neu aufgelöst. Ändert die Logsoftware zwischenzeitlich die in `MYQRG` gespeicherte Frequenz, verwendet bereits der nächste Beacon den aktualisierten Wert. Das Template selbst muss dafür nicht geändert werden.
+
+`MYQRG` und `MYQRGSHORT` beziehen sich immer auf die erste Chat-Kategorie. Die Auswahl oder Aktivierung des zweiten Chats ändert diese Zuordnung nicht.
+
+Stationsbezogene Variablen wie `QRZNAME`, `FIRSTAP` oder `SECONDAP` benötigen eine ausgewählte Gegenstation. Da ein öffentlicher Beacon keine bestimmte Station adressiert, werden diese Variablen im Beacon nicht aufgelöst.
+
+### Prüfung des Nachrichtentextes
+
+KST4Contest prüft sowohl das eingetragene Template als auch den nach der Variablenauflösung tatsächlich zu sendenden Text.
+
+Für Beacon-Nachrichten gelten folgende Bedingungen:
+
+- Der endgültige Nachrichtentext darf nicht leer sein.
+- Er darf höchstens 120 Zeichen enthalten.
+- Das Protokoll-Trennzeichen `|` ist nicht zulässig.
+- Zeilenumbrüche sind nicht zulässig.
+
+Eine ungültige Eingabe wird nicht als neue Beacon-Konfiguration übernommen. Wird ein Template erst durch eine spätere Variablenauflösung ungültig, beispielsweise weil der aufgelöste Text länger als 120 Zeichen ist, wird dieser Beacon-Lauf ausgelassen.
+
+Ein Template, das ausschließlich aus einer momentan noch leeren globalen Variable besteht, kann gespeichert werden. Das ist beispielsweise beim Start möglich, bevor die erste QRG vom Logprogramm empfangen wurde. Solange die Variable keinen verwendbaren Inhalt liefert, sendet KST4Contest jedoch keine leere Nachricht.
 
 ### Wann sollte der Beacon ausgeschaltet werden?
 
@@ -570,6 +605,7 @@ Der Beacon ist nur dann hilfreich, wenn seine QRG-Angabe zum tatsächlichen Betr
 Im Klartext: Solange auf einer festen QRG CQ gerufen wird, spart der Beacon Arbeit. Beim „Schleichen“ über das Band sollte er ausgeschaltet werden.
 
 Änderungen wirken während der laufenden Verbindung. Damit Aktivierung, Texte und Intervall auch nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
+
 ---
 
 ## Messagehandling Settings (ab v1.25)

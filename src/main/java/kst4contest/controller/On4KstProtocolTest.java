@@ -2,11 +2,16 @@ package kst4contest.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import kst4contest.model.ChatPreferences;
+
 
 class On4KstProtocolTest {
     @Test
@@ -65,5 +70,73 @@ class On4KstProtocolTest {
                         .toEpochSecond(ZoneOffset.UTC),
                 On4KstConnectionManager.parseMessageTimestamp(
                         "CH|2|20260813123456|DL1ABC|Op|0|msg|0|"));
+    }
+
+    @Test
+    void resolvesBeaconVariablesBeforeApplyingProtocolValidation() {
+        ChatPreferences preferences = new ChatPreferences();
+        preferences.setMYQRGFirstCat("144.300");
+
+        ChatController controller = new ChatController();
+        controller.setChatPreferences(preferences);
+
+        controller.validateBeaconTemplate(
+                "calling cq at MYQRG"
+        );
+
+        assertEquals(
+                "calling cq at 144.300",
+                controller.resolveAndValidateBeaconText(
+                        "calling cq at MYQRG"
+                )
+        );
+    }
+
+    @Test
+    void acceptsTemporarilyUnresolvedVariableOnlyBeaconTemplate() {
+        ChatPreferences preferences = new ChatPreferences();
+        preferences.setMYQRGFirstCat("");
+
+        ChatController controller = new ChatController();
+        controller.setChatPreferences(preferences);
+
+        assertDoesNotThrow(
+                () -> controller.validateBeaconTemplate("MYQRG")
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> controller.resolveAndValidateBeaconText("MYQRG")
+        );
+    }
+
+    @Test
+    void rejectsEmptyOverlongAndProtocolBreakingBeaconText() {
+        ChatPreferences preferences = new ChatPreferences();
+
+        ChatController controller = new ChatController();
+        controller.setChatPreferences(preferences);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> controller.validateBeaconTemplate("   ")
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> controller.validateBeaconTemplate(
+                        "cq at 144.300|0|QUIT"
+                )
+        );
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> controller.validateBeaconTemplate(
+                        "x".repeat(
+                                ChatController.MAX_BEACON_TEXT_LENGTH
+                                        + 1
+                        )
+                )
+        );
     }
 }
