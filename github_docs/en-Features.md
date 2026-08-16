@@ -315,9 +315,48 @@ Win-Test handover: [Log Synchronisation – Win-Test](en-Log-Sync#win-test)
 
 ## QSO Sniffer (from v1.31)
 
-The QSO sniffer monitors the chat for messages from a configurable callsign list and automatically forwards them to the **PM window**. This prevents relevant messages from being lost in the general chat traffic.
+During a contest, it may be useful to follow the communication of one particular station. This is not limited to rare stations or DXpeditions. Sked arrangements made by another station in the same team can disappear just as easily in a busy public chat.
+
+KST4Contest can therefore show every message sent or received by a monitored station additionally in the PM table. The message remains in its original table at the same time.
+
+Monitoring uses the normalised base callsign. An entry for `DN9APW` consequently covers messages sent by or addressed to:
+
+```text
+DN9APW-2
+DN9APW-70
+DN9APW-144
+DN9APW-432
+```
+
+Entering `DN9APW-70` in the monitoring list still stores `DN9APW`. A station using several band- or operating-position-specific KST suffixes therefore needs only one entry.
+
+The actual message retains the complete callsigns:
+
+```text
+Sniffed: (DN9APW-70 > 9A0BB-23) pse sked 19:30
+```
+
+This distinction is intentional. Monitoring aggregates the variants so that their communication remains visible. Message routing does not aggregate them because the intended login would otherwise become ambiguous.
+
+The base callsign is evaluated across both connected chat categories. The category of each individual message remains unchanged.
+
+The monitoring view includes:
+
+- directed messages sent by a monitored station;
+- directed messages addressed to a monitored station; and
+- public messages sent by a monitored station to `ALL`.
+
+A callsign which merely occurs in the message text does not trigger monitoring.
+
+Messages already addressed directly to the local callsign remain normal private messages and are not additionally marked as `Sniffed:`. QSO monitoring also does not generate a separate notification sound. Sound notifications for private messages actually addressed to the local station remain independent.
+
+The function does not request additional messages from the ON4KST server. It only provides another view of chat traffic which KST4Contest has already received.
+
+In plain terms: QSO monitoring does not decide whether a message really contains a sked or matters to the local contest operation. It makes the communication of the selected station easier to find. The operator still decides what to do with it.
 
 Configuration: [Configuration – Sniffer Settings](en-Configuration#sniffer-settings-from-v131)
+
+Complete callsigns and chat-category separation: [Multi-Channel Login](#multi-channel-login-from-v126)
 
 ---
 

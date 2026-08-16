@@ -824,12 +824,56 @@ Use **Save Settings** afterwards so that the values are restored at the next pro
 
 ## Sniffer Settings (from v1.31)
 
-The QSO sniffer filters chat messages from configurable callsigns and forwards them to the PM window.
+QSO monitoring is intended for stations whose communication should remain visible during busy chat activity. This may be a rare station, a DXpedition or another station in the same contest team whose sked arrangements should not disappear in the general message traffic.
 
-Settings:
-- **Callsign list**: Comma-separated list of callsigns whose messages are always forwarded to the PM window.
+The callsign list is maintained under **QSO monitoring** in the **Notification** tab.
 
-Use case: Keep track of important stations (e.g. DX expeditions or trusted contest allies) without constantly monitoring the main chat.
+For every monitored base callsign, KST4Contest additionally shows messages in the PM table when a variant of that callsign is either the sender or the receiver. Both connected chat categories are included.
+
+The list intentionally uses the normalised base callsign. The following entries therefore produce the same monitoring entry:
+
+```text
+DN9APW
+DN9APW-2
+DN9APW-70
+DN9APW-144
+```
+
+In every case, KST4Contest stores and displays:
+
+```text
+DN9APW
+```
+
+The different KST suffixes of one station do not have to be entered separately. A later message sent by `DN9APW-2` or addressed to `DN9APW-70` is covered by the same entry.
+
+This aggregation applies to QSO monitoring only. Active ChatMember objects, complete message destinations and chat categories remain separate. A message addressed to `DN9APW-70` is therefore not redirected to `DN9APW-2`.
+
+A monitored message is marked in the PM table using the complete visible callsigns of its sender and receiver:
+
+```text
+Sniffed: (DN9APW-2 > DL0ABC-70) Message text
+```
+
+The original message remains in its normal table. Monitoring changes neither its contents nor its routing.
+
+A message is included only when the monitored station is actually its sender or receiver. Merely mentioning the callsign in the message text is not sufficient. Public messages sent by a monitored station are included as well; their receiver is displayed as `ALL`.
+
+A message which is already addressed directly to the local callsign remains a normal private message and does not receive an additional `Sniffed:` marker.
+
+Manage the list as follows:
+
+1. Press **Add monitored callsign** to add an entry.
+2. Double-click an existing entry to edit it and press `Enter` to apply the change.
+3. To remove an entry, delete the complete cell contents and press `Enter`.
+
+The entered value may contain a visible KST suffix or portable components. KST4Contest normalises it to the base callsign before storing it. Different variants of the same base callsign are therefore treated as duplicates.
+
+Changes to the list take effect immediately. Press **Save Settings** afterwards to retain them. The base callsigns are stored in `preferences.xml` and restored at the next program start.
+
+> Base-callsign monitoring across KST suffixes is included in Nightly / v1.42.
+
+Further background and the distinction from message routing: [QSO Sniffer](en-Features#qso-sniffer-from-v131).
 
 ---
 

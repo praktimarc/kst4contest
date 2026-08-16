@@ -425,17 +425,42 @@ Weitere Hintergründe: [Band-Upgrade-Hinweis nach einem Logeintrag](de-Funktione
 
 ### Sniffer-Einstellungen (ab v1.31)
 
-Das QSO-Monitoring ist für Stationen gedacht, deren Kommunikation man gezielt verfolgen möchte. Das kann beispielsweise eine seltene Station, eine DXpedition oder eine andere Station des eigenen Contest-Teams sein.
+Das QSO-Monitoring ist für Stationen gedacht, deren Kommunikation man gezielt verfolgen möchte. Das kann beispielsweise eine seltene Station, eine DXpedition oder eine andere Station des eigenen Contest-Teams sein, deren Sked-Absprachen im allgemeinen Chatverkehr nicht untergehen sollen.
 
-Für jedes eingetragene Rufzeichen zeigt KST4Contest Nachrichten zusätzlich in der PM-Tabelle an, wenn das Rufzeichen entweder Absender oder Empfänger der Nachricht ist. Die ursprüngliche Nachricht wird dabei nicht aus ihrer normalen Tabelle entfernt.
+Die Rufzeichen werden im Reiter **Notification** unter **QSO monitoring** verwaltet.
 
-Überwachte Nachrichten werden in der PM-Tabelle eindeutig gekennzeichnet:
+Für jedes eingetragene Basisrufzeichen zeigt KST4Contest Nachrichten zusätzlich in der PM-Tabelle an, wenn eine Variante dieses Rufzeichens entweder Absender oder Empfänger der Nachricht ist. Berücksichtigt werden beide verbundenen Chat-Kategorien.
+
+Die Liste arbeitet bewusst mit dem normalisierten Basisrufzeichen. Folgende Eingaben erzeugen deshalb denselben Monitoring-Eintrag:
 
 ```text
-Sniffed: (SENDER > RECEIVER) Nachrichtentext
+DN9APW
+DN9APW-2
+DN9APW-70
+DN9APW-144
 ```
 
-So wird sichtbar, dass die Nachricht nicht an die eigene Station gerichtet war.
+In allen Fällen speichert und zeigt KST4Contest den Eintrag als:
+
+```text
+DN9APW
+```
+
+Damit müssen die verschiedenen KST-Suffixe einer Station nicht einzeln eingetragen werden. Wird später eine Nachricht von `DN9APW-2` gesendet oder an `DN9APW-70` adressiert, wird sie durch denselben Eintrag erfasst.
+
+Diese Zusammenführung gilt ausschließlich für das QSO-Monitoring. Die aktiven ChatMember-Objekte, vollständigen Nachrichtenempfänger und Chat-Kategorien bleiben getrennt. Eine an `DN9APW-70` gerichtete Nachricht wird deshalb nicht an `DN9APW-2` umgeleitet.
+
+Überwachte Nachrichten werden in der PM-Tabelle mit den vollständigen sichtbaren Rufzeichen von Absender und Empfänger gekennzeichnet:
+
+```text
+Sniffed: (DN9APW-2 > DL0ABC-70) Nachrichtentext
+```
+
+Die ursprüngliche Nachricht bleibt gleichzeitig in ihrer normalen Tabelle erhalten. Das Monitoring verändert weder den Nachrichteninhalt noch dessen Routing.
+
+Erfasst werden Nachrichten, bei denen das überwachte Rufzeichen tatsächlich Absender oder Empfänger ist. Eine bloße Erwähnung des Rufzeichens im Nachrichtentext reicht nicht aus. Öffentliche Nachrichten einer überwachten Station werden ebenfalls angezeigt; als Empfänger erscheint dabei `ALL`.
+
+Ist eine Nachricht bereits direkt an das eigene Rufzeichen gerichtet, erscheint sie als normale Privatnachricht und erhält keine zusätzliche `Sniffed:`-Kennzeichnung.
 
 Rufzeichen werden folgendermaßen verwaltet:
 
@@ -443,8 +468,13 @@ Rufzeichen werden folgendermaßen verwaltet:
 2. Ein vorhandenes Rufzeichen per Doppelklick bearbeiten und die Änderung mit `Enter` übernehmen.
 3. Zum Entfernen den Inhalt einer Tabellenzelle löschen und mit `Enter` bestätigen.
 
-Doppelte oder syntaktisch ungültige Rufzeichen werden nicht übernommen. Die Liste wird mit **Save Settings** in der `preferences.xml` gespeichert und beim nächsten Programmstart wiederhergestellt.
+Die Eingabe darf ein sichtbares KST-Suffix oder portable Bestandteile enthalten. KST4Contest normalisiert sie vor dem Speichern auf das Basisrufzeichen. Mehrere Varianten desselben Basisrufzeichens gelten deshalb als Duplikat.
 
+Die Änderung der Liste wirkt sofort. Zum dauerhaften Speichern anschließend **Save Settings** verwenden. Die Basisrufzeichen werden in der `preferences.xml` gespeichert und beim nächsten Programmstart wiederhergestellt.
+
+> Die Zusammenführung der KST-Suffixe über das Basisrufzeichen ist im Nightly beziehungsweise ab v1.42 enthalten.
+
+Weitere Hintergründe und die Abgrenzung zum Nachrichtenrouting: [QSO-Monitoring](de-Funktionen#qso-monitoring-ab-v131).
 ---
 
 ## Shortcut Settings (Schnellzugriff-Schaltflächen)

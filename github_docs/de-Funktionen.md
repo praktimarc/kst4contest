@@ -401,11 +401,48 @@ Win-Test-Übergabe: [Log-Synchronisation – Win-Test](de-Log-Synchronisation#wi
 
 ## QSO-Monitoring (ab v1.31)
 
-Für ausgewählte Rufzeichen kann KST4Contest gerichtete Nachrichten zusätzlich in der PM-Tabelle anzeigen. Dabei werden sowohl Nachrichten berücksichtigt, die das überwachte Rufzeichen sendet, als auch Nachrichten, die an dieses Rufzeichen gerichtet sind.
+Während eines Contests kann es sinnvoll sein, die Kommunikation einer bestimmten Station zu verfolgen. Das betrifft nicht nur seltene Stationen oder DXpeditionen. Auch die Sked-Absprachen einer anderen Station des eigenen Teams können im öffentlichen Nachrichtenaufkommen schnell übersehen werden.
 
-Die Nachricht bleibt gleichzeitig in ihrer ursprünglichen Tabelle erhalten und wird im PM-Fenster mit Absender und Empfänger als überwachte Kommunikation gekennzeichnet.
+KST4Contest kann deshalb alle Nachrichten, die eine überwachte Station sendet oder empfängt, zusätzlich in der PM-Tabelle anzeigen. Die Nachricht bleibt gleichzeitig in ihrer ursprünglichen Tabelle erhalten.
+
+Die Überwachung arbeitet mit dem normalisierten Basisrufzeichen. Ein Eintrag für `DN9APW` erfasst daher auch Nachrichten von oder an:
+
+```text
+DN9APW-2
+DN9APW-70
+DN9APW-144
+DN9APW-432
+```
+
+Auch wenn `DN9APW-70` in die Monitoring-Liste eingegeben wird, speichert KST4Contest nur `DN9APW`. Eine Station mit mehreren band- oder arbeitsplatzbezogenen KST-Suffixen muss dadurch nur einmal eingetragen werden.
+
+Die eigentliche Nachricht behält trotzdem die vollständigen Rufzeichen:
+
+```text
+Sniffed: (DN9APW-70 > 9A0BB-23) pse sked 19:30
+```
+
+Das ist ein wichtiger Unterschied. Das Monitoring fasst die Varianten zusammen, damit keine Nachricht übersehen wird. Das Nachrichtenrouting fasst sie nicht zusammen, weil andernfalls nicht mehr eindeutig wäre, welcher Login tatsächlich angesprochen wurde.
+
+Das Basisrufzeichen wird außerdem unabhängig von der Chat-Kategorie ausgewertet. Ist KST4Contest gleichzeitig mit zwei Kategorien verbunden, gilt derselbe Monitoring-Eintrag für beide Nachrichtenströme. Die Kategorie der einzelnen Nachricht bleibt dabei erhalten.
+
+Erfasst werden:
+
+- gerichtete Nachrichten, die eine überwachte Station sendet,
+- gerichtete Nachrichten an eine überwachte Station und
+- öffentliche Nachrichten, die eine überwachte Station an `ALL` sendet.
+
+Eine bloße Nennung des Rufzeichens im Nachrichtentext löst das Monitoring nicht aus.
+
+Nachrichten, die bereits direkt an das eigene Rufzeichen gerichtet sind, erscheinen als normale Privatnachrichten. Sie werden nicht zusätzlich als `Sniffed:` gekennzeichnet. Das QSO-Monitoring erzeugt außerdem keinen eigenen Hinweiston. Die akustische Benachrichtigung für tatsächlich an die eigene Station gerichtete Privatnachrichten bleibt davon unabhängig.
+
+Die Funktion fordert keine zusätzlichen Nachrichten vom ON4KST-Server an. Sie ordnet lediglich den bereits empfangenen Chatverkehr zusätzlich in die PM-Ansicht ein.
+
+Im Klartext: Das QSO-Monitoring entscheidet nicht, ob eine Nachricht tatsächlich einen Sked enthält oder für den eigenen Contestbetrieb relevant ist. Es sorgt lediglich dafür, dass die Kommunikation der ausgewählten Station nicht zwischen den übrigen Nachrichten verschwindet.
 
 Konfiguration: [Konfiguration – Sniffer-Einstellungen](de-Konfiguration#sniffer-einstellungen-ab-v131)
+
+Trennung vollständiger Rufzeichen und Chat-Kategorien: [Multi-Channel-Login und Rufzeichenvarianten](#multi-channel-login-ab-v126)
 
 ---
 
