@@ -43,6 +43,30 @@ Similar settings:
 
 ---
 
+## Testing the Connection
+
+After the logger's DX cluster client has connected, use **Send test spot** to generate the following entry:
+
+```text
+Spotted callsign: DO5AMF
+Comment: Testing DXC-Spot: Congrats, you donated $100!
+Frequency: .300 on the configured fallback band
+```
+
+With `144 MHz` selected as the fallback band, the spot appears at approximately `144.300 MHz`.
+
+The comment is a deliberately retained Easter egg. It makes the test entry easy to identify but has no other function. In particular, no donation or other external action is triggered.
+
+Three conditions must be met before running the test:
+
+1. KST4Contest is connected to the ON4KST chat.
+2. The local DX cluster server is enabled.
+3. The logging software's DX cluster client is connected to KST4Contest.
+
+If no client is connected, KST4Contest displays a corresponding message. A successful test therefore confirms that at least one connected client received the generated spot.
+
+---
+
 ## How It Works
 
 A spot is generated when **both** conditions are met:

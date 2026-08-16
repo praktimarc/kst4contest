@@ -20,6 +20,8 @@ related:
 
 ## Three different mechanisms
 
+![Shortcut buttons and text snippets in the Preferences](/manual/assets/client_settings_window_shortcuts.png)
+
 KST4Contest uses three related but distinct mechanisms:
 
 | Mechanism | Purpose |

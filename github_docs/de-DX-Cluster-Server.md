@@ -143,15 +143,17 @@ Mehrere DX-Cluster-Clients können gleichzeitig verbunden werden. Ein erzeugter 
 
 ## Verbindung testen
 
-Die Schaltfläche **Send test spot** erzeugt einen neutralen Testeintrag:
+Die Schaltfläche **Send test spot** erzeugt folgenden Testeintrag:
 
 ```text
 Spotted callsign: DO5AMF
-Comment: KST4CONTEST TEST
+Comment: Testing DXC-Spot: Congrats, you donated $100!
 Frequency: .300 des konfigurierten Fallback-Bandes
 ```
 
-Bei einem Fallback-Band von `144` erscheint der Spot daher auf ungefähr `144.300 MHz`.
+Bei einem Fallback-Band von `144 MHz` erscheint der Spot daher auf ungefähr `144.300 MHz`.
+
+Der Kommentar ist ein bewusst beibehaltenes Easteregg. Er dient ausschließlich dazu, den Testspot im Logprogramm eindeutig wiederzuerkennen. Eine tatsächliche Spende oder sonstige externe Aktion wird dadurch selbstverständlich nicht ausgelöst.
 
 Vor dem Test müssen drei Bedingungen erfüllt sein:
 

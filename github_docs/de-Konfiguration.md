@@ -370,11 +370,28 @@ Folgende Einstellungen und Schaltflächen gehören zur lokalen DX-Cluster-Ausgab
 - **TCP port**: Port, auf dem KST4Contest Verbindungen von DX-Cluster-Clients annimmt. Der Standardwert ist `8000`. Wird der Port während einer laufenden Verbindung geändert, startet KST4Contest den Server auf dem neuen Port neu. Der Logger muss sich anschließend ebenfalls mit dem neuen Port verbinden.
 - **Fallback band for relative QRG detection**: Das oben beschriebene globale Fallback-Band. Der Testspot verwendet `.300` dieses Bandes. Reale Spots verwenden dagegen die für den jeweiligen Absender erkannte QRG.
 - **Spotter callsign**: Rufzeichen, das im erzeugten DX-Cluster-Spot als Spotter erscheint. Hier sollte ein anderes Rufzeichen als das im Contest verwendete Stationsrufzeichen eingetragen werden. Einige Logprogramme filtern Spots des eigenen Rufzeichens oder behandeln sie anders als fremde Spots.
-- **Send test spot**: Sendet einen Testspot für `DL0TEST` auf `.300` des ausgewählten Fallback-Bandes. Der Test funktioniert nur, wenn KST4Contest mit dem Chat verbunden, der lokale DX-Cluster-Server aktiviert und mindestens ein DX-Cluster-Client verbunden ist.
+- **Send test spot**: Sendet den folgenden Testspot an alle aktuell verbundenen DX-Cluster-Clients:
 
-KST4Contest erzeugt nicht bei jeder im Chat gefundenen Frequenz automatisch einen Spot. Ein Spot entsteht nur dann, wenn eine gerichtete Nachricht zwischen zwei Stationen auf eine für die eigene Station interessante Antennenrichtung schließen lässt und für den Absender eine nutzbare Frequenz bekannt ist.
+```text
+Spotted callsign: DO5AMF
+Comment: Testing DXC-Spot: Congrats, you donated $100!
+Frequency: .300 des ausgewählten Fallback-Bandes
+```
+
+Bei einem Fallback-Band von `144 MHz` wird daraus beispielsweise eine Frequenz von ungefähr `144.300 MHz`.
+
+Der Kommentar des Testspots ist ein bewusst beibehaltenes Easteregg. Er hat keine technische Bedeutung und löst – trotz seiner erfreulich konkreten Formulierung – keine Zahlung aus. Entscheidend ist, dass der Spot im verbundenen Logprogramm erscheint.
+
+Der Test funktioniert nur, wenn
+
+1. KST4Contest mit dem ON4KST-Chat verbunden ist,
+2. der lokale DX-Cluster-Server aktiviert ist und
+3. mindestens ein DX-Cluster-Client mit KST4Contest verbunden ist.
+
+KST4Contest erzeugt nicht bei jeder im Chat gefundenen Frequenz automatisch einen Spot. Ein realer Spot entsteht nur dann, wenn eine gerichtete Nachricht zwischen zwei Stationen auf eine für die eigene Station interessante Antennenrichtung schließen lässt und für den Absender eine nutzbare Frequenz bekannt ist.
 
 Die vollständige Herleitung und die Einrichtung des Logprogramms sind im Kapitel [Integrierter DX-Cluster-Server](de-DX-Cluster-Server) beschrieben.
+
 ### Band-Upgrade-Hinweis nach einem Logeintrag
 
 Nach einem über UCXLog oder Win-Test empfangenen Logeintrag kann KST4Contest prüfen, ob die gerade gearbeitete Station noch ein weiteres gemeinsames, aber bisher nicht gearbeitetes Band anbietet.
@@ -432,21 +449,83 @@ Doppelte oder syntaktisch ungültige Rufzeichen werden nicht übernommen. Die Li
 
 ## Shortcut Settings (Schnellzugriff-Schaltflächen)
 
-Konfiguration von Schnellzugriff-Schaltflächen, die direkt im Hauptfenster erscheinen. Ein Klick auf eine Schaltfläche fügt den konfigurierten Text in das Sendfeld ein. Alle [Variablen](de-Makros-und-Variablen#variablen) können verwendet werden.
+![Konfiguration der Shortcut-Schaltflächen und Text-Snippets](client_settings_window_shortcuts.png)
+
+Jeder Eintrag im oberen Bereich des Reiters **Shortcuts** erzeugt eine Schaltfläche oberhalb des Nachrichteneingabefeldes im Hauptfenster. Ein Klick hängt den konfigurierten Text an den bereits vorhandenen Inhalt des Sendfeldes an.
+
+Enthält der Shortcut eine [Variable](de-Makros-und-Variablen#variablen), wird sie beim Einfügen durch ihren aktuellen Wert ersetzt. Ein Shortcut wie
+
+```text
+pse call me at MYQRGSHORT
+```
+
+kann dadurch beispielsweise folgenden Text einfügen:
+
+```text
+pse call me at 144.388
+```
+
+Die Einträge `MYQRG` und `SECONDQRG` werden zusätzlich als QRG-Schaltflächen hervorgehoben. Sie fügen die aktuelle QRG der ersten beziehungsweise zweiten Chat-Kategorie ein.
+
+Die Reihenfolge der Tabelle entspricht der Reihenfolge der Schaltflächen im Hauptfenster. Die Einträge werden folgendermaßen verwaltet:
+
+1. Mit **Add shortcut** wird am Anfang der Liste ein neuer Eintrag angelegt und sofort zur Bearbeitung geöffnet.
+2. Ein vorhandener Eintrag kann per Doppelklick bearbeitet werden. `Enter` übernimmt die Änderung.
+3. Wird der Inhalt vollständig gelöscht und anschließend mit `Enter` bestätigt, entfernt KST4Contest den Eintrag.
+4. Mit **Move selected up** und **Move selected down** wird der markierte Eintrag innerhalb der Liste verschoben.
+
+Änderungen werden sofort im Hauptfenster sichtbar. Damit sie auch nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
 
 ---
 
 ## Snippet Settings (Text-Snippets)
 
-Text-Snippets sind über folgende Wege abrufbar:
+Snippets sind längere Textbausteine, die vor allem für Nachrichten an eine ausgewählte Station vorgesehen sind. Sie können über folgende Wege aufgerufen werden:
 
-- **Rechtsklick** auf ein Rufzeichen in der Benutzerliste
-- **Rechtsklick** in der CQ-Nachrichtentabelle
-- **Rechtsklick** in der PM-Nachrichtentabelle
-- **Tastenkombinationen**: `Ctrl+1` bis `Ctrl+0` für die ersten 10 Snippets
+- per Rechtsklick auf eine Station in der Benutzerliste,
+- per Rechtsklick auf eine Nachricht in der öffentlichen Chat-Tabelle,
+- per Rechtsklick auf eine Nachricht in der PM-Tabelle oder
+- mit `Ctrl+1` bis `Ctrl+0` für die ersten zehn Einträge der Snippet-Liste.
 
-Wenn in der Benutzerliste ein Rufzeichen ausgewählt ist, wird der Snippet als Direktnachricht adressiert:
-`/CQ RUFZEICHEN <Snippet-Text>`
+Bei den Tastenkombinationen entspricht die Zuordnung der Tabellenreihenfolge:
+
+| Tastenkombination | Snippet |
+|---|---:|
+| `Ctrl+1` | erster Eintrag |
+| `Ctrl+2` | zweiter Eintrag |
+| … | … |
+| `Ctrl+9` | neunter Eintrag |
+| `Ctrl+0` | zehnter Eintrag |
+
+Ein über das Kontextmenü ausgewähltes Snippet wird an den bereits vorbereiteten Nachrichtentext angehängt. Die Auswahl einer Station oder Nachricht hat das Sendfeld zuvor normalerweise bereits mit dem passenden `/cq`-Empfänger vorbereitet.
+
+Eine Tastenkombination verhält sich etwas anders: Sie ersetzt den bisherigen Inhalt des Sendfeldes durch eine vollständig adressierte Privatnachricht:
+
+```text
+/cq RUFZEICHEN Snippet-Text
+```
+
+Dabei wird das vollständige sichtbare Rufzeichen einschließlich eines vorhandenen Suffixes verwendet. Für `9A0BB-70` entsteht daher beispielsweise:
+
+```text
+/cq 9A0BB-70 pse ur qrg?
+```
+
+Die Chat-Kategorie der ausgewählten Station bleibt für den späteren Versand erhalten. Ist keine Station ausgewählt oder ist für die gedrückte Tastenkombination kein Snippet vorhanden, wird nichts eingefügt.
+
+Variablen werden beim Einfügen des Snippets aufgelöst. Stationsbezogene Variablen wie `QRZNAME`, `FIRSTAP` oder `SECONDAP` verwenden die aktuell ausgewählte Station. Der vorbereitete Text wird nicht automatisch gesendet und kann deshalb noch geprüft oder geändert werden. `Enter` oder **TX** sendet die Nachricht; `Esc` leert das Sendfeld.
+
+Die Snippet-Liste wird genauso bearbeitet wie die Shortcut-Liste:
+
+1. **Add new snippet** legt am Anfang der Liste einen neuen Eintrag an.
+2. Ein Doppelklick öffnet einen vorhandenen Eintrag zur Bearbeitung.
+3. `Enter` übernimmt die Änderung.
+4. Ein leer bestätigter Eintrag wird entfernt.
+5. **Move selected up** und **Move selected down** ändern die Reihenfolge und damit auch die Zuordnung zu `Ctrl+1` bis `Ctrl+0`.
+
+Die Kontextmenüs und Tastenkombinationen werden nach einer Änderung sofort aktualisiert. Für die dauerhafte Speicherung anschließend **Save Settings** verwenden.
+
+Eine vollständige Übersicht der verfügbaren Platzhalter und ihrer Grenzen steht unter [Makros und Variablen](de-Makros-und-Variablen).
 
 ---
 

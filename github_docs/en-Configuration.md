@@ -392,7 +392,44 @@ The dropdown is neither a filter nor an override for complete frequencies. `432.
 
 Before using the fallback, KST4Contest checks the sender's recent band context. If a complete frequency has been detected for the same station during the previous 30 minutes, that band takes precedence. A fallback setting of `144 MHz` therefore still turns `.100` into `432.100 MHz` if the station mentioned `432.088` shortly before.
 
-Although the setting is located in the Notification tab, it affects the general QRG parser. It therefore influences the QRG column, detected active bands, priority calculations, band-upgrade hints and other functions which use a known station frequency – not only DX cluster spots.
+Although this setting is located in the Notification tab, it affects the general QRG parser. It therefore influences the QRG column, detected active bands, priority calculations, band-upgrade hints and other functions which use a known station frequency – not only DX cluster spots.
+
+Further details, including numbers which are deliberately ignored, are described under [QRG Detection](en-Features#qrg-detection).
+
+### Local DX Cluster Output
+
+KST4Contest can forward detected directional opportunities to logging software as DX cluster spots. A frequency recognised in the chat can therefore appear directly in the logger's band map without being entered manually.
+
+The **Enable the local DX Cluster server …** checkbox starts or stops the local TCP server. When KST4Contest is connected to the chat, the change takes effect immediately.
+
+The following settings and controls belong to the local DX cluster output:
+
+- **TCP port**: Port on which KST4Contest accepts connections from DX cluster clients. The default is `8000`. Changing the port while the server is running restarts it on the new port. The logger must then reconnect to that port.
+- **Fallback band for relative QRG detection**: The global fallback band described above. The test spot uses `.300` on this band. Actual spots use the QRG detected for the respective sender.
+- **Spotter callsign**: Callsign shown as the spotter in generated DX cluster entries. A callsign different from the contest callsign should be used. Some logging programs filter spots apparently sent by the local station or treat them differently from external spots.
+- **Send test spot**: Sends the following entry to every currently connected DX cluster client:
+
+```text
+Spotted callsign: DO5AMF
+Comment: Testing DXC-Spot: Congrats, you donated $100!
+Frequency: .300 on the selected fallback band
+```
+
+With `144 MHz` selected as the fallback band, the resulting frequency is approximately `144.300 MHz`.
+
+The comment is a deliberately retained Easter egg. It has no technical meaning and, despite being remarkably specific, does not initiate a payment. Its practical purpose is to make the test spot easy to identify in the logging software.
+
+The test works only if
+
+1. KST4Contest is connected to the ON4KST chat,
+2. the local DX cluster server is enabled, and
+3. at least one DX cluster client is connected to KST4Contest.
+
+KST4Contest does not generate a spot for every frequency found in the chat. An actual spot is created only when a directed message between two stations indicates a relevant antenna direction for the local station and a usable frequency is known for the sender.
+
+The complete derivation and logger setup are described under [Built-in DX Cluster Server](en-DX-Cluster-Server).
+
+---
 
 ### Band Upgrade Hint after a Log Entry
 
@@ -430,21 +467,83 @@ Further explanation: [Band Upgrade Hint after a Log Entry](en-Features#band-upgr
 
 ## Shortcut Settings
 
-Configuration of quick-access buttons that appear directly in the main window. Clicking a button inserts the configured text into the send field. All [variables](en-Macros-and-Variables#variables) can be used.
+![Configuration of shortcut buttons and text snippets](client_settings_window_shortcuts.png)
+
+Each entry in the upper part of the **Shortcuts** tab creates one button above the message field in the main window. Pressing the button appends its configured text to the current contents of the send field.
+
+If the shortcut contains a [variable](en-Macros-and-Variables#variables), it is replaced with its current value when the text is inserted. A shortcut such as
+
+```text
+pse call me at MYQRGSHORT
+```
+
+may therefore insert:
+
+```text
+pse call me at 144.388
+```
+
+The exact entries `MYQRG` and `SECONDQRG` are additionally highlighted as QRG buttons. They insert the current frequency of the primary or secondary chat category respectively.
+
+The order of the table determines the order of the buttons in the main window. Manage the entries as follows:
+
+1. **Add shortcut** creates a new entry at the beginning of the list and immediately opens it for editing.
+2. Double-click an existing entry to edit it. Press `Enter` to accept the change.
+3. To remove an entry, delete its complete contents and confirm with `Enter`.
+4. Use **Move selected up** and **Move selected down** to change the position of the selected entry.
+
+Changes appear in the main window immediately. Use **Save Settings** afterwards if they should remain available after the next program start.
 
 ---
 
 ## Snippet Settings
 
-Text snippets are accessible via:
+Snippets are longer text blocks intended primarily for messages to a selected station. They can be opened through:
 
-- **Right-click** on a callsign in the user list
-- **Right-click** in the CQ message table
-- **Right-click** in the PM message table
-- **Keyboard shortcuts**: `Ctrl+1` to `Ctrl+0` for the first 10 snippets
+- a right-click on a station in the user list;
+- a right-click on a message in the public chat table;
+- a right-click on a message in the PM table; or
+- `Ctrl+1` through `Ctrl+0` for the first ten entries in the snippet list.
 
-If a callsign is selected in the user list, the snippet is addressed as a direct message:
-`/CQ CALLSIGN <snippet text>`
+The keyboard mapping follows the order of the table:
+
+| Key combination | Snippet |
+|---|---:|
+| `Ctrl+1` | first entry |
+| `Ctrl+2` | second entry |
+| … | … |
+| `Ctrl+9` | ninth entry |
+| `Ctrl+0` | tenth entry |
+
+A snippet selected from a context menu is appended to the message already prepared in the send field. Selecting a station or message will normally have inserted the appropriate `/cq` destination first.
+
+A keyboard shortcut behaves differently: it replaces the current contents of the send field with a complete directed message:
+
+```text
+/cq CALLSIGN snippet text
+```
+
+The complete visible callsign, including any suffix, is retained. Selecting `9A0BB-70` may therefore produce:
+
+```text
+/cq 9A0BB-70 pse ur qrg?
+```
+
+The selected station's chat category is retained for transmission. If no station is selected, or no snippet is assigned to the chosen key combination, nothing is inserted.
+
+Variables are resolved when the snippet is inserted. Station-specific variables such as `QRZNAME`, `FIRSTAP` and `SECONDAP` refer to the currently selected station. The prepared message is not sent automatically and can still be checked or edited. Press `Enter` or **TX** to send it; `Esc` clears the send field.
+
+The snippet list is edited in the same way as the shortcut list:
+
+1. **Add new snippet** creates a new entry at the beginning of the list.
+2. Double-click an existing entry to edit it.
+3. Press `Enter` to accept the change.
+4. Confirming an empty entry removes it.
+5. **Move selected up** and **Move selected down** change both the displayed order and the assignment to `Ctrl+1` through `Ctrl+0`.
+
+The context menus and keyboard mappings are updated immediately. Use **Save Settings** afterwards to store the modified list permanently.
+
+The complete list of available placeholders and their limitations is described under [Macros and Variables](en-Macros-and-Variables).
 
 ---
 
