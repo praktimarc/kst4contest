@@ -1167,16 +1167,22 @@ public class MessageBusManagementThread extends Thread {
 //								}
 //							}
 
-										// ==== Unified auto-answer (generic + QRG) with ping-pong guard and per-remote cooldown ====
+										// ==== Unified auto-answer (generic + QRG) with ping-pong guard
+//      and per-remote cooldown ====
 										final String incomingText = newMessageArrived.getMessageText();
-										final String incomingLower = (incomingText == null) ? "" : incomingText.toLowerCase(Locale.ROOT);
+										final String incomingLower =
+												(incomingText == null)
+														? ""
+														: incomingText.toLowerCase(Locale.ROOT);
 
-										// Never answer another automatically generated message.
+// Never answer another automatically generated message.
 										if (!isAutoMessage(newMessageArrived)) {
 
 											boolean qrgRequested = false;
 
-											if (this.client.getChatPreferences().isMessageHandling_autoAnswerToQRGRequestEnabled()) {
+											if (this.client.getChatPreferences()
+													.isMessageHandling_autoAnswerToQRGRequestEnabled()) {
+
 												for (String lookForQRGString : qrgQuestionTexts) {
 													if (incomingLower.contains(lookForQRGString)) {
 														qrgRequested = true;
@@ -1185,36 +1191,47 @@ public class MessageBusManagementThread extends Thread {
 												}
 											}
 
-											boolean genericEnabled = this.client.getChatPreferences().isMsgHandling_autoAnswerEnabled();
+											boolean genericEnabled =
+													this.client.getChatPreferences()
+															.isMsgHandling_autoAnswerEnabled();
 
-											// A QRG reply takes precedence over the generic reply.
-											String payload = null;
+											String automaticAnswerText = buildAutoAnswerMessageText(
+													newMessageArrived,
+													qrgRequested,
+													genericEnabled
+											);
 
-											if (qrgRequested) {
-												payload = "QRG is: " + getAutoAnswerQrgForCategory(newMessageArrived.getChatCategory());
-											} else if (genericEnabled) {
-
-												payload = this.client.getChatPreferences().getMessageHandling_autoAnswerTextMainCat();
-											}
-
-											// Apply the cooldown only when this client is about to send a reply.
-											if (payload != null && isAutoAnswerAllowedNow(newMessageArrived)) {
+											/*
+											 * Invalid or incomplete replies are rejected before the cooldown
+											 * is checked or updated. A missing QRG must therefore not suppress
+											 * a later valid reply.
+											 */
+											if (automaticAnswerText != null
+													&& isAutoAnswerAllowedNow(newMessageArrived)) {
 
 												ChatMessage automaticAnswer = new ChatMessage();
 												ChatMember itsMe = new ChatMember();
-												itsMe.setCallSign(this.client.getChatPreferences().getStn_loginCallSign());
+
+												itsMe.setCallSign(
+														this.client.getChatPreferences()
+																.getStn_loginCallSign()
+												);
 
 												automaticAnswer.setSender(itsMe);
-												automaticAnswer.setReceiver(newMessageArrived.getSender());
-												automaticAnswer.setChatCategory(newMessageArrived.getChatCategory());
-
-												// The fixed prefix prevents automatic clients from answering each other.
-												automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign()
-														+ " " + AUTOANSWER_PREFIX + " " + payload);
+												automaticAnswer.setReceiver(
+														newMessageArrived.getSender()
+												);
+												automaticAnswer.setChatCategory(
+														newMessageArrived.getChatCategory()
+												);
+												automaticAnswer.setMessageText(automaticAnswerText);
 
 												this.client.getMessageTXBus().add(automaticAnswer);
 
-												// Record only locally generated replies, not the later server echo.
+												/*
+												 * Record the cooldown only after a complete and locally
+												 * validated reply has been placed in the transmit queue.
+												 */
 												markLocalAutoAnswerSent(newMessageArrived);
 											}
 										}
@@ -1905,6 +1922,101 @@ public class MessageBusManagementThread extends Thread {
 
 	}
 
+
+	/**
+	 * Builds and validates one automatic private reply.
+	 *
+	 * <p>A QRG request is answered only when the QRG belonging to the
+	 * incoming chat category is available. The generic answer is used
+	 * only for other private messages and only when it contains actual
+	 * text.</p>
+	 *
+	 * <p>The complete message is validated before it enters the transmit
+	 * queue. Invalid configuration values must neither produce an empty
+	 * automatic reply nor start the cooldown.</p>
+	 *
+	 * @param incoming incoming private message
+	 * @param qrgRequested whether the message contains a recognised QRG request
+	 * @param genericEnabled whether the general automatic reply is enabled
+	 * @return validated message text or {@code null} when no reply may be sent
+	 */
+	private String buildAutoAnswerMessageText(
+			ChatMessage incoming,
+			boolean qrgRequested,
+			boolean genericEnabled
+	) {
+		if (incoming == null
+				|| incoming.getSender() == null
+				|| incoming.getSender().getCallSign() == null
+				|| incoming.getSender().getCallSign().isBlank()) {
+
+			System.err.println(
+					"KST4Contest auto-answer skipped: "
+							+ "incoming message has no valid sender callsign."
+			);
+			return null;
+		}
+
+		String payload;
+
+		if (qrgRequested) {
+			String qrg = getAutoAnswerQrgForCategory(
+					incoming.getChatCategory()
+			);
+
+			if (qrg == null || qrg.isBlank()) {
+				System.err.println(
+						"KST4Contest QRG auto-answer skipped for "
+								+ incoming.getSender().getCallSign()
+								+ ": no QRG is available for chat category "
+								+ autoAnswerCooldownKey(incoming)
+								+ "."
+				);
+				return null;
+			}
+
+			payload = "QRG is: " + qrg.trim();
+
+		} else if (genericEnabled) {
+			payload = this.client.getChatPreferences()
+					.getMessageHandling_autoAnswerTextMainCat();
+
+			if (payload == null || payload.isBlank()) {
+				System.err.println(
+						"KST4Contest generic auto-answer skipped for "
+								+ incoming.getSender().getCallSign()
+								+ ": the configured answer text is empty."
+				);
+				return null;
+			}
+
+			payload = payload.trim();
+
+		} else {
+			return null;
+		}
+
+		String messageText =
+				"/CQ "
+						+ incoming.getSender().getCallSign().trim()
+						+ " "
+						+ AUTOANSWER_PREFIX
+						+ " "
+						+ payload;
+
+		try {
+			return On4KstProtocol.messageText(messageText);
+
+		} catch (IllegalArgumentException invalidMessage) {
+			System.err.println(
+					"KST4Contest auto-answer skipped for "
+							+ incoming.getSender().getCallSign()
+							+ ": "
+							+ invalidMessage.getMessage()
+			);
+			return null;
+		}
+	}
 
 	/**
 	 * Returns whether a message carries the fixed marker used for automatic replies.

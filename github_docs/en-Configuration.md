@@ -628,13 +628,96 @@ Changes take effect during the current connection. Use **Save Settings** afterwa
 
 ## Messagehandling Settings (from v1.25)
 
-New settings section with the following options:
+![Automatic reply settings](client_settings_window_messagehandling.png)
 
-- **Auto-reply to all incoming messages**: Configurable automatic reply to private messages.
-- **Auto-reply with own CQ QRG**: When someone asks for your QRG, KST4Contest automatically replies with the content of the `MYQRG` variable.
-- **Default filter for the userinfo window**: Pre-configured message filter for the station info window *(for Gianluca :-) )*.
+The most important use of the general automatic reply concerns stations which are logged into the ON4KST chat but are not taking part in the current contest. During larger contests, sked requests are sometimes sent to many logged-in stations without first checking whether they are participating. Without an automatic reply, the recipients would have to enter the same refusal repeatedly.
+
+KST4Contest can answer these requests with a predefined message. A separate function provides the local QRG when a private message contains a recognised frequency request. Both functions can be enabled independently.
+
+### General automatic reply
+
+**Enable automatic reply to all private messages** answers incoming private messages with the text entered in the adjacent field. One common text is used for both chat categories. The configured capitalisation is preserved.
+
+A suitable message is:
+
+```text
+Sri, I am not taking part in this contest. No skeds.
+```
+
+Do not add the `[KST4C Automsg]` prefix to the configured text. KST4Contest inserts it automatically.
+
+The message received by the remote station may therefore be:
+
+```text
+[KST4C Automsg] Sri, I am not taking part in this contest. No skeds.
+```
+
+The incoming private message remains visible. The function neither blocks nor discards the request; it merely avoids entering the same answer repeatedly.
+
+The reply is addressed to the sender's complete callsign, including any visible suffix, and sent through the chat category in which the private message was received. This distinction matters when two categories are connected at the same time: a request received through the microwave chat must not be answered accidentally through the VHF/UHF chat.
+
+An empty or whitespace-only answer does not produce an automatic message. A configured text containing the protocol separator `|` or a line break is rejected as well.
+
+### Automatic QRG reply
+
+**Enable automatic QRG replies** reacts to common QRG requests. Matching is case-insensitive and looks for the following text fragments:
+
+```text
+ur qrg?
+your qrg?
+qrg?
+freq?
+pse qrg
+```
+
+The answer contains only the QRG belonging to the category in which the request was received:
+
+| Incoming private message | QRG used for the reply |
+|---|---|
+| Primary category | current QRG of the primary category |
+| Second chat category | current QRG of the second category |
+
+A possible reply is:
+
+```text
+[KST4C Automsg] QRG is: 144.300.00
+```
+
+The values come from the same QRG fields used by `MYQRG` and `SECONDQRG`. The primary QRG may be entered manually or updated through [TRX synchronisation](#trx-sync-settings). The second category uses the value configured or entered for that category.
+
+If no QRG is available for the incoming category, KST4Contest does not send an incomplete reply. A message containing `QRG is:` without a frequency would technically answer the request while providing no useful information. It is therefore rejected before reaching the transmit queue.
+
+When both automatic-reply functions are enabled, the QRG reply takes precedence. A recognised QRG request does not additionally produce the general reply. If the required QRG is missing, KST4Contest does not fall back to the general answer.
+
+### Protection against repeated replies
+
+Every automatically generated reply contains the fixed prefix:
+
+```text
+[KST4C Automsg]
+```
+
+The general and QRG-specific functions ignore messages which already contain this prefix. This prevents two clients with automatic replies enabled from answering each other indefinitely.
+
+A common two-minute cooldown additionally applies to both reply types. The cooldown is tracked separately for each complete callsign and chat category.
+
+This means:
+
+- `CALLSIGN-2` and `CALLSIGN-70` have separate cooldowns.
+- The same complete callsign can still receive an independent reply in another chat category.
+- A general reply also suppresses a QRG reply to the same callsign in the same category for two minutes.
+- A QRG reply likewise suppresses the general reply.
+
+The cooldown starts only after KST4Contest has produced a complete, locally valid message and placed it in the transmit queue. A missing QRG, an empty general reply or a message rejected because of invalid characters does not start the cooldown. Once the missing information has been corrected, a valid reply can therefore be generated immediately.
+
+> **Note**: The configured text should describe the actual operating status clearly. If the station is only observing the contest and does not accept skeds, say exactly that. A vague automatic message is likely to produce another question – which is precisely the work this function is intended to avoid.
+
+Changes take effect during the current connection. Use **Save Settings** afterwards to retain the enable settings and general reply text for the next program start.
+
+Further background: [Automatic Replies to Private Messages](en-Features#automatic-replies-to-private-messages-from-v125).
 
 ---
+
 
 ## Win-Test Network Listener (from v1.31)
 
@@ -679,16 +762,63 @@ Data handling and QRG selection: [Log Synchronisation – Win-Test](en-Log-Sync#
 
 ---
 
-## PSTRotator Settings (from v1.31)
+## PSTRotator Settings (from v1.31)## PSTRotator Settings (from v1.31, fully configurable from v1.40)
 
-KST4Contest can control antenna direction via PSTRotator.
+KST4Contest can set an antenna direction through the PSTRotator UDP interface and use the current position reported by PSTRotator as the local QTF.
 
-Settings:
-- **Enable/Disable**: Checkbox in Preferences (from v1.40).
-- **IP address**: IP address of the PSTRotator computer (default: `127.0.0.1` when running on the same PC).
-- **Port**: Communication port of PSTRotator.
+The settings are located in the **Station** tab:
 
-> **Note**: After clicking a direction button, KST4Contest waits briefly for the rotator response. With slow rotors (e.g. SPID) there may be a small delay.
+| Setting | Default | Purpose |
+|---|---:|---|
+| **Enable PSTRotator** | disabled | Starts UDP communication with PSTRotator |
+| **PSTRotator host** | `127.0.0.1` | Hostname or IP address of the computer running PSTRotator |
+| **PSTRotator UDP port** | `12000` | UDP port on which PSTRotator receives control commands |
+
+When both applications run on the same computer, `127.0.0.1` is normally the clearest setting. If PSTRotator runs on another computer in the station network, enter its reachable IP address or DNS name.
+
+The port must be between `1` and `65534`. Port `65535` cannot be used because PSTRotator reports its position on the following port.
+
+### Preparing PSTRotator
+
+Configure the same UDP port under **Communication → UDP Control Port** in PSTRotator and enable **UDP Control**.
+
+The default configuration uses the following pair:
+
+| Direction | UDP port |
+|---|---:|
+| KST4Contest → PSTRotator | `12000` |
+| PSTRotator → KST4Contest | `12001` |
+
+KST4Contest binds the return port automatically. It is not configured separately.
+
+When the programs run on different computers, the local firewalls and station network must permit UDP traffic in both directions. KST4Contest cannot receive position reports if another program already occupies the return port.
+
+The complete UDP protocol is documented in the [PSTRotatorAz User Manual](https://www.qsl.net/yo3dmu/ANT/PstRotatorAz%20User%20Manual.pdf).
+
+### Updating the local QTF
+
+KST4Contest asks PSTRotator for the current azimuth and operating mode every two seconds. The reported azimuth becomes `actualQTF`.
+
+While PSTRotator integration is enabled, the QTF field in the main window is therefore read-only. It displays the most recent position reported by PSTRotator.
+
+This QTF is used by:
+
+- the direction filter;
+- the derivation of direction opportunities;
+- the Priority Score;
+- the antenna sector on the station map;
+- the AP and sked timeline; and
+- the `MYQTF` variable.
+
+A received rotator position is therefore more than a displayed value. It changes several functions which depend on the current antenna direction.
+
+The current integration uses azimuth only. Elevation control and complete azimuth/elevation tracking are outside its present scope.
+
+### Applying changed settings
+
+The enable setting, host and port are evaluated when the rotator connection is started. After changing them, disconnect and reconnect the ON4KST session or restart KST4Contest.
+
+Use **Save Settings** afterwards so that the values are restored at the next program start.
 
 ---
 

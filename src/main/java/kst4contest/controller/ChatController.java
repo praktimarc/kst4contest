@@ -37,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import kst4contest.logic.FrequencyTextParser;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.concurrent.ScheduledFuture;
 
 
 
@@ -69,8 +70,30 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	public static final int MAX_BEACON_TEXT_LENGTH = 120;
 	private static final long INITIAL_BEACON_DELAY_MILLIS = 10_000L;
 
-	private PstRotatorClient rotatorClient;
-    private Consumer<Double> viewRotorCallback;
+	private volatile PstRotatorClient rotatorClient;
+	private Consumer<Double> viewRotorCallback;
+
+	/*
+	 * The rotator retry must never block the JavaFX Application Thread.
+	 * A daemon scheduler performs the delayed SPID compatibility check.
+	 */
+	private final ScheduledExecutorService rotatorCommandScheduler =
+			Executors.newSingleThreadScheduledExecutor(runnable -> {
+				Thread thread = new Thread(
+						runnable,
+						"PSTRotator-Command-Retry"
+				);
+				thread.setDaemon(true);
+				return thread;
+			});
+
+	private ScheduledFuture<?> pendingRotatorRetry;
+
+	/*
+	 * Updated directly by the PSTRotator receiver thread. This avoids reading
+	 * a JavaFX property from the command scheduler.
+	 */
+	private volatile double lastReportedRotatorAzimuth = Double.NaN;
 
     private Kst4ContestApplication view; //effectively final, for recoupling of the controller to the view
 
@@ -303,41 +326,142 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		rotatorClient.start();
 	}
 
-    /**
-     * sets rotator to "AZ DEGREE" by button click <br/><br/>
-     * <b>Note that there is a workaround for spid rotators: <br/>
-     * The AZ will be set, after 'time' secs it will be controlled if the rotator started, If not, the rotator will<br/>
-     * be homed to 0 deg for very shord period, then the AZ value will be set again.
-     * </b>
-     * @param azimuth
-     */
-    public void rotateTo(double azimuth) {
+	/**
+	 * Sends a new azimuth to PSTRotator without blocking the JavaFX thread.
+	 *
+	 * <p>Some SPID configurations occasionally ignore the first azimuth
+	 * command. KST4Contest therefore checks the latest reported position after
+	 * two seconds. If no movement was reported and the target has not already
+	 * been reached, the original compatibility sequence is sent again.</p>
+	 *
+	 * @param azimuth required antenna azimuth in degrees
+	 */
+	public void rotateTo(double azimuth) {
+		if (!Double.isFinite(azimuth)) {
+			LOGGER.log(
+					Level.WARNING,
+					"Ignoring invalid PSTRotator azimuth: {0}",
+					azimuth
+			);
+			return;
+		}
 
-        double beforeRotateAzWas = chatPreferences.getActualQTF().getValue();
+		PstRotatorClient activeClient = rotatorClient;
+		if (activeClient == null) {
+			LOGGER.log(
+					Level.WARNING,
+					"Cannot rotate antenna to {0} degrees: "
+							+ "PSTRotator integration is not active.",
+					azimuth
+			);
+			return;
+		}
 
-        if (rotatorClient != null) {
-            rotatorClient.setTrackingMode(false);
-            System.out.println("Chatcontroller, Info: turning ant to " + azimuth + " by user request");
-            rotatorClient.setAzimuth(azimuth);
+		double targetAzimuth = normalizeAzimuth(azimuth);
+		double positionBeforeCommand = lastReportedRotatorAzimuth;
 
-            Object lockDelay = new Object();
-            synchronized (lockDelay) {
-                try{
+		activeClient.setTrackingMode(false);
 
-                    TimeUnit.SECONDS.sleep(2);; //wait 2s, then check if rotator does anything due SPID
-                    // sometimes does simply not accept a rotating value for first try!
-                } catch (InterruptedException e) {
+		LOGGER.log(
+				Level.INFO,
+				"Sending PSTRotator azimuth requested by the operator: {0}",
+				targetAzimuth
+		);
 
-                }
-            }
+		activeClient.setAzimuth(targetAzimuth);
 
-            if (chatPreferences.getActualQTF().getValue() == beforeRotateAzWas) {
-                rotatorClient.setAzimuth(0); //do some reset
-                rotatorClient.setAzimuth(azimuth); //then rotate
-            }
+		ScheduledFuture<?> previousRetry = pendingRotatorRetry;
+		if (previousRetry != null) {
+			previousRetry.cancel(false);
+		}
 
-        }
-    }
+		pendingRotatorRetry = rotatorCommandScheduler.schedule(
+				() -> retryRotatorCommandIfRequired(
+						positionBeforeCommand,
+						targetAzimuth
+				),
+				2,
+				TimeUnit.SECONDS
+		);
+	}
+
+	/**
+	 * Performs the delayed SPID compatibility check.
+	 *
+	 * <p>No retry is required when the requested position has already been
+	 * reached or when PSTRotator reported movement after the original command.
+	 * Missing feedback is treated like an unchanged position.</p>
+	 */
+	private void retryRotatorCommandIfRequired(
+			double positionBeforeCommand,
+			double targetAzimuth
+	) {
+		PstRotatorClient activeClient = rotatorClient;
+		if (activeClient == null) {
+			return;
+		}
+
+		double currentAzimuth = lastReportedRotatorAzimuth;
+
+		if (Double.isFinite(currentAzimuth)
+				&& angularDistance(currentAzimuth, targetAzimuth) < 0.5) {
+
+			LOGGER.log(
+					Level.FINE,
+					"PSTRotator reached the requested azimuth without retry: {0}",
+					targetAzimuth
+			);
+			return;
+		}
+
+		boolean noPositionFeedback =
+				!Double.isFinite(currentAzimuth);
+
+		boolean positionUnchanged =
+				Double.isFinite(positionBeforeCommand)
+						&& Double.isFinite(currentAzimuth)
+						&& angularDistance(
+						positionBeforeCommand,
+						currentAzimuth
+				) < 0.5;
+
+		if (!noPositionFeedback && !positionUnchanged) {
+			LOGGER.log(
+					Level.FINE,
+					"PSTRotator reported movement towards {0}; no retry required.",
+					targetAzimuth
+			);
+			return;
+		}
+
+		LOGGER.log(
+				Level.WARNING,
+				"PSTRotator reported no movement after the command for {0} degrees; "
+						+ "sending the SPID compatibility retry.",
+				targetAzimuth
+		);
+
+		activeClient.setAzimuth(0.0);
+		activeClient.setAzimuth(targetAzimuth);
+	}
+
+	/**
+	 * Returns the smallest angular distance between two azimuth values.
+	 */
+	private static double angularDistance(double first, double second) {
+		double difference = Math.abs(
+				normalizeAzimuth(first) - normalizeAzimuth(second)
+		);
+		return Math.min(difference, 360.0 - difference);
+	}
+
+	/**
+	 * Normalises an azimuth to the range from 0 inclusive to 360 exclusive.
+	 */
+	private static double normalizeAzimuth(double azimuth) {
+		double normalized = azimuth % 360.0;
+		return normalized < 0.0 ? normalized + 360.0 : normalized;
+	}
 
 	/**
 	 * Called when an external logger reports that a QSO was logged.
@@ -441,16 +565,42 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	}
 
 
-    public void stopRotator() {
-        if (rotatorClient != null) {
-            rotatorClient.stop();
-        }
-    }
+	public void stopRotator() {
+		ScheduledFuture<?> pendingRetry = pendingRotatorRetry;
+		if (pendingRetry != null) {
+			pendingRetry.cancel(false);
+			pendingRotatorRetry = null;
+		}
+
+		PstRotatorClient activeClient = rotatorClient;
+		rotatorClient = null;
+		lastReportedRotatorAzimuth = Double.NaN;
+
+		if (activeClient != null) {
+			activeClient.stop();
+		}
+	}
 
 	@Override
 	public void onAzimuthUpdate(double azimuth) {
-		// We are in the rotor client thread. JavaFX properties must be updated on the FX thread.
-		Runnable fxUpdate = () -> chatPreferences.getActualQTF().setValue(azimuth);
+		if (!Double.isFinite(azimuth)) {
+			LOGGER.log(
+					Level.WARNING,
+					"Ignoring invalid azimuth reported by PSTRotator: {0}",
+					azimuth
+			);
+			return;
+		}
+
+		double normalizedAzimuth = normalizeAzimuth(azimuth);
+		lastReportedRotatorAzimuth = normalizedAzimuth;
+
+		/*
+		 * The callback runs in the PSTRotator receiver thread. JavaFX properties
+		 * must be updated on the JavaFX Application Thread.
+		 */
+		Runnable fxUpdate = () ->
+				chatPreferences.getActualQTF().setValue(normalizedAzimuth);
 
 		if (Platform.isFxApplicationThread()) {
 			fxUpdate.run();

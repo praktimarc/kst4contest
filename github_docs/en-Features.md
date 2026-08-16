@@ -185,6 +185,27 @@ KST4Contest detects such messages that contain your own callsign and automatical
 
 ---
 
+## Automatic Replies to Private Messages (from v1.25)
+
+Not every station logged into the ON4KST chat is taking part in the current contest. Sked requests may nevertheless be sent to many visible callsigns without first checking whether they are participating. Without an automatic reply, those stations would have to enter the same refusal repeatedly.
+
+KST4Contest can answer such private messages with a predefined text. The incoming message remains visible; it is neither blocked nor discarded. A separate QRG reply recognises common requests such as `qrg?`, `freq?` and `pse qrg`.
+
+When two chat categories are connected, the original context is retained. The reply is addressed to the complete sender callsign and sent through the category in which the request arrived. A QRG request receives only the QRG belonging to that category.
+
+If the required QRG is missing, KST4Contest sends no incomplete answer. Empty or locally invalid general reply texts are rejected as well.
+
+Automatic replies need limits. KST4Contest adds the fixed prefix `[KST4C Automsg]`, ignores incoming messages which already contain that prefix and permits only one automatic reply to the same complete callsign in the same category within two minutes. The cooldown is shared by the general and QRG-specific reply functions.
+
+A rejected reply does not start the cooldown. After entering the missing QRG or correcting the configured text, KST4Contest can therefore answer the next request immediately.
+
+In plain terms: the function cannot prevent indiscriminate sked requests. It prevents the recipient from having to answer every one of them with the same refusal. It is not intended to simulate a conversation, let alone start an endless discussion with another automatic client.
+
+Configuration, recognised QRG requests and category handling: [Configuration – Messagehandling Settings](en-Configuration#messagehandling-settings-from-v125).
+
+---
+
+
 ## Multi-Channel Login (from v1.26)
 
 Simultaneous login to **two chat categories** (e.g. 144 MHz and 432 MHz). Both chats are monitored in parallel.
@@ -319,9 +340,48 @@ Settings: [Win-Test Network Listener](en-Configuration#win-test-network-listener
 
 ## PSTRotator Interface (from v1.31, fully configurable from v1.40)
 
-KST4Contest can control antenna direction directly via **PSTRotator**. When a station is selected in the user list, the rotator can automatically be turned to the QTF of the selected station.
+KST4Contest can point the antenna at the selected remote station through the PSTRotator UDP interface. The required azimuth is calculated from the local and remote locators.
 
-Configuration: [Configuration – PSTRotator Settings](en-Configuration#pstrotator-settings-from-v131)
+After selecting a station, the **Further Info** section provides the **Turn ant1 to …** button:
+
+![PSTRotator control for the selected station](pstrotator_turn_antenna.png)
+
+Pressing the button performs the following steps:
+
+1. KST4Contest disables PSTRotator tracking mode.
+2. The QTF of the selected station is transmitted as an integer azimuth.
+3. PSTRotator controls the configured rotor.
+4. The reported position becomes the current QTF in KST4Contest.
+
+The button remains visible while PSTRotator integration is disabled. In that case, no rotator command is sent.
+
+### Position feedback and SPID compatibility
+
+KST4Contest requests the current azimuth every two seconds. Position reports update the local QTF field and every function which depends on the antenna direction.
+
+Some SPID configurations occasionally ignore the first direction command. KST4Contest therefore checks two seconds later whether PSTRotator reported movement or reached the requested target.
+
+If the position remained unchanged and the target was not reached, KST4Contest sends one compatibility sequence through `0°` followed by the actual target value.
+
+This check runs in the background. The user interface remains responsive during the two-second interval. A new direction command replaces the pending check belonging to the previous command.
+
+### What does the reported position confirm?
+
+The displayed QTF is the azimuth reported by PSTRotator. It confirms that KST4Contest received a usable UDP position message.
+
+Depending on the station setup, it does not necessarily prove that the antenna is mechanically aligned to exactly that value. This still depends on the controller, calibration, configured offsets and the feedback available to PSTRotator.
+
+UDP itself provides no delivery acknowledgement. If the displayed QTF does not change, check:
+
+- that **UDP Control** is enabled in PSTRotator;
+- that the host and control port match;
+- that `control port + 1` is available for the position report;
+- that the firewall permits both UDP directions; and
+- that PSTRotator itself displays a plausible rotor position.
+
+In plain terms: KST4Contest provides the target and processes the reported position. The mechanical reality remains the responsibility of the rotor – and occasionally a glance outside.
+
+Configuration and port assignment: [Configuration – PSTRotator Settings](en-Configuration#pstrotator-settings-from-v131-fully-configurable-from-v140).
 
 ---
 

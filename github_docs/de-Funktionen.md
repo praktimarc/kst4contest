@@ -277,15 +277,20 @@ Nicht jede im ON4KST-Chat eingeloggte Station nimmt am gerade laufenden Contest 
 
 KST4Contest kann darauf mit einem vorher festgelegten Text reagieren. Die eingehende Privatnachricht bleibt dabei sichtbar; sie wird weder blockiert noch verworfen. Davon getrennt lässt sich eine QRG-Antwort aktivieren, die auf typische Fragen wie `qrg?`, `freq?` oder `pse qrg` reagiert.
 
-Bei zwei gleichzeitig geöffneten Chat-Kategorien bleibt der Zusammenhang erhalten: Die Antwort wird in der Kategorie der eingegangenen Nachricht gesendet. Eine QRG-Anfrage erhält außerdem nur die QRG dieser Kategorie und nicht eine Liste aller konfigurierten Frequenzen.
+Bei zwei gleichzeitig geöffneten Chat-Kategorien bleibt der Zusammenhang erhalten: Die Antwort wird an das vollständige Absenderrufzeichen und in der Kategorie der eingegangenen Nachricht gesendet. Eine QRG-Anfrage erhält außerdem nur die QRG dieser Kategorie und nicht eine Liste aller konfigurierten Frequenzen.
 
-Automatische Antworten benötigen Grenzen. KST4Contest versieht sie daher mit `[KST4C Automsg]`, ignoriert entsprechend gekennzeichnete Nachrichten bei der allgemeinen und QRG-bezogenen Antwort und begrenzt weitere Antworten an dieselbe Station in derselben Kategorie auf eine Nachricht innerhalb von zwei Minuten. Der Schutz gilt gemeinsam für beide Antwortarten.
+Fehlt die QRG der betreffenden Kategorie, sendet KST4Contest keine inhaltslose Auskunft. Auch ein leerer oder protokollwidriger allgemeiner Antworttext wird nicht in die Sendequeue übernommen.
+
+Automatische Antworten benötigen Grenzen. KST4Contest versieht sie daher mit `[KST4C Automsg]`, ignoriert entsprechend gekennzeichnete Nachrichten und begrenzt weitere Antworten an dasselbe vollständige Rufzeichen in derselben Kategorie auf eine Nachricht innerhalb von zwei Minuten. Der Schutz gilt gemeinsam für die allgemeine und die QRG-bezogene Antwort.
+
+Die Sperrzeit wird nur nach einer vollständigen und lokal gültigen Antwort gestartet. Eine fehlende QRG oder ein verworfener Antworttext verhindert daher keine spätere gültige Antwort.
 
 Im Klartext: Die Funktion verhindert keine Massenanfragen. Sie verhindert aber, dass der Empfänger jede davon einzeln mit derselben Absage beantworten muss. Sie soll keine Unterhaltung simulieren und erst recht keine endlose Diskussion mit einem zweiten automatischen Client beginnen.
 
 Konfiguration, erkannte QRG-Anfragen und genaue Kategorienzuordnung: [Konfiguration – Messagehandling Settings](de-Konfiguration#messagehandling-settings-ab-v125).
 
 ---
+
 
 ## Multi-Channel-Login (ab v1.26)
 
@@ -422,13 +427,53 @@ Einstellungen: [Win-Test-Netzwerk-Listener](de-Konfiguration#win-test-netzwerk-l
 
 
 
-## PSTRotator-Interface (ab v1.31, vollständig ab v1.40)
+## PSTRotator-Interface (ab v1.31, vollständig konfigurierbar ab v1.40)
 
-KST4Contest kann die Antennenrichtung direkt über **PSTRotator** steuern. Wenn in der Benutzerliste eine Station ausgewählt wird, kann der Rotator automatisch auf den QTF zur ausgewählten Station gedreht werden.
+KST4Contest kann die Antenne über die UDP-Schnittstelle von PSTRotator auf die ausgewählte Gegenstation drehen. Der dafür verwendete Azimut wird aus dem eigenen und dem fremden Locator berechnet.
 
-Konfiguration: [Konfiguration – PSTRotator-Einstellungen](de-Konfiguration#pstrotator-einstellungen-ab-v131)
+Nach der Auswahl einer Station steht im **Further Info**-Bereich der Button **Turn ant1 to …** zur Verfügung:
+
+![PSTRotator-Steuerung für die ausgewählte Station](pstrotator_turn_antenna.png)
+
+Ein Klick führt folgende Schritte aus:
+
+1. KST4Contest beendet den Tracking-Modus von PSTRotator.
+2. Der QTF der ausgewählten Station wird als ganzzahliger Azimut übertragen.
+3. PSTRotator steuert den konfigurierten Rotator.
+4. Die zurückgemeldete Position wird als aktuelle QTF in KST4Contest übernommen.
+
+Der Button bleibt auch sichtbar, wenn die PSTRotator-Integration deaktiviert ist. In diesem Fall wird kein Rotatorbefehl gesendet.
+
+### Rückmeldung und SPID-Kompatibilität
+
+KST4Contest fragt die aktuelle Azimutposition alle zwei Sekunden ab. Die Rückmeldung aktualisiert das eigene QTF-Feld und damit alle Funktionen, die von der Antennenrichtung abhängen.
+
+Einige SPID-Konfigurationen übernehmen den ersten Richtungsbefehl gelegentlich nicht. KST4Contest prüft deshalb zwei Sekunden nach dem Befehl, ob PSTRotator eine Bewegung beziehungsweise das Erreichen des Ziels gemeldet hat.
+
+Ist die Position unverändert und wurde das Ziel nicht erreicht, sendet KST4Contest einmalig eine Kompatibilitätssequenz über `0°` und anschließend erneut den eigentlichen Zielwert.
+
+Diese Prüfung läuft im Hintergrund. Die Benutzeroberfläche bleibt während der zwei Sekunden bedienbar. Wird zwischenzeitlich ein neuer Drehbefehl ausgelöst, ersetzt er die noch ausstehende Prüfung des vorherigen Befehls.
+
+### Was bestätigt die Positionsanzeige?
+
+Die angezeigte QTF ist die von PSTRotator gemeldete Azimutposition. Sie bestätigt, dass KST4Contest eine auswertbare UDP-Rückmeldung erhalten hat.
+
+Sie beweist nicht in jedem Aufbau, dass die Antenne mechanisch exakt in dieser Richtung steht. Das hängt von PSTRotator, dem angeschlossenen Controller, der Kalibrierung, möglichen Offsets und der tatsächlichen Rückmeldung des Rotors ab.
+
+UDP selbst bestätigt außerdem keine Paketzustellung. Bleibt die QTF unverändert, sollten daher zuerst folgende Punkte geprüft werden:
+
+- **UDP Control** ist in PSTRotator aktiviert.
+- Host und Steuerport stimmen überein.
+- Der Rückmeldeport `Steuerport + 1` ist frei.
+- Die Firewall lässt beide UDP-Richtungen zu.
+- PSTRotator zeigt selbst eine plausible Rotorposition an.
+
+Im Klartext: KST4Contest liefert die Zielrichtung und verarbeitet die gemeldete Position. Die mechanische Realität bleibt Aufgabe des Rotators – und gelegentlich der Blick aus dem Fenster.
+
+Konfiguration und Portbelegung: [Konfiguration – PSTRotator-Einstellungen](de-Konfiguration#pstrotator-einstellungen-ab-v131-vollstaendig-konfigurierbar-ab-v140).
 
 ---
+
 
 ## Band-Upgrade-Hinweis nach einem Logeintrag
 

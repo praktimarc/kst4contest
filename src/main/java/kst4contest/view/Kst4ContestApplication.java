@@ -9402,7 +9402,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 								txtFld_station_pstRotatorPort.getText().trim()
 						);
 
-						if (configuredPort < 1 || configuredPort > 65535) {
+						if (configuredPort < 1 || configuredPort > 65534) {
 							throw new NumberFormatException();
 						}
 
@@ -9412,7 +9412,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					} catch (NumberFormatException exception) {
 						showUserInputErrorWindow(
 								"\"" + txtFld_station_pstRotatorPort.getText()
-										+ "\" is not a valid UDP port. Enter a value between 1 and 65535."
+										+ "\" is not a valid UDP port. Enter a value between 1 and 65534. PSTRotator reports its position on the following UDP port."
 						);
 					}
 
@@ -9523,7 +9523,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			} catch (NumberFormatException exception) {
 				showUserInputErrorWindow(
 						"\"" + stn_txtServerPort.getText()
-								+ "\" is not a valid TCP port. Enter a value between 1 and 65535."
+								+ "\" is not a valid TCP port. Enter a value between 1 and 65534. PSTRotator reports its position on the following UDP port."
 				);
 
 				stn_txtServerPort.setText(
@@ -10249,7 +10249,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 						showUserInputErrorWindow(
 								"\"" + txtFld_asUDPPortInt.getText()
 										+ "\" is not a valid UDP port. "
-										+ "Enter a value between 1 and 65535."
+										+ "Enter a value between 1 and 65534. PSTRotator reports its position on the following UDP port."
 						);
 
 						txtFld_asUDPPortInt.setText(

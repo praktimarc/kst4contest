@@ -820,7 +820,11 @@ public class ChatPreferences {
 	}
 
 	public void setStn_pstRotatorPort(int stn_pstRotatorPort) {
-		if (stn_pstRotatorPort < 1 || stn_pstRotatorPort > 65535) {
+		/*
+		 * PSTRotator sends position reports to the configured UDP port + 1.
+		 * Port 65535 would therefore require the invalid local port 65536.
+		 */
+		if (stn_pstRotatorPort < 1 || stn_pstRotatorPort > 65534) {
 			this.stn_pstRotatorPort = 12000;
 		} else {
 			this.stn_pstRotatorPort = stn_pstRotatorPort;

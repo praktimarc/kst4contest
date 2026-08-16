@@ -626,9 +626,19 @@ Eine zweckmäßige Nachricht ist beispielsweise:
 Sri, I am not taking part in this contest. No skeds.
 ```
 
+Das Präfix `[KST4C Automsg]` muss nicht in das Eingabefeld geschrieben werden. KST4Contest ergänzt es automatisch.
+
+Die beim Empfänger sichtbare Nachricht lautet daher beispielsweise:
+
+```text
+[KST4C Automsg] Sri, I am not taking part in this contest. No skeds.
+```
+
 Die eingegangene Privatnachricht bleibt sichtbar. Die Funktion blockiert oder verwirft keine Anfrage, sondern erspart lediglich die wiederholte manuelle Antwort.
 
-Die Antwort wird in derselben Chat-Kategorie gesendet, in der die Privatnachricht eingegangen ist. Das ist bei einem parallelen Login in zwei Kategorien entscheidend: Eine Nachricht aus dem Microwave-Chat darf nicht versehentlich im VHF/UHF-Chat beantwortet werden.
+Die Antwort wird an das vollständige Rufzeichen des Absenders einschließlich eines vorhandenen Suffixes und in derselben Chat-Kategorie gesendet, in der die Privatnachricht eingegangen ist. Das ist bei einem parallelen Login in zwei Kategorien entscheidend: Eine Nachricht aus dem Microwave-Chat darf nicht versehentlich im VHF/UHF-Chat beantwortet werden.
+
+Ein leerer oder ausschließlich aus Leerzeichen bestehender Antworttext erzeugt keine automatische Nachricht. Enthält der Text ein Protokoll-Trennzeichen wie `|` oder einen Zeilenumbruch, wird die Antwort ebenfalls verworfen.
 
 ### Automatische QRG-Antwort
 
@@ -642,16 +652,24 @@ freq?
 pse qrg
 ```
 
-Die Antwort enthält nur die QRG der Kategorie, in der die Anfrage eingegangen ist:
+Die Antwort enthält ausschließlich die QRG der Kategorie, in der die Anfrage eingegangen ist:
 
 | Eingegangene Privatnachricht | Verwendete QRG |
 |---|---|
 | Hauptkategorie | aktuelle QRG der Hauptkategorie |
 | zweite Chat-Kategorie | aktuelle QRG der zweiten Kategorie |
 
+Eine mögliche Antwort lautet:
+
+```text
+[KST4C Automsg] QRG is: 144.300.00
+```
+
 Die Werte stammen aus denselben QRG-Feldern, die auch von `MYQRG` und `SECONDQRG` verwendet werden. Die Haupt-QRG kann manuell eingetragen oder durch die [TRX-Synchronisation](#trx-sync-einstellungen) aktualisiert werden. Für die zweite Kategorie wird der dort konfigurierte beziehungsweise manuell eingetragene Wert verwendet.
 
-Sind die allgemeine und die QRG-bezogene Antwort gleichzeitig aktiviert, hat die QRG-Antwort Vorrang. Eine erkannte QRG-Anfrage erzeugt daher nicht zusätzlich den allgemeinen Antworttext.
+Ist für die betreffende Kategorie keine QRG vorhanden, sendet KST4Contest keine unvollständige Antwort. Eine Nachricht wie `QRG is:` ohne Frequenz würde zwar auf die Frage reagieren, dem Anfragenden aber keine Information liefern. Sie wird deshalb bereits vor der Übergabe an die Sendequeue verworfen.
+
+Sind die allgemeine und die QRG-bezogene Antwort gleichzeitig aktiviert, hat die QRG-Antwort Vorrang. Eine erkannte QRG-Anfrage erzeugt daher nicht zusätzlich den allgemeinen Antworttext. Fehlt die benötigte QRG, fällt KST4Contest auch nicht auf die allgemeine Antwort zurück.
 
 ### Schutz vor wiederholten Antworten
 
@@ -663,9 +681,16 @@ Jede automatisch erzeugte Nachricht trägt das feste Präfix:
 
 Die allgemeine und die QRG-bezogene Antwort reagieren nicht auf Nachrichten, die dieses Präfix bereits enthalten. Dadurch beantworten sich zwei entsprechend arbeitende Clients nicht gegenseitig in einer Schleife.
 
-Zusätzlich gilt eine gemeinsame Sperrzeit von zwei Minuten für beide Antwortarten. Die Sperre wird getrennt je Rufzeichen und Chat-Kategorie geführt. Hat eine Station gerade in der Hauptkategorie eine automatische Antwort erhalten, kann sie deshalb weiterhin eine Antwort in der zweiten Kategorie erhalten. Weitere Nachrichten derselben Station in derselben Kategorie lösen während der folgenden zwei Minuten dagegen keine neue automatische Antwort aus.
+Zusätzlich gilt eine gemeinsame Sperrzeit von zwei Minuten für beide Antwortarten. Die Sperre wird getrennt nach vollständigem Rufzeichen und Chat-Kategorie geführt.
 
-Die Sperrzeit beginnt nur, wenn KST4Contest tatsächlich eine Antwort sendet.
+Daraus folgt:
+
+- `CALLSIGN-2` und `CALLSIGN-70` besitzen getrennte Sperrzeiten.
+- Dasselbe vollständige Rufzeichen kann in einer anderen Chat-Kategorie unabhängig beantwortet werden.
+- Eine allgemeine Antwort sperrt für zwei Minuten auch eine QRG-Antwort an dasselbe Rufzeichen in derselben Kategorie.
+- Eine QRG-Antwort sperrt entsprechend auch die allgemeine Antwort.
+
+Die Sperrzeit beginnt nur, wenn KST4Contest eine vollständige und lokal gültige Antwort in die Sendequeue übernimmt. Eine fehlende QRG, ein leerer allgemeiner Antworttext oder ein wegen ungültiger Zeichen verworfener Text startet keine Sperrzeit. Sobald die fehlende Information korrigiert wurde, kann daher unmittelbar eine gültige Antwort erzeugt werden.
 
 > **Hinweis**: Der Antworttext sollte den tatsächlichen Status eindeutig benennen. Wer den Contest nur beobachtet und keine Skeds fahren möchte, sollte genau das mitteilen. Eine vage Nachricht erzeugt im Zweifel nur die nächste Rückfrage – und damit exakt die Arbeit, welche die Funktion vermeiden soll.
 
@@ -717,16 +742,63 @@ Nach Änderungen **Save Settings** verwenden, damit Port, Stationsname, Broadcas
 Datenbehandlung und QRG-Auswahl: [Log-Synchronisation – Win-Test](de-Log-Synchronisation#win-test)
 
 
-## PSTRotator-Einstellungen (ab v1.31)
+## PSTRotator-Einstellungen (ab v1.31, vollständig konfigurierbar ab v1.40)
 
-KST4Contest kann die Antennenrichtung über PSTRotator steuern.
+KST4Contest kann eine ausgewählte Antennenrichtung über die UDP-Schnittstelle von [PSTRotator](https://www.pstrotator.com/) einstellen und die von PSTRotator gemeldete aktuelle Position als eigene QTF übernehmen.
 
-Einstellungen:
-- **Aktivieren/Deaktivieren**: Checkbox in den Preferences (ab v1.40).
-- **IP-Adresse**: IP-Adresse des PSTRotator-Rechners (Standard: `127.0.0.1` bei Betrieb auf demselben PC).
-- **Port**: Kommunikationsport von PSTRotator.
+Die Einstellungen befinden sich im Reiter **Station**:
 
-> **Hinweis**: Nach einem Klick auf den Richtungs-Button wartet KST4Contest kurz auf die Rotatorantwort. Bei langsamen Rotoren (z. B. SPID) kann es zu einer kleinen Verzögerung kommen.
+| Einstellung | Standardwert | Verwendung |
+|---|---:|---|
+| **Enable PSTRotator** | deaktiviert | Startet die UDP-Kommunikation mit PSTRotator |
+| **PSTRotator host** | `127.0.0.1` | Hostname oder IP-Adresse des Rechners, auf dem PSTRotator läuft |
+| **PSTRotator UDP port** | `12000` | UDP-Port, auf dem PSTRotator die Steuerbefehle empfängt |
+
+Bei Betrieb auf demselben Rechner ist `127.0.0.1` normalerweise die eindeutigste Einstellung. Läuft PSTRotator auf einem anderen Rechner im Stationsnetz, muss dessen erreichbare IP-Adresse oder DNS-Name eingetragen werden.
+
+Der Port darf zwischen `1` und `65534` liegen. Port `65535` ist nicht möglich, weil PSTRotator seine Positionsmeldungen auf dem jeweils folgenden Port sendet.
+
+### PSTRotator vorbereiten
+
+In PSTRotator muss unter **Communication → UDP Control Port** derselbe UDP-Port eingetragen werden wie in KST4Contest. Anschließend muss **UDP Control** in PSTRotator aktiviert werden.
+
+Bei der Standardeinstellung ergibt sich folgendes Portpaar:
+
+| Richtung | UDP-Port |
+|---|---:|
+| KST4Contest → PSTRotator | `12000` |
+| PSTRotator → KST4Contest | `12001` |
+
+KST4Contest bindet den Empfangsport automatisch. Er wird nicht separat konfiguriert.
+
+Bei Betrieb auf zwei Rechnern müssen die lokale Firewall und das Stationsnetz UDP-Pakete in beiden Richtungen zulassen. Ist der Empfangsport bereits durch ein anderes Programm belegt, kann KST4Contest die Positionsmeldungen nicht empfangen.
+
+Das vollständige UDP-Protokoll ist im [PSTRotatorAz User Manual](https://www.qsl.net/yo3dmu/ANT/PstRotatorAz%20User%20Manual.pdf) beschrieben.
+
+### Übernahme der aktuellen QTF
+
+KST4Contest fragt PSTRotator alle zwei Sekunden nach der aktuellen Azimutposition und dem Betriebsmodus. Die zurückgemeldete Azimutposition wird als `actualQTF` übernommen.
+
+Bei aktivierter PSTRotator-Integration ist das QTF-Feld im Hauptfenster deshalb nicht manuell editierbar. Es zeigt die zuletzt von PSTRotator gemeldete Position.
+
+Diese QTF wird unter anderem verwendet für:
+
+- den Richtungsfilter,
+- die Bewertung von Richtungsgelegenheiten,
+- den Priority Score,
+- die Darstellung des Antennensektors auf der Stationskarte,
+- die AP- und Sked-Timeline und
+- die Variable `MYQTF`.
+
+Eine empfangene Rotatorposition ist damit nicht nur eine Anzeige. Sie verändert mehrere Funktionen, die auf der aktuellen Antennenrichtung beruhen.
+
+KST4Contest verwendet derzeit nur den Azimut. Eine Elevationssteuerung oder eine vollständige Azimut-/Elevationsnachführung ist nicht Bestandteil dieser Integration.
+
+### Änderungen übernehmen
+
+Aktivierung, Host und Port werden beim Start der Rotatorverbindung ausgewertet. Nach einer Änderung sollte die ON4KST-Verbindung getrennt und erneut aufgebaut oder KST4Contest neu gestartet werden.
+
+Anschließend **Save Settings** verwenden, damit die Werte auch beim nächsten Programmstart wiederhergestellt werden.
 
 ---
 
