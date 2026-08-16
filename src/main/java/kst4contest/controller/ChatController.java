@@ -3981,42 +3981,96 @@ private ObservableList<String>
 	}
 
 	/**
-	 * decides if a message in the in-queue is directed to me or if its directed to another station and sniffed
-	 * @param chatMessage
-	 * @return
+	 * Checks whether a message belongs to a monitored base callsign.
+	 *
+	 * <p>QSO monitoring intentionally combines all visible ON4KST variants of
+	 * the same station. An entry for DN9APW therefore also matches DN9APW-2,
+	 * DN9APW-70 and other suffixes. This affects monitoring only; message
+	 * routing continues to use the complete callsign and chat category.</p>
+	 *
+	 * @param chatMessage message to examine
+	 * @return true if sender or receiver belongs to a monitored base callsign
 	 */
 	public boolean isSniffedMessage(ChatMessage chatMessage) {
-		if (chatMessage == null || chatMessage.getSender() == null || chatMessage.getReceiver() == null) {
+
+		if (chatMessage == null
+				|| chatMessage.getSender() == null
+				|| chatMessage.getReceiver() == null) {
 			return false;
 		}
 
-		String senderCall = chatMessage.getSender().getCallSign();
-		String receiverCall = chatMessage.getReceiver().getCallSign();
+		String senderCall =
+				chatMessage.getSender().getCallSign();
+		String receiverCall =
+				chatMessage.getReceiver().getCallSign();
 
 		if (senderCall == null || receiverCall == null) {
 			return false;
 		}
 
-		if (lstNotify_QSOSniffer_sniffedCallSignList == null || lstNotify_QSOSniffer_sniffedCallSignList.isEmpty()) {
+		if (lstNotify_QSOSniffer_sniffedCallSignList == null
+				|| lstNotify_QSOSniffer_sniffedCallSignList.isEmpty()) {
 			return false;
 		}
 
+		String senderBaseCall =
+				ChatMember.normalizeCallSignToBaseCallSign(
+						senderCall
+				);
+		String receiverBaseCall =
+				ChatMember.normalizeCallSignToBaseCallSign(
+						receiverCall
+				);
+
 		boolean observedCall =
-				lstNotify_QSOSniffer_sniffedCallSignList.contains(senderCall)
-						|| lstNotify_QSOSniffer_sniffedCallSignList.contains(receiverCall);
+				lstNotify_QSOSniffer_sniffedCallSignList
+						.stream()
+						.anyMatch(
+								monitoredCall -> {
+									String monitoredBaseCall =
+											ChatMember
+													.normalizeCallSignToBaseCallSign(
+															monitoredCall
+													);
+
+									return monitoredBaseCall != null
+											&& (
+											monitoredBaseCall
+													.equalsIgnoreCase(
+															senderBaseCall
+													)
+													|| monitoredBaseCall
+													.equalsIgnoreCase(
+															receiverBaseCall
+													)
+									);
+								}
+						);
 
 		if (!observedCall) {
 			return false;
 		}
 
-		String myCall = getChatPreferences() != null ? getChatPreferences().getStn_loginCallSign() : null;
-		String myRawCall = getChatPreferences() != null ? getChatPreferences().getStn_loginCallSignRaw() : null;
+		String myCall =
+				getChatPreferences() != null
+						? getChatPreferences().getStn_loginCallSign()
+						: null;
+		String myRawCall =
+				getChatPreferences() != null
+						? getChatPreferences().getStn_loginCallSignRaw()
+						: null;
 
 		/*
-		 * Sniffed messages should appear in the private table only if they are not
-		 * already direct messages to my own callsign.
+		 * Messages which are already addressed directly to the local station
+		 * belong in the PM table without an additional Sniffed marker.
 		 */
-		return !receiverCall.equals(myCall) && !receiverCall.equals(myRawCall);
+		boolean directedToOwnCall =
+				(myCall != null
+						&& receiverCall.equalsIgnoreCase(myCall))
+						|| (myRawCall != null
+						&& receiverCall.equalsIgnoreCase(myRawCall));
+
+		return !directedToOwnCall;
 	}
 
 	/**

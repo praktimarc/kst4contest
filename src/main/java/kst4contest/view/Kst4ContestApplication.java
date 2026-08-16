@@ -4775,21 +4775,31 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		callSignColumn.setOnEditCommit(event -> {
 			int row = event.getTablePosition().getRow();
 
-			String newValue =
+			String enteredCallSign =
 					event.getNewValue() == null
 							? ""
 							: event.getNewValue()
 							  .trim()
 							  .toUpperCase(Locale.ROOT);
 
-			if (newValue.isBlank()) {
+			if (enteredCallSign.isBlank()) {
 				event.getTableView()
 						.getItems()
 						.remove(row);
 				return;
 			}
 
-			if (!GuiUtils.isCallSignSyntax(newValue)) {
+			/*
+			 * QSO monitoring intentionally works with the base callsign.
+			 * Entering DN9APW, DN9APW-2 or DN9APW-70 therefore produces
+			 * the same monitoring entry: DN9APW.
+			 */
+			String monitoredBaseCall =
+					ChatMember.normalizeCallSignToBaseCallSign(
+							enteredCallSign
+					);
+
+			if (!GuiUtils.isCallSignSyntax(monitoredBaseCall)) {
 				alertWindowEvent(
 						"Please enter a valid callsign."
 				);
@@ -4813,7 +4823,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 								.get(i);
 
 				if (existing != null
-						&& existing.equalsIgnoreCase(newValue)) {
+						&& existing.equalsIgnoreCase(
+						monitoredBaseCall
+				)) {
 					duplicate = true;
 					break;
 				}
@@ -4821,7 +4833,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			if (duplicate) {
 				alertWindowEvent(
-						"This callsign is already "
+						"This base callsign is already "
 								+ "in the monitoring list."
 				);
 				event.getTableView().refresh();
@@ -4830,7 +4842,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			event.getTableView()
 					.getItems()
-					.set(row, newValue);
+					.set(row, monitoredBaseCall);
 		});
 
 		table.getColumns().add(callSignColumn);
@@ -10915,15 +10927,21 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					dialog.showAndWait().ifPresent(
 							input -> {
-								String callSign =
+								String enteredCallSign =
 										input
 												.trim()
 												.toUpperCase(
 														Locale.ROOT
 												);
 
+								String monitoredBaseCall =
+										ChatMember
+												.normalizeCallSignToBaseCallSign(
+														enteredCallSign
+												);
+
 								if (!GuiUtils.isCallSignSyntax(
-										callSign
+										monitoredBaseCall
 								)) {
 									alertWindowEvent(
 											"Please enter "
@@ -10938,15 +10956,16 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 												.stream()
 												.anyMatch(
 														existing ->
-																existing
+																existing != null
+																		&& existing
 																		.equalsIgnoreCase(
-																				callSign
+																				monitoredBaseCall
 																		)
 												);
 
 								if (duplicate) {
 									alertWindowEvent(
-											"This callsign is already "
+											"This base callsign is already "
 													+ "in the monitoring list."
 									);
 									return;
@@ -10954,7 +10973,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 								chatcontroller
 										.getLstNotify_QSOSniffer_sniffedCallSignList()
-										.add(callSign);
+										.add(monitoredBaseCall);
 							}
 					);
 				}

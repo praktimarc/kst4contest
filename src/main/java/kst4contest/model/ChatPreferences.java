@@ -2631,10 +2631,15 @@ public class ChatPreferences {
 
 								if (callSign != null
 										&& !callSign.isBlank()) {
+									/*
+									 * Older preference files may still contain complete KST callsigns
+									 * such as DN9APW-2. Monitoring is stored by base callsign so that
+									 * every suffix of the same station is covered by one entry.
+									 */
 									String normalizedCallSign =
-											callSign
-													.trim()
-													.toUpperCase();
+											ChatMember.normalizeCallSignToBaseCallSign(
+													callSign
+											);
 
 									if (!lstNotify_QSOSniffer_sniffedCallSignList
 											.contains(normalizedCallSign)) {
@@ -2660,12 +2665,28 @@ public class ChatPreferences {
 						for (int i = 0; i < children.getLength(); i++) {
 							Node child = children.item(i);
 							if (child.getNodeType() == Node.ELEMENT_NODE) {
-								String word = child.getTextContent();
-								if (word != null) {
-									word = word.trim();
-								}
-								if (word != null && !word.isEmpty()) {
-									lstNotify_QSOSniffer_sniffedWordsList.add(word);
+								String callSign = child.getTextContent();
+
+								if (callSign != null
+										&& !callSign.isBlank()) {
+
+									/*
+									 * Older preference files may contain complete KST callsigns
+									 * such as DN9APW-2. QSO monitoring is stored by base callsign,
+									 * so one entry covers every suffix of the same station.
+									 */
+									String normalizedCallSign =
+											ChatMember.normalizeCallSignToBaseCallSign(
+													callSign
+											);
+
+									if (normalizedCallSign != null
+											&& !normalizedCallSign.isBlank()
+											&& !lstNotify_QSOSniffer_sniffedCallSignList
+											.contains(normalizedCallSign)) {
+										lstNotify_QSOSniffer_sniffedCallSignList
+												.add(normalizedCallSign);
+									}
 								}
 							}
 						}
