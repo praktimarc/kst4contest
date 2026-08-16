@@ -4,11 +4,22 @@
 
 ## Verbinden mit dem Chat
 
-1. Im Einstellungsfenster eine **Chat-Kategorie** auswählen (z. B. 144 MHz VHF, 432 MHz UHF, …).
-2. **Connect**-Button klicken.
-3. Warten bis die Verbindung aufgebaut ist.
+Vor dem ersten Verbindungsaufbau müssen im Einstellungsfenster mindestens Rufzeichen, Passwort, Locator und primäre Chat-Kategorie konfiguriert werden. Soll zusätzlich eine zweite Kategorie verwendet werden, muss auch deren Login aktiviert und vollständig eingerichtet sein.
 
-> Trennen und Neu-Verbinden ist nur über das Einstellungsfenster möglich. Es empfiehlt sich daher, das Einstellungsfenster geöffnet zu lassen.
+Die Verbindung kann auf zwei Wegen aufgebaut werden:
+
+- Mit **Connect to …** im Einstellungsfenster werden die dort eingetragenen Werte übernommen und die Verbindung gestartet.
+- **File → Connect to …** verwendet die bereits in KST4Contest übernommenen Einstellungen.
+
+Geänderte Einstellungen müssen mit **Save Settings** gespeichert werden, wenn sie auch beim nächsten Programmstart verwendet werden sollen.
+
+Eine bestehende Verbindung kann über **File → Disconnect** oder über **Disconnect** im Einstellungsfenster beendet werden. **Exit + disconnect** beendet zusätzlich das Programm.
+
+Bei einem unerwarteten Verbindungsverlust versucht KST4Contest nach einer begrenzten Wartezeit, die ON4KST-Verbindung kontrolliert neu aufzubauen. Ein fehlgeschlagener Erstaufbau blockiert die Benutzeroberfläche nicht mehr.
+
+Ob die Verbindung lediglich als TCP-Verbindung besteht oder bereits vollständig angemeldet und synchronisiert ist, zeigt der [`LINK`-Status](#statusleiste-und-hinweise) im Hauptfenster.
+
+---
 
 ---
 
@@ -16,10 +27,40 @@
 
 Das Hauptfenster besteht aus mehreren Bereichen:
 
+
+### Statusleiste und Hinweise
+
+Die Statusleiste befindet sich am oberen Rand des Hauptfensters neben dem Menü.
+
+![Statusleiste mit ON4KST-Verbindungsanzeige](connection_status_indicator.png)
+
+Der dauerhaft sichtbare `LINK`-Indikator zeigt den tatsächlichen Zustand der ON4KST-Verbindung:
+
+| Anzeige | Bedeutung |
+|---|---|
+| grünes `LINK` | Login und Synchronisation der konfigurierten Chat-Kategorien sind vollständig abgeschlossen |
+| gelbes `LINK…` | Verbindung, Anmeldung, Benutzerlistensynchronisation oder kontrolliertes Beenden läuft |
+| rotes `LINK!` | keine Verbindung oder Wartezeit vor einem automatischen Neuaufbau |
+
+Der Tooltip enthält den internen Verbindungsstatus und eine genauere Beschreibung des aktuellen Schritts. Der Indikator ist keine Schaltfläche.
+
+`ONLINE` wird erst gemeldet, nachdem die Anmeldung bestätigt und die Benutzerlisten der konfigurierten Kategorien vollständig empfangen wurden. Während die Verbindung noch aufgebaut oder neu synchronisiert wird, bleiben Sendfeld und **TX** deaktiviert.
+
+Bei bestimmten Ereignissen erscheinen vorübergehend weitere Hinweise:
+
+- `SKED` weist auf eine fällige Sked-Erinnerung hin. Der Text enthält das vollständige Zielrufzeichen und die verbleibende Zeit.
+- `BAND+` erscheint nach einem Logeintrag, wenn für die gearbeitete Station noch mindestens ein gemeinsames, aktiviertes und nicht gearbeitetes Band erkannt wurde.
+
+Beide Hinweise blinken ungefähr zwölf Sekunden und verschwinden anschließend wieder. Der vollständige Inhalt beziehungsweise die Herleitung steht im jeweiligen Tooltip. Die Anzeigen sind nicht anklickbar.
+
+
 ### PM-Fenster (oben links)
 
-Zeigt alle empfangenen **Privatnachrichten** sowie abgefangene öffentliche Nachrichten, die das eigene Rufzeichen enthalten. Neue Nachrichten erscheinen in **Rot** und faden alle 30 Sekunden über Gelb bis Weiß ab.
+Das PM-Fenster zeigt die an die eigenen Chat-Logins gerichteten Privatnachrichten und die zugehörigen ausgehenden Antworten.
 
+Ist das [QSO-Monitoring](de-Funktionen#qso-monitoring-ab-v131) aktiviert, erscheinen dort zusätzlich die erfassten Nachrichten der überwachten Basisrufzeichen. Diese Einträge erhalten eine `Sniffed:`-Kennzeichnung mit dem vollständigen sichtbaren Absender und Empfänger.
+
+Neue Nachrichten werden zunächst auffällig dargestellt und wechseln anschließend schrittweise zur normalen Tabellenfarbe. Die farbliche Hervorhebung dient nur als zeitlicher Hinweis; sie verändert weder Inhalt noch Routing der Nachricht.
 ### Benutzerliste (Chat Members)
 
 Die zentrale Tabelle aller aktuell aktiven Chat-Nutzer. Spalten (je nach Konfiguration):
@@ -60,15 +101,47 @@ Jede Statuszelle besitzt einen Tooltip mit der Legende und dem für die betreffe
 Ein grün und fett dargestelltes Rufzeichen kennzeichnet eine aus einer gerichteten Nachricht hergeleitete Richtungsgelegenheit. Die Markierung bezieht sich auf den Absender der Nachricht und bleibt höchstens fünf Minuten sichtbar. Herleitung und Grenzen: [Richtungsgelegenheiten aus gerichteten Nachrichten](de-Funktionen#richtungsgelegenheiten-aus-gerichteten-nachrichten).
 ### Sendfeld
 
-Texteingabe für ausgehende Nachrichten. Nach Klick auf ein Rufzeichen in der Benutzerliste erhält das Sendfeld automatisch den Fokus – sofort tippen ohne Doppelklick (ab v1.22).
+Das Sendfeld enthält den vorbereiteten Text für die nächste ausgehende Nachricht.
 
-### MYQRG-Feld
+Wird eine Station bewusst per Maus oder Tastatur in der Benutzerliste ausgewählt, bereitet KST4Contest eine gerichtete Nachricht vor:
 
-Rechts neben dem Sendbutton. Zeigt die aktuelle eigene QRG an, kann auch manuell eingetragen werden.
+```text
+/cq RUFZEICHEN
+```
 
-### MYQTF-Feld *(für v1.3)*
+Dabei werden das vollständige sichtbare Rufzeichen einschließlich eines vorhandenen Suffixes und die Chat-Kategorie der ausgewählten Station beibehalten. Ein Ziel wie `9A0BB-70` wird nicht auf `9A0BB` verkürzt.
 
-Eingabefeld für die aktuelle Antennenrichtung. Wird für die geplante `MYQTF`-Variable verwendet.
+Eine Hintergrundaktualisierung, Neusortierung oder Filteränderung darf einen bereits bearbeiteten Nachrichtentext nicht überschreiben. Nur eine tatsächliche Auswahl durch den Operator bereitet den `/cq`-Empfänger erneut vor.
+
+- **TX** oder `Enter` sendet den vorbereiteten Text.
+- `Esc` leert das Sendfeld.
+- Während KST4Contest nicht vollständig mit ON4KST verbunden ist, bleiben Sendfeld und **TX** deaktiviert.
+
+Shortcuts, Snippets und Variablen sind unter [Makros und Variablen](de-Makros-und-Variablen) beschrieben.
+
+### MYQRG- und SECONDQRG-Feld
+
+Die beiden QRG-Felder enthalten die eigenen Frequenzen der primären und sekundären Chat-Kategorie.
+
+`MYQRG` kann von einer aktivierten TRX-Synchronisation aktualisiert oder – bei deaktivierten automatischen QRG-Quellen – von Hand eingetragen werden. `SECONDQRG` bleibt davon unabhängig und enthält die QRG der zweiten Kategorie.
+
+Die Auswahl einer Station aus dem zweiten Chat verändert die Bedeutung der beiden Werte nicht: `MYQRG` gehört weiterhin zur primären, `SECONDQRG` zur sekundären Kategorie.
+
+Weitere Einzelheiten: [TRX-Sync-Einstellungen](de-Konfiguration#trx-sync-einstellungen).
+
+### MYQTF-Feld
+
+Das MYQTF-Feld zeigt die aktuelle Antennenrichtung als numerischen Winkel in Grad.
+
+Ist PSTRotator aktiviert, wird der Wert automatisch übernommen und das Feld ist nicht manuell bearbeitbar. Ohne aktive Rotatorsynchronisation kann die Antennenrichtung direkt eingetragen werden. Die Änderung wird beim Verlassen des Feldes übernommen.
+
+Der Wert beeinflusst unter anderem:
+
+- die QTF-Filterung,
+- die Darstellung des Antennensektors auf der Stationskarte,
+- die Prioritätsberechnung,
+- die AP-Timeline und
+- die Variable `MYQTF`.
 
 ---
 
@@ -86,27 +159,77 @@ Damit muss der Divider nicht allein deshalb verschoben werden, um eine einzelne 
 
 ---
 
-## Filter
+## Filter und Reachability-Steuerung
 
-Die Filterleiste befindet sich oberhalb der Chatmember-Tabelle. Sie ist in mehrere logisch zusammengehörige Bereiche gegliedert:
-
-- **Show only QTF** begrenzt die Liste auf eine gewählte Antennenrichtung.
-- **Show only QRB [km] <=** setzt eine maximale Entfernung.
-- **Find** sucht nach einem Rufzeichen.
-- **wkd** blendet Rufzeichen aus, die bereits auf mindestens einem Band gearbeitet wurden.
-- Die einzelnen Band-Schaltflächen blenden eine Station aus, wenn sie auf dem betreffenden Band bereits gearbeitet oder dort als NOT QRV markiert wurde. Angezeigt werden nur die für die eigene Station aktivierten Bänder.
-- **Only new grids** zeigt ausschließlich Stationen aus vierstelligen Großfeldern, die auf noch keinem Band gearbeitet wurden.
-- **Grid color** ist kein Filter. Die Funktion markiert das QRA-Feld bereits gearbeiteter Großfelder, ohne Stationen auszublenden.
-- **New bands** zeigt Stationen mit mindestens einer erkannten, an der eigenen Station aktivierten und noch nicht gearbeiteten Bandmöglichkeit. NOT-QRV-Markierungen haben Vorrang.
-- **Reachability**, **Tropo >=0dB** und **AS next 5m** schränken die Liste anhand der gewählten Strecken- beziehungsweise AirScout-Bedingungen ein.
-
-Die Filterleiste besitzt keine feste Breite. QTF sowie die Worked- und Reachability-Filter nutzen zunächst den gesamten Platz ihrer jeweiligen Zeile. Wird der horizontale Divider nach rechts verschoben und die Chatmember-Ansicht dadurch schmaler, wechseln die Controls erst dann in die nächste Zeile, wenn ihre tatsächlich benötigte Breite nicht mehr zur Verfügung steht.
+Die Filterleiste befindet sich oberhalb der Chatmember-Tabelle. Filter können miteinander kombiniert werden; eine Station bleibt nur sichtbar, wenn sie alle aktiven Bedingungen erfüllt.
 
 ![Umgebrochene Filterleiste bei schmaler Chatmember-Ansicht](filter_bar_wrapped.png)
 
-Im Klartext: Die Filter bestimmen weiterhin den Inhalt der Tabelle, aber nicht mehr die Mindestbreite der gesamten rechten Programmseite. In der normalen Ansicht bleibt die Leiste kompakt. Erst bei einer tatsächlich schmalen Ansicht benötigt sie mehr Höhe. Der Divider kann anschließend wieder nach links verschoben werden; die Controls ordnen sich unmittelbar neu an.
+### Stationsfilter
 
----
+| Bedienelement | Wirkung |
+|---|---|
+| **Show only QTF** | Zeigt nur Stationen innerhalb der gewählten Antennenrichtung und des konfigurierten Öffnungswinkels |
+| **Show only QRB [km] <=** | Begrenzt die Liste auf die eingetragene maximale Entfernung |
+| **Find** | Filtert nach einem vollständigen oder teilweisen Rufzeichen |
+| **wkd** | Blendet Basisrufzeichen aus, die bereits auf mindestens einem unterstützten Band gearbeitet wurden |
+| einzelne Band-Schaltflächen | Blenden Stationen aus, die auf dem betreffenden Band bereits gearbeitet oder dort als NOT QRV markiert wurden |
+| **Inactive stations** | Blendet Stationen aus, deren letzte Chataktivität mehr als 20 Minuten zurückliegt |
+| **Only new grids** | Zeigt nur Stationen aus vierstelligen Großfeldern, die bisher auf keinem Band gearbeitet wurden |
+| **New bands** | Zeigt Stationen mit mindestens einer erkannten, lokal aktivierten und noch nicht gearbeiteten Bandmöglichkeit |
+| **Tropo >=0dB** | Zeigt Stationen mit einer berechneten, nicht negativen SSB-Marge |
+| **AS next 5m** | Zeigt Stationen mit einem aktuellen oder innerhalb der nächsten fünf Minuten erwarteten AirScout-Fenster |
+
+Bei **New bands** werden aktuelle QRGs, Bandangaben im Namensfeld und aktive Rufzeichenvarianten gemeinsam ausgewertet. Manuelle NOT-QRV-Markierungen haben Vorrang.
+
+Der Filter **Tropo >=0dB** entfernt nur Stationen, für die eine abgeschlossene Berechnung eine negative Marge ergeben hat. Noch nicht berechnete oder fehlgeschlagene Auswertungen bleiben sichtbar. Andernfalls würde ein fehlender API-Wert wie ein nachgewiesen ungeeigneter Funkweg behandelt.
+
+### Grid color
+
+**Grid color** ist kein Filter. Die Funktion verändert ausschließlich die Darstellung des QRA-Feldes und kennzeichnet bereits gearbeitete vierstellige Großfelder.
+
+Die Station bleibt unabhängig von der Farbmarkierung in der Tabelle sichtbar. **Reset filters** deaktiviert diese Anzeige deshalb nicht.
+
+### Reachability und Calc selected
+
+Das Dropdown **Reachability** bestimmt das Band, auf das sich die Tropo-Spalte, der Tropo-Filter und eine ausdrücklich gestartete Streckenberechnung beziehen.
+
+- **Auto** leitet das Band aus der aktuellen Stations-QRG, Bandangaben im Namensfeld und der unterstützten Chat-Kategorie her.
+- Ein ausdrücklich gewähltes Band übersteuert diese automatische Auswahl für die Reachability-Auswertung.
+
+Eine Änderung des Dropdowns startet keine Berechnung für die gesamte Benutzerliste. Das wäre bei einer Online-Höhendatenquelle unnötig langsam und würde externe API-Abfragen vervielfachen.
+
+**Calc selected** berechnet ausschließlich die aktuell ausgewählte Station auf dem gewählten beziehungsweise automatisch hergeleiteten Band. Das Ergebnis wird anschließend in der Tropo-Spalte und den zugehörigen Ansichten verwendet.
+
+### Filter zurücksetzen
+
+**Reset filters** entfernt:
+
+- den QTF-Filter,
+- den QRB-Filter,
+- den Inhalt des Rufzeichen-Suchfeldes,
+- alle Worked- und Bandfilter,
+- **Inactive stations**,
+- **Only new grids**,
+- **New bands**,
+- **Tropo >=0dB** und
+- **AS next 5m**.
+
+Die internen Filterprädikate werden dabei ausdrücklich geleert. Es genügt nicht, lediglich die sichtbaren Toggle-Buttons zurückzusetzen.
+
+Nicht verändert werden:
+
+- **Grid color**, weil es sich um eine Darstellungsoption handelt, und
+- die Auswahl im **Reachability**-Dropdown, weil sie das Berechnungsband festlegt und nicht unmittelbar die Tabelle filtert.
+
+### Verhalten bei schmaler Ansicht
+
+Die Filterleiste besitzt keine feste Breite. QTF-, Worked- und Reachability-Controls nutzen zunächst den verfügbaren Platz ihrer jeweiligen Zeile.
+
+Wird der mittlere Divider nach rechts verschoben und die Chatmember-Ansicht dadurch schmaler, wechseln Bedienelemente erst dann in die nächste Zeile, wenn ihre tatsächlich benötigte Breite nicht mehr ausreicht. Wird der Bereich wieder breiter, ordnen sie sich unmittelbar neu an.
+
+Im Klartext: Die Filter bestimmen den Tabelleninhalt, aber nicht mehr die Mindestbreite der gesamten rechten Programmseite.
+
 ---
 
 ## Stationsinfo-Panel (Further Info)
@@ -182,28 +305,67 @@ Herleitung und Grenzen: [Prioritätsscore und Prioritätsliste](de-Funktionen#pr
 Die Stationskarte kann auf zwei Wegen geöffnet werden:
 
 - **Windows → Show / hide station map** öffnet oder schließt das Kartenfenster.
-- **Show on map** im **Further Info**-Bereich öffnet die Karte und zentriert sie auf die ausgewählte Station.
+- **Show on map** im **Further Info**-Bereich öffnet die Karte und fokussiert die ausgewählte Station.
 
-Die Karte zeigt die Stationen, die auch nach Anwendung der aktuellen Benutzerlistenfilter noch sichtbar sind. Ein Hinweis in der Kopfzeile zeigt an, wenn eine gefilterte Ansicht aktiv ist.
+Die Karte verwendet die Stationen, die nach Anwendung der aktuellen Benutzerlistenfilter noch sichtbar sind. Die Kopfzeile zeigt die Anzahl der dargestellten Stationen und weist mit `filtered view active` auf eine gefilterte Ansicht hin.
 
 ![Stationskarte mit ausgewählter Station und eingeblendeter Streckenanalyse](station_map_path_analysis.png)
 
-Ein einzelner Stationsmarker kann direkt angeklickt werden. KST4Contest übernimmt die Station daraufhin als aktuelle Auswahl, scrollt die Benutzerliste zum passenden Chatmember und aktualisiert den **Further Info**-Bereich.
+### Station auswählen
 
-Marker, die bei der aktuellen Zoomstufe zu dicht beieinanderliegen, werden als Cluster mit einer Stationsanzahl angezeigt. Ein Klick auf einen Cluster vergrößert den betreffenden Kartenausschnitt. Erst ein anschließend sichtbarer einzelner Marker wählt eine konkrete Station aus.
+Ein einzelner Stationsmarker kann direkt angeklickt werden. KST4Contest:
 
-Für die ausgewählte Station erscheinen rechts unter **Selected station**:
+1. übernimmt den konkreten Chatmember als aktuelle Auswahl,
+2. scrollt die Benutzerliste zum entsprechenden Eintrag,
+3. aktualisiert den **Further Info**-Bereich und
+4. bereitet das vollständige sichtbare Rufzeichen als `/cq`-Empfänger vor.
 
-- Rufzeichen,
+Marker, die bei der aktuellen Zoomstufe zu dicht beieinanderliegen, werden als Cluster mit einer Stationsanzahl dargestellt. Ein Klick auf einen Cluster vergrößert den betreffenden Kartenausschnitt. Erst ein anschließend sichtbarer einzelner Marker wählt eine konkrete Station aus.
+
+Die Kopfzeile ergänzt bei ausgewählter Station:
+
+- vollständiges Rufzeichen,
 - Locator,
 - QRB und QTF,
 - erkannte aktive Bänder,
-- gegebenenfalls `B+` für eine offene Bandmöglichkeit und
+- eine gegebenenfalls vorhandene `B+`-Bandmöglichkeit und
 - die zuletzt bekannten QRGs.
 
-**Trigger cluster spot** sendet für die ausgewählte Station einen einzelnen Spot an die mit dem integrierten DX-Cluster-Server verbundenen Logprogramme. Die Schaltfläche setzt deshalb einen aktivierten Cluster-Server und mindestens einen verbundenen Client voraus.
+Lange Inhalte werden in der Kopfzeile gekürzt. Der vollständige Text steht im Tooltip.
 
-Unterhalb der Karte befindet sich das Höhenprofil. Rechts werden die dazugehörigen Detailwerte angezeigt, unter anderem:
+### Auswahl mit Reset view löschen
+
+**Reset view** löscht die Stationsauswahl, ohne die Kartenposition oder den Zoomlevel zu verändern.
+
+Dabei werden:
+
+- die ausgewählte Station zurückgesetzt,
+- die Auswahl in der Benutzerliste aufgehoben,
+- die Verbindungslinie zur Gegenstation entfernt,
+- eine noch laufende Auswertung der vorherigen Station verworfen und
+- der rechte Analysebereich entfernt.
+
+Die Karte selbst bleibt im zuvor gewählten Ausschnitt. Die Funktion ist deshalb kein geografischer Reset auf den eigenen Standort.
+
+![Stationskarte nach Reset view ohne ausgewählte Station](station_map_reset.png)
+
+Wird anschließend wieder ein einzelner Marker gewählt, erscheinen Stationsauswahl und Analysebereich erneut.
+
+### DX-Cluster-Spot auslösen
+
+**Trigger cluster spot** erscheint nur bei ausgewählter Station. Die Schaltfläche sendet einen einzelnen Spot an die mit dem integrierten DX-Cluster-Server verbundenen Logprogramme.
+
+Vorausgesetzt werden:
+
+- ein aktivierter lokaler DX-Cluster-Server,
+- mindestens ein verbundener Cluster-Client und
+- eine für die ausgewählte Station verwendbare QRG.
+
+Der Spot wird nicht an einen öffentlichen Internet-Cluster gesendet.
+
+### Streckenanalyse
+
+Unterhalb der Karte befindet sich das Höhenprofil. Der rechte Analysebereich zeigt unter anderem:
 
 - verwendete Datenquelle und Anzahl der Höhenpunkte,
 - Analysefrequenz,
@@ -212,18 +374,28 @@ Unterhalb der Karte befindet sich das Höhenprofil. Rechts werden die dazugehör
 - Fresnel-Freiheit,
 - erkannte Hindernisse,
 - Link-Budget,
-- geschätzter Empfangspegel und
+- geschätzten Empfangspegel und
 - eine zusammenfassende Pfadbewertung.
 
-Mit **Hide path analysis** werden das Profil unterhalb der Karte und die ausführlichen Analysewerte rechts gemeinsam ausgeblendet. Der Kartenbereich erhält dadurch mehr Platz.
+Die Auswertung verwendet dasselbe zentral hergeleitete Band wie die Reachability-Funktionen. Ein im **Reachability**-Dropdown ausdrücklich gewähltes Band wird berücksichtigt.
+
+Die Werte bleiben technische Abschätzungen. Gebäude, Bewuchs, lokale Abschattungen, aktuelle Ausbreitungsbedingungen und nicht bekannte Stationsparameter können das reale Ergebnis deutlich verändern.
+
+### Streckenanalyse ausblenden
+
+Mit **Hide path analysis** werden Höhenprofil und rechter Analysebereich gemeinsam ausgeblendet. Der Kartenbereich erhält dadurch mehr Platz.
 
 ![Stationskarte mit ausgeblendeter Pfadanalyse](station_map_compact.png)
 
-Der Hinweis **Path analysis is hidden** bleibt zusammen mit **Show path analysis** sichtbar. Die Funktion kann daher ohne Umweg wieder eingeschaltet werden. Der Zustand wird gespeichert.
+Der Hinweis **Path analysis is hidden** und die Schaltfläche **Show path analysis** bleiben sichtbar. Die Funktion kann daher ohne Umweg wieder eingeschaltet werden.
 
-Der Divider zwischen Karte und Detailbereich lässt sich horizontal verschieben. Bei schmalem Detailbereich werden längere Angaben umgebrochen; falls die Höhe nicht ausreicht, erscheint dort eine vertikale Scrollleiste.
+Ist beim Wiedereinblenden keine Station ausgewählt, erscheint kein leerer rechter Bereich. Er wird erst wieder aufgebaut, nachdem eine konkrete Station gewählt wurde.
 
-Ausführliche Herleitung und Grenzen: [Stationskarte und Streckenanalyse](de-Funktionen#stationskarte-und-streckenanalyse-ab-v141)
+Die Auswahl wird gespeichert und beim nächsten Programmstart wiederhergestellt.
+
+Der Divider zwischen Karte und Detailbereich lässt sich horizontal verschieben. Bei einem schmalen Detailbereich werden längere Angaben umgebrochen; reicht die verfügbare Höhe nicht aus, erscheint eine vertikale Scrollleiste.
+
+Ausführliche Herleitung und Grenzen: [Stationskarte und Streckenanalyse](de-Funktionen#stationskarte-und-streckenanalyse-ab-v141).
 
 ---
 
@@ -270,12 +442,29 @@ Herleitung und Grenzen: [Globale Nachrichtenansichten](de-Funktionen#globale-nac
 
 ## Menü
 
+### File
+
+- **Connect to …** startet die Verbindung mit den bereits übernommenen Einstellungen.
+- **Disconnect** beendet die aktuelle ON4KST-Verbindung, ohne KST4Contest zu schließen.
+- **Exit + disconnect** beendet die Verbindung und anschließend das Programm.
+
+Die Connect- und Disconnect-Einträge werden entsprechend dem aktuellen Verbindungszustand aktiviert oder deaktiviert.
+
+### Options
+
+- **Set QRG as name in Chat (main category)** sendet `/SETNAME` mit der aktuellen `MYQRG` an die primäre Chat-Kategorie.
+- **Show me as away in chat** sendet `/AWAY`.
+- **Show me as active in chat** sendet `/BACK`.
+- **Show options** blendet das Einstellungsfenster ein beziehungsweise aus.
+
+Die serverbezogenen Funktionen sind nur bei vollständig aufgebauter ON4KST-Verbindung verfügbar.
+
 ### Windows
 
-- **Hide cluster / stranger QSOs** beziehungsweise **Show cluster / stranger QSOs**: Blendet das zusätzliche Cluster- und QSO-Monitorfenster aus oder wieder ein.
-- **hide options** beziehungsweise **show options**: Blendet das Einstellungsfenster aus oder wieder ein.
-- **Use dark mode design**: Aktiviert das dunkle Farbschema.
-- **Use default mode design**: Aktiviert das normale helle Farbschema.
+- **Hide cluster / stranger QSOs** beziehungsweise **Show cluster / stranger QSOs** blendet das zusätzliche Cluster- und QSO-Monitorfenster aus oder wieder ein.
+- **hide options** beziehungsweise **show options** blendet das Einstellungsfenster aus oder wieder ein.
+- **Use dark mode design** aktiviert das dunkle Farbschema.
+- **Use default mode design** aktiviert das normale helle Farbschema.
 - **Show / hide station map** öffnet beziehungsweise schließt das separate Fenster mit Stationskarte und Streckenanalyse.
 
 ---

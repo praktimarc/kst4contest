@@ -52,7 +52,10 @@ pse call me at MYQRGSHORT
 
 Shortcuts are useful for short expressions which are required frequently and are not necessarily addressed to a particular station.
 
-`MYQRG` and `SECONDQRG` are also recognised as frequency buttons and insert the corresponding current QRG.
+The exact entries `MYQRG` and `SECONDQRG` are recognised as frequency buttons and insert the corresponding current QRG.
+
+The shortcut `/SETNAME MYQRG` is highlighted as well. It resolves the current primary QRG and prepares the complete server command in the send field. The command is not transmitted automatically and remains available for review.
+
 
 ## Text snippets
 

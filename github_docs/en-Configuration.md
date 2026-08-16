@@ -485,6 +485,9 @@ pse call me at 144.388
 
 The exact entries `MYQRG` and `SECONDQRG` are additionally highlighted as QRG buttons. They insert the current frequency of the primary or secondary chat category respectively.
 
+The shortcut `/SETNAME MYQRG` is highlighted as well. When it is pressed, KST4Contest resolves `MYQRG` and inserts the complete server command into the send field. The command is not transmitted automatically and can still be checked before it is sent with `Enter` or **TX**.
+
+
 The order of the table determines the order of the buttons in the main window. Manage the entries as follows:
 
 1. **Add shortcut** creates a new entry at the beginning of the list and immediately opens it for editing.

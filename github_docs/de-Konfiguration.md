@@ -495,7 +495,10 @@ kann dadurch beispielsweise folgenden Text einfügen:
 pse call me at 144.388
 ```
 
-Die Einträge `MYQRG` und `SECONDQRG` werden zusätzlich als QRG-Schaltflächen hervorgehoben. Sie fügen die aktuelle QRG der ersten beziehungsweise zweiten Chat-Kategorie ein.
+Die exakten Einträge `MYQRG` und `SECONDQRG` werden zusätzlich als QRG-Schaltflächen hervorgehoben. Sie fügen die aktuelle QRG der ersten beziehungsweise zweiten Chat-Kategorie ein.
+
+Auch der Shortcut `/SETNAME MYQRG` wird hervorgehoben. Beim Anklicken löst KST4Contest `MYQRG` auf und übernimmt den vollständigen Serverbefehl in das Sendfeld. Der Befehl wird nicht automatisch versendet und kann vor dem Senden mit `Enter` oder **TX** noch geprüft werden.
+
 
 Die Reihenfolge der Tabelle entspricht der Reihenfolge der Schaltflächen im Hauptfenster. Die Einträge werden folgendermaßen verwaltet:
 

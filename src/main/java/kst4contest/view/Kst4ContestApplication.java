@@ -8426,12 +8426,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			Predicate<ChatMember> inactivePredicate = new Predicate<ChatMember>() {
 				@Override
 				public boolean test(ChatMember chatMember) {
+					long inactiveMinutes =
+							Utils4KST.time_getSecondsBetweenEpochAndNow(
+									chatMember.getActivityTimeLastInEpoch() + ""
+							) / 60L;
 
-
-					if ((Utils4KST.time_getSecondsBetweenEpochAndNow(chatMember.getActivityTimeLastInEpoch()+"") /60%60) > 20) {
-						return false;
-					}
-					else return true;
+					return inactiveMinutes <= 20L;
 				}
 			};
 			btnTglInactive.setOnAction(new EventHandler<ActionEvent>() {
@@ -11714,12 +11714,16 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				//here is where all settings has to be written to the preferences instance
 
 
-				System.out.println("[Info] Main.java: connect clicked, using "
-						+ chatcontroller.getChatPreferences().getStn_loginCallSign() + " / "
-						+ chatcontroller.getChatPreferences().getStn_loginPassword() + " / "
-						+ chatcontroller.getChatPreferences().getStn_loginNameMainCat() + " / "
-						+ chatcontroller.getChatPreferences().getStn_loginLocatorMainCat() + " at category "
-						+ choiceBxChatChategory.getSelectionModel().getSelectedItem());
+				LOGGER.log(
+						Level.INFO,
+						"Settings window: ON4KST connection requested for {0} in {1}; "
+								+ "second chat enabled: {2}",
+						new Object[] {
+								chatcontroller.getChatPreferences().getStn_loginCallSign(),
+								choiceBxChatChategory.getSelectionModel().getSelectedItem(),
+								chatcontroller.getChatPreferences().isLoginToSecondChatEnabled()
+						}
+				);
 
 				try {
 

@@ -279,6 +279,15 @@ public final class StationMapView {
         updateStatusLabel();
         updateDetailPanel(selectedSnapshot);
 
+        /*
+         * The detail pane is useful only while path analysis is enabled and a
+         * concrete station is selected. Reset view therefore removes the pane
+         * instead of leaving an empty analysis area beside the map.
+         */
+        updateDetailPanePresence(
+                profileSection.isVisible() && selectedSnapshot != null
+        );
+
         if (mapReady) {
             renderAll();
         }
@@ -541,7 +550,15 @@ public final class StationMapView {
 
         pathAnalysisSection.setVisible(visible);
         pathAnalysisSection.setManaged(visible);
-        updateDetailPanePresence(visible);
+
+        /*
+         * Showing path analysis must not create an empty detail pane when no
+         * station is selected. The pane is restored automatically with the next
+         * valid station selection.
+         */
+        updateDetailPanePresence(
+                visible && lastSelectedSnapshot != null
+        );
 
         pathAnalysisHiddenHintLabel.setVisible(!visible);
         pathAnalysisHiddenHintLabel.setManaged(!visible);
