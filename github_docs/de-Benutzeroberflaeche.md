@@ -32,7 +32,9 @@ Das Hauptfenster besteht aus mehreren Bereichen:
 
 Die Statusleiste befindet sich am oberen Rand des Hauptfensters neben dem Menü.
 
+<!-- TODO: Screenshot connection_status_indicator.png fehlt im Repository - wieder einkommentieren, sobald die Datei unter github_docs/ liegt.
 ![Statusleiste mit ON4KST-Verbindungsanzeige](connection_status_indicator.png)
+-->
 
 Der dauerhaft sichtbare `LINK`-Indikator zeigt den tatsächlichen Zustand der ON4KST-Verbindung:
 
@@ -347,7 +349,9 @@ Dabei werden:
 
 Die Karte selbst bleibt im zuvor gewählten Ausschnitt. Die Funktion ist deshalb kein geografischer Reset auf den eigenen Standort.
 
+<!-- TODO: Screenshot station_map_reset.png fehlt im Repository - wieder einkommentieren, sobald die Datei unter github_docs/ liegt.
 ![Stationskarte nach Reset view ohne ausgewählte Station](station_map_reset.png)
+-->
 
 Wird anschließend wieder ein einzelner Marker gewählt, erscheinen Stationsauswahl und Analysebereich erneut.
 
