@@ -123,6 +123,6 @@ Besonderer Dank gilt:
 - Konrad Neitzel (DC9DJ) für Unterstützung bei der Projektstruktur,
 - Andreas (DO5ALF), Webmaster von funkerportal.de,
 - Franz van Velzen (PE0WGA) für Tests sowie
-- DN9APW (Philipp Wagner), der seit Mai 2025 an der Entwicklung und den CI/CD-Pipelines mitarbeitet.
+- DN9APW (Philipp Wagner), der seit Mai 2026 an der Entwicklung und den CI/CD-Pipelines mitarbeitet.
 
 Ebenso wichtig sind die Fehlermeldungen, Tests und konkreten Betriebserfahrungen aller weiteren Nutzer. Eine genaue Beschreibung eines reproduzierbaren Problems hilft dem Projekt meistens mehr als ein allgemeines „läuft gut“ – auch wenn Letzteres natürlich angenehmer zu lesen ist.
