@@ -126,7 +126,7 @@ jobs:
           jpackage \
             --type app-image \
             --name KST4Contest \
-            --icon src/main/resources/icons/kst4contest.png \
+            --icon packaging/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -213,7 +213,7 @@ jobs:
           jpackage \
             --type deb \
             --name KST4Contest \
-            --icon src/main/resources/icons/kst4contest.png \
+            --icon packaging/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -274,7 +274,7 @@ jobs:
           jpackage \
             --type rpm \
             --name KST4Contest \
-            --icon src/main/resources/icons/kst4contest.png \
+            --icon packaging/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -337,7 +337,7 @@ jobs:
           jpackage \
             --type app-image \
             --name KST4Contest \
-            --icon src/main/resources/icons/kst4contest.png \
+            --icon packaging/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \
@@ -457,7 +457,7 @@ jobs:
           jpackage \
             --type app-image \
             --name KST4Contest \
-            --icon src/main/resources/icons/kst4contest.png \
+            --icon packaging/icons/kst4contest.png \
             --input target/dist-libs \
             --main-jar app.jar \
             --main-class kst4contest.view.Kst4ContestApplication \

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180"><rect x="0" y="0" width="180" height="180" rx="40" fill="#5fd63a"></rect><g transform="translate(40,40) scale(1)">
+  <path d="M20 34 h60 a12 12 0 0 1 12 12 v20 a12 12 0 0 1 -12 12 h-30 l-16 12 v-12 h-14 a12 12 0 0 1 -12 -12 v-20 a12 12 0 0 1 12 -12 z" fill="#0a110a"></path>
+  <text x="50" y="65" text-anchor="middle" font-family="&#39;Space Grotesk&#39;,&#39;Helvetica Neue&#39;,Arial,sans-serif" font-weight="700" font-size="24" letter-spacing="0.5" fill="#5fd63a">KST</text>
+  <line x1="50" y1="34" x2="50" y2="17" stroke="#0a110a" stroke-width="6" stroke-linecap="round"></line>
+  <circle cx="50" cy="13" r="4.5" fill="#0a110a"></circle>
+  <path d="M58 6 a9 9 0 0 1 0 14" fill="none" stroke="#0a110a" stroke-width="4" stroke-linecap="round"></path>
+  <path d="M64 1 a15 15 0 0 1 0 24" fill="none" stroke="#0a110a" stroke-width="4" stroke-linecap="round"></path>
+  <path d="M42 6 a9 9 0 0 0 0 14" fill="none" stroke="#0a110a" stroke-width="4" stroke-linecap="round"></path>
+  <path d="M36 1 a15 15 0 0 0 0 24" fill="none" stroke="#0a110a" stroke-width="4" stroke-linecap="round"></path></g></svg>

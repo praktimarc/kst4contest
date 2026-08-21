@@ -94,6 +94,10 @@ jobs:
           sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packaging/aur/kst4contest/PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('${SHA_SRC}')/" packaging/aur/kst4contest/PKGBUILD
 
+          # A new pkgver supersedes any rebuild-only pkgrel bumps made in between.
+          sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/kst4contest-bin/PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/kst4contest/PKGBUILD
+
           # kst4contest-git: Basis aus pom.xml, Suffix aus git
           BASE_VER=$(grep -m1 '<version>' pom.xml \
             | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | sed 's/[-.]nightly//')
