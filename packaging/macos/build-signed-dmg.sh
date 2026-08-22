@@ -142,9 +142,12 @@ done > "$MACHO_LIST"
 COUNT="$(wc -l < "$MACHO_LIST" | tr -d ' ')"
 echo "    $COUNT Mach-O files to sign"
 
-# codesign contacts Apple's timestamp server on every call, so run a handful in
-# parallel or this takes far longer than it needs to.
-xargs -P 8 -I {} codesign --force --timestamp --options runtime \
+# Serially, deliberately. Running codesign concurrently over several files of
+# the same bundle fails intermittently -- a CI run died with "replacing existing
+# signature" immediately followed by "No such file or directory" for that same
+# path, while the identical script passed locally. Each call contacts Apple's
+# timestamp server, so this costs about a minute for a runtime this size.
+xargs -I {} codesign --force --timestamp --options runtime \
     --sign "$FULL_IDENTITY" {} < "$MACHO_LIST"
 rm -f "$MACHO_LIST"
 

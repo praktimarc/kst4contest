@@ -609,6 +609,7 @@ jobs:
     name: Build macOS DMG (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, macos-15-intel]
 
