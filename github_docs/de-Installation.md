@@ -267,7 +267,19 @@ Für Apple-Silicon-Macs wird das Paket mit `arm64` benötigt. Für Intel-Macs is
 3. Ziehe `KST4Contest.app` in den Ordner **Programme**.
 4. Starte KST4Contest aus dem Programme-Ordner oder über das Launchpad.
 
-Die Anwendung ist derzeit nicht von Apple notarisiert. macOS kann den ersten Start deshalb blockieren.
+Ab Version 1.42 sind die macOS-Pakete mit einer Apple Developer ID signiert und von Apple notarisiert. Der erste Start funktioniert damit per Doppelklick, ohne Umweg über das Kontextmenü und ohne Sicherheitsabfrage. Das Notarisierungsticket liegt in der DMG-Datei selbst, sodass die Prüfung auch ohne Internetverbindung gelingt.
+
+Wer nachsehen möchte, ob ein heruntergeladenes Paket wirklich signiert ist, kann das im Terminal prüfen:
+
+```bash
+spctl --assess --type open --context context:primary-signature -v KST4Contest-v<Version>-macos-arm64.dmg
+```
+
+Erwartet wird `accepted` zusammen mit `source=Notarized Developer ID`.
+
+### Versionen bis einschließlich 1.41.1
+
+Ältere Pakete sind nicht notarisiert. macOS blockiert den ersten Start deshalb.
 
 Falls die Anwendung aus dem offiziellen GitHub Release stammt:
 
@@ -408,7 +420,9 @@ Starte die Datei anschließend aus einem Terminal. Fehlermeldungen sind dort mei
 
 ### macOS blockiert die Anwendung
 
-Verwende die unter [Installation unter macOS](#installation-unter-macos) beschriebene Funktion **Öffnen** im Kontextmenü. Prüfe vorher, ob die DMG-Datei aus dem offiziellen GitHub Release stammt.
+Ab Version 1.42 sollte das nicht mehr vorkommen, da die Pakete signiert und notarisiert sind. Tritt die Blockade trotzdem auf, ist die DMG-Datei meist unvollständig heruntergeladen oder nachträglich verändert worden. Lade sie in dem Fall erneut aus dem offiziellen GitHub Release.
+
+Bei älteren Versionen ist die Blockade zu erwarten. Verwende dort die unter [Installation unter macOS](#installation-unter-macos) beschriebene Funktion **Öffnen** im Kontextmenü.
 
 ### Das Problem bleibt bestehen
 

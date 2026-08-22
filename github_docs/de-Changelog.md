@@ -123,6 +123,10 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - Nightly-Pakete werden automatisiert aus dem aktuellen `main`-Branch gebaut. Stable- und Beta-Releases verwenden reproduzierbare Paketnamen für die unterstützten Plattformen.
 
+- **Signierte und notarisierte macOS-Pakete:** Die DMG-Dateien für Apple Silicon und Intel sind mit einer Apple Developer ID signiert und von Apple notarisiert; das Notarisierungsticket ist in der DMG hinterlegt. Der erste Start funktioniert damit per Doppelklick, ohne den bisherigen Umweg über **Öffnen** im Kontextmenü, und die Prüfung gelingt auch ohne Internetverbindung. Betroffen sind Nightly-, Beta- und Stable-Pakete gleichermaßen. Die Windows-Pakete sind weiterhin nicht signiert.
+
+- **Korrekte Bundle-Kennung und Version unter macOS:** Die Anwendung meldet sich jetzt als `de.x08.KST4Contest` statt als `kst4contest.view` und trägt die tatsächliche Versionsnummer im Bundle. Bisher wies jedes Release im Finder unter **Informationen** die Version `1.0` aus. Bestehende Einstellungen sind davon nicht betroffen, da KST4Contest seine Daten in `~/.praktiKST/` ablegt und nicht an der Bundle-Kennung festmacht.
+
 ### Bekannte Grenzen
 
 - Die aktive Geländedatenquelle verwendet Open-Meteo mit Copernicus-GLO-90-Daten und höchstens 100 Höhenpunkten pro Strecke.

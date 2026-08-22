@@ -67,14 +67,14 @@ const ARTIFACT_INFO = {
         os: "macOS Apple Silicon",
         format: "DMG arm64",
         icon: "🍎",
-        note: "Best-effort build for Apple Silicon Macs. Not notarized by Apple.",
+        note: "Best-effort build for Apple Silicon Macs. Signed and notarized by Apple.",
         order: 7
     },
     "macos-dmg-macos-15-intel": {
         os: "macOS Intel",
         format: "DMG x86_64",
         icon: "🍎",
-        note: "Best-effort build for Intel Macs. Not notarized by Apple.",
+        note: "Best-effort build for Intel Macs. Signed and notarized by Apple.",
         order: 8
     }
 };

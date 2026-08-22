@@ -121,6 +121,10 @@ v1.42 brings several previously separate calculations together. Band information
 
 - Nightly packages are built automatically from the current `main` branch. Stable and Beta releases use predictable asset names for the supported platforms.
 
+- **Signed and notarized macOS packages:** The DMG files for Apple Silicon and Intel are signed with an Apple Developer ID and notarized by Apple, with the notarization ticket stapled into the DMG. The first launch now works by double-clicking, without the previous detour through **Open** in the context menu, and the check also succeeds without an internet connection. This applies to Nightly, Beta and Stable packages alike. The Windows packages remain unsigned.
+
+- **Correct bundle identifier and version on macOS:** The application now identifies itself as `de.x08.KST4Contest` rather than `kst4contest.view`, and carries its actual version number in the bundle. Previously every release reported version `1.0` in Finder's **Get Info** panel. Existing settings are unaffected, because KST4Contest stores its data in `~/.praktiKST/` rather than keying it to the bundle identifier.
+
 ### Known limitations
 
 - The active terrain provider uses Open-Meteo with Copernicus GLO-90 data and no more than 100 elevation samples per path.

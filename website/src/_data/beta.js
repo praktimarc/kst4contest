@@ -129,14 +129,14 @@ module.exports = async function () {
             os: "macOS Apple Silicon",
             format: "DMG arm64",
             icon: "🍎",
-            note: "Best-effort build for Apple Silicon Macs. Not currently notarized by Apple.",
+            note: "Best-effort build for Apple Silicon Macs. Signed and notarized by Apple from version 1.42 onwards.",
             url: assetUrl("KST4Contest-{tag}-macos-arm64.dmg")
         },
         {
             os: "macOS Intel",
             format: "DMG x86_64",
             icon: "🍎",
-            note: "Best-effort build for Intel Macs. Not currently notarized by Apple.",
+            note: "Best-effort build for Intel Macs. Signed and notarized by Apple from version 1.42 onwards.",
             url: assetUrl("KST4Contest-{tag}-macos-x86_64.dmg")
         }
     ];

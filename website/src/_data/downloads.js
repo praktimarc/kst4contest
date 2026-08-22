@@ -121,7 +121,7 @@ module.exports = async function () {
             format: "DMG arm64",
             icon: "🍎",
             recommended: false,
-            note: "Best-effort build for Apple Silicon Macs. The application is not currently notarized by Apple.",
+            note: "Best-effort build for Apple Silicon Macs. Signed and notarized by Apple from version 1.42 onwards.",
             url: assetUrl("KST4Contest-{tag}-macos-arm64.dmg")
         },
         {
@@ -129,7 +129,7 @@ module.exports = async function () {
             format: "DMG x86_64",
             icon: "🍎",
             recommended: false,
-            note: "Best-effort build for Intel Macs. The application is not currently notarized by Apple.",
+            note: "Best-effort build for Intel Macs. Signed and notarized by Apple from version 1.42 onwards.",
             url: assetUrl("KST4Contest-{tag}-macos-x86_64.dmg")
         },
         {
