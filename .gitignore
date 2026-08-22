@@ -44,3 +44,6 @@ website/_site/
 
 # Local secrets for act testing
 .secrets
+
+# Apple notarization private keys - never commit these
+*.p8

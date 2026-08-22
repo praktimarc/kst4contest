@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- The JVM compiles bytecode to machine code at runtime and executes it
+         from memory it allocated itself. Under the hardened runtime all three
+         of these are required or the app is killed on launch. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <!-- jpackage bundles JavaFX native libraries that are signed with our own
+         identity rather than Apple's, and the JVM dlopen()s them at runtime. -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+
+    <!-- KST4Contest talks to the ON4KST chat servers. -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>
