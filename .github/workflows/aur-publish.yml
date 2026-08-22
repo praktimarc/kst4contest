@@ -17,10 +17,11 @@ on:
         default: "false"
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  AUR_SSH_DIR: /tmp/aur-ssh
 
 jobs:
   publish-aur:
@@ -41,6 +42,7 @@ jobs:
         uses: actions/checkout@v4.1.7
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.WEBSITE_DEPLOY_KEY }}
 
       - name: Mark workspace as safe Git directory
         run: |
@@ -125,52 +127,74 @@ jobs:
             cat "packaging/aur/${pkg}/.SRCINFO"
           done
 
-      - name: Commit updated PKGBUILDs to repo
-        if: inputs.dry_run != 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config user.name "github-actions[bot]"
-          git remote set-url origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git"
-          git add packaging/aur/
-          git diff --cached --quiet && echo "No PKGBUILD changes to commit." && exit 0
-          git commit -m "chore: update AUR packages to ${{ steps.ver.outputs.tag }} [skip ci]"
-          git push
-
       - name: Set up AUR SSH
         if: inputs.dry_run != 'true'
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" > ~/.ssh/aur_ed25519
-          chmod 600 ~/.ssh/aur_ed25519
-          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
-          cat >> ~/.ssh/config << 'EOF'
-          Host aur.archlinux.org
-            IdentityFile ~/.ssh/aur_ed25519
-            User aur
-          EOF
+          mkdir -p "${AUR_SSH_DIR}"
+
+          printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" \
+            > "${AUR_SSH_DIR}/aur_ed25519"
+
+          sed -i 's/\r$//' "${AUR_SSH_DIR}/aur_ed25519"
+          chmod 600 "${AUR_SSH_DIR}/aur_ed25519"
+
+          ssh-keygen -y \
+            -f "${AUR_SSH_DIR}/aur_ed25519" \
+            > /dev/null
+
+          ssh-keyscan \
+            -T 10 \
+            -t ed25519 \
+            aur.archlinux.org \
+            > "${AUR_SSH_DIR}/known_hosts"
+
+          if [ ! -s "${AUR_SSH_DIR}/known_hosts" ]; then
+            echo "::error::No SSH host key was received from aur.archlinux.org."
+            exit 1
+          fi
+
+          echo "Received AUR host-key fingerprint:"
+          ssh-keygen -lf "${AUR_SSH_DIR}/known_hosts"
+
+          if ! ssh-keygen -lf "${AUR_SSH_DIR}/known_hosts" \
+            | grep -Fq "SHA256:RFzBCUItH9LZS0cKB5UE6ceAYhBD5C8GeOBip8Z11+4"; then
+            echo "::error::The AUR SSH host-key fingerprint does not match the official fingerprint."
+            exit 1
+          fi
+
+          printf '%s\n' \
+            "Host aur.archlinux.org" \
+            "  HostName aur.archlinux.org" \
+            "  User aur" \
+            "  IdentityFile ${AUR_SSH_DIR}/aur_ed25519" \
+            "  IdentitiesOnly yes" \
+            "  StrictHostKeyChecking yes" \
+            "  UserKnownHostsFile ${AUR_SSH_DIR}/known_hosts" \
+            > "${AUR_SSH_DIR}/config"
+
+          chmod 600 "${AUR_SSH_DIR}/config"
+          chmod 600 "${AUR_SSH_DIR}/known_hosts"
 
       - name: Push to AUR
         if: inputs.dry_run != 'true'
         env:
           TAG: ${{ steps.ver.outputs.tag }}
+          GIT_SSH_COMMAND: ssh -F /tmp/aur-ssh/config
         run: |
           git config --global user.email "philipp@wagnersnetz.de"
           git config --global user.name "Philipp Wagner"
+
+          mkdir -p /tmp/aur
 
           push_to_aur() {
             local pkg="$1"
             local msg="$2"
             local aur_dir="/tmp/aur/${pkg}"
 
-            git clone "ssh://aur@aur.archlinux.org/${pkg}.git" "${aur_dir}" 2>/dev/null || {
-              mkdir -p "${aur_dir}"
-              git -C "${aur_dir}" init
-              git -C "${aur_dir}" remote add origin "ssh://aur@aur.archlinux.org/${pkg}.git"
-            }
+            git -c init.defaultBranch=master clone \
+              "ssh://aur@aur.archlinux.org/${pkg}.git" "${aur_dir}"
 
             cp "packaging/aur/${pkg}/PKGBUILD" "${aur_dir}/"
             cp "packaging/aur/${pkg}/.SRCINFO" "${aur_dir}/"
@@ -186,3 +210,19 @@ jobs:
           push_to_aur kst4contest     "Update to ${TAG}"
           push_to_aur kst4contest-git \
             "Update pkgver to $(grep '^pkgver=' packaging/aur/kst4contest-git/PKGBUILD | cut -d= -f2)"
+
+      - name: Commit updated PKGBUILDs to repo
+        if: inputs.dry_run != 'true'
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add packaging/aur/
+          git diff --cached --quiet && echo "No PKGBUILD changes to commit." && exit 0
+          git commit -m "chore: update AUR packages to ${{ steps.ver.outputs.tag }} [skip ci]"
+
+          if ! git push; then
+            echo "::warning::PKGBUILD bookkeeping commit could not be pushed to main."
+            echo "The AUR packages were published; only the in-repo copy stays behind."
+            echo "Check that WEBSITE_DEPLOY_KEY still has write access and may bypass"
+            echo "the branch ruleset, or commit packaging/aur/ by hand."
+          fi
