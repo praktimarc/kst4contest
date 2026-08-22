@@ -267,7 +267,19 @@ Apple Silicon Macs require the package marked `arm64`. Intel Macs require the pa
 3. Drag `KST4Contest.app` into the **Applications** folder.
 4. Start KST4Contest from the Applications folder or Launchpad.
 
-The application is not currently notarized by Apple. macOS may therefore block the first launch.
+From version 1.42 onwards the macOS packages are signed with an Apple Developer ID and notarized by Apple. The first launch therefore works by double-clicking, without going through the context menu and without a security prompt. The notarization ticket is stapled into the DMG file itself, so the check also succeeds without an internet connection.
+
+To confirm that a downloaded package really is signed, check it in a terminal:
+
+```bash
+spctl --assess --type open --context context:primary-signature -v KST4Contest-v<version>-macos-arm64.dmg
+```
+
+The expected result is `accepted` together with `source=Notarized Developer ID`.
+
+### Versions up to and including 1.41.1
+
+Older packages are not notarized, so macOS blocks the first launch.
 
 If the application came from the official GitHub Release:
 
@@ -408,7 +420,9 @@ Then start the file from a terminal. Error messages shown there are usually more
 
 ### macOS blocks the application
 
-Use the **Open** function described under [Installing on macOS](#installing-on-macos). Before doing so, verify that the DMG file came from the official GitHub Release.
+From version 1.42 onwards this should no longer happen, because the packages are signed and notarized. If it does occur, the DMG file was most likely downloaded incompletely or modified afterwards; download it again from the official GitHub Release.
+
+On older versions the block is expected. Use the **Open** function described under [Installing on macOS](#installing-on-macos).
 
 ### The problem remains
 
