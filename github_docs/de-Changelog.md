@@ -8,10 +8,9 @@ Die veröffentlichten Stable-Versionen und ihre Programmpakete stehen unter [Git
 
 ---
 
-## v1.42 – Nightly / in Entwicklung
+## v1.42.0 (2026-08-22)
 
-> Stand dieses Abschnitts: 14. August 2026.  
-> v1.42 ist noch kein veröffentlichtes Stable-Release. Bis zur Freigabe können weitere Änderungen hinzukommen.
+**Gemeinsamer Bandkontext, sitzungsbasierte ON4KST-Verbindung und signierte macOS-Pakete**
 
 v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, Worked-Status, NOT-QRV-Markierungen, Rufzeichensuffixe und Frequenzen werden dadurch konsistenter in der Benutzerliste, der Stationskarte, der Prioritätsberechnung und den externen Schnittstellen verwendet.
 
@@ -138,6 +137,8 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 - Aircraft-Scatter-Daten aus AirScout und die Geländeanalyse der Stationskarte sind weiterhin getrennte Bewertungen.
 
 - Eine genauere Konfiguration von Stationshöhe, Frequenz und K-Faktor wird in [Issue #74](https://github.com/praktimarc/kst4contest/issues/74) weiterverfolgt.
+
+Die veröffentlichte Version ist als [Release v1.42.0](https://github.com/praktimarc/kst4contest/releases/tag/v1.42.0) verfügbar.
 
 ---
 

@@ -50,7 +50,7 @@ KST4Contest also updates the AirScout watchlist. Stations which are no longer ac
 
 ## How is the AirScout band selected?
 
-> Automatic station-specific band selection is included in Nightly / v1.42. A fixed configured AirScout band remains available as a manual fallback.
+> Automatic station-specific band selection is included from v1.42 onwards. A fixed configured AirScout band remains available as a manual fallback.
 
 In **Auto per station** mode, KST4Contest uses the same propagation-frequency resolver as the internal path analysis. The sources are evaluated in the following order:
 
@@ -138,7 +138,7 @@ Each KST4Contest instance should use a distinct client identifier. Incoming AirS
 
 This keeps a reply for one operating position from being assigned to another client merely because both listen on the same UDP network.
 
-> Strict reply filtering by the configured client/server pair is included in Nightly / v1.42.
+> Strict reply filtering by the configured client/server pair is included from v1.42 onwards.
 
 ## AP variables in messages
 

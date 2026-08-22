@@ -8,10 +8,9 @@ Published Stable versions and their application packages are available under [Gi
 
 ---
 
-## v1.42 – Nightly / in development
+## v1.42.0 (2026-08-22)
 
-> Status of this section: 14 August 2026.  
-> v1.42 is not a published Stable release yet. Further changes may be added before release.
+**Shared band context, session-based ON4KST connection and signed macOS packages**
 
 v1.42 brings several previously separate calculations together. Band information, Worked status, NOT-QRV marks, callsign suffixes and frequencies are now used more consistently by the user list, station map, priority calculation and external interfaces.
 
@@ -136,6 +135,8 @@ v1.42 brings several previously separate calculations together. Band information
 - Aircraft-scatter information from AirScout and the terrain analysis in the station map remain separate assessments.
 
 - More detailed configuration of station height, frequency and K factor is being tracked in [Issue #74](https://github.com/praktimarc/kst4contest/issues/74).
+
+The published version is available as [Release v1.42.0](https://github.com/praktimarc/kst4contest/releases/tag/v1.42.0).
 
 ---
 

@@ -472,7 +472,7 @@ Die Eingabe darf ein sichtbares KST-Suffix oder portable Bestandteile enthalten.
 
 Die Änderung der Liste wirkt sofort. Zum dauerhaften Speichern anschließend **Save Settings** verwenden. Die Basisrufzeichen werden in der `preferences.xml` gespeichert und beim nächsten Programmstart wiederhergestellt.
 
-> Die Zusammenführung der KST-Suffixe über das Basisrufzeichen ist im Nightly beziehungsweise ab v1.42 enthalten.
+> Die Zusammenführung der KST-Suffixe über das Basisrufzeichen ist ab v1.42 enthalten.
 
 Weitere Hintergründe und die Abgrenzung zum Nachrichtenrouting: [QSO-Monitoring](de-Funktionen#qso-monitoring-ab-v131).
 ---

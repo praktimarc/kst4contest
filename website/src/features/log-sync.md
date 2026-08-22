@@ -48,7 +48,7 @@ STATUS packets can also update the local QRG. In multi-operator networks, a stat
 
 Win-Test can additionally receive skeds created in KST4Contest. The handover only takes place when a QRG matching the selected band can be determined. No fixed fallback frequency is inserted merely to make the packet technically valid.
 
-> The band-aware sked handover and explicit `SSB`/`CW` selection are included in Nightly / v1.42.
+> The band-aware sked handover and explicit `SSB`/`CW` selection are included from v1.42 onwards.
 
 ## Stored state and limitations
 

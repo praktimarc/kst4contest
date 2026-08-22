@@ -320,7 +320,7 @@ Für ausgewählte Stationen in der Benutzerliste gibt es direkte Buttons, um das
 
 ## Skeds und Sked-Erinnerungen
 
-> Verfügbar ab v1.40; Band-, Rufzeichen- und Win-Test-Behandlung erweitert in Nightly / v1.42.
+> Verfügbar ab v1.40; Band-, Rufzeichen- und Win-Test-Behandlung erweitert in v1.42.
 
 Ein Sked ist mehr als eine Erinnerung an eine Uhrzeit. Er muss während des laufenden Contestbetriebs rechtzeitig sichtbar werden, die vereinbarte Station priorisieren und – sofern gewünscht – die Gegenstation noch einmal an den Termin erinnern.
 

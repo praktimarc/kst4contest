@@ -57,7 +57,7 @@ The frequency is not guessed. KST4Contest first looks for a recent QRG of the re
 
 KST-specific suffixes such as `-2`, `-70` or `-144` are removed from the callsign passed to the log. Portable components such as `/P` and `/M` are preserved.
 
-> Band-aware QRG validation, explicit `SSB`/`CW` selection and the corrected handling of KST suffixes are included in Nightly / v1.42.
+> Band-aware QRG validation, explicit `SSB`/`CW` selection and the corrected handling of KST suffixes are included from v1.42 onwards.
 
 ![Sked handed over from KST4Contest to Win-Test](/manual/assets/wintest_sked_handover.png)
 

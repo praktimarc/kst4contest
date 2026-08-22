@@ -141,7 +141,7 @@ JN49GL , AP: 1min, 100%; 4min, 75%
 
 AirScout information is optional. A missing AirScout response does not prevent the spot from being sent.
 
-> AP-independent spot creation, corrected sender-locator handling and band-generic frequency conversion are included in Nightly / v1.42.
+> AP-independent spot creation, corrected sender-locator handling and band-generic frequency conversion are included from v1.42 onwards.
 
 ## Connecting a logger
 

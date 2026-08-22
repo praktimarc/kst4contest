@@ -66,7 +66,7 @@ All four entries belong to the same base callsign, but they are four different c
 
 This is particularly important for `9A0BB-2` and `9A0BB-70`: because both use the same category, the category alone cannot distinguish them.
 
-> Correct separation of several suffix variants within the same category is included in Nightly / v1.42 and fixes [Issue #73](https://github.com/praktimarc/kst4contest/issues/73).
+> Correct separation of several suffix variants within the same category is included from v1.42 onwards and fixes [Issue #73](https://github.com/praktimarc/kst4contest/issues/73).
 
 ## How are messages routed?
 

@@ -299,7 +299,7 @@ The priority list is calculated from the active station model and is independent
 
 Selecting such a candidate still updates Further Info and prepares the directed message. The active filter remains unchanged.
 
-> Correct band eligibility, base-callsign grouping, separate suffix routing, the final Sked-fail override and selection of filtered candidates are included in Nightly / v1.42.
+> Correct band eligibility, base-callsign grouping, separate suffix routing, the final Sked-fail override and selection of filtered candidates are included from v1.42 onwards.
 
 ## When is the score updated?
 

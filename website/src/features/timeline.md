@@ -37,7 +37,7 @@ AP candidates appear in the upper lanes. Up to four selected candidates can be s
 
 Skeds appear as diamonds in the lower lane. Their labels use the complete selected KST callsign so that band-specific or otherwise suffixed logins remain identifiable.
 
-> Complete KST callsigns in sked labels are included in Nightly / v1.42.
+> Complete KST callsigns in sked labels are included from v1.42 onwards.
 
 ## Antenna direction remains visible
 

@@ -234,7 +234,7 @@ For selected stations in the user list, there are direct buttons to open the **Q
 
 ## Skeds and Sked Reminders
 
-> Available from v1.40; band, callsign and Win-Test handling extended in Nightly / v1.42.
+> Available from v1.40; band, callsign and Win-Test handling extended in v1.42.
 
 A sked is more than a reminder tied to a particular time. During a contest, it must become visible early enough, move the agreed station up the priority list and – if required – remind the remote station as well.
 

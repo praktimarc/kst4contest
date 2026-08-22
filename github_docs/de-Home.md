@@ -52,7 +52,7 @@ Download, unterstützte Betriebssysteme und Installationswege sind im Kapitel [I
 
 Dieses Handbuch unterscheidet zwischen der veröffentlichten Stable-Version und dem aktuellen Entwicklungsstand.
 
-Die derzeit veröffentlichte Stable-Version ist **v1.41.1**. Funktionen oder Änderungen, die erst im Entwicklungsstand für v1.42 enthalten sind, werden ausdrücklich als **Nightly / v1.42** gekennzeichnet. Fehlt eine solche Kennzeichnung, bezieht sich die Beschreibung auf die Stable-Version.
+Die derzeit veröffentlichte Stable-Version ist **v1.42.0**. Funktionen oder Änderungen, die erst mit einer bestimmten Version hinzugekommen sind, werden ausdrücklich als **ab v1.42** gekennzeichnet. Funktionen, die es nur im aktuellen Entwicklungsstand gibt, sind als **Nightly** gekennzeichnet. Fehlt eine solche Kennzeichnung, bezieht sich die Beschreibung auf die Stable-Version.
 
 - [Stable, Beta und Nightly herunterladen](https://kst4contest.hamradioonline.de/download/)
 - [Veröffentlichte GitHub Releases](https://github.com/praktimarc/kst4contest/releases)

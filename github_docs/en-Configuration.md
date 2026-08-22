@@ -874,7 +874,7 @@ The entered value may contain a visible KST suffix or portable components. KST4C
 
 Changes to the list take effect immediately. Press **Save Settings** afterwards to retain them. The base callsigns are stored in `preferences.xml` and restored at the next program start.
 
-> Base-callsign monitoring across KST suffixes is included in Nightly / v1.42.
+> Base-callsign monitoring across KST suffixes is included from v1.42 onwards.
 
 Further background and the distinction from message routing: [QSO Sniffer](en-Features#qso-sniffer-from-v131).
 
