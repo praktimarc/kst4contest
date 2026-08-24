@@ -1,0 +1,7 @@
+interface:
+  display_name: "KST4Contest Documentation"
+  short_description: "Keep KST4Contest manuals, website and release text aligned"
+  default_prompt: "Review the implemented KST4Contest behaviour, explain the documentation impact in German, propose a concept, ask questions, and wait for approval before editing."
+
+policy:
+  allow_implicit_invocation: true

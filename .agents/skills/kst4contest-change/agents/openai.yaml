@@ -1,0 +1,7 @@
+interface:
+  display_name: "KST4Contest Change"
+  short_description: "Plan and implement KST4Contest changes safely"
+  default_prompt: "Analyze the requested KST4Contest change, explain your understanding and concept in German, ask implementation questions, and wait for approval before editing."
+
+policy:
+  allow_implicit_invocation: true

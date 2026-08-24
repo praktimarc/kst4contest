@@ -1,0 +1,7 @@
+interface:
+  display_name: "KST4Contest Review"
+  short_description: "Review KST4Contest diffs before commit"
+  default_prompt: "Review the current KST4Contest changes only. Report findings in German and do not edit files."
+
+policy:
+  allow_implicit_invocation: true
