@@ -68,6 +68,7 @@ Für einen Contest ist grundsätzlich die Stable-Version zu empfehlen. Nightly-B
 |---|---|
 | [Installation](de-Installation) | ON4KST-Account, Download, Installation und Updates |
 | [Konfiguration](de-Konfiguration) | Login, Station, Bänder, Benutzeroberfläche und externe Schnittstellen |
+| [Contest-Workflow](de-Contest-Workflow) | Vorstartprüfung, CQ-Betrieb, Kandidatenauswahl, Skeds, Logeintrag und Bandwechsel |
 | [Log-Synchronisation](de-Log-Synchronisation) | Simplelogfile, UCXLog, N1MM+, QARTest, DXLog.net und Win-Test |
 | [AirScout-Integration](de-AirScout-Integration) | Verbindung zu AirScout und Auswertung von Aircraft-Scatter-Zeiten |
 | [DX-Cluster-Server](de-DX-Cluster-Server) | Übergabe erkannter Möglichkeiten an das Logprogramm |

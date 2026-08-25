@@ -68,6 +68,7 @@ The stable release is normally the appropriate choice for contest operation. Bet
 |---|---|
 | [Installation](en-Installation) | ON4KST account, downloads, installation and updates |
 | [Configuration](en-Configuration) | Login, station, bands, user interface and external connections |
+| [Contest Workflow](en-Contest-Workflow) | Pre-start checks, CQ operation, candidate selection, skeds, logging and band changes |
 | [Log Synchronisation](en-Log-Sync) | Simplelogfile, UCXLog, N1MM+, QARTest, DXLog.net and Win-Test |
 | [AirScout Integration](en-AirScout-Integration) | Connecting AirScout and evaluating aircraft scatter timing |
 | [DX Cluster Server](en-DX-Cluster-Server) | Passing detected opportunities to logging software |

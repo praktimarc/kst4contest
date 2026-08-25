@@ -65,6 +65,7 @@ jobs:
             github_docs/en-Home.md \
             github_docs/en-Installation.md \
             github_docs/en-Configuration.md \
+            github_docs/en-Contest-Workflow.md \
             github_docs/en-Features.md \
             github_docs/en-User-Interface.md \
             github_docs/en-Macros-and-Variables.md \
@@ -91,6 +92,7 @@ jobs:
             github_docs/de-Home.md \
             github_docs/de-Installation.md \
             github_docs/de-Konfiguration.md \
+            github_docs/de-Contest-Workflow.md \
             github_docs/de-Funktionen.md \
             github_docs/de-Benutzeroberflaeche.md \
             github_docs/de-Makros-und-Variablen.md \

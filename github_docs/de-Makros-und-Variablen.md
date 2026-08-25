@@ -362,3 +362,9 @@ Dabei ist insbesondere zu beachten:
 - Der eingefügte Text wird nicht automatisch auf seine betriebliche Richtigkeit geprüft.
 
 Das Sendfeld bleibt deshalb nach dem Einfügen eines Shortcuts oder Snippets bearbeitbar. Die Variablen vermeiden wiederholte Eingaben; die abschließende Prüfung bleibt beim Operator.
+
+---
+
+## Verwendung im Contest
+
+Shortcuts, Snippets und Variablen sind einzelne Werkzeuge innerhalb des laufenden Betriebs. Ihr Zusammenspiel mit CQ-Betrieb, Stationsauswahl, Skeds, QRG-Wechseln und Log-Synchronisation ist unter [Contest-Workflow mit KST4Contest](de-Contest-Workflow) beschrieben.

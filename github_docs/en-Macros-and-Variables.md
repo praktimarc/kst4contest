@@ -174,14 +174,6 @@ The common interval and the behaviour of both chat categories are described unde
 
 ---
 
+## Use During a Contest
 
-## Example Contest Workflow with Macros
-
-1. Select a station in the user list → callsign is now pre-selected.
-2. Press `Ctrl+1` → Snippet "Hi OM, try sked?" is addressed as a PM.
-3. Press Enter → Message sent.
-4. Station replies with frequency → QRG column is automatically filled.
-5. Press `Ctrl+2` → Snippet "I am calling cq ur dir, pse lsn to me at 144.388" (MYQRG resolved).
-6. Press Enter → Sent.
-
-No manual typing, no errors, no interruption to CQ calling.
+Shortcuts, snippets and variables are individual tools within the operating workflow. Their interaction with CQ operation, station selection, skeds, QRG changes and log synchronisation is described under [Contest Workflow with KST4Contest](en-Contest-Workflow).
