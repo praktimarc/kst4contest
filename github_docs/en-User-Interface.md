@@ -30,9 +30,7 @@ The main window consists of several areas:
 
 The status bar is located at the top of the main window next to the menu.
 
-<!-- TODO: Screenshot connection_status_indicator.png is missing from the repository. Uncomment the image after the file has been added to github_docs/.
 ![Status bar with ON4KST connection indicator](connection_status_indicator.png)
--->
 
 The permanently visible `LINK` indicator shows the actual state of the ON4KST connection:
 
@@ -352,9 +350,7 @@ It:
 
 The map itself remains at the previously selected position and zoom level. This function is therefore not a geographical reset to the local station.
 
-<!-- TODO: Screenshot station_map_reset.png is missing from the repository. Uncomment the image after the file has been added to github_docs/.
 ![Station map after Reset view without a selected station](station_map_reset.png)
--->
 
 Selecting another individual marker restores the station selection and analysis panel.
 
@@ -444,21 +440,6 @@ Windows → Show cluster / stranger QSOs
 The main-window tabs and separate monitor window use the same underlying data. Hiding the monitor window therefore neither stops message processing nor removes messages from the tabs.
 
 Derivation and limitations: [Global Message Views](en-Features#global-message-views).
-
----
-
-
-### Separate monitor window
-
-The DX cluster and QSO-of-the-other tables can also be displayed together in a separate window.
-
-![Separate monitor window for DX cluster traffic and directed messages between other stations](cluster_qso_monitor.png)
-
-The separate window and the tabs use the same underlying messages. Hiding the window does not stop message processing or remove messages from the tabs.
-
-Use **Windows → Hide cluster / stranger QSOs** to hide the window and **Windows → Show cluster / stranger QSOs** to restore it.
-
-If a message is too long for its table cell, moving the mouse over the cell displays the complete text in a tooltip. Links beginning with `http://`, `https://` or `www.` can be opened in the system browser.
 
 ---
 

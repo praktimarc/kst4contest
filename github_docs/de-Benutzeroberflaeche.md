@@ -21,8 +21,6 @@ Ob die Verbindung lediglich als TCP-Verbindung besteht oder bereits vollständig
 
 ---
 
----
-
 ## Hauptfenster-Überblick
 
 Das Hauptfenster besteht aus mehreren Bereichen:

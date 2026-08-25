@@ -765,7 +765,7 @@ Data handling and QRG selection: [Log Synchronisation – Win-Test](en-Log-Sync#
 
 ---
 
-## PSTRotator Settings (from v1.31)## PSTRotator Settings (from v1.31, fully configurable from v1.40)
+## PSTRotator Settings (from v1.31, fully configurable from v1.40)
 
 KST4Contest can set an antenna direction through the PSTRotator UDP interface and use the current position reported by PSTRotator as the local QTF.
 
