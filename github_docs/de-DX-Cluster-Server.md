@@ -23,7 +23,7 @@ Im Klartext: Die Information muss nicht erst im Chat gefunden, gelesen, gemerkt 
 
 ---
 
-## Wie wird eine Richtungsgelegenheit hergeleitet?
+## Automatische Spots aus Richtungsgelegenheiten
 
 Angenommen, Station A schreibt eine gerichtete Nachricht an Station B. KST4Contest verwendet die Richtung von A zu B als Näherung für die aktuelle Antennenrichtung von Station A. Anschließend wird geprüft, ob die eigene Station aus Sicht von A innerhalb des angenommenen Antennenkorridors liegt.
 
@@ -48,6 +48,22 @@ Ein DX-Cluster-Spot wird nur erzeugt, wenn alle folgenden Bedingungen erfüllt s
 Treffen die Bedingungen zu, wird der Spot unmittelbar beim Verarbeiten der Nachricht erzeugt. Die parallel angezeigte grüne Richtungsmarkierung bleibt dagegen fünf Minuten sichtbar und kann durch spätere Nachrichten verlängert oder vorzeitig entfernt werden.
 
 Das Verfahren berücksichtigt weder Gelände noch aktuelle Ausbreitungsbedingungen und beweist keine tatsächliche Antennenstellung. Es erkennt eine plausible Gelegenheit. Die ausführliche Herleitung und ein Zahlenbeispiel stehen unter [Richtungsgelegenheiten aus gerichteten Nachrichten](de-Funktionen#richtungsgelegenheiten-aus-gerichteten-nachrichten).
+
+---
+
+## Manueller Spot für die ausgewählte Kartenstation
+
+Ein Spot kann auch bewusst ausgelöst werden. Wähle dazu eine Station auf der Stationskarte und verwende **Trigger cluster spot** im Detailbereich.
+
+Diese manuelle Auslösung benötigt keine zuvor erkannte gerichtete Nachricht. Auch maximaler QRB und Antennen-Öffnungswinkel entscheiden in diesem Fall nicht darüber, ob der Spot gesendet wird. Erforderlich sind:
+
+- ein aktivierter lokaler DX-Cluster-Server,
+- mindestens ein verbundener DX-Cluster-Client und
+- eine für die ausgewählte Kartenstation verwendbare QRG.
+
+Damit kann der Operator eine bereits ausgewählte Station gezielt in die Bandmap übernehmen, auch wenn die Bedingungen für einen automatischen Richtungs-Spot nicht vorliegen. Die Bedienung der Karte ist unter [Stationskarte](de-Benutzeroberflaeche#stationskarte) beschrieben.
+
+Automatische und manuelle Spots werden ausschließlich an die mit KST4Contest verbundenen Clients gesendet. Es erfolgt keine Weiterleitung an einen öffentlichen Internet-Cluster.
 
 ---
 
@@ -171,12 +187,11 @@ Ein Spot enthält:
 
 - das konfigurierte Spotter-Rufzeichen,
 - die normalisierte Frequenz,
-- das Rufzeichen der erkannten Station,
+- das vollständige sichtbare Rufzeichen der erkannten oder ausgewählten Station,
 - den Locator,
-- Flugzeug-Scatter-Informationen, falls vorhanden,
 - die aktuelle UTC-Zeit.
 
-Wenn für die Station aktuelle Aircraft-Scatter-Informationen vorliegen, kann KST4Contest diese als zusätzliche AP-Information in den Kommentar des Spots aufnehmen.
+Bei automatisch erzeugten Richtungs-Spots kann KST4Contest bis zu zwei aktuelle AirScout-Einträge als zusätzliche AP-Information in den Kommentar aufnehmen. Fehlende AirScout-Daten verhindern den Spot nicht. Ein manuell über die Stationskarte ausgelöster Spot verwendet den Locator der ausgewählten Station ohne diese optionale Ergänzung.
 
 ---
 
@@ -193,7 +208,7 @@ Prüfe:
 - Blockiert eine Firewall die Verbindung?
 - Ist im Logger das DX-Cluster-Fenster beziehungsweise die Bandmap aktiviert?
 
-### Testspot funktioniert, aber reale Spots fehlen
+### Testspot funktioniert, aber automatische Spots fehlen
 
 Dann funktioniert die Verbindung grundsätzlich. Für die betreffende Chat-Situation war wahrscheinlich mindestens eine fachliche Bedingung nicht erfüllt:
 
@@ -204,6 +219,10 @@ Dann funktioniert die Verbindung grundsätzlich. Für die betreffende Chat-Situa
 - keine erkannte Frequenz.
 
 KST4Contest sendet absichtlich nicht jede gefundene Frequenz an den Logger. Andernfalls würde aus einer Arbeitserleichterung sehr schnell eine lokale Spot-Schleuder.
+
+### Manuell ausgelöster Spot fehlt
+
+Prüfe, ob auf der Karte eine Station ausgewählt ist und für sie eine verwendbare QRG vorliegt. Der lokale Server muss aktiviert und mindestens ein Client verbunden sein. Die Geometrie einer gerichteten Nachricht, maximaler QRB und Antennen-Öffnungswinkel sind für die manuelle Auslösung keine Voraussetzungen.
 
 ### Der Spot erscheint auf dem falschen Band
 

@@ -4,7 +4,7 @@ icon: 📡
 category: Logger Integration
 since: "1.23"
 summary: Forward detected directional opportunities and their known frequencies as local DX Cluster spots to compatible contest loggers.
-description: KST4Contest provides a local TCP DX Cluster server which turns selected ON4KST direction and frequency information into spots for a logger bandmap.
+description: KST4Contest provides a local TCP DX Cluster server which forwards automatic directional opportunities or a manually selected map station to a logger bandmap.
 tagsList:
   - DX Cluster
   - bandmap
@@ -29,9 +29,9 @@ The purpose is practical: when a station appears to be pointing in the local dir
 
 That is the entire idea. The function is a bridge between the KST4Contest analysis and the logger, not another source of general DX traffic.
 
-## When is a spot generated?
+## Automatic and manual spots
 
-A real spot is generated only when all of the following conditions are met:
+An automatic spot is generated only when all of the following conditions are met:
 
 1. A directed message between two other stations has been detected.
 2. Valid locators are available for the sender and receiver.
@@ -39,9 +39,11 @@ A real spot is generated only when all of the following conditions are met:
 4. The local station lies inside the assumed antenna corridor of the sender.
 5. A usable frequency is known for the sender.
 6. The local DX Cluster server is enabled.
-7. At least one DX-Cluster client is connected to the server.
-
 KST4Contest deliberately does not forward every frequency mentioned in the chat. Otherwise, a function intended to reduce distraction would produce its own local spot flood.
+
+A spot can also be triggered deliberately. Select a station on the station map and use **Trigger cluster spot** in the detail panel. This manual action does not require a directed message, a match with the maximum QRB or a match with the configured antenna beamwidth. It uses the selected station and its known QRG directly.
+
+For either route, at least one DX-Cluster client must be connected to receive the spot. Both automatic and manual spots remain inside the local or trusted station network; KST4Contest does not forward them to a public DX Cluster.
 
 ## How is the directional opportunity derived?
 
@@ -124,14 +126,15 @@ A bare three-digit value is accepted only when the surrounding text identifies i
 
 ## What does the spot contain?
 
-The generated spot contains:
+Every generated spot contains:
 
 - the configured spotter callsign;
 - the normalised frequency;
-- the complete callsign of the detected station;
-- the sender's locator;
-- up to two optional AirScout entries; and
+- the complete visible callsign of the detected or selected station;
+- the locator of that station;
 - the current UTC time.
+
+Automatically generated directional spots can additionally include up to two current AirScout entries. A manually triggered map spot uses the selected station's locator without this optional addition.
 
 An example comment with AirScout information may look like this:
 
@@ -139,7 +142,7 @@ An example comment with AirScout information may look like this:
 JN49GL , AP: 1min, 100%; 4min, 75%
 ```
 
-AirScout information is optional. A missing AirScout response does not prevent the spot from being sent.
+AirScout information is optional. A missing AirScout response does not prevent an automatic directional spot from being sent.
 
 > AP-independent spot creation, corrected sender-locator handling and band-generic frequency conversion are included from v1.42 onwards.
 
@@ -198,6 +201,8 @@ A successful test confirms that at least one client received the generated spot.
 - Was the direction inside the configured beamwidth?
 - Was a valid frequency known?
 - Did a station-specific band context change the relative QRG?
+
+For a manual spot, check that the station remains selected on the map and has a usable QRG. Maximum QRB, beamwidth and directed-message geometry are not prerequisites for **Trigger cluster spot**.
 
 ## What the spot means — and what it does not
 
