@@ -231,6 +231,6 @@ Other loggers may work if they can open a normal TCP connection to a DX Cluster 
 
 [Read the complete setup and troubleshooting section in the manual.](/manual/en/dx-cluster-server/)
 
-[Read how directional opportunities are derived.](/manual/en/features/#sked-direction-highlighting)
+[Read how directional opportunities are derived.](/manual/en/features/#directional-opportunities-from-directed-messages)
 
 [Read how relative QRG information is configured.](/manual/en/configuration/#fallback-band-for-relative-qrg-detection)

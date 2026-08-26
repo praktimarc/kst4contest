@@ -6,45 +6,116 @@ Overview of all main features of KST4Contest.
 
 ---
 
-## Sked Direction Highlighting
+## Directional Opportunities from Directed Messages
 
-One of the core features: when a station makes a sked request **towards your direction**, it is highlighted **green and bold** in the user list.
+The ON4KST chat shows which station directs a message to which other station. It does not transmit the actual antenna direction. A directed message can nevertheless provide a useful indication during a contest: a station requesting, answering or preparing a sked will normally point its antenna at least approximately towards the station being addressed.
 
-### How does it work?
+KST4Contest therefore evaluates directed messages between two other stations. The message does not have to be explicitly identified as a sked request. The relevant information is the sender, receiver and their locators.
 
-The calculation is based on the following logic:
+### How Is the Direction Derived?
 
-- When station A sends a sked request to station B, it is assumed that A is pointing its antenna towards B.
-- If the resulting direction from A to your own station is within half the beamwidth of your own antenna, A is highlighted.
+Assume that station A sends a directed message to station B:
 
-**Example** (beamwidth 69°, half-angle 34.5°):
+1. KST4Contest calculates the direction from station A to station B.
+2. This direction is used as the likely antenna direction of station A.
+3. KST4Contest then calculates the direction from station A to the local station.
+4. The angular difference is compared with half of the configured antenna beamwidth.
+5. Station A must also be within the configured maximum QRB.
 
-| Situation | Result for DO5AMF in JN49 |
+A configured beamwidth of `70°` therefore produces an assumed corridor of `35°` on either side of the direction from station A to station B.
+
+| Example | Result |
 |---|---|
-| Sked from F5FEN → DM5M | ✅ Highlighted (F5FEN points towards DM5M, close to JN49) |
-| Sked from DM5M → F5FEN | ✅ Highlighted (DM5M replies towards F5FEN) |
-| F1DBN is uninvolved | ❌ No highlighting |
-| DO5AMF/P (different location) | ❌ No highlighting for sked reply |
+| Direction A → B: `120°`, direction A → local station: `145°` | Angular difference `25°`: directional opportunity detected |
+| Direction A → B: `120°`, direction A → local station: `165°` | Angular difference `45°`: outside the assumed corridor |
+| Locator of A or B is missing | Direction cannot be calculated |
+| A is outside the maximum QRB | No directional opportunity |
 
-The calculation does not include topographic path calculations – this is a deliberate simplification. It may be added in a future version.
+### What Is Shown in the User List?
 
-> Configuration: [Configuration – Antenna Beamwidth](en-Configuration#antenna-beamwidth)
+When a directional opportunity is detected, the sender's callsign appears in green and bold in the user list. Evening mode uses a lighter green. The receiver is not marked merely because it received the message; a reply in the opposite direction is evaluated as a separate message and therefore as a new case.
+
+![Detected directional opportunity in the user list](direction_opportunity_highlight.png)
+
+In the screenshot, DF0GEB sent a directed message to DN9APW and received a reply. KST4Contest detected the directional opportunity and highlighted DN9APW in the user list. The map is shown for context: the local station lies between the two stations and therefore receives the indication.
+
+The mark remains visible for five minutes after the most recent matching message. Another matching message from the same station restarts that period. If the station sends another directed message which no longer satisfies the direction conditions, the mark is removed immediately.
+
+If simple sound notifications are enabled, KST4Contest also plays a short indication when the directional opportunity is first detected. Further matching messages do not repeat the same sound while the station is already marked.
+
+### What Does the Mark Mean – and What Does It Not Mean?
+
+The calculation is a geometric derivation. It does not prove that station A is actually pointing its antenna towards station B. It also does not include terrain, current propagation, the real antenna pattern of the remote station or its rotator position.
+
+ON4KST does not provide the beamwidth of the remote station. KST4Contest therefore uses the value configured for the local antenna as an approximation for station A. A value which is too large produces more possible directional opportunities with less practical meaning. A value which is too small may hide useful situations.
+
+In plain terms: the green mark is a reasoned indication of a possible opportunity. It is neither a propagation forecast nor a guarantee of completing a QSO.
+
+Configuration:
+
+- [Antenna Beamwidth](en-Configuration#antenna-beamwidth)
+- [Default Maximum QRB](en-Configuration#default-maximum-qrb)
 
 ---
 
-## Sked Direction Spots (Built-in DX Cluster)
+## Forwarding as a DX Cluster Spot
 
-From **v1.23**: Direction warnings are forwarded as DX cluster spots to the logging software when a QRG is known. Details: [DX Cluster Server](en-DX-Cluster-Server).
+Since version 1.23, KST4Contest can forward a detected directional opportunity to the DX Cluster client of a logging programme. The local DX Cluster server must be enabled and a usable frequency must be known for the sender.
+
+The frequency may come from an earlier message or may be detected for the first time in the message which triggers the opportunity. In both cases it is available when KST4Contest checks whether it can create a spot. The programme therefore does not forward every QRG found in the chat. Automatic spots require a geometrically matching directed message.
+
+The five-minute user-list mark and the DX Cluster spot use the same direction calculation but have different lifetimes. The mark remains visible temporarily. The spot is generated immediately while the matching message is processed.
+
+Setup, frequency handling and limitations: [Built-in DX Cluster Server](en-DX-Cluster-Server).
 
 ---
 
-## QRG Detection (QRG Reading)
+## QRG Detection
 
-KST4Contest processes every line of text flowing through the channel and automatically extracts **frequency references**. These are displayed in the user list in the **QRG column**.
+Frequencies are rarely written in a consistent form in the ON4KST chat. A station may first mention `432.088`, later write only `.100`, and use `qrg 120` in another message. The context is usually obvious to a human reader. Software still has to distinguish whether `120` is a frequency, a time, a distance or something else entirely.
 
-Recognised formats: `144.205`, `432.088`, `.205` (with configured band assumption), etc.
+KST4Contest therefore evaluates the text of every public and directed chat message. A detected QRG is assigned to the sender and displayed in the user list's **QRG column**. The column shows the most recently detected frequency with at least three decimal places. A value stored internally as `144.21` is therefore displayed as `144.210`.
 
-**Benefit**: Without asking, you can directly look up a station's calling frequency and decide whether a contact is possible.
+### Which Formats Are Recognised?
+
+| Notation | Example | Processing |
+|---|---|---|
+| Complete frequency | `144.210`, `432,088`, `10368.100` | The frequency determines the band directly. |
+| Relative frequency with a dot or comma | `.210`, `,088` | The band is added from the station context or configured fallback. |
+| Three-digit frequency with text context | `qrg 210`, `freq is 210`, `on 210`, `210 MHz` | The number is treated as a relative frequency. |
+| Three-digit number without frequency context | `210`, `599`, `144` | The number is deliberately not accepted as a QRG. |
+
+The final restriction prevents plausible-looking but incorrect results. With a fallback of `144 MHz`, a signal report of `599` could easily be turned into `144.599 MHz`. The result would be formally valid and operationally useless.
+
+### How Is the Band of a Relative QRG Determined?
+
+KST4Contest uses the following order:
+
+1. If a suitable complete frequency has been detected for the same sender during the previous 30 minutes, KST4Contest uses its band.
+2. If several current bands are known, the most recently updated plausible band context is used.
+3. If no suitable station context exists, KST4Contest uses the band selected under **Fallback band for relative QRG detection**.
+
+Example: the global fallback is `144 MHz`. A station first mentions `432.088` and writes `.100` a few minutes later. KST4Contest does not add the global fallback. It uses the more recent station context, producing `432.100 MHz`. If another station without previous band information writes `.100`, the result is `144.100 MHz`.
+
+The fallback band really is the last resort. It is selected from the bands supported by KST4Contest and affects all QRG detection, not only the built-in DX Cluster server.
+
+### Where Is a Detected QRG Used?
+
+The most recently detected frequency appears in the user list. Its band context can also affect other functions, including:
+
+- detection of the station's active bands;
+- the chat-member score and priority lists;
+- band-upgrade hints after a log entry;
+- frequency selection for skeds; and
+- a DX Cluster spot generated from a directional opportunity.
+
+If the QRG first appears in the same message which triggers a directional opportunity, it is processed before the direction and spot checks. The resulting spot can therefore already use the frequency from that message.
+
+Detection remains a text-based process. KST4Contest cannot prove that the station is still using the stated frequency or that an ambiguous value belongs to a different context. This is precisely why bare three-digit numbers without frequency-related text are no longer accepted.
+
+Configuration and supported fallback bands: [Fallback Band for Relative QRG Detection](en-Configuration#fallback-band-for-relative-qrg-detection).
+
+Use in a logger bandmap: [Built-in DX Cluster Server](en-DX-Cluster-Server).
 
 ---
 

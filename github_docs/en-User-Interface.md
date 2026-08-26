@@ -82,7 +82,7 @@ The central table of all currently active chat users. Columns (depending on conf
 
 The QRG column shows the frequency most recently detected for a station. Missing trailing zeros are added for display purposes, so `144.21`, for example, is shown as `144.210`. If KST4Contest detects frequencies on several bands in succession, the column shows the latest match. The internal band information may still contain several current bands for that station.
 
-Relative frequency information is first combined with a band context from the same sender which is no more than 30 minutes old. Only if no such context exists does KST4Contest use the global fallback band. Detection rules, examples and limitations: [QRG Detection](en-Features#qrg-detection-qrg-reading).
+Relative frequency information is first combined with a band context from the same sender which is no more than 30 minutes old. Only if no such context exists does KST4Contest use the global fallback band. Detection rules, examples and limitations: [QRG Detection](en-Features#qrg-detection).
 
 
 ### Worked, band and grid-square status

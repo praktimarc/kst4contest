@@ -205,20 +205,6 @@ Worked-, NOT-QRV- und Großfeldinformationen werden in der internen SQLite-Daten
 
 Ein manueller Reset unter **Workedstn database** entfernt sämtliche Worked-Markierungen, NOT-QRV-Tags und gespeicherten Worked-Großfelder. Die bekannten Rufzeichenzeilen bleiben dabei in der Datenbank erhalten. Einzelheiten: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).
 
-
----
-
-## NOT-QRV-Tags (ab v1.2)
-
-Wenn eine Station mitteilt, dass sie auf einem bestimmten Band nicht QRV ist, kann dies manuell markiert werden:
-
-1. Station in der Benutzerliste auswählen.
-2. Rechtsklick → NOT-QRV für das entsprechende Band setzen.
-
-Diese Tags werden in der internen Datenbank gespeichert und bleiben nach einem Neustart von KST4Contest erhalten. Zurücksetzen über die Einstellungen möglich.
-
-**Nutzen**: Verhindert wiederholte Sked-Anfragen auf Bändern, auf denen die Station nicht QRV ist – schont sowohl die eigenen Nerven als auch die der Gegenstation.
-
 ---
 
 ## Richtungsfilter (Direction Filter)

@@ -40,13 +40,23 @@ After a change, click **Save Settings** and restart KST4Contest. Band columns an
 
 ### Antenna Beamwidth
 
-Enter a realistic value for your antenna's beamwidth (in degrees). This value is used for the [Sked Direction Highlighting](en-Features#sked-direction-highlighting). A test value of 50° has proven effective; DM5M uses quads with 69°.
+Enter the complete horizontal beamwidth of the local antenna in degrees. KST4Contest applies half of this value to either side of the selected or derived antenna direction. A configured value of `70°` therefore produces a corridor of `±35°`.
 
-> **Do not** enter fantasy values – the direction calculations will become useless.
+The value is used for:
+
+- the QTF filter in the user list;
+- the display of the local antenna corridor; and
+- the assumed beamwidth of a remote station when [deriving directional opportunities](en-Features#directional-opportunities-from-directed-messages).
+
+The final use is deliberately an approximation. ON4KST transmits neither the antenna being used nor its beamwidth. KST4Contest therefore uses the local value as a practical assumption for the remote station.
+
+Choose a realistic value for the actual station setup. A value which is too large produces many geometrical matches with little practical meaning. A value which is too small may hide useful directional opportunities.
 
 ### Default Maximum QRB
 
-Maximum distance (in km) for which direction warnings should be triggered. A realistic value for DM5M is 900 km. Stations farther away are ignored for highlighting purposes.
+Enter the maximum distance in kilometres within which KST4Contest should consider directional opportunities. The relevant distance is between the local station and the sender of the directed message, not between sender and receiver.
+
+If the sender is farther away, the situation is neither highlighted nor forwarded as an automatic directional opportunity to the local DX Cluster server, even if the calculated angle would match.
 
 ### Path Analysis and Link Budget
 

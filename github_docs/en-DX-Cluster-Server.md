@@ -47,7 +47,7 @@ An automatic DX Cluster spot is created only when all of the following condition
 
 When these conditions are met, the spot is created while the message is processed. The green directional highlight shown in parallel remains visible for five minutes and may be extended or removed by later messages.
 
-The calculation does not consider terrain, current propagation or the station's actual operating intention. It identifies a plausible opportunity. The full derivation and a numerical example are available under [Sked Direction Highlighting](en-Features#sked-direction-highlighting).
+The calculation does not consider terrain, current propagation or the station's actual operating intention. It identifies a plausible opportunity. The full derivation and a numerical example are available under [Directional Opportunities from Directed Messages](en-Features#directional-opportunities-from-directed-messages).
 
 ---
 
