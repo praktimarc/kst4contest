@@ -52,6 +52,8 @@ Downloads, supported operating systems and installation methods are described in
 
 This manual describes the current stable release of KST4Contest.
 
+The currently published Stable version is **v1.42.0**.
+
 Functions that are only available in a Beta or Nightly build are marked accordingly. If no such note is present, the description applies to the stable release.
 
 - [Download Stable, Beta and Nightly builds](https://kst4contest.hamradioonline.de/download/)

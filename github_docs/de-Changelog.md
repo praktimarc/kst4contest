@@ -70,7 +70,7 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - **Exakte Sked-Ziele:** Timeline und automatische Erinnerungen verwenden das vollständige sichtbare KST-Rufzeichen. Ein Sked für `DN9APW-2` wird nicht versehentlich an eine andere Variante desselben Basisrufzeichens gesendet.
 
-- **Beacon und Autoantwort überarbeitet:** Beide Chat-Kategorien verwenden einen gemeinsamen Timer, behalten aber getrennte Aktivierungsschalter und Texte. Das zulässige Mindestintervall beträgt zwei Minuten; Nachrichtentexte sind auf 120 Zeichen begrenzt. Die gespeicherte Beacon-Aktivierung wird beim Start aus der Konfiguration übernommen.
+- **Beacon und Autoantwort überarbeitet:** Beide Chat-Kategorien verwenden einen gemeinsamen Timer, behalten aber getrennte Aktivierungsschalter und Texte. Das zulässige Mindestintervall beträgt eine Minute; Nachrichtentexte sind auf 120 Zeichen begrenzt. Die gespeicherte Beacon-Aktivierung wird beim Start aus der Konfiguration übernommen.
 
 - **Variablen zentral aufgelöst:** Nachrichtenvariablen für Beacons, Shortcuts, Snippets und andere automatisch erzeugte Texte werden über einen gemeinsamen Resolver verarbeitet.
 

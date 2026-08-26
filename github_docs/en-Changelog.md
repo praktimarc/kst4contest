@@ -70,7 +70,7 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **Exact sked targets:** The timeline and automatic reminders use the complete visible KST callsign. A sked for `DN9APW-2` is not accidentally sent to another variant of the same base callsign.
 
-- **Reworked beacon and automatic replies:** Both chat categories use one shared timer while retaining separate enable switches and message texts. The minimum permitted interval is two minutes and message texts are limited to 120 characters. The stored beacon state is restored from the configuration at startup.
+- **Reworked beacon and automatic replies:** Both chat categories use one shared timer while retaining separate enable switches and message texts. The minimum permitted interval is one minute and message texts are limited to 120 characters. The stored beacon state is restored from the configuration at startup.
 
 - **Central variable resolution:** Message variables used by beacons, shortcuts, snippets and other generated text are processed by one shared resolver.
 
@@ -91,6 +91,8 @@ v1.42 brings several previously separate calculations together. Band information
 - **Failed initial connection and lost sockets:** An unavailable server during startup no longer sends KST4Contest into an endless or busy-wait loop. The user interface remains responsive and further attempts use bounded reconnect backoff. Sockets closed by the server, or connections without inbound traffic for an excessive period, are also detected reliably.
 
 - **Message-bus diagnostics:** Correctly processed ON4KST frames are no longer reported additionally as `Critical, detected unhandled Chatmessage`. Only genuinely unknown frames reach the fallback diagnostic branch.
+
+- **Password in diagnostic output:** The ON4KST password is no longer written in plain text to the console or error log during connection setup.
 
 - **Long-running station-selection failure:** Chat members managed by the message thread have been decoupled from the JavaFX view. Simultaneous data and table updates therefore no longer cause broken selection models or concurrent-modification problems after longer runtimes.
 
