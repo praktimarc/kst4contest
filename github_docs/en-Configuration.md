@@ -4,7 +4,7 @@
 
 After the first start, the **settings window** opens – this is the central starting point for all configuration. It is recommended to keep the settings window open during operation (e.g. to quickly toggle the beacon on and off).
 
-> **Important**: Always click **"Save Settings"** after any change! Settings are stored in `~/.praktikst/preferences.xml` on Linux and in `%USERPROFILE%\.praktikst\preferences.xml` (or `C:\Users\<Username>\.praktikst\preferences.xml`) on Windows. From v1.21 onwards, window sizes and divider positions are also saved when you click Save.
+> **Important**: Always click **"Save Settings"** after any change! Settings are stored in `~/.praktiKST/preferences.xml` on Linux and macOS and in `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows. From v1.21 onwards, window sizes and divider positions are also saved when you click Save.
 
 ---
 
@@ -934,6 +934,6 @@ Enable Dark Mode through **Windows → Use dark mode design**. Use **Windows →
 
 Click **"Save Settings"** after **every** change! Without saving, all changes will be lost on the next start.
 
-- Storage location: `~/.praktikst/preferences.xml` on Linux and `%USERPROFILE%\.praktikst\preferences.xml` (or `C:\Users\<Username>\.praktikst\preferences.xml`) on Windows
+- Storage location: `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows
 - From v1.21: Window sizes and divider positions are also saved.
 - If you encounter problems: delete the configuration file → KST4Contest will create a new one with default values.

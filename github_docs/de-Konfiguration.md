@@ -4,7 +4,7 @@
 
 Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist der zentrale Ausgangspunkt für alle Konfigurationen. Es empfiehlt sich, das Einstellungsfenster während des Betriebs geöffnet zu lassen (z. B. um den Beacon schnell ein- und auszuschalten).
 
-> **Wichtig**: Nach jeder Änderung unbedingt **„Save Settings"** klicken! Die Einstellungen werden unter Linux in `~/.praktikst/preferences.xml` und unter Windows in `%USERPROFILE%\.praktikst\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktikst\preferences.xml`) gespeichert. Ab v1.21 werden auch Fenstergrößen und Divider-Positionen beim Speichern gesichert.
+> **Wichtig**: Nach jeder Änderung unbedingt **„Save Settings"** klicken! Die Einstellungen werden unter Linux und macOS in `~/.praktiKST/preferences.xml` und unter Windows in `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`) gespeichert. Ab v1.21 werden auch Fenstergrößen und Divider-Positionen beim Speichern gesichert.
 
 ---
 
@@ -879,6 +879,6 @@ Der Dark Mode wird über **Windows → Use dark mode design** aktiviert. Mit **W
 
 Nach **jeder** Änderung **„Save Settings"** klicken! Ohne Speichern gehen alle Änderungen beim nächsten Start verloren.
 
-- Speicherort: unter Linux `~/.praktikst/preferences.xml` und unter Windows `%USERPROFILE%\.praktikst\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktikst\preferences.xml`)
+- Speicherort: unter Linux und macOS `~/.praktiKST/preferences.xml` und unter Windows `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`)
 - Ab v1.21: Fenstergrößen und Divider-Positionen werden ebenfalls gespeichert.
 - Bei Problemen: Konfigurationsdatei löschen → KST4Contest erstellt eine neue mit Standardwerten.
