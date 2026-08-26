@@ -238,7 +238,21 @@ Operation and layout of the filter bar: [User Interface – Filters](en-User-Int
 
 ## Coloured PM Rows (from v1.25)
 
-New private messages appear in **red**. The colour fades every 30 seconds from yellow to white – like a rainbow fade. This makes it immediately clear how recent a message is.
+New incoming private messages use a series of green age highlights. The green becomes progressively more muted as the message gets older:
+
+| Message age | Display |
+|---|---|
+| up to and including 30 seconds | first green level |
+| 31 to 60 seconds | second green level |
+| 61 to 90 seconds | third green level |
+| 91 to 120 seconds | fourth green level |
+| 121 to 180 seconds | fifth green level |
+| 181 to 300 seconds | sixth green level |
+| from 301 seconds | normal table colour |
+
+The table refreshes the age display every five seconds, so a boundary may become visible only during the next refresh. No age class remains attached after five minutes; reused and empty table rows also return to their normal style.
+
+Messages sent by the local station retain their separate highlight and do not use the green age scale.
 
 *(Idea by IU3OAR, Gianluca Costantino – thank you!)*
 
@@ -285,9 +299,9 @@ Simultaneous login to **two chat categories** (e.g. 144 MHz and 432 MHz). Both c
 
 ## Dark Mode (from v1.26)
 
-Toggle via: **Window → Use Dark Mode**
+Enable it through **Windows → Use dark mode design**. Use **Windows → Use default mode design** to return to the normal light colour scheme.
 
-For individual colour adjustments: edit the CSS file (path in the program settings).
+The green private-message age scale remains available in both designs. Text colour, normal table colour and the separate highlight for locally sent messages follow the selected built-in design.
 
 ---
 

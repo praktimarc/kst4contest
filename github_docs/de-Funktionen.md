@@ -239,7 +239,21 @@ Bedienung und Aufbau der Filterleiste: [Benutzeroberfläche – Filter](de-Benut
 
 ## Farbige PM-Zeilen (ab v1.25)
 
-Neue Privatnachrichten erscheinen in **Rot**. Die Farbe wechselt alle 30 Sekunden über Gelb bis Weiß – wie ein Regenbogen-Fade. So ist auf einen Blick erkennbar, wie aktuell eine Nachricht ist.
+Neue eingehende Privatnachrichten werden in mehreren grünen Altersstufen hervorgehoben. Mit zunehmendem Alter wird das Grün schrittweise gedämpfter:
+
+| Alter der Nachricht | Darstellung |
+|---|---|
+| bis einschließlich 30 Sekunden | erste grüne Stufe |
+| 31 bis 60 Sekunden | zweite grüne Stufe |
+| 61 bis 90 Sekunden | dritte grüne Stufe |
+| 91 bis 120 Sekunden | vierte grüne Stufe |
+| 121 bis 180 Sekunden | fünfte grüne Stufe |
+| 181 bis 300 Sekunden | sechste grüne Stufe |
+| ab 301 Sekunden | normale Tabellenfarbe |
+
+Die Tabelle aktualisiert die Altersdarstellung alle fünf Sekunden. Ein Grenzübergang kann deshalb erst beim nächsten Aktualisierungslauf sichtbar werden. Nach fünf Minuten bleibt keine Altersklasse an der Zeile haften; auch wiederverwendete oder leere Tabellenzeilen kehren zu ihrem normalen Stil zurück.
+
+Eigene Nachrichten erhalten weiterhin eine separate Hervorhebung und verwenden nicht die grüne Altersskala.
 
 *(Idee von IU3OAR, Gianluca Costantino – danke!)*
 
@@ -286,9 +300,9 @@ Gleichzeitiger Login in **zwei Chat-Kategorien** (z. B. 144 MHz und 432 MHz). Be
 
 ## Dark Mode (ab v1.26)
 
-Aktivierbar über: **Window → Use Dark Mode**
+Aktivierbar über **Windows → Use dark mode design**. Mit **Windows → Use default mode design** wird wieder auf das normale helle Farbschema umgeschaltet.
 
-Für individuelle Farbanpassungen: CSS-Datei bearbeiten (Pfad in den Programmunterlagen).
+Die grüne Altersskala der Privatnachrichten bleibt in beiden Darstellungen erhalten. Textfarbe, normale Tabellenfarbe und die separate Hervorhebung eigener Nachrichten folgen dem jeweils geladenen Standarddesign.
 
 ---
 

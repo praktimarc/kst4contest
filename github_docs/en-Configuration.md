@@ -926,7 +926,7 @@ Display and derivation: [Worked Callsigns, New Bands and New Grid Squares](en-Fe
 
 ## Dark Mode (from v1.26)
 
-Toggle via the menu: **Window → Use Dark Mode**. The colors can be individually customized via CSS.
+Enable Dark Mode through **Windows → Use dark mode design**. Use **Windows → Use default mode design** to restore the normal light colour scheme.
 
 ---
 

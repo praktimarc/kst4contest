@@ -871,7 +871,7 @@ Anzeige und Herleitung: [Gearbeitete Rufzeichen, neue Bänder und neue Großfeld
 
 ## Dark Mode (ab v1.26)
 
-Umschaltbar über das Menü: **Window → Use Dark Mode**. Die Farben können über CSS individuell angepasst werden.
+Der Dark Mode wird über **Windows → Use dark mode design** aktiviert. Mit **Windows → Use default mode design** wird wieder das normale helle Farbschema geladen.
 
 ---
 

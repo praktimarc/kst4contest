@@ -25,7 +25,6 @@ import javafx.scene.control.TableRow; // For the priority coloring
 
 import javafx.animation.PauseTransition;
 import javafx.beans.binding.Bindings;
-import javafx.css.PseudoClass;
 import javafx.geometry.*;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
@@ -3754,67 +3753,54 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		//experimental row coloring on new private messages (and recolouring if they get older)
+		// Color new private messages and restore the normal row style after five minutes.
 		tbl_privateMSGTable.setRowFactory(tv -> new TableRow<ChatMessage>() {
 			@Override
-			protected void updateItem(ChatMessage item, boolean empty) {
+			protected void updateItem(
+					final ChatMessage item,
+					final boolean empty
+			) {
 				super.updateItem(item, empty);
-				try {
-					if (item != null) {
 
-						if (item.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign())) {
-							PseudoClass foo = PseudoClass.getPseudoClass("messageHighlightOwn-column");
+				getStyleClass().removeAll(
+						PrivateMessageRowStyleResolver.knownStyleClasses()
+				);
 
-//							System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> pm row style " + this.getStyleClass());
-							tv.setStyle(null);
+				if (empty || item == null || item.getSender() == null) {
+					return;
+				}
 
-//							this.getStyleClass().clear();
-							this.getStyleClass().add("messageHighlightOwn-column"); //add new special colored css reference
-//							setStyle("-fx-background-color: #ADD8E6;");
-						} else {
+				final String ownCallsign = chatcontroller
+						.getChatPreferences()
+						.getStn_loginCallSign();
 
-//							System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> pm row style " + this.getStyleClass());
+				final boolean ownMessage = Objects.equals(
+						item.getSender().getCallSign(),
+						ownCallsign
+				);
 
-							if (( (new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime())) <= 30 ) { //after 30 seconds change color
-//								setStyle("-fx-background-color: #FF6F00;");
-								this.getStyleClass().clear();
-								this.getStyleClass().add("messageHighlight30-column"); //add new special colored css reference
+				final String styleClass;
 
-							} else if (( (new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime())) <= 60 ) { //after 60 seconds change color
-								this.getStyleClass().clear();
-								this.getStyleClass().add("messageHighlight60-column"); //add new special colored css reference
-//								setStyle("-fx-background-color: #FFB300;");
-							} else if (( (new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime())) <= 90 ) { //after 90 seconds change color
-								this.getStyleClass().clear();
-								this.getStyleClass().add("messageHighlight90-column"); //add new special colored css reference
-//								setStyle("-fx-background-color: #FFB300;");
-							} else if (( (new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime())) <= 120 ) { //after 120 seconds change color
-								this.getStyleClass().clear();
-								this.getStyleClass().add("messageHighlight120-column"); //add new special colored css reference
-//								setStyle("-fx-background-color: #FFD54F;");
-							} else if (( (new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime())) <= 180 ) { //after 180 seconds change color
-								this.getStyleClass().clear();
-								this.getStyleClass().add("messageHighlight180-column"); //add new special colored css reference
-//								setStyle("-fx-background-color: #FFD54F;");
-							} else if (( (new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime())) <= 300 ) { //after 300 seconds change color
-								this.getStyleClass().clear();
-								this.getStyleClass().add("messageHighlight300-column"); //add new special colored css reference
-//								setStyle("-fx-background-color: #FFF176;");
-							} else
-							{
+				if (ownMessage) {
+					styleClass = PrivateMessageRowStyleResolver
+							.resolveStyleClass(true, 0);
+				} else {
+					try {
+						final long ageSeconds = new Utils4KST()
+								.time_generateCurrentEpochTime()
+								- Long.parseLong(
+										item.getMessageGeneratedTime()
+								);
 
-//								setStyle("");
-							}
-						}
-
-//						switch (Integer.parseInt("" + (((new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime()))))) {
-//							case int i
-//						} //TODO: update to JDK21 or bigger, then a range case is possible, improves speed maybe
+						styleClass = PrivateMessageRowStyleResolver
+								.resolveStyleClass(false, ageSeconds);
+					} catch (NumberFormatException exception) {
+						return;
 					}
+				}
 
-//				System.out.println("---> messagealter ---> " + (((new Utils4KST().time_generateCurrentEpochTime())) - (Long.parseLong(item.getMessageGeneratedTime()))));
-				} catch (Exception e) {
-					;
+				if (styleClass != null) {
+					getStyleClass().add(styleClass);
 				}
 
 			}
