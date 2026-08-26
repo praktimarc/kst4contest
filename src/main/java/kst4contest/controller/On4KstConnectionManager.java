@@ -48,6 +48,8 @@ final class On4KstConnectionManager {
     static final long LOGIN_FALLBACK_MILLIS = 2_000L; //Login-Fallback
     static final long HANDSHAKE_TIMEOUT_MILLIS = 45_000L; //Handshake-Timeout
     static final long APPLICATION_HEARTBEAT_AFTER_MILLIS = 90_000L; //Application-Heartbeat
+    /** Idle duration after which the server is asked for current DX data. */
+    static final long CONNECTION_PROBE_AFTER_MILLIS = 180_000L; //Active connection probe
     static final long INBOUND_STALE_AFTER_MILLIS = 210_000L; //Stale-Timeout - time without rxed data
     static final List<Long> RECONNECT_DELAYS_MILLIS =
             List.of(2_000L, 5_000L, 10_000L, 20_000L, 30_000L); //Reconnect-Backoff if no connection possible
@@ -178,7 +180,19 @@ final class On4KstConnectionManager {
         session.lastInboundMillis.set(now);
         session.lastProgressMillis.set(now);
 
-        String opcode = opcode(line);
+        String opcode = On4KstProtocol.opcode(line);
+        long probeResponseMillis = session.connectionProbe.acknowledge(now);
+        if (probeResponseMillis >= 0L) {
+            LOGGER.log(Level.INFO,
+                    "ON4KST connection probe confirmed: session {0}, "
+                            + "received opcode {1}, response time {2} ms",
+                    new Object[] {
+                            sessionId,
+                            opcode,
+                            probeResponseMillis
+                    });
+        }
+
         if ("CK".equals(opcode)) {
             sendHeartbeat(session);
         }
@@ -244,7 +258,15 @@ final class On4KstConnectionManager {
                     new LinkedBlockingQueue<>();
             LinkedBlockingQueue<ChatMessage> transmitQueue =
                     new LinkedBlockingQueue<>();
-            Session session = new Session(token, socket, receiveQueue, transmitQueue);
+            int mainCategory = controller.getChatPreferences()
+                    .getLoginChatCategoryMain()
+                    .getCategoryNumber();
+            Session session = new Session(
+                    token,
+                    socket,
+                    receiveQueue,
+                    transmitQueue,
+                    mainCategory);
 
             ReadThread readThread = new ReadThread(
                     token, socket, receiveQueue, this::isActiveSession,
@@ -252,8 +274,7 @@ final class On4KstConnectionManager {
                     failure -> onConnectionFailure(token, failure));
             WriteThread writeThread = new WriteThread(
                     token, socket, transmitQueue,
-                    controller.getChatPreferences().getLoginChatCategoryMain()
-                            .getCategoryNumber(),
+                    mainCategory,
                     this::isActiveSession,
                     failure -> onConnectionFailure(token, failure),
                     controller::onOn4KstOutboundFrameRejected);
@@ -535,6 +556,29 @@ final class On4KstConnectionManager {
         session.transmitQueue.offer(heartbeat);
     }
 
+    private void sendConnectionProbe(
+            Session session,
+            long now,
+            long inboundIdle
+    ) {
+        if (session == null || !isActiveSession(session.id)
+                || !session.connectionProbe.tryStart(now)) {
+            return;
+        }
+
+        LOGGER.log(Level.INFO,
+                "Sending ON4KST connection probe: session {0}, main category "
+                        + "{1}, inbound idle {2} seconds",
+                new Object[] {
+                        session.id,
+                        session.mainCategory,
+                        inboundIdle / 1_000L
+                });
+        sendControl(
+                session,
+                On4KstProtocol.connectionProbe(session.mainCategory));
+    }
+
     private void onConnectionFailure(long sessionId, Throwable failure) {
         scheduler.execute(() -> failSession(sessionId, failure));
     }
@@ -634,23 +678,74 @@ final class On4KstConnectionManager {
                 return;
             }
 
-            long inboundIdle = now - session.lastInboundMillis.get();
-            if (inboundIdle > INBOUND_STALE_AFTER_MILLIS) {
-                failSession(session.id,
-                        new SocketException("No ON4KST data received for "
-                                + inboundIdle / 1_000L + " seconds"));
+            long lastInboundMillis = session.lastInboundMillis.get();
+            long inboundIdle = now - lastInboundMillis;
+            IdleAction idleAction = determineIdleAction(
+                    inboundIdle,
+                    session.lastHeartbeatMillis.get() >= lastInboundMillis,
+                    session.connectionProbe.isOutstanding());
+
+            if (session.lastInboundMillis.get() != lastInboundMillis) {
                 return;
             }
 
-            if (inboundIdle > APPLICATION_HEARTBEAT_AFTER_MILLIS
-                    && session.lastHeartbeatMillis.get()
-                    < session.lastInboundMillis.get()) {
-                sendHeartbeat(session);
+            switch (idleAction) {
+                case TIMEOUT -> {
+                    if (session.lastInboundMillis.get() != lastInboundMillis) {
+                        return;
+                    }
+                    long probeWaitMillis =
+                            session.connectionProbe.responseWaitMillis(now);
+                    if (probeWaitMillis >= 0L) {
+                        LOGGER.log(Level.WARNING,
+                                "ON4KST connection probe timed out: session "
+                                        + "{0}, main category {1}, no response "
+                                        + "for {2} ms, inbound idle {3} seconds; "
+                                        + "reconnecting",
+                                new Object[] {
+                                        session.id,
+                                        session.mainCategory,
+                                        probeWaitMillis,
+                                        inboundIdle / 1_000L
+                                });
+                    }
+                    failSession(session.id,
+                            new SocketException("No ON4KST data received for "
+                                    + inboundIdle / 1_000L + " seconds"));
+                }
+                case CONNECTION_PROBE ->
+                        sendConnectionProbe(session, now, inboundIdle);
+                case HEARTBEAT -> sendHeartbeat(session);
+                case NONE -> {
+                    // The session is active or already has the required idle action.
+                }
             }
         } catch (RuntimeException exception) {
             LOGGER.log(Level.WARNING,
                     "ON4KST connection monitor failed", exception);
         }
+    }
+
+    /**
+     * Selects at most one maintenance action for the current inbound idle phase.
+     */
+    static IdleAction determineIdleAction(
+            long inboundIdleMillis,
+            boolean heartbeatSentForIdlePhase,
+            boolean probeOutstanding
+    ) {
+        if (inboundIdleMillis > INBOUND_STALE_AFTER_MILLIS) {
+            return IdleAction.TIMEOUT;
+        }
+        if (inboundIdleMillis >= CONNECTION_PROBE_AFTER_MILLIS
+                && !probeOutstanding) {
+            return IdleAction.CONNECTION_PROBE;
+        }
+        if (inboundIdleMillis > APPLICATION_HEARTBEAT_AFTER_MILLIS
+                && !heartbeatSentForIdlePhase) {
+            return IdleAction.HEARTBEAT;
+        }
+        return IdleAction.NONE;
     }
 
     private void validateConfiguration() {
@@ -782,15 +877,6 @@ final class On4KstConnectionManager {
         }
     }
 
-    private String opcode(String line) {
-        if (line == null) {
-            return "";
-        }
-        int separator = line.indexOf('|');
-        return (separator < 0 ? line : line.substring(0, separator))
-                .trim().toUpperCase(Locale.ROOT);
-    }
-
     private String describeFailure(Throwable failure) {
         if (failure == null) {
             return "unknown error";
@@ -808,12 +894,15 @@ final class On4KstConnectionManager {
         private final Socket socket;
         private final LinkedBlockingQueue<ChatMessage> receiveQueue;
         private final LinkedBlockingQueue<ChatMessage> transmitQueue;
+        private final int mainCategory;
         private final long connectedMillis = System.currentTimeMillis();
         private final AtomicLong lastInboundMillis =
                 new AtomicLong(connectedMillis);
         private final AtomicLong lastProgressMillis =
                 new AtomicLong(connectedMillis);
         private final AtomicLong lastHeartbeatMillis = new AtomicLong();
+        private final ConnectionProbeState connectionProbe =
+                new ConnectionProbeState();
         private final Map<Integer, Map<String, ChatMember>> initialMembers =
                 new ConcurrentHashMap<>();
 
@@ -831,12 +920,45 @@ final class On4KstConnectionManager {
                 long id,
                 Socket socket,
                 LinkedBlockingQueue<ChatMessage> receiveQueue,
-                LinkedBlockingQueue<ChatMessage> transmitQueue
+                LinkedBlockingQueue<ChatMessage> transmitQueue,
+                int mainCategory
         ) {
             this.id = id;
             this.socket = socket;
             this.receiveQueue = receiveQueue;
             this.transmitQueue = transmitQueue;
+            this.mainCategory = mainCategory;
+        }
+    }
+
+    /** Maintenance action selected by the session monitor. */
+    enum IdleAction {
+        NONE,
+        HEARTBEAT,
+        CONNECTION_PROBE,
+        TIMEOUT
+    }
+
+    /** Tracks one outstanding liveness probe for the complete TCP session. */
+    static final class ConnectionProbeState {
+        private final AtomicLong sentMillis = new AtomicLong();
+
+        boolean tryStart(long now) {
+            return now > 0L && sentMillis.compareAndSet(0L, now);
+        }
+
+        long acknowledge(long now) {
+            long sent = sentMillis.getAndSet(0L);
+            return sent == 0L ? -1L : Math.max(0L, now - sent);
+        }
+
+        boolean isOutstanding() {
+            return sentMillis.get() > 0L;
+        }
+
+        long responseWaitMillis(long now) {
+            long sent = sentMillis.get();
+            return sent == 0L ? -1L : Math.max(0L, now - sent);
         }
     }
 }

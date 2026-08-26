@@ -54,6 +54,27 @@ final class On4KstProtocol {
                 + "|0|";
     }
 
+    /** Builds the active liveness probe for the session's main chat. */
+    static String connectionProbe(int category) {
+        return "RDXQ|" + category(category) + "|";
+    }
+
+    /** Returns whether a server frame is the expected liveness-probe response. */
+    static boolean isConnectionProbeResponse(String frame) {
+        return "DXQ".equals(opcode(frame));
+    }
+
+    /** Extracts and normalizes the opcode without exposing the remaining frame. */
+    static String opcode(String frame) {
+        if (frame == null) {
+            return "";
+        }
+        int separator = frame.indexOf('|');
+        return (separator < 0 ? frame : frame.substring(0, separator))
+                .trim()
+                .toUpperCase(Locale.ROOT);
+    }
+
     /** Builds a category-qualified locator command after validating Maidenhead syntax. */
     static String setLocator(int category, String locator) {
         return command(category, "/SETLOC " + locator(locator));

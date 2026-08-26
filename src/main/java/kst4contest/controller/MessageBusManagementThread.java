@@ -877,6 +877,12 @@ public class MessageBusManagementThread extends Thread {
 				|| messageToProcess.getMessageText().isEmpty()) {
 			// No processable data.
 		} else {
+			if (On4KstProtocol.isConnectionProbeResponse(
+					messageToProcess.getMessageText())) {
+				// DXQ is the internal response to the active connection probe.
+				// Liveness was already recorded by the session manager.
+				return;
+			}
 
 			if (messageToProcess.getMessageText().startsWith(SRVR_LOGSTAT + "|")) {
 				String[] logstatMessage =
@@ -2177,8 +2183,11 @@ public class MessageBusManagementThread extends Thread {
 //								e.printStackTrace();
 //							}
 
-					System.out.println(messageTextRaw.getMessageText() + " <- RXed"); // Stdout at
-					// Console#######################################################TODO:Wichtig
+					if (!On4KstProtocol.isConnectionProbeResponse(
+							messageTextRaw.getMessageText())) {
+						System.out.println(messageTextRaw.getMessageText() + " <- RXed"); // Stdout at
+						// Console#######################################################TODO:Wichtig
+					}
 
 					try {
 						processRXMessage23001(messageTextRaw);
