@@ -15,6 +15,7 @@ tagsList:
   - Minos
   - contest logger
 related:
+  - qrg-detection
   - station-map
   - directional-opportunities
   - log-sync

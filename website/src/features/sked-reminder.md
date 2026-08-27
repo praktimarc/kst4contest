@@ -11,6 +11,7 @@ tagsList:
   - contest reminder
   - Win-Test
 related:
+  - qrg-detection
   - priority-score
   - airscout
   - timeline
