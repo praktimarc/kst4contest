@@ -60,7 +60,7 @@ By default, KST4Contest uses the main frequency from a Win-Test `STATUS` packet.
 
 If the pass value is missing or invalid, KST4Contest falls back to the main frequency. An unusable pass value therefore does not clear `MYQRG` or replace it with an invalid frequency.
 
-Several Win-Test operating positions may transmit `STATUS` packets on the same network. The configured station-name filter accepts QRG updates only from the intended position. This prevents another workplace from taking over the local frequency merely because its packet arrived later.
+Several Win-Test operating positions may transmit `STATUS` packets on the same network. The configured station-name filter accepts QRG updates only from the intended position. This prevents another operating position from taking over the local frequency merely because its packet arrived later.
 
 ## What happens with several frequency sources?
 

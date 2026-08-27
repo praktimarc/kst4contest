@@ -14,6 +14,7 @@ tagsList:
   - contest team
   - dual chat
 related:
+  - global-message-views
   - dual-chat
   - sked-reminder
   - automatic-replies

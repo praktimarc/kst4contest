@@ -13,6 +13,7 @@ tagsList:
   - QRB
   - contest workflow
 related:
+  - global-message-views
   - station-map
   - band-recognition
   - dx-cluster

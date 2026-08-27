@@ -13,6 +13,7 @@ tagsList:
   - ON4KST
   - contest workflow
 related:
+  - global-message-views
   - trx-qrg-synchronisation
   - band-recognition
   - station-map
