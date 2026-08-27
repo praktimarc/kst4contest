@@ -379,6 +379,8 @@ Three notification types are available:
 2. **CW announcement**: The callsign of a station sending a private message is output as a CW signal.
 3. **Phonetic announcement**: The callsign is pronounced phonetically.
 
+PM-related audio output is triggered only by messages actually directed to the local login callsign. Public messages shown additionally through PM Catching and messages added through QSO Monitoring remain silent.
+
 ### Fallback Band for Relative QRG Detection
 
 The **Fallback band for relative QRG detection** dropdown selects the band used when a relative QRG cannot be assigned to a recent station-specific band context.

@@ -263,7 +263,7 @@ Eigene Nachrichten erhalten weiterhin eine separate Hervorhebung und verwenden n
 
 ---
 
-## PM-Abfang (Catching Personal Messages)
+## PM-Abfang (Catching Personal Messages, ab v1.1)
 
 Manche Nutzer senden Direktnachrichten versehentlich öffentlich, z. B.:
 
@@ -271,7 +271,15 @@ Manche Nutzer senden Direktnachrichten versehentlich öffentlich, z. B.:
 (DM5M) pse ur qrg
 ```
 
-KST4Contest erkennt solche Nachrichten, die das eigene Rufzeichen enthalten, und sortiert sie automatisch in die **Privatnachrichten-Tabelle** ein. So gehen keine Nachrichten verloren.
+KST4Contest sucht im Nachrichtentext ohne Beachtung der Groß- und Kleinschreibung nach dem konfigurierten eigenen Login-Rufzeichen. Enthält eine öffentliche Nachricht diesen Text, erscheint sie zusätzlich in der **Privatnachrichten-Tabelle**. Etwas flapsig lässt sich das als **„Lästererkennung“** bezeichnen. Das ist eine Nebenbezeichnung, kein formaler Funktionsname.
+
+Die ursprüngliche Nachricht bleibt unverändert: Sie ist weiterhin öffentlich, behält ihren Empfänger `ALL`, ihren Text und ihre Chat-Kategorie. PM-Catching ergänzt nur eine weitere Ansicht derselben Nachricht.
+
+Die Textsuche versteht keine Absicht. Ein Schreibfehler oder ein verkürztes Rufzeichen wird nicht erkannt. Umgekehrt kann eine bloße Erwähnung des vollständig geschriebenen Rufzeichens einen Treffer erzeugen, obwohl keine Antwort erwartet wird.
+
+Wird eine eingehende Zeile in der PM-Tabelle ausgewählt, bereitet KST4Contest eine Antwort an ihren Absender vor. Bei einer eigenen ausgehenden Nachricht wird stattdessen der ursprüngliche Empfänger als Ziel wiederhergestellt. Die Auswahl versendet noch keine Nachricht.
+
+Auch abgefangene Zeilen verwenden die normale Altersanzeige der PM-Tabelle. Sie lösen jedoch weder den einfachen PM-Hinweiston noch die CW- oder Sprachausgabe für ein eingehendes Rufzeichen aus. Dasselbe gilt für Nachrichten, die durch das QSO-Monitoring zusätzlich in der PM-Tabelle erscheinen.
 
 ---
 

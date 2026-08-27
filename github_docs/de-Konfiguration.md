@@ -332,6 +332,8 @@ Die drei Audiofunktionen arbeiten unabhängig voneinander:
 
 CW- und Sprachausgabe können gleichzeitig aktiviert werden. Das ist technisch möglich, im Contest aber nicht zwingend hilfreich. In der Praxis sollte nur die Ausgabe eingeschaltet werden, die im eigenen Stationsbetrieb tatsächlich wahrgenommen werden kann, ohne den Operator dauerhaft zu beschäftigen.
 
+Die PM-bezogenen Audioausgaben reagieren nur auf Nachrichten, die tatsächlich an das eigene Login-Rufzeichen gerichtet sind. Öffentliche Nachrichten, die durch PM-Catching zusätzlich in der PM-Tabelle erscheinen, und dort eingeblendete Monitoring-Nachrichten bleiben akustisch still.
+
 ### Fallback-Band für relative QRG-Erkennung
 
 Das Dropdown **Fallback band for relative QRG detection** legt fest, welches Band KST4Contest verwendet, wenn eine relative QRG keinem aktuellen Stationskontext zugeordnet werden kann.

@@ -56,9 +56,16 @@ Beide Hinweise blinken ungefähr zwölf Sekunden und verschwinden anschließend 
 
 Das PM-Fenster zeigt die an die eigenen Chat-Logins gerichteten Privatnachrichten und die zugehörigen ausgehenden Antworten.
 
+Öffentliche Nachrichten erscheinen dort zusätzlich, wenn ihr Text ohne Beachtung der Groß- und Kleinschreibung das konfigurierte eigene Login-Rufzeichen enthält. Dieses PM-Catching – flapsig auch **„Lästererkennung“** – verändert weder den öffentlichen Empfänger `ALL` noch Nachrichtentext, Chat-Kategorie oder Routing.
+
 Ist das [QSO-Monitoring](de-Funktionen#qso-monitoring-ab-v131) aktiviert, erscheinen dort zusätzlich die erfassten Nachrichten der überwachten Basisrufzeichen. Diese Einträge erhalten eine `Sniffed:`-Kennzeichnung mit dem vollständigen sichtbaren Absender und Empfänger.
 
-Neue Nachrichten werden zunächst auffällig dargestellt und wechseln anschließend schrittweise zur normalen Tabellenfarbe. Die farbliche Hervorhebung dient nur als zeitlicher Hinweis; sie verändert weder Inhalt noch Routing der Nachricht.
+Neue, nicht selbst gesendete Zeilen durchlaufen sechs grüne Altersstufen und kehren nach fünf Minuten zur normalen Tabellenfarbe zurück. Eigene Nachrichten behalten ihre separate Hervorhebung. Die farbliche Darstellung ist nur ein zeitlicher Hinweis; sie verändert weder Inhalt noch Routing der Nachricht.
+
+Die Auswahl einer eingehenden Zeile bereitet eine Antwort an den Absender vor. Bei einer eigenen ausgehenden Nachricht wird stattdessen der ursprüngliche Empfänger als Nachrichtenziel wiederhergestellt. Caught- und Monitoring-Zeilen lösen keine PM-Audioausgabe aus.
+
+Altersstufen: [Farbige PM-Zeilen](de-Funktionen#farbige-pm-zeilen-ab-v125). Erkennung und Grenzen: [PM-Abfang](de-Funktionen#pm-abfang-catching-personal-messages-ab-v11).
+
 ### Benutzerliste (Chat Members)
 
 Die zentrale Tabelle aller aktuell aktiven Chat-Nutzer. Spalten (je nach Konfiguration):

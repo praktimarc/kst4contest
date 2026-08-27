@@ -56,9 +56,15 @@ Both indicators flash for approximately twelve seconds and then disappear. Their
 
 The PM window shows private messages addressed to the local chat logins and the corresponding outgoing replies.
 
+Public messages are also shown when their text contains the configured local login callsign, ignoring letter case. This PM Catching mechanism – informally, **“gossip detection”** – changes neither the public `ALL` receiver nor the message text, chat category or routing.
+
 If [QSO Monitoring](en-Features#qso-sniffer-from-v131) is enabled, it additionally shows captured messages involving the monitored base callsigns. These entries receive a `Sniffed:` prefix containing the complete visible sender and receiver callsigns.
 
-New messages are initially highlighted and then gradually return to the normal table colour. This highlighting only indicates the age of the message; it does not change its content or routing.
+New rows not sent by the local station pass through six green age levels and return to the normal table colour after five minutes. Messages sent by the local station retain their separate highlight. The colour only indicates message age; it does not change content or routing.
+
+Selecting an incoming row prepares a reply to the sender. For an outgoing message from the local station, the original receiver is restored as the message target instead. Caught and monitored rows do not trigger PM audio output.
+
+Age levels: [Coloured PM Rows](en-Features#coloured-pm-rows-from-v125). Recognition and limitations: [PM Catching](en-Features#pm-catching-from-v11).
 
 ### User List (Chat Members)
 

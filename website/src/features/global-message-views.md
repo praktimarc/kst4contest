@@ -13,6 +13,7 @@ tagsList:
   - chat activity
   - contest coordination
 related:
+  - private-message-handling
   - qso-monitoring
   - directional-opportunities
   - dx-cluster

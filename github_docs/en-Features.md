@@ -262,7 +262,7 @@ Messages sent by the local station retain their separate highlight and do not us
 
 ---
 
-## PM Catching
+## PM Catching (from v1.1)
 
 Some users accidentally post direct messages publicly, e.g.:
 
@@ -270,7 +270,15 @@ Some users accidentally post direct messages publicly, e.g.:
 (DM5M) pse ur qrg
 ```
 
-KST4Contest detects such messages that contain your own callsign and automatically sorts them into the **private messages table**. No messages are missed this way.
+KST4Contest searches the message text for the configured local login callsign without distinguishing upper- and lower-case letters. When a public message contains that text, it also appears in the **private messages table**. A slightly flippant description is **“gossip detection”**. This is a nickname, not the formal name of the function.
+
+The original message remains unchanged: it is still public and retains its `ALL` receiver, text and chat category. PM Catching merely adds another view of the same message.
+
+The text search cannot infer intention. A typing error or shortened callsign is not recognised. Conversely, a simple mention of the complete callsign can produce a match even when no reply was expected.
+
+Selecting an incoming row in the PM table prepares a reply to its sender. For an outgoing message from the local station, the original receiver is restored as the target instead. Selecting the row does not send the message.
+
+Caught rows use the normal PM-table age display. They do not trigger the simple PM sound, CW callsign output or phonetic callsign output. The same applies to messages shown additionally through QSO Monitoring.
 
 ---
 

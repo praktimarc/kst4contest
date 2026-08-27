@@ -13,6 +13,7 @@ tagsList:
   - sked request
   - dual chat
 related:
+  - private-message-handling
   - trx-qrg-synchronisation
   - dual-chat
   - macros
