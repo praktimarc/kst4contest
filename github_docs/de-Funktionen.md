@@ -237,7 +237,7 @@ Die Filter oberhalb der Benutzerliste greifen auf dieselben Informationen zurüc
 
 Mehrere aktivierte Filter werden gemeinsam angewendet. Eine Station bleibt nur sichtbar, wenn sie alle gewählten Bedingungen erfüllt. Die Filter reagieren unmittelbar auf neue Logeinträge und geänderte NOT-QRV-Markierungen.
 
-Bedienung und Aufbau der Filterleiste: [Benutzeroberfläche – Filter](de-Benutzeroberflaeche#filter).
+Bedienung und Aufbau der Filterleiste: [Benutzeroberfläche – Filter](de-Benutzeroberflaeche#filter-und-reachability-steuerung).
 
 ---
 

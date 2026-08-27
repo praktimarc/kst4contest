@@ -15,6 +15,7 @@ tagsList:
   - SHF
   - contest workflow
 related:
+  - station-filters
   - qrg-detection
   - band-recognition
   - timeline

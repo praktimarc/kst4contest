@@ -15,6 +15,7 @@ tagsList:
   - Copernicus GLO-90
   - contest workflow
 related:
+  - station-filters
   - qrg-detection
   - band-recognition
   - directional-opportunities

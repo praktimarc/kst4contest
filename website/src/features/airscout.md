@@ -15,6 +15,7 @@ tagsList:
   - SHF
   - contest
 related:
+  - station-filters
   - timeline
   - priority-score
   - sked-reminder

@@ -236,7 +236,7 @@ The filters above the user list use the same information as the Worked columns:
 
 Several active filters are applied together. A station remains visible only if it satisfies every selected condition. The filters react immediately to new log entries and changed NOT-QRV marks.
 
-Operation and layout of the filter bar: [User Interface – Filters](en-User-Interface#filters).
+Operation and layout of the filter bar: [User Interface – Filters](en-User-Interface#filters-and-reachability-controls).
 
 ---
 

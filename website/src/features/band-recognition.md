@@ -14,6 +14,7 @@ tagsList:
   - ON4KST
   - contest workflow
 related:
+  - station-filters
   - qrg-detection
   - station-map
   - directional-opportunities

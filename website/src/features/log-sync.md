@@ -13,6 +13,7 @@ tagsList:
   - DXLog.net
   - contest logger
 related:
+  - station-filters
   - band-recognition
   - priority-score
   - dual-chat
