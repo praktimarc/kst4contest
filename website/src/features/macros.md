@@ -13,6 +13,7 @@ tagsList:
   - ON4KST
   - operator workflow
 related:
+  - trx-qrg-synchronisation
   - airscout
   - dual-chat
   - sked-reminder

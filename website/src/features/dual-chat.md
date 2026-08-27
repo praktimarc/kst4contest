@@ -15,6 +15,7 @@ tagsList:
   - SHF
   - microwave contest
 related:
+  - trx-qrg-synchronisation
   - band-recognition
   - priority-score
   - log-sync

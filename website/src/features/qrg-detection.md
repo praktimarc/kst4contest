@@ -13,6 +13,7 @@ tagsList:
   - ON4KST
   - contest workflow
 related:
+  - trx-qrg-synchronisation
   - band-recognition
   - station-map
   - priority-score

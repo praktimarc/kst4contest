@@ -13,6 +13,7 @@ tagsList:
   - DXLog.net
   - contest logger
 related:
+  - trx-qrg-synchronisation
   - station-filters
   - band-recognition
   - priority-score
