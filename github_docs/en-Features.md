@@ -24,6 +24,10 @@ Assume that station A sends a directed message to station B:
 
 A configured beamwidth of `70°` therefore produces an assumed corridor of `35°` on either side of the direction from station A to station B.
 
+![Geometry of the assumed antenna corridors](directional_opportunity_geometry.png)
+
+In the example, the green corridor runs from F5FEN towards DM5M. When F5FEN sends a directed message to DM5M, KST4Contest checks whether the local station lies inside this corridor. A reply from DM5M to F5FEN is calculated again in the opposite direction: the blue corridor then starts at DM5M and points towards F5FEN. Each message therefore evaluates the assumed antenna direction of its sender.
+
 | Example | Result |
 |---|---|
 | Direction A → B: `120°`, direction A → local station: `145°` | Angular difference `25°`: directional opportunity detected |

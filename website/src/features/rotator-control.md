@@ -13,6 +13,7 @@ tagsList:
   - UDP
   - SPID
 related:
+  - directional-opportunities
   - priority-score
   - timeline
   - airscout

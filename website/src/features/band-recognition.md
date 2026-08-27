@@ -14,6 +14,7 @@ tagsList:
   - ON4KST
   - contest workflow
 related:
+  - directional-opportunities
   - priority-score
   - dual-chat
   - log-sync
@@ -47,7 +48,7 @@ Recognition alone is not enough. KST4Contest compares the detected bands with:
 
 Only a locally enabled, common and unworked band remains an open opportunity. A manual NOT-QRV mark takes precedence over a detected QRG, name field or callsign variant.
 
-![Per-band NOT-QRV controls for the selected station](/manual/assets/not_qrv_controls.png)
+![Worked and band status in the user list](/manual/assets/not_qrv_controls.png)
 
 The comparison remains band-specific. Working a station on 144 MHz does not mark it as worked on 432 MHz, and a NOT-QRV mark for one band does not remove a different band opportunity.
 

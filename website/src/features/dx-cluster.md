@@ -14,6 +14,7 @@ tagsList:
   - N1MM+
   - contest logger
 related:
+  - directional-opportunities
   - log-sync
   - priority-score
   - dual-chat

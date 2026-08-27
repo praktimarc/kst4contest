@@ -23,6 +23,10 @@ Angenommen, Station A schreibt eine gerichtete Nachricht an Station B:
 
 Ein eingetragener Öffnungswinkel von `70°` ergibt damit einen angenommenen Korridor von jeweils `35°` links und rechts der Richtung von Station A zu Station B.
 
+![Geometrie der angenommenen Antennenkorridore](directional_opportunity_geometry.png)
+
+Im dargestellten Beispiel verläuft der grüne Korridor von F5FEN in Richtung DM5M. Sendet F5FEN eine gerichtete Nachricht an DM5M, prüft KST4Contest, ob die eigene Station innerhalb dieses Korridors liegt. Bei einer Antwort von DM5M an F5FEN wird die Richtung neu berechnet: Dann beginnt der blaue Korridor bei DM5M und zeigt in Gegenrichtung auf F5FEN. Bewertet wird also bei jeder Nachricht die angenommene Antennenrichtung des jeweiligen Absenders.
+
 | Beispiel | Ergebnis |
 |---|---|
 | Richtung A → B: `120°`, Richtung A → eigene Station: `145°` | Winkeldifferenz `25°`: Richtungsgelegenheit erkannt |
