@@ -13,6 +13,7 @@ tagsList:
   - QRB
   - contest workflow
 related:
+  - station-map
   - band-recognition
   - dx-cluster
   - rotator-control

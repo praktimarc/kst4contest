@@ -806,7 +806,7 @@ Marker colours provide a compact status indication:
 |---|---|
 | Blue | Normal station marker |
 | Yellow | The callsign has already been worked on at least one band |
-| Green | The station is inside the current antenna sector and is relevant as a directional candidate |
+| Green | A directional opportunity has been derived for the station from directed chat messages |
 | Orange | Currently selected station |
 
 The selected state has the highest display priority, followed by the directional warning and Worked state. A selected station therefore remains orange even if it also meets one of the other conditions.

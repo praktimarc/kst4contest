@@ -246,6 +246,19 @@ G1YBB uses the directional indication particularly consistently. Stations highli
 
 KST4Contest does not automate the QSO. Its advantage is that QRG, direction, aircraft scatter information and other evaluation data are already available when the opportunity appears. The remaining task is a quick operating decision.
 
+Another particularly consistent operating method uses the station map as a geographical worklist:
+
+1. The **wkd** filter removes already worked callsigns from the user list and therefore from the map.
+2. G1YBB selects an interesting station on the map.
+3. **Trigger cluster spot** passes the known QRG to Minos.
+4. Selecting the spot moves Minos to that QRG.
+5. The completed QSO is logged.
+6. Log synchronisation updates the Worked state, and the filter removes the station from both the user list and the map.
+
+The map consequently becomes a spatial list of the stations still to be worked. This workflow is optional. It requires reliable log synchronisation and a working DX Cluster connection and is mainly useful for operators who deliberately want to organise the contest in this geographical way.
+
+[Watch G1YBB demonstrate this workflow.](https://www.youtube.com/watch?v=BCNCjowPgec)
+
 ---
 
 ## Optional Interfaces in the Workflow

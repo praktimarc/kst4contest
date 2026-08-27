@@ -14,6 +14,7 @@ tagsList:
   - ON4KST
   - contest workflow
 related:
+  - station-map
   - directional-opportunities
   - priority-score
   - dual-chat

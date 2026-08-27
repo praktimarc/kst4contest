@@ -248,6 +248,7 @@ The interface has been used with:
 
 - UCXLog
 - N1MM+
+- Minos
 
 Other loggers may work if they support a normal TCP connection to a DX Cluster server and accept conventional `DX de ...` spot lines.
 

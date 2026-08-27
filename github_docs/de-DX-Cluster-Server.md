@@ -242,5 +242,6 @@ Die Schnittstelle wurde mit folgenden Logprogrammen verwendet:
 
 - UCXLog
 - N1MM+
+- Minos
 
 Weitere Logger können funktionieren, wenn sie eine normale TCP-Verbindung zu einem DX-Cluster-Server unterstützen.

@@ -246,6 +246,19 @@ G1YBB verwendet die Richtungsanzeige besonders konsequent. Grün markierte Stati
 
 KST4Contest automatisiert dabei nicht das QSO. Der Vorteil besteht darin, dass QRG, Richtung, Aircraft-Scatter-Informationen und weitere Bewertungsdaten bereits vorliegen, wenn die Gelegenheit entsteht. Die verbleibende Aufgabe ist eine schnelle betriebliche Entscheidung.
 
+Eine weitere, besonders konsequente Betriebsweise nutzt die Stationskarte als geografische Arbeitsliste:
+
+1. Der **wkd**-Filter blendet bereits gearbeitete Rufzeichen aus der Benutzerliste und damit auch aus der Karte aus.
+2. G1YBB wählt eine interessante Station auf der Karte aus.
+3. **Trigger cluster spot** übergibt die bekannte QRG an Minos.
+4. Ein Klick auf den Spot wechselt in Minos auf diese QRG.
+5. Nach dem QSO wird der Kontakt geloggt.
+6. Die Log-Synchronisation aktualisiert den Worked-Status; der Filter entfernt die Station anschließend aus Benutzerliste und Karte.
+
+Die Karte wird so zu einer räumlichen Liste der noch abzuarbeitenden Stationen. Dieser Ablauf ist optional. Er setzt eine zuverlässig eingerichtete Log-Synchronisation und DX-Cluster-Verbindung voraus und ist vor allem für Operatoren interessant, die den Contest bewusst auf diese geografische Weise strukturieren möchten.
+
+[G1YBB zeigt diesen Workflow im Video.](https://www.youtube.com/watch?v=BCNCjowPgec)
+
 ---
 
 ## Optionale Schnittstellen im Workflow

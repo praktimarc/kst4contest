@@ -13,6 +13,7 @@ tagsList:
   - UDP
   - SPID
 related:
+  - station-map
   - directional-opportunities
   - priority-score
   - timeline

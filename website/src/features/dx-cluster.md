@@ -12,8 +12,10 @@ tagsList:
   - QRG detection
   - UCXLog
   - N1MM+
+  - Minos
   - contest logger
 related:
+  - station-map
   - directional-opportunities
   - log-sync
   - priority-score
@@ -227,6 +229,7 @@ The local DX Cluster interface has been used with:
 
 - UCXLog
 - N1MM+
+- Minos
 
 Other loggers may work if they can open a normal TCP connection to a DX Cluster server and accept conventional `DX de ...` spot lines.
 
