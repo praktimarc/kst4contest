@@ -15,6 +15,7 @@ tagsList:
   - SHF
   - microwave contest
 related:
+  - band-recognition
   - priority-score
   - log-sync
   - airscout

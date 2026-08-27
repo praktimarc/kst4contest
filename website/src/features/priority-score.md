@@ -15,6 +15,7 @@ tagsList:
   - SHF
   - contest workflow
 related:
+  - band-recognition
   - timeline
   - airscout
   - sked-reminder
