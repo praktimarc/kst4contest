@@ -56,7 +56,9 @@ Beide Hinweise blinken ungefähr zwölf Sekunden und verschwinden anschließend 
 
 Das PM-Fenster zeigt die an die eigenen Chat-Logins gerichteten Privatnachrichten und die zugehörigen ausgehenden Antworten.
 
-Öffentliche Nachrichten erscheinen dort zusätzlich, wenn ihr Text ohne Beachtung der Groß- und Kleinschreibung das konfigurierte eigene Login-Rufzeichen enthält. Dieses PM-Catching – flapsig auch **„Lästererkennung“** – verändert weder den öffentlichen Empfänger `ALL` noch Nachrichtentext, Chat-Kategorie oder Routing.
+Nicht selbst gesendete Nachrichten erscheinen dort zusätzlich, wenn ihr Text ohne Beachtung der Groß- und Kleinschreibung das konfigurierte eigene Login-Rufzeichen enthält. Das gilt für öffentliche Nachrichten an `ALL` ebenso wie für gerichtete Nachrichten zwischen anderen Chatteilnehmern. Gerade im zweiten Fall lässt sich dieses PM-Catching flapsig als **„Lästererkennung“** bezeichnen.
+
+Der tatsächliche Empfänger, der Nachrichtentext, die Chat-Kategorie und das Routing bleiben unverändert. Die Nachricht erhält lediglich eine zusätzliche Darstellung im PM-Fenster.
 
 Ist das [QSO-Monitoring](de-Funktionen#qso-monitoring-ab-v131) aktiviert, erscheinen dort zusätzlich die erfassten Nachrichten der überwachten Basisrufzeichen. Diese Einträge erhalten eine `Sniffed:`-Kennzeichnung mit dem vollständigen sichtbaren Absender und Empfänger.
 

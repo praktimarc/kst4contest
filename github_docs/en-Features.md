@@ -270,9 +270,11 @@ Some users accidentally post direct messages publicly, e.g.:
 (DM5M) pse ur qrg
 ```
 
-KST4Contest searches the message text for the configured local login callsign without distinguishing upper- and lower-case letters. When a public message contains that text, it also appears in the **private messages table**. A slightly flippant description is **“gossip detection”**. This is a nickname, not the formal name of the function.
+KST4Contest searches the text of every message not sent by the local station for the configured local login callsign without distinguishing upper- and lower-case letters. A match also appears in the **private messages table**. This applies to public messages addressed to `ALL` and to directed messages between other chat participants.
 
-The original message remains unchanged: it is still public and retains its `ALL` receiver, text and chat category. PM Catching merely adds another view of the same message.
+A directed message between two other stations is where the slightly flippant description **“gossip detection”** fits best. It is a nickname, not the formal name of the function.
+
+The original message remains unchanged: its actual receiver remains `ALL` or the other chat participant; its text, chat category and routing are retained as well. PM Catching merely adds another view of the same message.
 
 The text search cannot infer intention. A typing error or shortened callsign is not recognised. Conversely, a simple mention of the complete callsign can produce a match even when no reply was expected.
 

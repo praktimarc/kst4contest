@@ -56,7 +56,9 @@ Both indicators flash for approximately twelve seconds and then disappear. Their
 
 The PM window shows private messages addressed to the local chat logins and the corresponding outgoing replies.
 
-Public messages are also shown when their text contains the configured local login callsign, ignoring letter case. This PM Catching mechanism – informally, **“gossip detection”** – changes neither the public `ALL` receiver nor the message text, chat category or routing.
+Messages not sent by the local station are also shown when their text contains the configured local login callsign, ignoring letter case. This applies to public messages addressed to `ALL` and to directed messages between other chat participants. The informal description **“gossip detection”** is particularly apt for the latter case.
+
+The actual receiver, message text, chat category and routing remain unchanged. The message merely gains an additional representation in the PM window.
 
 If [QSO Monitoring](en-Features#qso-sniffer-from-v131) is enabled, it additionally shows captured messages involving the monitored base callsigns. These entries receive a `Sniffed:` prefix containing the complete visible sender and receiver callsigns.
 

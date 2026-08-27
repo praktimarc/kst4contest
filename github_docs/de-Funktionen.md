@@ -271,9 +271,11 @@ Manche Nutzer senden Direktnachrichten versehentlich öffentlich, z. B.:
 (DM5M) pse ur qrg
 ```
 
-KST4Contest sucht im Nachrichtentext ohne Beachtung der Groß- und Kleinschreibung nach dem konfigurierten eigenen Login-Rufzeichen. Enthält eine öffentliche Nachricht diesen Text, erscheint sie zusätzlich in der **Privatnachrichten-Tabelle**. Etwas flapsig lässt sich das als **„Lästererkennung“** bezeichnen. Das ist eine Nebenbezeichnung, kein formaler Funktionsname.
+KST4Contest sucht im Text aller nicht selbst gesendeten Nachrichten ohne Beachtung der Groß- und Kleinschreibung nach dem konfigurierten eigenen Login-Rufzeichen. Ein Treffer erscheint zusätzlich in der **Privatnachrichten-Tabelle**. Das gilt sowohl für öffentliche Nachrichten an `ALL` als auch für gerichtete Nachrichten zwischen anderen Chatteilnehmern.
 
-Die ursprüngliche Nachricht bleibt unverändert: Sie ist weiterhin öffentlich, behält ihren Empfänger `ALL`, ihren Text und ihre Chat-Kategorie. PM-Catching ergänzt nur eine weitere Ansicht derselben Nachricht.
+Gerade bei einer fremden gerichteten Nachricht wirkt das etwas wie **„Lästererkennung“**. Das ist eine flapsige Nebenbezeichnung, kein formaler Funktionsname.
+
+Die ursprüngliche Nachricht bleibt unverändert: Der tatsächliche Empfänger bleibt `ALL` beziehungsweise der andere Chatteilnehmer; auch Text, Chat-Kategorie und Routing bleiben erhalten. PM-Catching ergänzt nur eine weitere Ansicht derselben Nachricht.
 
 Die Textsuche versteht keine Absicht. Ein Schreibfehler oder ein verkürztes Rufzeichen wird nicht erkannt. Umgekehrt kann eine bloße Erwähnung des vollständig geschriebenen Rufzeichens einen Treffer erzeugen, obwohl keine Antwort erwartet wird.
 

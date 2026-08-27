@@ -373,13 +373,15 @@ AirScout setup, aircraft display and the meaning of the returned AP information 
 
 ![Notifications, DX cluster output and QSO monitoring](client_settings_window_notification.png)
 
-Three notification types are available:
+The three audio functions work independently:
 
-1. **Simple sounds**: TADA sound for incoming messages, tick for sked direction detection, etc.
-2. **CW announcement**: The callsign of a station sending a private message is output as a CW signal.
-3. **Phonetic announcement**: The callsign is pronounced phonetically.
+1. **Simple sounds**: Plays short cues for new private messages, detected directional opportunities, sked reminders and `BAND+` hints.
+2. **CW announcement**: Spells the sender's callsign in CW for a new private message.
+3. **Phonetic announcement**: Speaks the sender's callsign phonetically for a new private message.
 
-PM-related audio output is triggered only by messages actually directed to the local login callsign. Public messages shown additionally through PM Catching and messages added through QSO Monitoring remain silent.
+Each function can be enabled separately. CW and phonetic output can also be active at the same time.
+
+PM-related audio output is triggered only by messages actually directed to the local login callsign. Messages shown additionally through PM Catching and messages added through QSO Monitoring remain silent.
 
 ### Fallback Band for Relative QRG Detection
 

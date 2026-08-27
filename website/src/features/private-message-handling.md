@@ -3,8 +3,8 @@ title: Private Message Handling
 icon: ✉️
 category: ON4KST Chat
 since: "1.1"
-summary: Catch public mentions of the configured login callsign in the PM table and use six green age levels to keep recent messages visible without changing their routing.
-description: KST4Contest combines PM Catching, age-based row highlighting and reply preparation so that direct messages and relevant public mentions remain practical to handle during a busy contest.
+summary: Catch mentions of the configured login callsign from public or directed chat traffic and use six green age levels without changing the original message routing.
+description: KST4Contest combines PM Catching, age-based row highlighting and reply preparation for direct messages and callsign mentions across the visible chat traffic.
 tagsList:
   - ON4KST
   - private messages
@@ -21,15 +21,15 @@ related:
 
 ## Why catch more than direct PMs?
 
-Not every message intended for one station is sent as a directed ON4KST message. An operator may accidentally post something like this publicly:
+Not every message which concerns the local station is addressed to it directly. An operator may accidentally post something like this publicly:
 
 ```text
 (DM5M) pse ur qrg
 ```
 
-Without an additional view, that line remains among CQ calls, beacons and the rest of the public chat. KST4Contest therefore also shows a public message in the PM table when its text contains the configured local login callsign.
+The callsign may also appear in a directed message between two other chat participants. KST4Contest therefore also shows every message not sent by the local station in the PM table when its text contains the configured local login callsign. This covers public messages addressed to `ALL` and directed traffic between other stations.
 
-PM Catching has existed since version 1.1. A slightly flippant description is **“gossip detection”**. It is a nickname, not the formal name of the function.
+PM Catching has existed since version 1.1. For directed messages between other stations, a slightly flippant description is **“gossip detection”**. It is a nickname, not the formal name of the function.
 
 ## How is a mention recognised?
 
@@ -46,7 +46,7 @@ In plain terms: PM Catching finds visible callsign text. It cannot know what the
 
 ## The original message remains unchanged
 
-Catching adds the message to the PM view. It does not turn the public line into a private message, change its receiver, rewrite its text or move it to another chat category.
+Catching adds the message to the PM view. It does not turn it into a private message to the local station. The actual receiver remains `ALL` or the other chat participant; message text, chat category and routing remain unchanged as well.
 
 The same principle applies to [QSO Monitoring](/features/qso-monitoring/): a monitored message may be shown additionally in the PM table, but its original routing remains intact. The two mechanisms use different criteria:
 
@@ -79,7 +79,7 @@ After five minutes, the row returns to the normal table colour. Messages sent by
 
 ## What produces a PM notification sound?
 
-PM audio is reserved for messages actually directed to the local login. A public message shown through PM Catching does not trigger the simple PM sound, CW callsign output or phonetic callsign output.
+PM audio is reserved for messages actually directed to the local login. A message shown through PM Catching does not trigger the simple PM sound, CW callsign output or phonetic callsign output.
 
 Messages added through QSO Monitoring likewise remain silent. Their appearance in the PM table is a visual aid, not evidence that the local station received a new private message.
 
