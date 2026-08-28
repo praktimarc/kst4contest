@@ -4,7 +4,7 @@ icon: 💬
 category: ON4KST Chat
 since: "1.26"
 summary: Monitor two ON4KST categories in one interface while preserving the complete callsign and category required for correct message routing.
-description: KST4Contest combines two ON4KST chat sessions, keeps individual logins separate and shares station-related Worked, band and priority information through the normalised base callsign.
+description: KST4Contest uses one authenticated ON4KST TCP session for two chat categories, keeps their message contexts separate and shares station-related Worked, band and priority information through the normalised base callsign.
 tagsList:
   - ON4KST
   - dual chat
@@ -29,27 +29,31 @@ VHF, UHF and microwave activity is not always concentrated in one ON4KST categor
 
 Opening two unrelated chat clients would show both message streams, but every comparison between them would remain manual. Worked status, band information, active stations and sked context would still be distributed across separate windows.
 
-KST4Contest therefore opens up to two ON4KST chat sessions and processes both in one operating context.
+KST4Contest therefore signs in once and adds a second chat category through ON4KST Single Sign-on when required. Both categories use the same TCP session and are processed in one operating context.
 
 ![Primary and secondary chat settings](/manual/assets/client_settings_window_station.png)
 
-## Two connections remain two connections
+## One connection, two category contexts
 
-The primary and secondary chat sessions retain their own:
+KST4Contest authenticates the ON4KST TCP session with one local login callsign, one password and one locator. The primary category is part of that login. If a second category is enabled, the client adds it to the same session through Single Sign-on. It does not open another TCP connection or perform a second local login.
+
+The primary and secondary categories still retain their own:
 
 - ON4KST chat category;
-- login callsign;
+- visible local chat name;
 - public message stream;
-- destination category for outgoing messages; and
-- active login entries.
+- message context and destination category for outgoing messages;
+- local QRG;
+- beacon enable setting and message template; and
+- active chat-member entries.
 
-The second session can use the same local callsign as the primary session or a separately configured callsign. A different login may be useful when the station uses category- or band-specific suffixes.
+The **Name in Chat 2** field changes the local name shown in the second category. It is not a second login callsign. Both categories continue to use the one callsign and locator supplied when the TCP session was authenticated.
 
-Combining the display does not turn both sessions into one ON4KST connection. Messages must still be sent through the category in which the intended destination is active.
+One connection therefore does not mean one combined message stream. Messages must still be sent in the category in which the intended destination is active.
 
 ## What identifies an active chat member?
 
-An active login is identified by:
+For remote chat participants, an active member is identified by:
 
 1. the complete visible callsign, including its suffix; and
 2. the ON4KST chat category.
@@ -65,7 +69,7 @@ Consider the following active entries:
 | `9A0BB-23` | 2 | separate |
 | `9A0BB-13` | 2 | separate |
 
-All four entries belong to the same base callsign, but they are four different chat logins. Joining, updating or leaving the chat affects only the corresponding complete callsign in the corresponding category.
+All four entries belong to the same base callsign, but they are four different chat-member identities. Joining, updating or leaving the chat affects only the corresponding complete callsign in the corresponding category.
 
 This is particularly important for `9A0BB-2` and `9A0BB-70`: because both use the same category, the category alone cannot distinguish them.
 
@@ -73,7 +77,7 @@ This is particularly important for `9A0BB-2` and `9A0BB-70`: because both use th
 
 ## How are messages routed?
 
-When a row is selected, KST4Contest retains both the complete callsign and its category. A private message is addressed to that complete callsign and sent through the corresponding chat session.
+When a row is selected, KST4Contest retains both the complete callsign and its category. A private message is addressed to that complete callsign and sent in the corresponding category within the shared session.
 
 Selecting `9A0BB-70` in category 1 therefore creates a message for `9A0BB-70` in category 1. It is not silently reduced to `9A0BB`, and it is not sent through category 2 merely because another variant is active there.
 
@@ -86,11 +90,11 @@ The same distinction is used for:
 - sked reminder messages; and
 - leaving or updating an active chat entry.
 
-The different variants do not have to be able to send messages to each other. That is not the purpose of the function. They must remain correctly reachable by other stations and receive the messages addressed to their respective login.
+The different variants do not have to be able to send messages to each other. That is not the purpose of the function. They must remain correctly reachable by other stations and receive the messages addressed to their respective chat-member identity.
 
 ## What is shared through the base callsign?
 
-Some information describes the radio station rather than one temporary chat login. This information is aggregated through the normalised base callsign.
+Some information describes a remote radio station rather than one temporary chat-member identity. This information is aggregated through the normalised base callsign.
 
 For the examples above, the common base callsign is `9A0BB`.
 
@@ -109,7 +113,7 @@ Per-band information is still retained. Working the station on 70 MHz does not m
 
 ## Why are band hints combined?
 
-A station may use its visible login names to describe the available bands:
+A remote station may use its visible chat names to describe the available bands:
 
 - `9A0BB-2`
 - `9A0BB-70`
@@ -124,13 +128,13 @@ A manual NOT-QRV mark still takes precedence. An automatically detected suffix o
 
 ## Why is the Priority Score not duplicated?
 
-The Priority Score represents the operating priority of the station, not the number of chat logins it happens to use.
+The Priority Score represents the operating priority of the remote station, not the number of chat-member identities it happens to use.
 
 KST4Contest therefore calculates the score for the normalised base callsign and projects it to the active variants. Several suffixes do not create several independent priority candidates merely by being logged in more than once.
 
 The individual rows remain selectable because the correct message destination still matters.
 
-In plain terms: one station should not occupy half the priority list, but the operator must still be able to contact the correct login.
+In plain terms: one station should not occupy half the priority list, but the operator must still be able to contact the correct chat-member identity.
 
 ## Categories are context, not proof of a band
 
@@ -150,7 +154,7 @@ Categories unrelated to the supported VHF, UHF, microwave or EME workflows are i
 
 Sharing the station context does not merge everything associated with the base callsign.
 
-The following remain tied to the individual login or message:
+The following remain tied to the individual remote chat member or message:
 
 - complete message destination;
 - chat category;
@@ -158,15 +162,15 @@ The following remain tied to the individual login or message:
 - visible callsign suffix;
 - join and leave state;
 - the specific row selected by the operator; and
-- message history associated with that login and category.
+- message history associated with that chat member and category.
 
-This distinction is the basis of the dual-chat implementation: operational information may be shared where it describes the same radio station, while communication remains attached to the actual ON4KST login.
+This distinction is the basis of the dual-chat implementation: operational information may be shared where it describes the same remote radio station, while communication remains attached to the complete ON4KST callsign and category.
 
 ## Practical limitations
 
-The shared base-callsign model assumes that suffix variants separated by `-` belong to the same underlying amateur-radio station. That is appropriate for common logins such as `-2`, `-70`, `-144` or `-432`.
+The shared base-callsign model assumes that suffix variants separated by `-` belong to the same underlying amateur-radio station. That is appropriate for common remote chat names such as `-2`, `-70`, `-144` or `-432`.
 
-KST4Contest cannot determine whether two operators behind those logins are using one station, several independently operated stations or a distributed contest setup. Worked and band information is therefore shared at callsign level, while the operator remains responsible for selecting the correct chat destination.
+KST4Contest cannot determine whether two operators behind those chat entries are using one station, several independently operated stations or a distributed contest setup. Worked and band information is therefore shared at callsign level, while the operator remains responsible for selecting the correct chat destination.
 
 [Read how both chat categories are configured.](/manual/en/configuration/#login-and-chat-categories)
 

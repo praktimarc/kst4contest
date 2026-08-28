@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-08-27
+Last reviewed: 2026-08-28
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -65,10 +65,16 @@ Known integration areas include:
 
 CR/LF framing, XML framing, ports/transports, callsign normalization and frequency formatting are protocol behaviour and must not be changed as incidental cleanup.
 
+### ON4KST session and authentication
+
+- One KST4Contest connection uses one authenticated ON4KST TCP session with one local login callsign, one password and one locator.
+- The primary category is part of the initial login. A distinct second category is added to the same session through ON4KST Single Sign-on; it must not create a second TCP connection or local login.
+- The local visible chat name, message context, QRG and beacon configuration remain category-specific.
+
 ### ON4KST session liveness
 
 - After 90 seconds without inbound data, the application keeps the established empty CRLF heartbeat.
-- At about 180 seconds of inbound idle time, the TCP session sends one `RDXQ|<main chat id>|` probe. The probe state belongs to the session, so a two-category login still sends only one probe per idle phase.
+- At about 180 seconds of inbound idle time, the TCP session sends one `RDXQ|<main chat id>|` probe. The probe state belongs to the session, so a two-category session still sends only one probe per idle phase.
 - Any subsequent inbound server frame confirms the probe. `DXQ` is accepted as the expected internal response and is not published as chat content.
 - If no inbound frame arrives by about 210 seconds, the existing reconnect flow remains responsible for replacing the session.
 - Probe diagnostics contain the session id, main category, opcode and timing only. They must not include credentials, complete server frames or normal chat messages.

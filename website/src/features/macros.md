@@ -170,7 +170,7 @@ A public beacon has no selected remote station. It can therefore use only global
 
 ![Beacon settings for both chat categories](/manual/assets/client_settings_window_beacon.png)
 
-Each chat category has its own enable setting and message template. Both categories use the same timer interval. The second beacon is sent only when the second chat login and its beacon are enabled.
+Each chat category has its own enable setting and message template. Both categories use the same timer interval. The second beacon is sent only when the second category and its beacon are enabled in the shared ON4KST session.
 
 Global variables are evaluated again on every timer run. A QRG changed by the logger can therefore be included in the next beacon without editing its template.
 

@@ -72,13 +72,13 @@ The base callsign is used to decide whether a message should be shown in the mon
 
 A message for `DN9APW-70` therefore remains a message for `DN9APW-70`. It is not redirected to `DN9APW`, `DN9APW-2` or another suffix.
 
-This is the same distinction used elsewhere in KST4Contest: station-related information may be shared through the base callsign, while communication remains attached to the actual ON4KST login.
+This is the same distinction used elsewhere in KST4Contest: station-related information may be shared through the base callsign, while communication remains attached to the remote participant's complete callsign and category.
 
 ## Both chat categories are included
 
-When two ON4KST categories are connected, the same monitoring list applies to both. There is no need to configure the station separately for each category.
+When two ON4KST categories are active in the same session, the same monitoring list applies to both. There is no need to configure the station separately for each category.
 
-The category of the individual message remains part of its context. Combining the monitoring view does not merge the underlying chat connections.
+The category of the individual message remains part of its context. Combining the monitoring view does not merge the category-specific message streams or create separate chat connections.
 
 ## What the function does not do
 

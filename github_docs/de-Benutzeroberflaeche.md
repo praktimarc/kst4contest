@@ -4,7 +4,7 @@
 
 ## Verbinden mit dem Chat
 
-Vor dem ersten Verbindungsaufbau müssen im Einstellungsfenster mindestens Rufzeichen, Passwort, Locator und primäre Chat-Kategorie konfiguriert werden. Soll zusätzlich eine zweite Kategorie verwendet werden, muss auch deren Login aktiviert und vollständig eingerichtet sein.
+Vor dem ersten Verbindungsaufbau müssen im Einstellungsfenster ein lokales Login-Rufzeichen, Passwort, Locator und die primäre Chat-Kategorie konfiguriert werden. Soll zusätzlich eine zweite Kategorie verwendet werden, wird sie dort aktiviert und ausgewählt. KST4Contest meldet sich einmal an und ergänzt die zweite Kategorie per Single Sign-on innerhalb derselben TCP-Sitzung.
 
 Die Verbindung kann auf zwei Wegen aufgebaut werden:
 
@@ -54,7 +54,7 @@ Beide Hinweise blinken ungefähr zwölf Sekunden und verschwinden anschließend 
 
 ### PM-Fenster (oben links)
 
-Das PM-Fenster zeigt die an die eigenen Chat-Logins gerichteten Privatnachrichten und die zugehörigen ausgehenden Antworten.
+Das PM-Fenster zeigt die an die eigenen sichtbaren Chat-Namen gerichteten Privatnachrichten und die zugehörigen ausgehenden Antworten.
 
 Nicht selbst gesendete Nachrichten erscheinen dort zusätzlich, wenn ihr Text ohne Beachtung der Groß- und Kleinschreibung das konfigurierte eigene Login-Rufzeichen enthält. Das gilt für öffentliche Nachrichten an `ALL` ebenso wie für gerichtete Nachrichten zwischen anderen Chatteilnehmern. Gerade im zweiten Fall lässt sich dieses PM-Catching flapsig als **„Lästererkennung“** bezeichnen.
 

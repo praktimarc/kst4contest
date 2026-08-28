@@ -14,14 +14,15 @@ After the first start, the **settings window** opens – this is the central sta
 
 ### Login and Chat Categories
 
-Enter your ON4KST chat credentials here (callsign and password).
-Also, select the **primary chat category** (e.g., IARU Region 1 VHF/Microwave).
+Enter the one local login callsign and password used for the ON4KST chat. Also select the **primary chat category** (e.g. IARU Region 1 VHF/Microwave).
 
-With the option for a **second chat** (Multi-Channel Login), you can log in to another category simultaneously (e.g., UHF/SHF). Both chats will then be monitored in parallel. You can optionally specify a different login name for the second chat (useful for Opposite Station Multi-Callsign Logging).
+The **second chat** option (Multi-Channel Login) adds another category (e.g. UHF/SHF) to the same ON4KST TCP session through Single Sign-on. KST4Contest does not open a second TCP connection and does not use another local login callsign or password.
+
+**Name in Chat 2** is the local name shown in the second category, not a second login. The visible chat name, message context, QRG and beacon remain separate for each category. **Opposite Station Multi-Callsign Login Tagging**, by contrast, refers exclusively to remote stations which appear in the chat under several complete callsigns.
 
 ### Callsign and Locator
 
-Enter your own callsign and Maidenhead locator (6 characters, e.g., `JN49IJ`). These values are needed for distance and direction calculations.
+Enter your own callsign and Maidenhead locator (6 characters, e.g. `JN49IJ`). ON4KST uses the same locator for both categories in the one TCP session. These values are also used for distance and direction calculations.
 
 ### Active Bands
 
@@ -576,7 +577,7 @@ KST4Contest uses one shared timer for both chat categories. Each category nevert
 - **Beacon message** contains the public message for that category.
 - **Shared beacon interval** sets the common interval used by both categories.
 
-When both beacons are enabled, they are sent one after the other in their respective categories during the same timer run. The second beacon is only considered while the second chat is enabled and connected.
+When both beacons are enabled, they are sent one after the other in their respective categories during the same timer run. The second beacon is only considered while the second category is enabled and fully synchronised in the same ON4KST session.
 
 ### Interval and timer behaviour
 

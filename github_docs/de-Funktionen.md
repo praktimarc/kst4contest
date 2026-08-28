@@ -308,7 +308,7 @@ Konfiguration, erkannte QRG-Anfragen und genaue Kategorienzuordnung: [Konfigurat
 
 ## Multi-Channel-Login (ab v1.26)
 
-Gleichzeitiger Login in **zwei Chat-Kategorien** (z. B. 144 MHz und 432 MHz). Beide Chats werden parallel überwacht.
+KST4Contest meldet sich mit einem lokalen Rufzeichen, Passwort und Locator einmal bei ON4KST an. Eine zweite Chat-Kategorie (z. B. 144 MHz und 432 MHz) wird per Single Sign-on innerhalb derselben TCP-Sitzung ergänzt. Beide Kategorien werden parallel überwacht; der eigene sichtbare Chat-Name, Nachrichtenkontext, QRG und Beacon bleiben je Kategorie getrennt.
 
 ---
 
@@ -322,7 +322,7 @@ Die grüne Altersskala der Privatnachrichten bleibt in beiden Darstellungen erha
 
 ## Opposite Station Multi-Callsign Login-Tagging (ab v1.26)
 
-Unterstützung für Stationen, die mit mehreren Rufzeichen gleichzeitig im Chat aktiv sind (z. B. Expedition-Setups).
+Unterstützung für Gegenstationen, die mit mehreren vollständigen Rufzeichen gleichzeitig im Chat aktiv sind (z. B. Expedition-Setups). Vollständiges Rufzeichen und Chat-Kategorie bleiben getrennte Teilnehmeridentitäten; Worked-, Band- und Prioritätsdaten werden über das Basisrufzeichen gemeinsam ausgewertet.
 
 ---
 
@@ -438,7 +438,7 @@ Sniffed: (DN9APW-70 > 9A0BB-23) pse sked 19:30
 
 Das ist ein wichtiger Unterschied. Das Monitoring fasst die Varianten zusammen, damit keine Nachricht übersehen wird. Das Nachrichtenrouting fasst sie nicht zusammen, weil andernfalls nicht mehr eindeutig wäre, welcher Login tatsächlich angesprochen wurde.
 
-Das Basisrufzeichen wird außerdem unabhängig von der Chat-Kategorie ausgewertet. Ist KST4Contest gleichzeitig mit zwei Kategorien verbunden, gilt derselbe Monitoring-Eintrag für beide Nachrichtenströme. Die Kategorie der einzelnen Nachricht bleibt dabei erhalten.
+Das Basisrufzeichen wird außerdem unabhängig von der Chat-Kategorie ausgewertet. Sind in derselben ON4KST-Sitzung zwei Kategorien aktiv, gilt derselbe Monitoring-Eintrag für beide Nachrichtenströme. Die Kategorie der einzelnen Nachricht bleibt dabei erhalten.
 
 Erfasst werden:
 
@@ -703,7 +703,7 @@ Die Timeline ist eine Vorschau. AirScout-Daten können sich ändern, und ein ein
 
 KST4Contest kann wiederkehrende CQ-Nachrichten in den öffentlichen Chat senden. Der Beacon ist für längeres CQ-Rufen auf einer festen Frequenz gedacht: Die eigene QRG wird regelmäßig veröffentlicht, ohne dass derselbe Text von Hand wiederholt werden muss.
 
-Beide Chat-Kategorien verwenden ein gemeinsames Intervall, besitzen aber jeweils einen eigenen Aktivierungsschalter und Nachrichtentext. Der zweite Beacon wird nur gesendet, wenn auch der zweite Chat aktiviert und verbunden ist.
+Beide Chat-Kategorien verwenden ein gemeinsames Intervall, besitzen aber jeweils einen eigenen Aktivierungsschalter und Nachrichtentext. Der zweite Beacon wird nur gesendet, wenn die zweite Kategorie in derselben ON4KST-Sitzung aktiviert und vollständig synchronisiert ist.
 
 Globale Variablen wie `MYQRG`, `SECONDQRG`, `MYLOCATOR` oder `MYQTF` werden unmittelbar vor jeder Aussendung neu aufgelöst. Eine zwischenzeitlich vom Logprogramm aktualisierte QRG kann dadurch bereits im nächsten Beacon erscheinen.
 

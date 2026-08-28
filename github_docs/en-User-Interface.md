@@ -4,7 +4,7 @@
 
 ## Connecting to the Chat
 
-Before connecting for the first time, configure at least the callsign, password, locator and primary chat category in the settings window. If a second category is required, its login must also be enabled and configured completely.
+Before connecting for the first time, configure one local login callsign, password, locator and the primary chat category in the settings window. If a second category is required, enable and select it there. KST4Contest signs in once and adds the second category through Single Sign-on within the same TCP session.
 
 The connection can be started in two ways:
 
@@ -54,7 +54,7 @@ Both indicators flash for approximately twelve seconds and then disappear. Their
 
 ### PM Window (top left)
 
-The PM window shows private messages addressed to the local chat logins and the corresponding outgoing replies.
+The PM window shows private messages addressed to the local visible chat names and the corresponding outgoing replies.
 
 Messages not sent by the local station are also shown when their text contains the configured local login callsign, ignoring letter case. This applies to public messages addressed to `ALL` and to directed messages between other chat participants. The informal description **“gossip detection”** is particularly apt for the latter case.
 

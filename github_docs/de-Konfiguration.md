@@ -14,14 +14,15 @@ Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist de
 
 ### Login und Chat-Kategorien
 
-Hier werden die Zugangsdaten für den ON4KST-Chat eingetragen (Rufzeichen und Passwort).
-Zudem wird die **primäre Chat-Kategorie** (z. B. IARU Region 1 VHF/Microwave) ausgewählt.
+Hier werden das eine lokale Login-Rufzeichen und Passwort für den ON4KST-Chat eingetragen. Zudem wird die **primäre Chat-Kategorie** (z. B. IARU Region 1 VHF/Microwave) ausgewählt.
 
-Mit der Option für einen **zweiten Chat** (Multi-Channel-Login) kann man sich gleichzeitig in eine weitere Kategorie (z. B. UHF/SHF) einloggen. Beide Chats werden dann parallel überwacht. Hier kann optional auch ein abweichender Login-Name für den zweiten Chat vergeben werden (nützlich für Opposite Station Multi-Callsign Logging).
+Mit der Option für einen **zweiten Chat** (Multi-Channel-Login) wird eine weitere Kategorie (z. B. UHF/SHF) per Single Sign-on in derselben ON4KST-TCP-Sitzung aktiviert. KST4Contest öffnet dafür keine zweite TCP-Verbindung und verwendet weder ein zweites lokales Login-Rufzeichen noch ein zweites Passwort.
+
+**Name in Chat 2** ist der eigene sichtbare Chat-Name in der zweiten Kategorie, kein zweites Login. Der sichtbare Chat-Name, der Nachrichtenkontext, die QRG und der Beacon bleiben für beide Kategorien getrennt. **Opposite Station Multi-Callsign Login-Tagging** bezieht sich dagegen ausschließlich auf Gegenstationen, die mit mehreren vollständigen Rufzeichen im Chat erscheinen.
 
 ### Rufzeichen und Locator
 
-Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. `JN49IJ`) eintragen. Diese Werte werden für Distanz- und Richtungsberechnungen benötigt.
+Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. `JN49IJ`) eintragen. ON4KST verwendet für beide Kategorien denselben Locator der einen TCP-Sitzung. Die Werte werden außerdem für Distanz- und Richtungsberechnungen benötigt.
 
 ### Aktivierte Bänder
 
@@ -576,7 +577,7 @@ KST4Contest verwendet einen gemeinsamen Timer für beide Chat-Kategorien. Aktivi
 - **Beacon message** enthält den öffentlichen Nachrichtentext dieser Kategorie.
 - **Shared beacon interval** legt das gemeinsame Intervall für beide Kategorien fest.
 
-Sind beide Beacons aktiviert, werden sie beim selben Timer-Lauf nacheinander in ihren jeweiligen Kategorien gesendet. Der zweite Beacon wird nur berücksichtigt, wenn auch der zweite Chat aktiviert und verbunden ist.
+Sind beide Beacons aktiviert, werden sie beim selben Timer-Lauf nacheinander in ihren jeweiligen Kategorien gesendet. Der zweite Beacon wird nur berücksichtigt, wenn die zweite Kategorie in derselben ON4KST-Sitzung aktiviert und vollständig synchronisiert ist.
 
 ### Intervall und Timer-Verhalten
 

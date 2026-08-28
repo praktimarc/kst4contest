@@ -307,7 +307,7 @@ Configuration, recognised QRG requests and category handling: [Configuration –
 
 ## Multi-Channel Login (from v1.26)
 
-Simultaneous login to **two chat categories** (e.g. 144 MHz and 432 MHz). Both chats are monitored in parallel.
+KST4Contest signs in to ON4KST once with one local callsign, password and locator. A second chat category (e.g. 144 MHz and 432 MHz) is added through Single Sign-on within the same TCP session. Both categories are monitored in parallel, while the local visible chat name, message context, QRG and beacon remain separate for each category.
 
 ---
 
@@ -321,7 +321,7 @@ The green private-message age scale remains available in both designs. Text colo
 
 ## Opposite Station Multi-Callsign Login Tagging (from v1.26)
 
-Support for stations that are active in the chat with multiple callsigns simultaneously (e.g. expedition setups).
+Support for remote stations which are active in the chat under several complete callsigns at the same time (e.g. expedition setups). The complete callsign and chat category remain separate participant identities, while Worked, band and priority data are shared through the base callsign.
 
 ---
 
@@ -437,7 +437,7 @@ Sniffed: (DN9APW-70 > 9A0BB-23) pse sked 19:30
 
 This distinction is intentional. Monitoring aggregates the variants so that their communication remains visible. Message routing does not aggregate them because the intended login would otherwise become ambiguous.
 
-The base callsign is evaluated across both connected chat categories. The category of each individual message remains unchanged.
+The base callsign is evaluated across both chat categories in the shared ON4KST session. The category of each individual message remains unchanged.
 
 The monitoring view includes:
 
@@ -703,7 +703,7 @@ The timeline is a preview. AirScout data can change, and a stored sked guarantee
 
 KST4Contest can send recurring CQ messages to the public chat. The beacon is intended for longer periods of calling CQ on a fixed frequency: it publishes the local QRG regularly without requiring the operator to enter the same text again.
 
-Both chat categories use one shared interval, but each category has its own enable setting and message template. The second beacon is only sent while the second chat is enabled and connected.
+Both chat categories use one shared interval, but each category has its own enable setting and message template. The second beacon is only sent while the second category is enabled and fully synchronised in the shared ON4KST session.
 
 Global variables such as `MYQRG`, `SECONDQRG`, `MYLOCATOR` and `MYQTF` are resolved immediately before every transmission. A QRG updated by the logging software can therefore appear in the next beacon.
 
