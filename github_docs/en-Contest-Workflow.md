@@ -257,7 +257,7 @@ Another particularly consistent operating method uses the station map as a geogr
 
 The map consequently becomes a spatial list of the stations still to be worked. This workflow is optional. It requires reliable log synchronisation and a working DX Cluster connection and is mainly useful for operators who deliberately want to organise the contest in this geographical way.
 
-[Watch G1YBB demonstrate this workflow.](https://www.youtube.com/watch?v=BCNCjowPgec)
+[Watch G1YBB demonstrate this workflow.](https://www.youtube.com/watch?v=lMQZMiSHlUI)
 
 ---
 

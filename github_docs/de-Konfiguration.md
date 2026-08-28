@@ -14,15 +14,15 @@ Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist de
 
 ### Login und Chat-Kategorien
 
-Hier werden das eine lokale Login-Rufzeichen und Passwort für den ON4KST-Chat eingetragen. Zudem wird die **primäre Chat-Kategorie** (z. B. IARU Region 1 VHF/Microwave) ausgewählt.
+Hier werden das lokale Login-Rufzeichen und das Passwort für den ON4KST-Chat eingetragen. Zudem wird die **primäre Chat-Kategorie** (z. B. IARU Region 1 VHF/Microwave) ausgewählt.
 
 Mit der Option für einen **zweiten Chat** (Multi-Channel-Login) wird eine weitere Kategorie (z. B. UHF/SHF) per Single Sign-on in derselben ON4KST-TCP-Sitzung aktiviert. KST4Contest öffnet dafür keine zweite TCP-Verbindung und verwendet weder ein zweites lokales Login-Rufzeichen noch ein zweites Passwort.
 
-**Name in Chat 2** ist der eigene sichtbare Chat-Name in der zweiten Kategorie, kein zweites Login. Der sichtbare Chat-Name, der Nachrichtenkontext, die QRG und der Beacon bleiben für beide Kategorien getrennt. **Opposite Station Multi-Callsign Login-Tagging** bezieht sich dagegen ausschließlich auf Gegenstationen, die mit mehreren vollständigen Rufzeichen im Chat erscheinen.
+**Name in Chat 2** konfiguriert ausschließlich das sichtbare, kategoriebasierte Namensfeld der zweiten Kategorie. Es ist weder ein zweites Login noch ein Nachrichtenempfänger. Das sichtbare Namensfeld, der Nachrichtenkontext, die QRG und der Beacon bleiben für beide Kategorien getrennt. **Opposite Station Multi-Callsign Login-Tagging** bezieht sich dagegen ausschließlich auf Gegenstationen, die mit mehreren vollständigen sichtbaren Rufzeichenvarianten im Chat erscheinen.
 
 ### Rufzeichen und Locator
 
-Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. `JN49IJ`) eintragen. ON4KST verwendet für beide Kategorien denselben Locator der einen TCP-Sitzung. Die Werte werden außerdem für Distanz- und Richtungsberechnungen benötigt.
+Eigenes Rufzeichen und Maidenhead-Locator (6-stellig, z. B. `JN49IJ`) eintragen. Der Locator ist kein Bestandteil der Authentifizierung. ON4KST verwendet ihn gemeinsam für beide Kategorien der einen TCP-Sitzung; KST4Contest benötigt ihn außerdem für Distanz- und Richtungsberechnungen.
 
 ### Aktivierte Bänder
 

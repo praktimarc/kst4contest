@@ -18,11 +18,11 @@ Enter the one local login callsign and password used for the ON4KST chat. Also s
 
 The **second chat** option (Multi-Channel Login) adds another category (e.g. UHF/SHF) to the same ON4KST TCP session through Single Sign-on. KST4Contest does not open a second TCP connection and does not use another local login callsign or password.
 
-**Name in Chat 2** is the local name shown in the second category, not a second login. The visible chat name, message context, QRG and beacon remain separate for each category. **Opposite Station Multi-Callsign Login Tagging**, by contrast, refers exclusively to remote stations which appear in the chat under several complete callsigns.
+**Name in Chat 2** configures only the visible, category-specific name field for the second category. It is neither another login nor a message destination. The visible name field, message context, QRG and beacon remain separate for each category. **Opposite Station Multi-Callsign Login Tagging**, by contrast, refers exclusively to remote stations which appear in the chat under several complete visible callsign variants.
 
 ### Callsign and Locator
 
-Enter your own callsign and Maidenhead locator (6 characters, e.g. `JN49IJ`). ON4KST uses the same locator for both categories in the one TCP session. These values are also used for distance and direction calculations.
+Enter your own callsign and Maidenhead locator (6 characters, e.g. `JN49IJ`). The locator is not part of authentication. ON4KST shares it between both categories in the one TCP session, and KST4Contest also uses it for distance and direction calculations.
 
 ### Active Bands
 

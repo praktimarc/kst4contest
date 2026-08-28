@@ -21,8 +21,8 @@ KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/m
 
 ### Chat identity
 
-- Full callsign variants can be distinct chat-member identities.
-- Category is part of chat identity.
+- For remote chat participants, the complete visible callsign plus category forms the chat-member identity.
+- Full callsign variants can therefore be distinct chat-member identities.
 - Base-call normalization is permitted only for explicitly base-call-wide functions.
 - Worked status is shared across suffix variants of the same base call.
 - Monitoring a variant such as `DN9APW-2` or `DN9APW-70` intentionally monitors the base call `DN9APW`.
@@ -67,9 +67,11 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 
 ### ON4KST session and authentication
 
-- One KST4Contest connection uses one authenticated ON4KST TCP session with one local login callsign, one password and one locator.
+- One KST4Contest connection authenticates one ON4KST TCP session with one local login callsign and one password.
+- The TCP session uses one common locator for both categories; the locator is not part of authentication.
 - The primary category is part of the initial login. A distinct second category is added to the same session through ON4KST Single Sign-on; it must not create a second TCP connection or local login.
-- The local visible chat name, message context, QRG and beacon configuration remain category-specific.
+- **Name in Chat** is a visible category-specific name field, not a login callsign or message destination. Private messages to the local station are addressed to the local login callsign.
+- The visible **Name in Chat** field, message context, QRG and beacon configuration remain category-specific.
 
 ### ON4KST session liveness
 

@@ -307,7 +307,7 @@ Configuration, recognised QRG requests and category handling: [Configuration –
 
 ## Multi-Channel Login (from v1.26)
 
-KST4Contest signs in to ON4KST once with one local callsign, password and locator. A second chat category (e.g. 144 MHz and 432 MHz) is added through Single Sign-on within the same TCP session. Both categories are monitored in parallel, while the local visible chat name, message context, QRG and beacon remain separate for each category.
+KST4Contest signs in to ON4KST once with one local login callsign and password. One locator is shared by the entire TCP session. A second chat category (e.g. 144 MHz and 432 MHz) is added through Single Sign-on within the same session. Both categories are monitored in parallel, while the visible category-specific name field, message context, QRG and beacon remain separate for each category.
 
 ---
 
@@ -321,7 +321,7 @@ The green private-message age scale remains available in both designs. Text colo
 
 ## Opposite Station Multi-Callsign Login Tagging (from v1.26)
 
-Support for remote stations which are active in the chat under several complete callsigns at the same time (e.g. expedition setups). The complete callsign and chat category remain separate participant identities, while Worked, band and priority data are shared through the base callsign.
+Support for remote stations which are active in the chat under several complete visible callsign variants at the same time (e.g. expedition setups). The complete callsign and chat category remain separate participant identities, while Worked, band and priority data are shared through the base callsign.
 
 ---
 
@@ -602,7 +602,7 @@ The score is calculated for the normalised base callsign. A sked entered for an 
 
 ### How are multiple suffixes and chat categories handled?
 
-Active callsigns such as `9A0BB-2`, `9A0BB-70`, `9A0BB-23` and `9A0BB-13` remain separate chat members. Messages can therefore still be addressed to the complete callsign in the correct chat category.
+Active complete visible callsign variants such as `9A0BB-2`, `9A0BB-70`, `9A0BB-23` and `9A0BB-13` remain separate chat members. Messages can therefore still be addressed to the complete callsign in the correct chat category.
 
 Worked, band, NOT-QRV and score information belongs to the common base callsign `9A0BB`. The score is calculated once and projected to all active variants. The user list may consequently contain several separate rows with the same score, while the priority list contains only one entry for the base station.
 

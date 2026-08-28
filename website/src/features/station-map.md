@@ -67,7 +67,7 @@ G1YBB uses the map particularly consistently as a geographical contest worklist:
 
 This creates a direct visual progression through the remaining stations. It is an optional and deliberately consistent operating method, not a prerequisite for using the map or KST4Contest.
 
-[Watch G1YBB demonstrate this workflow.](https://www.youtube.com/watch?v=BCNCjowPgec)
+[Watch G1YBB demonstrate this workflow.](https://www.youtube.com/watch?v=lMQZMiSHlUI)
 
 ## What does the path analysis calculate?
 

@@ -257,7 +257,7 @@ Eine weitere, besonders konsequente Betriebsweise nutzt die Stationskarte als ge
 
 Die Karte wird so zu einer räumlichen Liste der noch abzuarbeitenden Stationen. Dieser Ablauf ist optional. Er setzt eine zuverlässig eingerichtete Log-Synchronisation und DX-Cluster-Verbindung voraus und ist vor allem für Operatoren interessant, die den Contest bewusst auf diese geografische Weise strukturieren möchten.
 
-[G1YBB zeigt diesen Workflow im Video.](https://www.youtube.com/watch?v=BCNCjowPgec)
+[G1YBB zeigt diesen Workflow im Video.](https://www.youtube.com/watch?v=lMQZMiSHlUI)
 
 ---
 

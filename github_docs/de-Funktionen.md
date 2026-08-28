@@ -308,7 +308,7 @@ Konfiguration, erkannte QRG-Anfragen und genaue Kategorienzuordnung: [Konfigurat
 
 ## Multi-Channel-Login (ab v1.26)
 
-KST4Contest meldet sich mit einem lokalen Rufzeichen, Passwort und Locator einmal bei ON4KST an. Eine zweite Chat-Kategorie (z. B. 144 MHz und 432 MHz) wird per Single Sign-on innerhalb derselben TCP-Sitzung ergänzt. Beide Kategorien werden parallel überwacht; der eigene sichtbare Chat-Name, Nachrichtenkontext, QRG und Beacon bleiben je Kategorie getrennt.
+KST4Contest meldet sich mit einem lokalen Login-Rufzeichen und Passwort einmal bei ON4KST an. Ein gemeinsamer Locator gilt für die gesamte TCP-Sitzung. Eine zweite Chat-Kategorie (z. B. 144 MHz und 432 MHz) wird per Single Sign-on innerhalb derselben Sitzung ergänzt. Beide Kategorien werden parallel überwacht; das sichtbare kategoriebasierte Namensfeld, der Nachrichtenkontext, die QRG und der Beacon bleiben je Kategorie getrennt.
 
 ---
 
@@ -322,7 +322,7 @@ Die grüne Altersskala der Privatnachrichten bleibt in beiden Darstellungen erha
 
 ## Opposite Station Multi-Callsign Login-Tagging (ab v1.26)
 
-Unterstützung für Gegenstationen, die mit mehreren vollständigen Rufzeichen gleichzeitig im Chat aktiv sind (z. B. Expedition-Setups). Vollständiges Rufzeichen und Chat-Kategorie bleiben getrennte Teilnehmeridentitäten; Worked-, Band- und Prioritätsdaten werden über das Basisrufzeichen gemeinsam ausgewertet.
+Unterstützung für Gegenstationen, die mit mehreren vollständigen sichtbaren Rufzeichenvarianten gleichzeitig im Chat aktiv sind (z. B. Expedition-Setups). Vollständiges Rufzeichen und Chat-Kategorie bleiben getrennte Teilnehmeridentitäten; Worked-, Band- und Prioritätsdaten werden über das Basisrufzeichen gemeinsam ausgewertet.
 
 ---
 
@@ -604,7 +604,7 @@ Die Bewertung wird für das normalisierte Basisrufzeichen vorgenommen. Ein Sked 
 
 ### Wie werden mehrere SSIDs und Chat-Kategorien behandelt?
 
-Aktive Rufzeichen wie `9A0BB-2`, `9A0BB-70`, `9A0BB-23` und `9A0BB-13` bleiben getrennte Chatmember. Dadurch können Nachrichten weiterhin an das vollständige Rufzeichen und die richtige Chat-Kategorie adressiert werden.
+Aktive vollständige sichtbare Rufzeichenvarianten wie `9A0BB-2`, `9A0BB-70`, `9A0BB-23` und `9A0BB-13` bleiben getrennte Chatmember. Dadurch können Nachrichten weiterhin an das vollständige Rufzeichen und die richtige Chat-Kategorie adressiert werden.
 
 Worked-, Band-, NOT-QRV- und Score-Informationen beziehen sich dagegen auf das gemeinsame Basisrufzeichen `9A0BB`. Der Score wird deshalb einmal berechnet und auf alle aktiven Varianten übertragen. Die Benutzerliste kann mehrere getrennte Zeilen mit demselben Score enthalten; in der Prioritätsliste erscheint das Basisrufzeichen nur einmal.
 

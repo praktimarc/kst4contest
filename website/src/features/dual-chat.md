@@ -35,19 +35,19 @@ KST4Contest therefore signs in once and adds a second chat category through ON4K
 
 ## One connection, two category contexts
 
-KST4Contest authenticates the ON4KST TCP session with one local login callsign, one password and one locator. The primary category is part of that login. If a second category is enabled, the client adds it to the same session through Single Sign-on. It does not open another TCP connection or perform a second local login.
+KST4Contest authenticates the ON4KST TCP session with one local login callsign and one password. The session uses one common locator for both categories; the locator is not an authentication credential. The primary category is part of the initial login. If a second category is enabled, the client adds it to the same session through Single Sign-on. It does not open another TCP connection or perform a second local login.
 
 The primary and secondary categories still retain their own:
 
 - ON4KST chat category;
-- visible local chat name;
+- visible category-specific **Name in Chat** field;
 - public message stream;
 - message context and destination category for outgoing messages;
 - local QRG;
 - beacon enable setting and message template; and
 - active chat-member entries.
 
-The **Name in Chat 2** field changes the local name shown in the second category. It is not a second login callsign. Both categories continue to use the one callsign and locator supplied when the TCP session was authenticated.
+The **Name in Chat 2** field configures only the visible name field for the second category. It is neither a second login callsign nor a message destination. Both categories continue to use the one local login callsign and the common locator of the TCP session.
 
 One connection therefore does not mean one combined message stream. Messages must still be sent in the category in which the intended destination is active.
 
@@ -55,14 +55,14 @@ One connection therefore does not mean one combined message stream. Messages mus
 
 For remote chat participants, an active member is identified by:
 
-1. the complete visible callsign, including its suffix; and
+1. the complete visible callsign variant, including its suffix; and
 2. the ON4KST chat category.
 
 Both parts are required.
 
 Consider the following active entries:
 
-| Complete callsign | Chat category | Active entity |
+| Complete visible callsign variant | Chat category | Active entity |
 |---|---:|---|
 | `9A0BB-2` | 1 | separate |
 | `9A0BB-70` | 1 | separate |
@@ -77,7 +77,7 @@ This is particularly important for `9A0BB-2` and `9A0BB-70`: because both use th
 
 ## How are messages routed?
 
-When a row is selected, KST4Contest retains both the complete callsign and its category. A private message is addressed to that complete callsign and sent in the corresponding category within the shared session.
+When a row is selected, KST4Contest retains both the complete callsign and its category. A private message is addressed to that complete callsign and sent in the corresponding category within the shared session. Incoming private messages for the local station are addressed to the local login callsign, not to a category-specific **Name in Chat** field.
 
 Selecting `9A0BB-70` in category 1 therefore creates a message for `9A0BB-70` in category 1. It is not silently reduced to `9A0BB`, and it is not sent through category 2 merely because another variant is active there.
 
@@ -113,7 +113,7 @@ Per-band information is still retained. Working the station on 70 MHz does not m
 
 ## Why are band hints combined?
 
-A remote station may use its visible chat names to describe the available bands:
+A remote station may use complete visible callsign variants to describe the available bands:
 
 - `9A0BB-2`
 - `9A0BB-70`
@@ -168,7 +168,7 @@ This distinction is the basis of the dual-chat implementation: operational infor
 
 ## Practical limitations
 
-The shared base-callsign model assumes that suffix variants separated by `-` belong to the same underlying amateur-radio station. That is appropriate for common remote chat names such as `-2`, `-70`, `-144` or `-432`.
+The shared base-callsign model assumes that complete visible callsign variants separated by `-` belong to the same underlying amateur-radio station. That is appropriate for variants such as `-2`, `-70`, `-144` or `-432`.
 
 KST4Contest cannot determine whether two operators behind those chat entries are using one station, several independently operated stations or a distributed contest setup. Worked and band information is therefore shared at callsign level, while the operator remains responsible for selecting the correct chat destination.
 
