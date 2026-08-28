@@ -137,7 +137,7 @@ This distinction matters. A callsign already worked on one band may still be use
 
 [Log Synchronisation](en-Log-Sync) imports new QSOs from the logging application. The amount of information available depends on the interface being used:
 
-- The file-based Simplelogfile interpreter detects callsigns only. It can therefore set only the global Worked status.
+- The file-based Simplelogfile interpreter reads the selected text file once per minute using a fixed callsign pattern. Matches are normalised to the base callsign and set only the global Worked status for all active variants.
 - The QSO UDP interfaces and the Win-Test network listener can also provide the band.
 - If the log packet contains a valid locator, KST4Contest additionally stores the worked four-character grid square for that band.
 
@@ -206,7 +206,9 @@ In plain terms: an automatically detected hint means "probably active on this ba
 
 ### Storage and lifetime
 
-Worked, NOT-QRV and worked-grid information is stored in the internal SQLite database and restored on the next start. Entries expire automatically after three days, so a reset before every contest is normally unnecessary.
+Worked, NOT-QRV and worked-grid information received from network interfaces, together with manual marks, is stored in the internal SQLite database and restored on the next start. Entries expire automatically after three days, so a reset before every contest is normally unnecessary.
+
+Simplelogfile matches are excluded. They are not persisted in SQLite but are derived from the selected file during each application session. The file is therefore the durable source. The interpreter does not remove an existing Worked mark during the current session and does not reset the state automatically for a new contest.
 
 A manual reset under **Workedstn database** removes all Worked marks, NOT-QRV marks and stored worked grid squares. The known callsign rows remain in the database. See [Worked Station Database Settings](en-Configuration#worked-station-database-settings) for details.
 
@@ -718,7 +720,7 @@ Configuration, timer behaviour and available variables: [Configuration – Beaco
 
 ## Simplelogfile
 
-File-based log evaluation using regex. Details: [Log Synchronisation](en-Log-Sync#method-1-universal-file-based-callsign-interpreter-simplelogfile).
+The Simplelogfile interpreter reads callsigns from a selected text file once per minute. If the file is missing, KST4Contest creates it and displays a non-blocking notice with its path and the initial setup and contest checks. Details: [Log Synchronisation](en-Log-Sync#method-1-universal-file-based-callsign-interpreter-simplelogfile).
 ---
 
 ## Global Message Views

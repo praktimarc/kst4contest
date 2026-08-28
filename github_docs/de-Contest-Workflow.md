@@ -67,6 +67,8 @@ Aktiviere nur die Schnittstellen, die tatsächlich verwendet und vorher getestet
 
 Ein Contest ist ein ungünstiger Zeitpunkt, um gleichzeitig die Funkbedingungen und eine erstmals aktivierte Netzwerkschnittstelle zu untersuchen.
 
+Beim Simplelogfile sollte vor jedem Contest geprüft werden, ob das Logprogramm die aktuelle Contestdatei an den in KST4Contest ausgewählten Pfad schreibt. Ein Test-QSO muss innerhalb einer Minute als global gearbeitet erscheinen. KST4Contest setzt die aus dieser Datei abgeleiteten Worked-Markierungen beim Contestwechsel nicht automatisch zurück.
+
 ---
 
 ## Grundablauf während des Contests
@@ -89,7 +91,7 @@ KST4Contest hält die benötigten Informationen zwischen diesen Schritten zusamm
 
 ## CQ-Betrieb
 
-Bei einer weitgehend festen CQ-QRG sollten `MYQRG` beziehungsweise `SECONDQRG` den tatsächlich verwendeten Frequenzen entsprechen. Eine aktivierte TRX-Synchronisation kann `MYQRG` automatisch aktualisieren. Ohne automatische Quelle muss der Wert von Hand gepflegt werden.
+Bei einer weitgehend festen CQ-QRG sollten `MYQRG` beziehungsweise `SECONDQRG` den tatsächlich verwendeten Frequenzen entsprechen. Eine aktivierte und tatsächlich liefernde TRX-Synchronisation kann `MYQRG` automatisch aktualisieren. Die Aktivierung allein reicht nicht: Vor dem Contest sollte mit einer realen Frequenzänderung geprüft werden, ob gültige Pakete ankommen. Ohne funktionierende automatische Quelle muss der Wert von Hand gepflegt werden.
 
 Der Beacon kann die aktuelle QRG, den Locator und die Antennenrichtung regelmäßig im Chat veröffentlichen. Seine Variablen werden bei jedem Sendedurchlauf erneut ausgewertet.
 

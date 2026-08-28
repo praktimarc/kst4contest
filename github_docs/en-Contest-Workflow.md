@@ -67,6 +67,8 @@ Enable only interfaces which are actually required and have already been tested:
 
 A contest is not an ideal time to investigate radio conditions and a newly enabled network interface at the same time.
 
+Before each contest, verify that the logging application writes the current contest file to the path selected for the Simplelogfile. A test QSO should appear as globally worked within one minute. KST4Contest does not reset Worked marks derived from this file automatically when the contest changes.
+
 ---
 
 ## Basic Contest Cycle
@@ -89,7 +91,7 @@ KST4Contest keeps the required information together between these steps. Changin
 
 ## CQ Operation
 
-During operation on a mainly fixed CQ frequency, `MYQRG` and `SECONDQRG` should match the frequencies actually in use. Enabled TRX synchronisation can update `MYQRG` automatically. Without an automatic source, the value must be maintained manually.
+During operation on a mainly fixed CQ frequency, `MYQRG` and `SECONDQRG` should match the frequencies actually in use. TRX synchronisation can update `MYQRG` automatically only when it is enabled and actually supplies valid packets. Before the contest, verify this with a real frequency change. Without a working automatic source, the value must be maintained manually.
 
 The beacon can publish the current QRG, locator and antenna direction in the chat at regular intervals. Its variables are evaluated again for every transmission.
 

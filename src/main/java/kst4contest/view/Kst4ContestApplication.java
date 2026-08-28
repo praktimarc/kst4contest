@@ -12142,7 +12142,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				"File: " + filePath + "\n\n"
 						+ "Configure your logging application to write its live log to this file. "
 						+ "Then log a test QSO and verify that the callsign is marked as worked "
-						+ "in KST4Contest within one minute.");
+						+ "in KST4Contest within one minute.\n\n"
+						+ "Before each contest, verify that the logging application writes the current "
+						+ "contest log to this exact file. KST4Contest does not reset Simplelogfile-derived "
+						+ "Worked marks automatically when a new contest starts.");
 		explanation.setWrapText(true);
 
 		Hyperlink manualLink = new Hyperlink("Open the Simplelogfile manual");

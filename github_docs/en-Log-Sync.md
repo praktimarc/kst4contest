@@ -10,17 +10,19 @@ KST4Contest imports worked stations from the logging application and derives the
 
 ## Method 1: Universal File Based Callsign Interpreter (Simplelogfile)
 
-KST4Contest reads a log file and searches it for callsigns using a configurable regular expression. The file is read only and is never modified. Binary log files can also be used; content which cannot be interpreted as text is skipped.
+KST4Contest reads the selected text file once per minute and searches it for callsigns using a fixed built-in regular expression. Each match is normalised to its base callsign, so the global Worked status applies to every currently active chat variant of that callsign.
 
 The advantage is broad compatibility: no dedicated network interface is required from the logging application.
 
 The limitation is equally clear. A callsign match alone provides neither a reliable band nor a locator. The Simplelogfile interpreter can therefore set only the global Worked status. It does not create a per-band `X`, a worked-grid record or a reliable basis for the band-upgrade hint after a log entry.
 
-Configure the log-file path and regular expression in the **Log sync** tab. Use one of the network interfaces where possible if band-specific information is required.
+Select the text-file path in the **Log sync** tab. If the file is missing, KST4Contest creates it and displays a one-time, non-blocking notice with the path and the checks to perform next. Read or creation errors are logged; the scheduled task continues with its next one-minute pass. Use one of the network interfaces where possible if band-specific information is required.
+
+Worked status derived from the Simplelogfile is not stored in the internal SQLite database. The selected file is the durable source and is read again after every restart. The interpreter only adds positive Worked marks; it does not remove an existing mark during the current application session and does not reset automatically for a new contest. Before each contest, verify that the logging application is writing the current contest log to this exact file.
 
 ---
 
-# Method 2: Network Listener for QSO UDP Packets – Recommended
+## Method 2: Network Listener for QSO UDP Packets – Recommended
 
 UCXLog, QARTest, N1MM+ and DXLog.net can transmit a UDP packet when a QSO is saved. KST4Contest receives these packets on port `12060` by default and imports the callsign together with any band and locator information they contain.
 
@@ -164,7 +166,7 @@ In addition to QSO synchronisation, UCXLog and other programs also transmit the 
 
 ![Frequency Buttons](qrg_buttons.png)
 
-**Result**: Your own QRG never needs to be typed manually in the chat – clicking the MYQRG button or using the variable in the beacon is sufficient.
+**Result**: An enabled interface updates `MYQRG` when it actually supplies valid frequency packets. Enabling an interface does not create a QRG on its own. If no suitable packets arrive, check the interface or disable both automatic sources and maintain the QRG manually.
 
 **Sources for your own QRG (MYQRG):**
 - UCXLog, N1MM+, DXLog.net, QARTest via UDP port 12060
@@ -192,7 +194,7 @@ For DM5M-style setups (2 radios, 2 computers, one KST4Contest instance or two se
 
 ## Internal Database
 
-KST4Contest stores Worked, NOT-QRV and worked-grid information in its own SQLite database. This database is independent of the logging application's database.
+KST4Contest stores Worked, NOT-QRV and worked-grid information received from network interfaces, together with manual marks, in its own SQLite database. This database is independent of the logging application's database. Simplelogfile matches are excluded and are derived again from the selected file in each application session.
 
 The input sources provide different levels of detail:
 
@@ -202,6 +204,6 @@ The input sources provide different levels of detail:
 | QSO UDP listener | yes | yes, if included in the packet | yes, if both band and locator are available |
 | Win-Test network listener | yes | yes | yes, if a locator is available |
 
-The information is restored when KST4Contest starts and updated during operation when new log entries arrive. It expires automatically after three days, so a reset before every contest is normally unnecessary.
+The information stored in SQLite is restored when KST4Contest starts and updated during operation when new log entries arrive. It expires automatically after three days, so a reset before every contest is normally unnecessary. This lifetime does not apply to the Simplelogfile interpreter: its file remains the durable source and is not reset automatically for a new contest.
 
 A complete manual reset removes Worked marks, NOT-QRV marks and worked grid squares together. See [Worked Station Database Settings](en-Configuration#worked-station-database-settings) for details.

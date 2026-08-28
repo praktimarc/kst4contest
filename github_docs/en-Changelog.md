@@ -80,6 +80,10 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **DXLog full-log import:** In addition to `contactinfo`, the UCXLog-compatible UDP listener processes `contactreplace`. This allows a complete log broadcast by DXLog.net to be imported.
 
+- **Defined Simplelogfile behaviour:** The selected text file is evaluated once per minute using a fixed callsign pattern. Matches set the global Worked status for all active variants of the base callsign but are not persisted in SQLite. A missing file is created, and read or creation errors do not terminate the periodic task.
+
+- **Guarded automatic QRG updates:** `MYQRG` is updated only by an enabled interface which actually supplies valid `RadioInfo` or Win-Test `STATUS` packets. An enabled source which provides no data does not remove the need for a functional check or manual QRG maintenance.
+
 - **Improved version comparison:** Versions are compared semantically so that patch releases and Nightly versions are not misclassified by conversion to a floating-point number.
 
 ### Fixed

@@ -65,6 +65,16 @@ Known integration areas include:
 
 CR/LF framing, XML framing, ports/transports, callsign normalization and frequency formatting are protocol behaviour and must not be changed as incidental cleanup.
 
+### Logging and Worked-state persistence
+
+- The Simplelogfile interpreter reads the selected text file after connection startup and then once per minute using a fixed built-in callsign pattern.
+- Simplelogfile callsigns are normalized to base callsigns and set only the global Worked state for every active variant. They do not create per-band Worked or grid-square state.
+- Simplelogfile-derived Worked state is not persisted in SQLite. The selected file is the durable source and is read again in each application session.
+- The interpreter only adds positive runtime marks. It does not remove existing marks during the current session and does not reset automatically when a new contest starts.
+- A missing selected file is created. Read, path and creation failures are contained so the periodic timer remains alive; successful creation triggers a one-time, non-blocking UI notice with the exact path and setup/contest checks.
+- Network-derived and manually assigned Worked, NOT-QRV and worked-grid state continues to use SQLite with its established lifetime and reset behaviour.
+- Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
+
 ### ON4KST session and authentication
 
 - One KST4Contest connection authenticates one ON4KST TCP session with one local login callsign and one password.

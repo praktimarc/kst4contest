@@ -136,7 +136,7 @@ Diese Trennung ist notwendig. Ein bereits gearbeitetes Rufzeichen kann auf einem
 
 Die [Log-Synchronisation](de-Log-Synchronisation) übernimmt neue QSOs aus dem Logprogramm. Welche Informationen dabei zur Verfügung stehen, hängt von der verwendeten Schnittstelle ab:
 
-- Der dateibasierte Simplelogfile-Interpreter erkennt nur das Rufzeichen. Er kann deshalb lediglich den globalen Worked-Status setzen.
+- Der dateibasierte Simplelogfile-Interpreter liest die ausgewählte Textdatei einmal pro Minute mit einem festen Rufzeichenmuster. Treffer werden auf das Basisrufzeichen normalisiert und setzen für alle aktiven Varianten lediglich den globalen Worked-Status.
 - Die QSO-UDP-Schnittstellen und der Win-Test-Netzwerk-Listener können zusätzlich das Band übernehmen.
 - Enthält das Logpaket einen gültigen Locator, speichert KST4Contest außerdem das gearbeitete vierstellige Großfeld für dieses Band.
 
@@ -205,7 +205,9 @@ Im Klartext: Ein erkannter Hinweis bedeutet „wahrscheinlich auf diesem Band ak
 
 ### Speicherung und Lebensdauer
 
-Worked-, NOT-QRV- und Großfeldinformationen werden in der internen SQLite-Datenbank gespeichert und beim nächsten Start wieder geladen. Die Einträge laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist deshalb normalerweise nicht erforderlich.
+Worked-, NOT-QRV- und Großfeldinformationen aus den Netzwerkschnittstellen sowie manuelle Markierungen werden in der internen SQLite-Datenbank gespeichert und beim nächsten Start wieder geladen. Die Einträge laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist deshalb normalerweise nicht erforderlich.
+
+Simplelogfile-Treffer sind davon ausgenommen. Sie werden nicht in SQLite persistiert, sondern bei jedem Programmlauf aus der ausgewählten Datei abgeleitet. Die Datei ist damit die dauerhafte Quelle. Der Interpreter entfernt während der laufenden Sitzung keine bereits gesetzte Worked-Markierung und setzt den Zustand beim Wechsel zu einem neuen Contest nicht automatisch zurück.
 
 Ein manueller Reset unter **Workedstn database** entfernt sämtliche Worked-Markierungen, NOT-QRV-Tags und gespeicherten Worked-Großfelder. Die bekannten Rufzeichenzeilen bleiben dabei in der Datenbank erhalten. Einzelheiten: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).
 
@@ -718,7 +720,7 @@ Konfiguration, Timer-Verhalten und verfügbare Variablen: [Konfiguration – Bea
 
 ## Simplelogfile
 
-Details: [Log-Synchronisation](de-Log-Synchronisation#methode-1-universal-file-based-callsign-interpreter-simplelogfile).
+Der Simplelogfile-Interpreter liest einmal pro Minute Rufzeichen aus einer ausgewählten Textdatei. Fehlt die Datei, legt KST4Contest sie an und zeigt einen nicht blockierenden Hinweis mit Pfad, Funktionstest und Contestprüfung. Details: [Log-Synchronisation](de-Log-Synchronisation#methode-1-universal-file-based-callsign-interpreter-simplelogfile).
 
 ---
 

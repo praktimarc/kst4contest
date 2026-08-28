@@ -128,13 +128,15 @@ The **Log sync** tab selects the sources from which KST4Contest imports worked s
 | **General QSO UDP listener** | QSO packets from UCXLog, QARTest, N1MM+ and DXLog.net | global and per-band Worked status plus worked grid square where both band and locator are transmitted |
 | **Win-Test network listener** | native Win-Test network packets | global and per-band Worked status, locator information and, depending on the settings, QRG synchronisation and sked handover |
 
-The file-based interpreter is mainly useful when the logging application provides no supported network interface. A callsign match alone, however, contains neither a reliable band nor a locator. Use one of the network listeners wherever possible if per-band information is required.
+The file-based interpreter reads the selected text file once per minute using a fixed callsign pattern. Matches are normalised to base callsigns and set only the global Worked status for all active variants. It is mainly useful when the logging application provides no supported network interface. A callsign match alone contains neither a reliable band nor a locator, so use one of the network listeners wherever possible if per-band information is required.
+
+If the selected file does not exist, KST4Contest creates it and displays its full path together with checks for initial setup and the next contest. The file itself is the durable source; Worked marks derived from it are not stored in SQLite and are not reset automatically for a new contest.
 
 The general QSO UDP listener is the recommended interface for UCXLog, QARTest, N1MM+ and DXLog.net. QSO and `RadioInfo` packets use the same configurable UDP port; the default is `12060`. Separate options in **Log sync** and **TRX sync** determine whether the received QSO and frequency information is processed.
 
 Win-Test uses its own network protocol and therefore has a separate listener. Its default port is `9871`. If this port is changed while the listener is enabled, KST4Contest restarts the Win-Test listener on the new port. After changing the shared UDP port `12060`, KST4Contest must instead be restarted completely.
 
-All enabled input paths may be used in parallel. Their Worked information is merged into the same internal database; identical reports do not create separate Worked states. KST4Contest must be running when a QSO is saved unless the logging application can resend the existing log.
+All enabled input paths may be used in parallel and identical reports do not create separate Worked states. Network-derived Worked information is stored in the internal database. Simplelogfile marks remain runtime state derived from the selected file. KST4Contest must be running when a network QSO is transmitted unless the logging application can resend the existing log.
 
 Configuration of the individual logging applications, band and locator handling, and the Win-Test sked handover are described under [Log Synchronisation](en-Log-Sync).
 
@@ -154,7 +156,7 @@ TRX synchronisation imports the current frequency from the logging application a
 | **Win-Test STATUS** | `Win-Test STATUS QRG Sync` | Processes the main or pass frequency from native Win-Test `STATUS` packets. The Win-Test listener uses its separately configured port, which defaults to `9871`. |
 | **Manual entry** | Disable both automatic QRG sources | The local QRG can be entered manually in the main window. |
 
-The general listener is intended for logging applications which transmit compatible `RadioInfo` packets. Depending on their individual configuration, this includes UCXLog, N1MM+, QARTest and DXLog.net. QSO and `RadioInfo` packets use the same port configured under **Log sync**, but separate options determine whether KST4Contest processes QSO information, TRX information or both packet types.
+The general listener is intended for logging applications which transmit compatible `RadioInfo` packets. Depending on their individual configuration, this includes UCXLog, N1MM+, QARTest and DXLog.net. QSO and `RadioInfo` packets use the same port configured under **Log sync**, but separate options determine whether KST4Contest processes QSO information, TRX information or both packet types. An automatic QRG source must be enabled and actually supply valid packets; enabling it alone does not update `MYQRG`.
 
 Restart KST4Contest after changing the shared UDP port. Changes to the two QRG-sync checkboxes take effect immediately.
 
@@ -164,7 +166,7 @@ Both automatic sources update `MYQRG` only. This is the local QRG of the first o
 
 If a second chat is enabled, its QRG remains independent. It is not derived from incoming TRX packets and is available through `SECONDQRG`. The first category can therefore follow the logging application's frequency automatically while a separate QRG is entered manually for the second category.
 
-As soon as at least one automatic QRG source is enabled, the first category's QRG field in the main window is bound to the received value. Manual entry becomes available again when both the general RadioInfo listener and Win-Test STATUS synchronisation are disabled.
+When at least one automatic QRG source is enabled and supplies a valid value, the first category's QRG field in the main window follows the received frequency. If the expected packets do not arrive, verify the interface before the contest. Manual entry is available when both the general RadioInfo listener and Win-Test STATUS synchronisation are disabled.
 
 ### Main or Pass Frequency from Win-Test
 
@@ -916,6 +918,8 @@ The internal SQLite database stores contest-related state independently of the l
 - Worked status per band,
 - manually assigned NOT-QRV marks per band, and
 - worked four-character grid squares per band.
+
+Worked marks from the Simplelogfile interpreter are the exception. They are copied from the selected file into runtime state only and are not persisted in SQLite. The file is the durable source and has no automatic contest reset.
 
 The normalised callsign, without visible chat brackets or category formatting, is used as the key. This allows active variants of the same callsign to be evaluated consistently.
 

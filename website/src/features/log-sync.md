@@ -37,7 +37,9 @@ The available information depends on the interface:
 | General QSO UDP listener | yes | when included | when included |
 | Win-Test network listener | yes | yes | when included |
 
-The Simplelogfile interpreter is broadly compatible but can only identify worked callsigns. A callsign match in a file does not provide enough information to infer a reliable band or grid square.
+The Simplelogfile interpreter reads the selected text file once per minute using a fixed callsign pattern. Matches are normalised to the base callsign and set the global Worked status for all active variants. A callsign match does not provide enough information to infer a reliable band or grid square.
+
+If the file does not exist, KST4Contest creates it and displays the path together with the initial setup and contest checks. The file itself is the durable source. Its Worked marks are not stored in SQLite, are not removed automatically during the running session and are not reset automatically for a new contest.
 
 The general UDP listener processes packets from UCXLog, N1MM+, QARTest and DXLog.net. Where the packet contains band and locator data, KST4Contest also updates the per-band Worked state and worked grid square.
 
@@ -47,7 +49,7 @@ The general UDP listener processes packets from UCXLog, N1MM+, QARTest and DXLog
 
 Win-Test uses a separate listener for its native network protocol. KST4Contest resolves the Win-Test band ID, including 50 and 70 MHz, and stores the resulting Worked information in the same internal database.
 
-STATUS packets can also update the local QRG. In multi-operator networks, a station-name filter prevents STATUS packets from another operating position from replacing the frequency of the intended radio.
+STATUS packets can also update the local QRG when QRG synchronisation is enabled and valid packets actually arrive. Enabling the source alone does not supply a frequency. In multi-operator networks, a station-name filter prevents STATUS packets from another operating position from replacing the frequency of the intended radio.
 
 Win-Test can additionally receive skeds created in KST4Contest. The handover only takes place when a QRG matching the selected band can be determined. No fixed fallback frequency is inserted merely to make the packet technically valid.
 
@@ -55,7 +57,9 @@ Win-Test can additionally receive skeds created in KST4Contest. The handover onl
 
 ## Stored state and limitations
 
-Worked, NOT-QRV and worked-grid information is stored in the internal SQLite database and restored after a restart. Contest-related records expire automatically after three days.
+Worked, NOT-QRV and worked-grid information received through the network interfaces, together with manual marks, is stored in the internal SQLite database and restored after a restart. Contest-related records expire automatically after three days.
+
+Simplelogfile marks follow a different data flow: they remain runtime state derived from the selected file. The file is read again after a restart and has no automatic contest reset.
 
 KST4Contest can only use the fields supplied by the selected interface. Missing band or locator data is not reconstructed from guesswork. This makes the result less complete in some cases, but also avoids turning an incomplete log packet into incorrect Worked information.
 

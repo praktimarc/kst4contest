@@ -109,7 +109,9 @@ Drei Methoden stehen zur Verfügung, um gearbeitete Stationen automatisch zu mar
 
 ### Universal File Based Callsign Interpreter (Simplelogfile)
 
-Interpretiert beliebige Log-Dateien per Regex nach Rufzeichen-Mustern. Keine Bandinformation möglich. Geeignet als Fallback oder für nicht direkt unterstützte Logprogramme.
+Liest die ausgewählte Textdatei einmal pro Minute mit einem fest eingebauten Rufzeichenmuster. Die Treffer werden auf Basisrufzeichen normalisiert und setzen für alle aktiven Varianten nur den globalen Worked-Status. Band- und Locatorinformationen können daraus nicht abgeleitet werden. Die Funktion eignet sich als Fallback für Logprogramme ohne unterstützte Netzwerkschnittstelle.
+
+Existiert die ausgewählte Datei noch nicht, legt KST4Contest sie an und zeigt einmalig den vollständigen Pfad sowie Hinweise zum Funktions- und Contesttest. Die Datei ist selbst die dauerhafte Quelle; aus ihr abgeleitete Worked-Markierungen werden nicht in SQLite gespeichert und nicht automatisch für einen neuen Contest zurückgesetzt.
 
 ### Netzwerk-Listener für QSO-UDP-Broadcast
 
@@ -135,7 +137,7 @@ Die TRX-Synchronisation übernimmt die aktuelle Frequenz aus dem Logprogramm und
 | **Win-Test STATUS** | `Win-Test STATUS QRG Sync` | Verarbeitet die Haupt- oder Pass-Frequenz aus nativen Win-Test-`STATUS`-Paketen. Der Win-Test-Listener verwendet seinen separat konfigurierten Port, standardmäßig `9871`. |
 | **Manuelle Eingabe** | Beide automatischen QRG-Quellen deaktivieren | Die eigene QRG kann im Hauptfenster von Hand eingetragen werden. |
 
-Der allgemeine Listener ist für Logprogramme vorgesehen, die kompatible `RadioInfo`-Pakete senden. Dazu gehören – abhängig von deren jeweiliger Konfiguration – UCXLog, N1MM+, QARTest und DXLog.net. QSO- und `RadioInfo`-Pakete verwenden denselben unter **Log sync** konfigurierten Port. Dort wird jedoch getrennt festgelegt, ob KST4Contest QSO-Informationen, TRX-Informationen oder beide Paketarten verarbeitet.
+Der allgemeine Listener ist für Logprogramme vorgesehen, die kompatible `RadioInfo`-Pakete senden. Dazu gehören – abhängig von deren jeweiliger Konfiguration – UCXLog, N1MM+, QARTest und DXLog.net. QSO- und `RadioInfo`-Pakete verwenden denselben unter **Log sync** konfigurierten Port. Dort wird jedoch getrennt festgelegt, ob KST4Contest QSO-Informationen, TRX-Informationen oder beide Paketarten verarbeitet. Eine automatische QRG-Quelle muss aktiviert sein und tatsächlich gültige Pakete liefern; die Aktivierung allein aktualisiert `MYQRG` nicht.
 
 Wird der gemeinsame UDP-Port geändert, muss KST4Contest neu gestartet werden. Eine reine Änderung der Checkboxen wird dagegen sofort berücksichtigt.
 
@@ -145,7 +147,7 @@ Beide automatischen Quellen aktualisieren ausschließlich `MYQRG`. Das ist die e
 
 Bei aktiviertem zweiten Chat bleibt dessen QRG davon unabhängig. Sie wird nicht aus den empfangenen TRX-Paketen abgeleitet und steht als `SECONDQRG` zur Verfügung. Dadurch kann beispielsweise die erste Kategorie automatisch der Frequenz des Logprogramms folgen, während für die zweite Kategorie eine eigene QRG von Hand eingetragen wird.
 
-Sobald mindestens eine automatische QRG-Quelle aktiviert ist, wird das QRG-Feld der ersten Kategorie im Hauptfenster an den empfangenen Wert gebunden. Eine manuelle Eingabe in dieses Feld ist wieder möglich, wenn sowohl der allgemeine RadioInfo-Listener als auch die Win-Test-STATUS-Synchronisation deaktiviert sind.
+Sobald mindestens eine automatische QRG-Quelle aktiviert ist und einen gültigen Wert liefert, folgt das QRG-Feld der ersten Kategorie im Hauptfenster der empfangenen Frequenz. Bleiben die erwarteten Pakete aus, sollte die Schnittstelle vor dem Contest geprüft werden. Eine manuelle Eingabe in dieses Feld ist möglich, wenn sowohl der allgemeine RadioInfo-Listener als auch die Win-Test-STATUS-Synchronisation deaktiviert sind.
 
 ### Haupt- oder Pass-Frequenz aus Win-Test
 
@@ -859,6 +861,8 @@ Die interne SQLite-Datenbank speichert die contestbezogenen Zustände unabhängi
 - Worked-Status pro Band,
 - manuell gesetzte NOT-QRV-Tags pro Band und
 - gearbeitete vierstellige Großfelder pro Band.
+
+Eine Ausnahme bilden Worked-Markierungen des Simplelogfile-Interpreters. Sie werden nur aus der ausgewählten Datei in den laufenden Zustand übernommen und nicht in SQLite persistiert. Die Datei ist die dauerhafte Quelle und besitzt keinen automatischen Contest-Reset.
 
 Als Schlüssel wird das normalisierte Rufzeichen ohne sichtbare Chat-Klammern oder Kategorieformatierung verwendet. Dadurch können aktive Varianten desselben Rufzeichens konsistent ausgewertet werden.
 
