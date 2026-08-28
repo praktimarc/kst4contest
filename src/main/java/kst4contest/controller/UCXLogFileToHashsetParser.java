@@ -1,12 +1,13 @@
 package kst4contest.controller;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.HashMap;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,73 +15,50 @@ import kst4contest.model.ChatMember;
 
 public class UCXLogFileToHashsetParser {
 
-	public BufferedReader fileReader;
-//	private final String PTRN_CallSign = "(([a-zA-Z]{1,2}[\\d{1}]?\\/)?(\\d{1}[a-zA-Z][\\d{1}][a-zA-Z]{1,3})((\\/p)|(\\/\\d))?)|(([a-zA-Z0-9]{1,2}[\\d{1}]?\\/)?(([a-zA-Z]{1,2}(\\d{1}[a-zA-Z]{1,4})))((\\/p)|(\\/\\d))?)"; //OLD, S51AR for example will not work
-	private final String PTRN_CallSign = "(([a-zA-Z]{1,2}[\\d]{1}?\\/)?(\\d{1}[a-zA-Z][\\d]{1}[a-zA-Z]{1,3})((\\/p)|(\\/\\d))?)|(([a-zA-Z0-9]{1,2}[\\d]{1}?\\/)?(([a-zA-Z]{1,2}(\\d{1}[a-zA-Z]{1,4})))((\\/p)|(\\/\\d))?)|([A-Z]\\d{2}[A-Z]{1,3})";
+	private static final Pattern CALL_SIGN_PATTERN = Pattern.compile(
+			"(([a-zA-Z]{1,2}[\\d]{1}?\\/)?(\\d{1}[a-zA-Z][\\d]{1}[a-zA-Z]{1,3})((\\/p)|(\\/\\d))?)"
+					+ "|(([a-zA-Z0-9]{1,2}[\\d]{1}?\\/)?(([a-zA-Z]{1,2}(\\d{1}[a-zA-Z]{1,4})))((\\/p)|(\\/\\d))?)"
+					+ "|([A-Z]\\d{2}[A-Z]{1,3})");
 
-
+	private final Path logFile;
 
 	public UCXLogFileToHashsetParser(String filePathAndName) {
-
-		try {
-			fileReader = new BufferedReader(new InputStreamReader(new FileInputStream(new File(filePathAndName))));
-
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
+		this.logFile = Path.of(filePathAndName);
 	}
 
-	/**
-	 * check if a line of the ucxlog-Logfile inhibits a Callsign<br/>
-	 * <b>returns ChatMember = null, if no frequency found</b>
-	 * 
-	 * @param chatMessage
-	 */
-	private ChatMember checkIfLineInhibitsCallSign(String line) {
-
-		Pattern pattern = Pattern.compile(PTRN_CallSign);
-		Matcher matcher = pattern.matcher(line);
-
-		String matchedString = "";
+	private String findLastCallSign(String line) {
+		Matcher matcher = CALL_SIGN_PATTERN.matcher(line);
+		String matchedCallSign = "";
 
 		while (matcher.find()) {
-
-			matchedString = matcher.group();
-//			System.out.println("[UCXLogFile:] Processed worked Callsign from file: " + matchedString);
-
+			matchedCallSign = matcher.group();
 		}
 
-		ChatMember newChatMember = new ChatMember();
-
-		newChatMember.setCallSign(matchedString.toUpperCase());
-
-		return newChatMember;
-
+		return matchedCallSign.toUpperCase(Locale.ROOT);
 	}
 
 	/**
-	 * Parses an ucxlog-live-file (full qualified path given by constructor
-	 * argument), looks by regex for callsigns and builds a hashmap with only one
-	 * entry by callsign
+	 * Parses the selected log file and returns every detected station as a
+	 * normalized base callsign. The reader is closed after each pass so the logging
+	 * application can continue replacing or rotating the file.
+	 *
+	 * @return unique normalized base callsigns found in the file
+	 * @throws IOException if the file cannot be read
 	 */
-	public HashMap<String, String> parse() throws IOException {
+	public Set<String> parse() throws IOException {
+		Set<String> workedBaseCalls = new HashSet<>();
 
-		HashMap<String, String> chatMemberMap = new HashMap();
-
-		String line;
-		while ((line = fileReader.readLine()) != null) {
-//			System.out.println("raw: " + line);
-			ChatMember temp = checkIfLineInhibitsCallSign(line);
-
-			if (temp.getCallSign() != "") {
-				chatMemberMap.put(temp.getCallSign(), temp.getCallSign());
+		try (BufferedReader fileReader = Files.newBufferedReader(logFile, Charset.defaultCharset())) {
+			String line;
+			while ((line = fileReader.readLine()) != null) {
+				String matchedCallSign = findLastCallSign(line);
+				String baseCallSign = ChatMember.normalizeCallSignToBaseCallSign(matchedCallSign);
+				if (baseCallSign != null && !baseCallSign.isBlank()) {
+					workedBaseCalls.add(baseCallSign.toUpperCase(Locale.ROOT));
+				}
 			}
 		}
-//		System.out.println(chatMemberMap.size());
-		return chatMemberMap;
 
+		return workedBaseCalls;
 	}
-
 }

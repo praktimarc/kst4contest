@@ -3,6 +3,7 @@ package kst4contest.controller;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.nio.channels.Selector;
+import java.nio.file.Path;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -2014,6 +2015,115 @@ private ObservableList<String>
 		}
 
 		return matchingMembers;
+	}
+
+	/**
+	 * Applies the global Worked state from the Simplelogfile to every active
+	 * callsign variant with the same base callsign. UI-backed state is changed only
+	 * on the JavaFX Application Thread.
+	 *
+	 * @param workedBaseCalls normalized callsigns detected in the selected file
+	 */
+	public void applySimpleLogWorkedBaseCalls(Set<String> workedBaseCalls) {
+		Set<String> normalizedWorkedBaseCalls = normalizeWorkedBaseCalls(workedBaseCalls);
+		if (normalizedWorkedBaseCalls.isEmpty()) {
+			return;
+		}
+
+		runOnFxThread(() -> {
+			int changedMembers = markSimpleLogWorkedMembers(
+					activeChatMembersByCallAndCategory.values(), normalizedWorkedBaseCalls);
+			int changedClusterMessages = markSimpleLogWorkedClusterMessages(
+					lst_clusterMemberList, normalizedWorkedBaseCalls);
+
+			if (changedMembers > 0) {
+				fireUserListUpdate("Simplelogfile Worked status updated");
+			}
+
+			LOGGER.log(Level.FINE,
+					"Simplelogfile marked {0} active members and {1} cluster messages as worked.",
+					new Object[] { changedMembers, changedClusterMessages });
+		});
+	}
+
+	static int markSimpleLogWorkedMembers(
+			Collection<ChatMember> members,
+			Set<String> workedBaseCalls
+	) {
+		if (members == null || workedBaseCalls == null || workedBaseCalls.isEmpty()) {
+			return 0;
+		}
+
+		int changed = 0;
+		for (ChatMember member : members) {
+			if (member == null || member.isWorked()) {
+				continue;
+			}
+
+			String memberCall = member.getCallSignRaw() != null
+					? member.getCallSignRaw() : member.getCallSign();
+			String baseCall = ChatMember.normalizeCallSignToBaseCallSign(memberCall);
+			if (baseCall != null && workedBaseCalls.contains(baseCall.toUpperCase(Locale.ROOT))) {
+				member.setWorked(true);
+				changed++;
+			}
+		}
+		return changed;
+	}
+
+	static int markSimpleLogWorkedClusterMessages(
+			Collection<ClusterMessage> clusterMessages,
+			Set<String> workedBaseCalls
+	) {
+		if (clusterMessages == null || workedBaseCalls == null || workedBaseCalls.isEmpty()) {
+			return 0;
+		}
+
+		int changed = 0;
+		for (ClusterMessage clusterMessage : clusterMessages) {
+			if (clusterMessage == null || clusterMessage.isReceiverWkd()
+					|| clusterMessage.getReceiver() == null) {
+				continue;
+			}
+
+			ChatMember receiver = clusterMessage.getReceiver();
+			String receiverCall = receiver.getCallSignRaw() != null
+					? receiver.getCallSignRaw() : receiver.getCallSign();
+			String baseCall = ChatMember.normalizeCallSignToBaseCallSign(receiverCall);
+			if (baseCall != null && workedBaseCalls.contains(baseCall.toUpperCase(Locale.ROOT))) {
+				clusterMessage.setReceiverWkd(true);
+				changed++;
+			}
+		}
+		return changed;
+	}
+
+	private static Set<String> normalizeWorkedBaseCalls(Set<String> workedBaseCalls) {
+		if (workedBaseCalls == null || workedBaseCalls.isEmpty()) {
+			return Set.of();
+		}
+
+		Set<String> normalizedCalls = new HashSet<>();
+		for (String callSign : workedBaseCalls) {
+			String baseCall = ChatMember.normalizeCallSignToBaseCallSign(callSign);
+			if (baseCall != null && !baseCall.isBlank()) {
+				normalizedCalls.add(baseCall.toUpperCase(Locale.ROOT));
+			}
+		}
+		return Set.copyOf(normalizedCalls);
+	}
+
+	/**
+	 * Notifies the UI after a missing Simplelogfile was created successfully.
+	 *
+	 * @param filePath absolute path of the new file
+	 */
+	public void notifySimpleLogFileCreated(Path filePath) {
+		if (filePath == null || statusListener == null) {
+			return;
+		}
+
+		runOnFxThread(() -> statusListener.onSimpleLogFileCreated(filePath));
 	}
 
 	/**

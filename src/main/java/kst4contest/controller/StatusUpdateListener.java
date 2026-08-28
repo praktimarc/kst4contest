@@ -1,5 +1,7 @@
 package kst4contest.controller;
 
+import java.nio.file.Path;
+
 import kst4contest.model.ThreadStateMessage;
 
 public interface StatusUpdateListener {
@@ -30,6 +32,15 @@ public interface StatusUpdateListener {
             On4KstConnectionState state,
             String detail
     ) {
+        // Optional for non-UI listeners.
+    }
+
+    /**
+     * Called after KST4Contest successfully creates a missing Simplelogfile.
+     *
+     * @param filePath absolute path of the newly created file
+     */
+    default void onSimpleLogFileCreated(Path filePath) {
         // Optional for non-UI listeners.
     }
 

@@ -84,6 +84,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	private static final Logger LOGGER = Logger.getLogger(
 			Kst4ContestApplication.class.getName());
+	private static final String SIMPLE_LOG_MANUAL_URL =
+			"https://kst4contest.hamradioonline.de/manual/en/log-sync/"
+					+ "#method-1-universal-file-based-callsign-interpreter-simplelogfile";
 
 	private boolean gridSquareHighlightEnabled = false;
 
@@ -12127,6 +12130,28 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				txt_chatMessageUserInput.setDisable(!online);
 			}
 		});
+	}
+
+	@Override
+	public void onSimpleLogFileCreated(Path filePath) {
+		Alert alert = new Alert(AlertType.INFORMATION);
+		alert.setTitle("Simplelogfile created");
+		alert.setHeaderText("The selected Simplelogfile did not exist and has been created");
+
+		Label explanation = new Label(
+				"File: " + filePath + "\n\n"
+						+ "Configure your logging application to write its live log to this file. "
+						+ "Then log a test QSO and verify that the callsign is marked as worked "
+						+ "in KST4Contest within one minute.");
+		explanation.setWrapText(true);
+
+		Hyperlink manualLink = new Hyperlink("Open the Simplelogfile manual");
+		manualLink.setOnAction(event -> getHostServices().showDocument(SIMPLE_LOG_MANUAL_URL));
+
+		VBox content = new VBox(10, explanation, manualLink);
+		content.setPrefWidth(560);
+		alert.getDialogPane().setContent(content);
+		alert.show();
 	}
 
 
