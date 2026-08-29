@@ -136,7 +136,7 @@ The general QSO UDP listener is the recommended interface for UCXLog, QARTest, N
 
 Win-Test uses its own network protocol and therefore has a separate listener. Its default port is `9871`. If this port is changed while the listener is enabled, KST4Contest restarts the Win-Test listener on the new port. After changing the shared UDP port `12060`, KST4Contest must instead be restarted completely.
 
-All enabled input paths may be used in parallel and identical reports do not create separate Worked states. Network-derived Worked information is stored in the internal database. Simplelogfile marks remain runtime state derived from the selected file. KST4Contest must be running when a network QSO is transmitted unless the logging application can resend the existing log.
+All enabled input paths may be used in parallel and identical reports do not create separate Worked states. Network-derived Worked information is stored in the internal database. Simplelogfile marks remain runtime state derived from the selected file. Before using Simplelogfile, check whether the logging application already provides one of the supported network interfaces. KST4Contest must be running when a network QSO is transmitted unless the logging application can resend the existing log.
 
 Configuration of the individual logging applications, band and locator handling, and the Win-Test sked handover are described under [Log Synchronisation](en-Log-Sync).
 
@@ -919,7 +919,7 @@ The internal SQLite database stores contest-related state independently of the l
 - manually assigned NOT-QRV marks per band, and
 - worked four-character grid squares per band.
 
-Worked marks from the Simplelogfile interpreter are the exception. They are copied from the selected file into runtime state only and are not persisted in SQLite. The file is the durable source and has no automatic contest reset.
+Worked marks from the Simplelogfile interpreter are the exception. They are copied from the selected file into runtime state only and are not persisted in SQLite. The file is the durable source and has no automatic contest reset. A database reset does not change or empty it; callsigns contained in the file are marked as worked again during the next periodic evaluation.
 
 The normalised callsign, without visible chat brackets or category formatting, is used as the key. This allows active variants of the same callsign to be evaluated consistently.
 

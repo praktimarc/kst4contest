@@ -39,7 +39,7 @@ The available information depends on the interface:
 
 The Simplelogfile interpreter reads the selected text file once per minute using a fixed callsign pattern. Matches are normalised to the base callsign and set the global Worked status for all active variants. A callsign match does not provide enough information to infer a reliable band or grid square.
 
-If the file does not exist, KST4Contest creates it and displays the path together with the initial setup and contest checks. The file itself is the durable source. Its Worked marks are not stored in SQLite, are not removed automatically during the running session and are not reset automatically for a new contest.
+If the file does not exist, KST4Contest creates it and first asks you to check whether Simplelogfile is needed or whether the logging application provides a supported network interface. The notice then displays the path together with the initial setup and contest checks. The file itself is the durable source. Its Worked marks are not stored in SQLite, are not removed automatically during the running session and are not reset automatically for a new contest.
 
 The general UDP listener processes packets from UCXLog, N1MM+, QARTest and DXLog.net. Where the packet contains band and locator data, KST4Contest also updates the per-band Worked state and worked grid square.
 
@@ -59,7 +59,7 @@ Win-Test can additionally receive skeds created in KST4Contest. The handover onl
 
 Worked, NOT-QRV and worked-grid information received through the network interfaces, together with manual marks, is stored in the internal SQLite database and restored after a restart. Contest-related records expire automatically after three days.
 
-Simplelogfile marks follow a different data flow: they remain runtime state derived from the selected file. The file is read again after a restart and has no automatic contest reset.
+Simplelogfile marks follow a different data flow: they remain runtime state derived from the selected file. The file is read again after a restart and has no automatic contest reset. A database reset does not change or empty it. Callsigns contained in the file are marked as worked again during the next evaluation within one minute.
 
 KST4Contest can only use the fields supplied by the selected interface. Missing band or locator data is not reconstructed from guesswork. This makes the result less complete in some cases, but also avoids turning an incomplete log packet into incorrect Worked information.
 

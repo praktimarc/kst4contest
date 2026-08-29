@@ -14,16 +14,17 @@ import java.util.Locale;
 /**
  * Small helper service for preparing and filling the local offline DEM directory.
  *
- * <p>This is intentionally the first practical step before adding a real network
- * downloader:
+ * <p>This service only prepares local data for a possible future offline terrain
+ * provider:
  * <ul>
  *     <li>create a known default Copernicus DEM root directory below .praktiKST</li>
  *     <li>copy manually selected local *_DEM.tif files into that directory</li>
  * </ul>
  *
- * <p>The active terrain provider already scans the configured root directory
- * recursively. Therefore it is sufficient to import valid Copernicus DGED
- * GeoTIFF files into one dedicated folder tree.</p>
+ * <p>Importing files does not activate an offline provider or change the terrain
+ * calculation chain. The active provider remains Open-Meteo with Copernicus GLO-90
+ * data. Valid Copernicus GLO-30 DGED GeoTIFF files are only copied into the prepared
+ * directory tree.</p>
  */
 public final class OfflineDemImportService {
 

@@ -208,7 +208,7 @@ In plain terms: an automatically detected hint means "probably active on this ba
 
 Worked, NOT-QRV and worked-grid information received from network interfaces, together with manual marks, is stored in the internal SQLite database and restored on the next start. Entries expire automatically after three days, so a reset before every contest is normally unnecessary.
 
-Simplelogfile matches are excluded. They are not persisted in SQLite but are derived from the selected file during each application session. The file is therefore the durable source. The interpreter does not remove an existing Worked mark during the current session and does not reset the state automatically for a new contest.
+Simplelogfile matches are excluded. They are not persisted in SQLite but are derived from the selected file during each application session. The file is therefore the durable source. The interpreter does not remove an existing Worked mark during the current session and does not reset the state automatically for a new contest. A manual database reset does not change or empty the file. Callsigns contained in it are marked as worked again when the file is next evaluated within one minute.
 
 A manual reset under **Workedstn database** removes all Worked marks, NOT-QRV marks and stored worked grid squares. The known callsign rows remain in the database. See [Worked Station Database Settings](en-Configuration#worked-station-database-settings) for details.
 

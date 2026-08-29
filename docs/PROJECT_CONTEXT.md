@@ -70,10 +70,15 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - The Simplelogfile interpreter reads the selected text file after connection startup and then once per minute using a fixed built-in callsign pattern.
 - Simplelogfile callsigns are normalized to base callsigns and set only the global Worked state for every active variant. They do not create per-band Worked or grid-square state.
 - Simplelogfile-derived Worked state is not persisted in SQLite. The selected file is the durable source and is read again in each application session.
-- The interpreter only adds positive runtime marks. It does not remove existing marks during the current session and does not reset automatically when a new contest starts.
+- The interpreter only adds positive runtime marks. It does not remove existing marks during the current session and does not reset automatically when a new contest starts. A database reset does not modify the file; callsigns contained in it are marked as worked again during the next periodic evaluation.
 - A missing selected file is created. Read, path and creation failures are contained so the periodic timer remains alive; successful creation triggers a one-time, non-blocking UI notice with the exact path and setup/contest checks.
 - Network-derived and manually assigned Worked, NOT-QRV and worked-grid state continues to use SQLite with its established lifetime and reset behaviour.
 - Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
+
+### Terrain data providers
+
+- The active terrain profile provider is Open-Meteo using Copernicus GLO-90 data.
+- `OfflineDemImportService` only prepares a local directory and copies manually selected Copernicus GLO-30 GeoTIFF files into it. Importing files does not activate an offline provider or change the active calculation chain.
 
 ### ON4KST session and authentication
 

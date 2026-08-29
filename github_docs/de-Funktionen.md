@@ -207,7 +207,7 @@ Im Klartext: Ein erkannter Hinweis bedeutet „wahrscheinlich auf diesem Band ak
 
 Worked-, NOT-QRV- und Großfeldinformationen aus den Netzwerkschnittstellen sowie manuelle Markierungen werden in der internen SQLite-Datenbank gespeichert und beim nächsten Start wieder geladen. Die Einträge laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist deshalb normalerweise nicht erforderlich.
 
-Simplelogfile-Treffer sind davon ausgenommen. Sie werden nicht in SQLite persistiert, sondern bei jedem Programmlauf aus der ausgewählten Datei abgeleitet. Die Datei ist damit die dauerhafte Quelle. Der Interpreter entfernt während der laufenden Sitzung keine bereits gesetzte Worked-Markierung und setzt den Zustand beim Wechsel zu einem neuen Contest nicht automatisch zurück.
+Simplelogfile-Treffer sind davon ausgenommen. Sie werden nicht in SQLite persistiert, sondern bei jedem Programmlauf aus der ausgewählten Datei abgeleitet. Die Datei ist damit die dauerhafte Quelle. Der Interpreter entfernt während der laufenden Sitzung keine bereits gesetzte Worked-Markierung und setzt den Zustand beim Wechsel zu einem neuen Contest nicht automatisch zurück. Ein manueller Datenbank-Reset verändert oder leert die Datei ebenfalls nicht. Darin enthaltene Rufzeichen werden bei der nächsten Auswertung innerhalb einer Minute erneut als gearbeitet markiert.
 
 Ein manueller Reset unter **Workedstn database** entfernt sämtliche Worked-Markierungen, NOT-QRV-Tags und gespeicherten Worked-Großfelder. Die bekannten Rufzeichenzeilen bleiben dabei in der Datenbank erhalten. Einzelheiten: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).
 
@@ -523,7 +523,7 @@ UDP selbst bestätigt außerdem keine Paketzustellung. Bleibt die QTF unverände
 
 Im Klartext: KST4Contest liefert die Zielrichtung und verarbeitet die gemeldete Position. Die mechanische Realität bleibt Aufgabe des Rotators – und gelegentlich der Blick aus dem Fenster.
 
-Konfiguration und Portbelegung: [Konfiguration – PSTRotator-Einstellungen](de-Konfiguration#pstrotator-einstellungen-ab-v131-vollstaendig-konfigurierbar-ab-v140).
+Konfiguration und Portbelegung: [Konfiguration – PSTRotator-Einstellungen](de-Konfiguration#pstrotator-einstellungen-ab-v131-vollständig-konfigurierbar-ab-v140).
 
 ---
 

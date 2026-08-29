@@ -18,7 +18,7 @@ Die Grenze ist ebenso eindeutig: Aus einem reinen Rufzeichentreffer lassen sich 
 
 Den Pfad der Textdatei im Reiter **Log sync** auswählen. Fehlt die Datei, legt KST4Contest sie an und zeigt einmalig einen nicht blockierenden Hinweis mit dem Pfad und den nächsten Prüfschritten an. Lese- oder Erstellungsfehler werden protokolliert; die minütliche Auswertung läuft beim nächsten Termin weiter. Für bandbezogene Auswertungen sollte nach Möglichkeit eine der Netzwerkschnittstellen verwendet werden.
 
-Der aus dem Simplelogfile abgeleitete Worked-Status wird nicht in der internen SQLite-Datenbank gespeichert. Die ausgewählte Datei ist die dauerhafte Quelle und wird auch nach einem Neustart erneut eingelesen. Der Interpreter setzt nur positive Worked-Markierungen; er entfernt während der laufenden Programmsitzung keine bereits gesetzte Markierung und führt beim Wechsel zu einem neuen Contest keinen automatischen Reset durch. Vor jedem Contest sollte deshalb geprüft werden, ob das Logprogramm genau die aktuelle Contestdatei beschreibt.
+Der aus dem Simplelogfile abgeleitete Worked-Status wird nicht in der internen SQLite-Datenbank gespeichert. Die ausgewählte Datei ist die dauerhafte Quelle und wird auch nach einem Neustart erneut eingelesen. Der Interpreter setzt nur positive Worked-Markierungen; er entfernt während der laufenden Programmsitzung keine bereits gesetzte Markierung und führt beim Wechsel zu einem neuen Contest keinen automatischen Reset durch. Auch ein manueller Datenbank-Reset ändert oder leert das Simplelogfile nicht. Darin enthaltene Rufzeichen werden bei der nächsten Auswertung innerhalb einer Minute erneut als gearbeitet markiert. Vor jedem Contest sollte deshalb geprüft werden, ob das Logprogramm genau die aktuelle Contestdatei beschreibt.
 
 ---
 
@@ -203,6 +203,6 @@ Die Datenquellen liefern unterschiedlich genaue Informationen:
 | QSO-UDP-Listener | ja | ja, wenn im Paket enthalten | ja, wenn Band und Locator enthalten sind |
 | Win-Test-Netzwerk-Listener | ja | ja | ja, wenn ein Locator enthalten ist |
 
-Die in SQLite gespeicherten Daten werden beim Programmstart wieder geladen und bei neuen Logeinträgen während des Betriebs aktualisiert. Sie laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist daher normalerweise nicht erforderlich. Für den Simplelogfile-Interpreter gilt diese Lebensdauer nicht: Seine Datei bleibt die dauerhafte Quelle und wird nicht automatisch auf einen neuen Contest zurückgesetzt.
+Die in SQLite gespeicherten Daten werden beim Programmstart wieder geladen und bei neuen Logeinträgen während des Betriebs aktualisiert. Sie laufen nach drei Tagen automatisch ab. Ein Reset vor jedem Contest ist daher normalerweise nicht erforderlich. Für den Simplelogfile-Interpreter gilt diese Lebensdauer nicht: Seine Datei bleibt die dauerhafte Quelle und wird durch einen Datenbank-Reset weder geändert noch geleert. Enthaltene Rufzeichen setzt die nächste periodische Auswertung erneut auf den globalen Worked-Status.
 
 Ein vollständiger manueller Reset entfernt Worked-Markierungen, NOT-QRV-Tags und Worked-Großfelder gemeinsam. Weitere Einzelheiten: [Worked Station Database Settings](de-Konfiguration#worked-station-database-settings-gearbeitete-stationen-datenbank).

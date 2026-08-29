@@ -109,7 +109,7 @@ Drei Methoden stehen zur Verfügung, um gearbeitete Stationen automatisch zu mar
 
 ### Universal File Based Callsign Interpreter (Simplelogfile)
 
-Liest die ausgewählte Textdatei einmal pro Minute mit einem fest eingebauten Rufzeichenmuster. Die Treffer werden auf Basisrufzeichen normalisiert und setzen für alle aktiven Varianten nur den globalen Worked-Status. Band- und Locatorinformationen können daraus nicht abgeleitet werden. Die Funktion eignet sich als Fallback für Logprogramme ohne unterstützte Netzwerkschnittstelle.
+Liest die ausgewählte Textdatei einmal pro Minute mit einem fest eingebauten Rufzeichenmuster. Die Treffer werden auf Basisrufzeichen normalisiert und setzen für alle aktiven Varianten nur den globalen Worked-Status. Band- und Locatorinformationen können daraus nicht abgeleitet werden. Die Funktion eignet sich als Fallback für Logprogramme ohne unterstützte Netzwerkschnittstelle. Vor der Verwendung sollte deshalb geprüft werden, ob das eingesetzte Logprogramm bereits eine der unterstützten Netzwerkschnittstellen bereitstellt.
 
 Existiert die ausgewählte Datei noch nicht, legt KST4Contest sie an und zeigt einmalig den vollständigen Pfad sowie Hinweise zum Funktions- und Contesttest. Die Datei ist selbst die dauerhafte Quelle; aus ihr abgeleitete Worked-Markierungen werden nicht in SQLite gespeichert und nicht automatisch für einen neuen Contest zurückgesetzt.
 
@@ -862,7 +862,7 @@ Die interne SQLite-Datenbank speichert die contestbezogenen Zustände unabhängi
 - manuell gesetzte NOT-QRV-Tags pro Band und
 - gearbeitete vierstellige Großfelder pro Band.
 
-Eine Ausnahme bilden Worked-Markierungen des Simplelogfile-Interpreters. Sie werden nur aus der ausgewählten Datei in den laufenden Zustand übernommen und nicht in SQLite persistiert. Die Datei ist die dauerhafte Quelle und besitzt keinen automatischen Contest-Reset.
+Eine Ausnahme bilden Worked-Markierungen des Simplelogfile-Interpreters. Sie werden nur aus der ausgewählten Datei in den laufenden Zustand übernommen und nicht in SQLite persistiert. Die Datei ist die dauerhafte Quelle und besitzt keinen automatischen Contest-Reset. Ein Datenbank-Reset verändert oder leert sie nicht; enthaltene Rufzeichen werden bei der nächsten periodischen Auswertung erneut als gearbeitet markiert.
 
 Als Schlüssel wird das normalisierte Rufzeichen ohne sichtbare Chat-Klammern oder Kategorieformatierung verwendet. Dadurch können aktive Varianten desselben Rufzeichens konsistent ausgewertet werden.
 

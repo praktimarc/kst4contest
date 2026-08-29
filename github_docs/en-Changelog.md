@@ -34,6 +34,8 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **Manual QTF input:** The current antenna direction can be changed directly in KST4Contest when PSTRotator is not being used.
 
+- **`MYQTF` message variable:** The current antenna direction can be inserted as a numeric angle in degrees into shortcuts, snippets and other supported message texts.
+
 - **Filter reset:** A dedicated reset button reliably removes the active user-list filter predicates.
 
 - **Map clustering:** Stations close to each other are grouped at lower zoom levels. The selected station and relevant direction opportunities remain individually visible.
@@ -80,7 +82,7 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **DXLog full-log import:** In addition to `contactinfo`, the UCXLog-compatible UDP listener processes `contactreplace`. This allows a complete log broadcast by DXLog.net to be imported.
 
-- **Defined Simplelogfile behaviour:** The selected text file is evaluated once per minute using a fixed callsign pattern. Matches set the global Worked status for all active variants of the base callsign but are not persisted in SQLite. A missing file is created, and read or creation errors do not terminate the periodic task.
+- **Defined Simplelogfile behaviour:** The selected text file is evaluated once per minute using a fixed callsign pattern. Matches set the global Worked status for all active variants of the base callsign but are not persisted in SQLite. A missing file is created, and read or creation errors do not terminate the periodic task. A database reset does not change the file, so callsigns contained in it are marked as worked again during the next evaluation.
 
 - **Guarded automatic QRG updates:** `MYQRG` is updated only by an enabled interface which actually supplies valid `RadioInfo` or Win-Test `STATUS` packets. An enabled source which provides no data does not remove the need for a functional check or manual QRG maintenance.
 
@@ -414,7 +416,6 @@ First publicly released version. Core features:
 
 ## Planned Features
 
-- `MYQTF` variable (own antenna direction as text)
 - ~~Lifetime for worked status (automatic reset)~~ ✅ **Implemented in v1.40** (3-day lifetime, no manual reset needed anymore)
 - Filtering the "Cluster & QSO of others" window to own QTF
 - Further topography-based calculations for direction warnings

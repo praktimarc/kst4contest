@@ -370,9 +370,9 @@ public class ReadUDPByWintestThread extends Thread {
     /**
      * Resolves the project Band enum from Win-Test band IDs.
      *
-     * <p>Only bands that exist in the current Band enum are returned. 50/70 MHz are
-     * still represented as worked flags in ChatMember, but they are not part of the
-     * current Reachability/New-Locator band enum.</p>
+     * <p>Only bands that exist in the current Band enum are returned. The existing
+     * 50 MHz and 70 MHz values are resolved in the same way as the other supported
+     * VHF, UHF and microwave bands.</p>
      *
      * @param bandId Win-Test band id from ADDQSO
      * @return matching Band or null

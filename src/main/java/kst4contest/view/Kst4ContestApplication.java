@@ -11377,6 +11377,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			confirmation.setContentText(
 					"This removes all worked markings, manually assigned NOT-QRV tags "
 							+ "and stored worked-grid information. The operation cannot be undone.\n\n"
+							+ "The selected Simplelogfile is not changed. Callsigns contained in it will be "
+							+ "marked as worked again when the file is read within the next minute.\n\n"
 							+ "A reset before every contest is normally not required because these data "
 							+ "expire automatically after three days."
 			);
@@ -11419,7 +11421,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			information.setContentText(
 					affectedLines
 							+ " callsign database entries were updated. "
-							+ "Worked-grid data were cleared as well."
+							+ "Worked-grid data were cleared as well. The selected Simplelogfile was not changed; "
+							+ "callsigns contained in it will be marked as worked again when the file is next read."
 			);
 			information.show();
 		});
@@ -12140,7 +12143,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		Label explanation = new Label(
 				"File: " + filePath + "\n\n"
-						+ "Configure your logging application to write its live log to this file. "
+						+ "First check whether you need the Simplelogfile integration. If your logging "
+						+ "application provides a supported network interface, use that interface for "
+						+ "band and locator information.\n\n"
+						+ "If you use Simplelogfile, configure your logging application to write its live log to this file. "
 						+ "Then log a test QSO and verify that the callsign is marked as worked "
 						+ "in KST4Contest within one minute.\n\n"
 						+ "Before each contest, verify that the logging application writes the current "
