@@ -82,6 +82,8 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - **DXLog-Gesamtlog übernommen:** Der UCXLog-kompatible UDP-Listener verarbeitet neben `contactinfo` auch `contactreplace`. Dadurch kann ein von DXLog.net als vollständiges Log ausgesendeter Datenbestand eingelesen werden.
 
+- **Logger-Bandwerte vereinheitlicht:** Numerische sowie Meter- und Zentimeterangaben aus UCXLog-kompatiblen QSO-Paketen und die Band-IDs von Win-Test werden einmal normalisiert und danach einheitlich für Worked-Markierungen und Worked-Großfelder verwendet. Dadurch setzen insbesondere `2320`, `5760` und `10368` zuverlässig ihre vorhandenen Bandmarkierungen. Bei einem fehlenden oder unbekannten Band bleibt es beim globalen Worked-Status.
+
 - **Simplelogfile-Verhalten präzisiert:** Die ausgewählte Textdatei wird einmal pro Minute mit einem festen Rufzeichenmuster ausgewertet. Treffer setzen den globalen Worked-Status aller aktiven Varianten des Basisrufzeichens, werden aber nicht in SQLite persistiert. Eine fehlende Datei wird angelegt; Lese- und Erstellungsfehler beenden die periodische Auswertung nicht. Ein Datenbank-Reset verändert die Datei nicht, sodass enthaltene Rufzeichen bei der nächsten Auswertung erneut als gearbeitet markiert werden.
 
 - **Automatische QRG-Übernahme abgesichert:** `MYQRG` wird nur von einer aktivierten Schnittstelle aktualisiert, die tatsächlich gültige `RadioInfo`- beziehungsweise Win-Test-`STATUS`-Pakete liefert. Eine aktivierte, aber nicht liefernde Quelle ersetzt die notwendige Funktionsprüfung oder manuelle QRG-Pflege nicht.

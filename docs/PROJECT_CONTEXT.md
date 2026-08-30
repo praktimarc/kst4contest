@@ -74,6 +74,10 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - A missing selected file is created. Read, path and creation failures are contained so the periodic timer remains alive; successful creation triggers a one-time, non-blocking UI notice with the exact path and setup/contest checks.
 - Network-derived and manually assigned Worked, NOT-QRV and worked-grid state continues to use SQLite with its established lifetime and reset behaviour.
 - Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
+- UCXLog-compatible QSO packets and Win-Test `ADDQSO` packets are converted into one validated external-QSO state. Logger-specific numeric, metre and centimetre values and Win-Test band IDs are normalised once; the resolved band is then the sole source for per-band Worked and worked-grid state.
+- A missing or unknown logger band sets only the global Worked state. Worked-grid state requires both a recognised project band and a valid locator; no band or locator is inferred. Packets without a usable callsign are discarded without terminating the listener.
+- External logger threads do not read or mutate the JavaFX user-list projection. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the JavaFX Application Thread before evaluating a band-upgrade notice.
+- The established Win-Test handling for 24, 47 and 76 GHz remains unchanged. Their Worked flags are retained, while only frequencies represented by the project `Band` model can create worked-grid state.
 
 ### Terrain data providers
 

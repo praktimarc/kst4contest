@@ -2,10 +2,8 @@ package kst4contest.controller;
 
 import javafx.application.Platform;
 import kst4contest.ApplicationConstants;
-import kst4contest.model.Band;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ThreadStateMessage;
-import kst4contest.view.GuiUtils;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -98,7 +96,7 @@ public class ReadUDPByWintestThread extends Thread {
         }
     }
 
-    private void processWinTestMessage(String msg) {
+    void processWinTestMessage(String msg) {
 //        System.out.println("Wintest-Message received: " + msg);
 
         lastPacketTime = System.currentTimeMillis();
@@ -368,33 +366,28 @@ public class ReadUDPByWintestThread extends Thread {
 
 
     /**
-     * Resolves the project Band enum from Win-Test band IDs.
+     * Extracts the unchanged Win-Test band ID from the unquoted ADDQSO fields.
      *
-     * <p>Only bands that exist in the current Band enum are returned. The existing
-     * 50 MHz and 70 MHz values are resolved in the same way as the other supported
-     * VHF, UHF and microwave bands.</p>
-     *
-     * @param bandId Win-Test band id from ADDQSO
-     * @return matching Band or null
+     * @param message complete ADDQSO packet
+     * @return raw band ID or an empty value when the field is missing
      */
-    private Band helper_resolveBandFromWinTestBandId(String bandId) {
-        if (bandId == null) {
-            return null;
+    static String extractBandIdFromWinTestAddQso(String message) {
+        if (message == null) {
+            return "";
         }
 
-        return switch (bandId.trim()) {
-            case "10" -> Band.B_50;
-            case "11" -> Band.B_70;
-            case "12" -> Band.B_144;
-            case "14" -> Band.B_432;
-            case "16" -> Band.B_1296;
-            case "17" -> Band.B_2320;
-            case "18" -> Band.B_3400;
-            case "19" -> Band.B_5760;
-            case "20" -> Band.B_10G;
-            case "21" -> Band.B_24G;
-            default -> null;
-        };
+        String[] quotedParts = message.split("\"");
+        if (quotedParts.length <= 6) {
+            return "";
+        }
+
+        String unquotedFields = quotedParts[6].trim();
+        if (unquotedFields.isEmpty()) {
+            return "";
+        }
+
+        String[] packetFields = unquotedFields.split("\\s+");
+        return packetFields.length > 3 ? packetFields[3] : "";
     }
 
     /**
@@ -449,112 +442,32 @@ public class ReadUDPByWintestThread extends Thread {
      * @param msg
      */
     private void parseAddQso(String msg) {
-
-
-        ChatMember modifyThat = null;
-
         try {
-//            int qsoNumber = extractQsoNumber(msg);
-//            receivedQsos.put(qsoNumber, msg);
-//            lastKnownQso = Math.max(lastKnownQso, qsoNumber);
-            String callSignCatched = msg.split("\"") [7];
+            String[] quotedParts = msg == null ? new String[0] : msg.split("\"");
+            String callSign = quotedParts.length > 7 ? quotedParts[7] : "";
+            String rawBandId = extractBandIdFromWinTestAddQso(msg);
             String locatorFromLogger = helper_resolveLocatorFromWinTestAddQso(msg);
-
-            ChatMember workedCall = new ChatMember();
-            workedCall.setCallSign(callSignCatched);
-            workedCall.setWorked(true); //its worked at this place, for sure!
-
-            if (locatorFromLogger != null) {
-                workedCall.setQra(locatorFromLogger);
+            LoggedQsoBand loggedBand = LoggedQsoBand.fromWinTestBandId(rawBandId);
+            ExternalLoggedQso loggedQso = ExternalLoggedQso.create(
+                    callSign, loggedBand, locatorFromLogger, "WINTEST").orElse(null);
+            if (loggedQso == null) {
+                System.out.println("[WinTestUDPRcvr: warning] ADDQSO without usable callsign ignored");
+                return;
             }
 
-            ArrayList<Integer> markTheseChattersAsWorked = client.checkListForChatMemberIndexesByCallSign(workedCall);
-
-            String bandId;
-            bandId = msg.split("\"")[6].split(" ")[4].trim();
-
-            Band workedBand = helper_resolveBandFromWinTestBandId(bandId);
-            switch (bandId) {
-                case "10" -> workedCall.setWorked50(true);
-                case "11" -> workedCall.setWorked70(true);
-                case "12" -> workedCall.setWorked144(true);
-                case "14" -> workedCall.setWorked432(true);
-                case "16" -> workedCall.setWorked1240(true);
-                case "17" -> workedCall.setWorked2300(true);
-                case "18" -> workedCall.setWorked3400(true);
-                case "19" -> workedCall.setWorked5600(true);
-                case "20" -> workedCall.setWorked10G(true);
-                case "21" -> workedCall.setWorked24G(true);
-                case "22" -> workedCall.setWorked47G(true);
-                case "23" -> workedCall.setWorked76G(true);
-                default -> System.out.println("[WinTestUDPRcvr: warning] Unbekannte Band-ID: " + bandId);
+            if (loggedBand == null && !rawBandId.isEmpty()) {
+                System.out.println("[WinTestUDPRcvr: warning] Unknown band ID: " + rawBandId);
             }
 
-            if (workedBand != null && locatorFromLogger != null) {
-                this.client.registerWorkedGrossField(workedBand, locatorFromLogger, workedCall, "WINTEST");
+            ChatMember workedCall = loggedQso.toWorkedChatMember();
+            if (loggedBand != null
+                    && loggedBand.getProjectBand() != null
+                    && locatorFromLogger != null) {
+                this.client.registerWorkedGrossField(
+                        loggedBand.getProjectBand(), locatorFromLogger, workedCall, loggedQso.getSource());
             }
 
-            if (!markTheseChattersAsWorked.isEmpty()) {
-                //Worked call is part of the current chatmember list
-
-                for (int index : markTheseChattersAsWorked) {
-                    //iterate through the logged in chatmembers callsigns and set the worked markers
-                    modifyThat = client.getLst_chatMemberList().get(index);
-
-                    modifyThat.setWorked(true); //worked its for sure
-
-                    if (locatorFromLogger != null
-                            && (modifyThat.getQra() == null
-                            || modifyThat.getQra().isBlank()
-                            || "unknown".equalsIgnoreCase(modifyThat.getQra()))) {
-                        modifyThat.setQra(locatorFromLogger);
-                    }
-
-                    if (workedCall.isWorked50()) {
-                        modifyThat.setWorked50(true);
-                    } else if (workedCall.isWorked70()) {
-                        modifyThat.setWorked70(true);
-                    } else if (workedCall.isWorked144()) {
-                        modifyThat.setWorked144(true);
-                    } else if (workedCall.isWorked432()) {
-                        modifyThat.setWorked432(true);
-                    } else if (workedCall.isWorked1240()) {
-                        modifyThat.setWorked1240(true);
-                    } else if (workedCall.isWorked2300()) {
-                        modifyThat.setWorked2300(true);
-                    } else if (workedCall.isWorked3400()) {
-                        modifyThat.setWorked3400(true);
-                    } else if (workedCall.isWorked5600()) {
-                        modifyThat.setWorked5600(true);
-                    } else if (workedCall.isWorked10G()) {
-                        modifyThat.setWorked10G(true);
-                    } else if (workedCall.isWorked24G()) {
-                        modifyThat.setWorked24G(true);
-                    } else if (workedCall.isWorked47G()) {
-                        modifyThat.setWorked47G(true);
-                    } else if (workedCall.isWorked76G()) {
-                        modifyThat.setWorked76G(true);
-                    }   else {
-                        System.out.println("[WinTestUDPRcvr: warning] found no new worked-flag for this band: " + workedCall.getCallSignRaw() + bandId);
-                    }
-                }
-
-                try {
-
-                    GuiUtils.triggerGUIFilteredChatMemberListChange(client); //not clean at all
-
-                    // trigger band-upgrade hint after log entry (Win-Test)
-                    try {
-                        client.onExternalLogEntryReceived(workedCall.getCallSignRaw());
-                    } catch (Exception e) {
-                        System.out.println("[WinTestUDPRcvr, warning]: band-upgrade hint failed: " + e.getMessage());
-                    }
-
-                } catch (Exception IllegalStateException) {
-                    //do nothing, as it works...
-                }
-            }
-
+            client.applyExternalLoggedQso(loggedQso);
 
             boolean isInChat = this.client.getDbHandler().updateWkdInfoOnChatMember(workedCall);
             // This will update the worked info on a worked chatmember. DBHandler will
@@ -587,17 +500,9 @@ public class ReadUDPByWintestThread extends Thread {
 
             bufwrtrRawMSGOut = new BufferedWriter(fileWriterPersistUDPToFile);
 
-            if (modifyThat != null) {
-                bufwrtrRawMSGOut.write("\n" + modifyThat.toString());
-                bufwrtrRawMSGOut.flush();
-                bufwrtrRawMSGOut.close();
-
-            } else {
-                bufwrtrRawMSGOut.write("\n" + workedCall.toString());
-                bufwrtrRawMSGOut.flush();
-                bufwrtrRawMSGOut.close();
-
-            }
+            bufwrtrRawMSGOut.write("\n" + workedCall.toString());
+            bufwrtrRawMSGOut.flush();
+            bufwrtrRawMSGOut.close();
 
 
             System.out.println("[WinTest, Info: Marking Chatmember as worked: " + workedCall.toString());

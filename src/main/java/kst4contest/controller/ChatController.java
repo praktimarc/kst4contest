@@ -2018,6 +2018,68 @@ private ObservableList<String>
 	}
 
 	/**
+	 * Applies a QSO received from an external logger to all active callsign
+	 * variants. Active member objects back JavaFX views, so their state is changed
+	 * only on the JavaFX Application Thread. The band-upgrade hint is evaluated
+	 * afterwards and therefore sees the new Worked state.
+	 *
+	 * @param loggedQso validated external QSO
+	 */
+	public void applyExternalLoggedQso(ExternalLoggedQso loggedQso) {
+		if (loggedQso == null) {
+			return;
+		}
+
+		runOnFxThread(() -> {
+			int updatedMembers = markExternalLoggedQsoMembers(
+					activeChatMembersByCallAndCategory.values(), loggedQso);
+			if (updatedMembers == 0) {
+				return;
+			}
+
+			fireUserListUpdate("External logger Worked state updated");
+			try {
+				onExternalLogEntryReceived(loggedQso.getCallSign());
+			} catch (Exception exception) {
+				LOGGER.log(Level.WARNING,
+						"Band-upgrade hint failed after external logger update for "
+								+ loggedQso.getCallSign(), exception);
+			}
+		});
+	}
+
+	static int markExternalLoggedQsoMembers(
+			Collection<ChatMember> members,
+			ExternalLoggedQso loggedQso
+	) {
+		if (members == null || loggedQso == null) {
+			return 0;
+		}
+
+		String workedBaseCall = ChatMember.normalizeCallSignToBaseCallSign(
+				loggedQso.getCallSign());
+		if (workedBaseCall == null || workedBaseCall.isBlank()) {
+			return 0;
+		}
+
+		int updatedMembers = 0;
+		for (ChatMember member : members) {
+			if (member == null) {
+				continue;
+			}
+
+			String memberCall = member.getCallSignRaw() != null
+					? member.getCallSignRaw() : member.getCallSign();
+			String memberBaseCall = ChatMember.normalizeCallSignToBaseCallSign(memberCall);
+			if (memberBaseCall != null && memberBaseCall.equalsIgnoreCase(workedBaseCall)) {
+				loggedQso.applyToActiveMember(member);
+				updatedMembers++;
+			}
+		}
+		return updatedMembers;
+	}
+
+	/**
 	 * Applies the global Worked state from the Simplelogfile to every active
 	 * callsign variant with the same base callsign. UI-backed state is changed only
 	 * on the JavaFX Application Thread.

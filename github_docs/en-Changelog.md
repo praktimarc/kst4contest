@@ -82,6 +82,8 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **DXLog full-log import:** In addition to `contactinfo`, the UCXLog-compatible UDP listener processes `contactreplace`. This allows a complete log broadcast by DXLog.net to be imported.
 
+- **Consistent logger band values:** Numeric, metre and centimetre values from UCXLog-compatible QSO packets and Win-Test band IDs are normalised once and then used consistently for Worked marks and worked grid squares. In particular, `2320`, `5760` and `10368` now reliably set their existing band marks. A missing or unknown band continues to set only the global Worked status.
+
 - **Defined Simplelogfile behaviour:** The selected text file is evaluated once per minute using a fixed callsign pattern. Matches set the global Worked status for all active variants of the base callsign but are not persisted in SQLite. A missing file is created, and read or creation errors do not terminate the periodic task. A database reset does not change the file, so callsigns contained in it are marked as worked again during the next evaluation.
 
 - **Guarded automatic QRG updates:** `MYQRG` is updated only by an enabled interface which actually supplies valid `RadioInfo` or Win-Test `STATUS` packets. An enabled source which provides no data does not remove the need for a functional check or manual QRG maintenance.

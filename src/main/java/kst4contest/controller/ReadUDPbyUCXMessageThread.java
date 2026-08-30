@@ -3,7 +3,6 @@ package kst4contest.controller;
 import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 import javax.xml.XMLConstants;
@@ -13,7 +12,6 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import kst4contest.ApplicationConstants;
 import kst4contest.model.ThreadStateMessage;
-import kst4contest.view.GuiUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -132,54 +130,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		return WorkedGrossFieldCache.extractLocator6(helper_getOptionalElementText(element, "rcvnr"));
 	}
 
-	/**
-	 * Resolves the project Band enum from logger band values.
-	 *
-	 * @param band logger band text
-	 * @return matching Band or null
-	 */
-	private Band helper_resolveBandFromLoggerBand(String band) {
-		if (band == null) {
-			return null;
-		}
-
-		switch (band.trim()) {
-			case "50":
-			case "6m":
-				return Band.B_50;
-			case "70":
-			case "4m":
-				return Band.B_70;
-			case "144":
-			case "2m":
-				return Band.B_144;
-			case "432":
-			case "70cm":
-				return Band.B_432;
-			case "1240":
-			case "1296":
-			case "23cm":
-				return Band.B_1296;
-			case "2300":
-			case "2320":
-			case "13cm":
-				return Band.B_2320;
-			case "3400":
-			case "9cm":
-				return Band.B_3400;
-			case "5600":
-			case "5760":
-			case "6cm":
-				return Band.B_5760;
-			case "10G":
-			case "10368":
-			case "3cm":
-				return Band.B_10G;
-			default:
-				return null;
-		}
-	}
-
 	public void run() {
 
         System.out.println("ReadUDPByUCXLogThread: started Thread for UCXLog getUDP");
@@ -295,8 +245,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 		String udpMsg = helper_extractXmlPayload(udpPacketToProcess);
 
-		ChatMember modifyThat = null;
-
         ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "received Message\n" + udpMsg, false);
 
         callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
@@ -342,95 +290,27 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 						Element element = (Element) node;
 
-						String call = element.getElementsByTagName("call").item(0).getTextContent();
-						String band = helper_getOptionalElementText(element, "band");
+						String call = helper_getOptionalElementText(element, "call");
+						String rawBand = helper_getOptionalElementText(element, "band");
 						String gridSquare = helper_resolveLocatorFromContactInfo(element);
 						String points = helper_getOptionalElementText(element, "points");
+						LoggedQsoBand loggedBand = LoggedQsoBand.fromLoggerValue(rawBand);
+						ExternalLoggedQso loggedQso = ExternalLoggedQso.create(
+								call, loggedBand, gridSquare, "UCXLOG").orElse(null);
+						if (loggedQso == null) {
+							System.out.println("[ReadUDPFromUCX, warning]: QSO packet without usable callsign ignored");
+							continue;
+						}
 
 						System.out.println("[Readudp, info ]: received Current Element :" + node.getNodeName()
-								+ "call: " + call + " / " + band + " ----> " + points + " POINTS");
+								+ "call: " + call + " / " + rawBand + " ----> " + points + " POINTS");
 
 //						client.getChatPreferences().setBcn_contestScoreSum(Long.parseLong(points));
 
-						ChatMember workedCall = new ChatMember();
-						workedCall.setCallSign(call);
-						workedCall.setWorked(true);
-
-						if (gridSquare != null) {
-							workedCall.setQra(gridSquare);
-						}
-
-						Band workedBand = helper_resolveBandFromLoggerBand(band);
-
-						switch (band) {
-						case "50":
-						case "6m":
-						{
-							workedCall.setWorked50(true);
-							break;
-						}
-
-						case "70":
-						case "4m":
-						{
-							workedCall.setWorked70(true);
-							break;
-						}
-
-						case "144":
-						case "2m": //minos contest logger
-						{
-							workedCall.setWorked144(true);
-							break;
-						}
-
-						case "432":
-						case "70cm":
-							{
-								workedCall.setWorked432(true);
-								break;
-							}
-
-						case "1240": //ucxlog style
-						case "1296": //used for n1mm / Dxlog
-						case "23cm": //minos contest logger
-						{
-							workedCall.setWorked1240(true);
-							break;
-						}
-
-						case "2300":
-						case "13cm":
-							{
-							workedCall.setWorked2300(true);
-							break;
-						}
-
-						case "3400":
-						case "9cm":
-						{
-							workedCall.setWorked3400(true);
-							break;
-						}
-
-						case "5600":
-						case "6cm":
-						{
-							workedCall.setWorked5600(true);
-							break;
-						}
-
-						case "10G":
-						case "3cm":
-						{
-							workedCall.setWorked10G(true);
-                            break;
-						}
-
-
-							default:
-								System.out.println("[ReadUDPFromUCX, Error:] unexpected band value: \"" + band + "\"");
-								break;
+						ChatMember workedCall = loggedQso.toWorkedChatMember();
+						Band workedBand = loggedBand == null ? null : loggedBand.getProjectBand();
+						if (loggedBand == null && !rawBand.isEmpty()) {
+							System.out.println("[ReadUDPFromUCX, warning]: unexpected band value: \"" + rawBand + "\"");
 						}
 
 						{
@@ -444,60 +324,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 //							asd //TODO: Check if callsign and callsignraw is similar, then mark first and further via new checklistforchatmembermultiplemethod with array of indize
 
-							ArrayList<Integer> markTheseChattersAsWorked = client.checkListForChatMemberIndexesByCallSign(workedCall);
-
-							if (markTheseChattersAsWorked.isEmpty()) {
-								//Worked call is not part of the chatmember list
-							} else {
-								for (int index : markTheseChattersAsWorked) {
-									modifyThat = client.getLst_chatMemberList().get(index);
-
-									modifyThat.setWorked(true);
-
-									if (workedCall.isWorked50()) {
-										modifyThat.setWorked50(true);
-
-									} else if (workedCall.isWorked70()) {
-										modifyThat.setWorked70(true);
-
-									} else if (workedCall.isWorked144()) {
-										modifyThat.setWorked144(true);
-
-									} else if (workedCall.isWorked432()) {
-										modifyThat.setWorked432(true);
-
-									} else if (workedCall.isWorked1240()) {
-										modifyThat.setWorked1240(true);
-
-									} else if (workedCall.isWorked2300()) {
-										modifyThat.setWorked2300(true);
-
-									} else if (workedCall.isWorked3400()) {
-										modifyThat.setWorked3400(true);
-
-									} else if (workedCall.isWorked5600()) {
-										modifyThat.setWorked5600(true);
-
-									} else if (workedCall.isWorked10G()) {
-										modifyThat.setWorked10G(true);
-									}
-								}
-
-								try {
-
-									GuiUtils.triggerGUIFilteredChatMemberListChange(this.client);
-									// BEGIN PATCH: trigger band-upgrade hint after log entry (UCXLog)
-									try {
-										client.onExternalLogEntryReceived(workedCall.getCallSignRaw());
-									} catch (Exception e) {
-										System.out.println("[UCXUDPRcvr, warning]: band-upgrade hint failed: " + e.getMessage());
-									}
-
-
-								} catch (Exception IllegalStateException) {
-									//do nothing, as it works...
-								}
-							}
+							client.applyExternalLoggedQso(loggedQso);
 
 							/**
 							 * old mechanic to markup worked stations in the chatmember table
@@ -574,7 +401,8 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						}
 
 						if (workedBand != null && gridSquare != null) {
-							this.client.registerWorkedGrossField(workedBand, gridSquare, workedCall, "UCXLOG");
+							this.client.registerWorkedGrossField(
+									workedBand, gridSquare, workedCall, loggedQso.getSource());
 						}
 
 						boolean isInChat = this.client.getDbHandler().updateWkdInfoOnChatMember(workedCall);
@@ -609,17 +437,9 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 						bufwrtrRawMSGOut = new BufferedWriter(fileWriterPersistUDPToFile);
 
-						if (modifyThat != null) {
-							bufwrtrRawMSGOut.write("\n" + modifyThat.toString());
-							bufwrtrRawMSGOut.flush();
-							bufwrtrRawMSGOut.close();
-
-						} else {
-							bufwrtrRawMSGOut.write("\n" + workedCall.toString());
-							bufwrtrRawMSGOut.flush();
-							bufwrtrRawMSGOut.close();
-
-						}
+						bufwrtrRawMSGOut.write("\n" + workedCall.toString());
+						bufwrtrRawMSGOut.flush();
+						bufwrtrRawMSGOut.close();
 
 					}
 				}
