@@ -428,11 +428,13 @@ The following settings and controls belong to the local DX cluster output:
 
 ```text
 Spotted callsign: DO5AMF
-Comment: Testing DXC-Spot: Congrats, you donated $100!
+Comment: DXC test: You donated $100!
 Frequency: .300 on the selected fallback band
 ```
 
 With `144 MHz` selected as the fallback band, the resulting frequency is approximately `144.300 MHz`.
+
+All spots use a fixed, DXSpider-compatible 75-character payload line with a 30-character comment field. Longer comments are deliberately truncated at this protocol boundary; the DX callsign is not. A callsign longer than twelve characters causes the affected spot to be rejected and logged.
 
 The comment is a deliberately retained Easter egg. It has no technical meaning and, despite being remarkably specific, does not initiate a payment. Its practical purpose is to make the test spot easy to identify in the logging software.
 

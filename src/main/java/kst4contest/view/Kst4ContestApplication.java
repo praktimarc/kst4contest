@@ -10736,7 +10736,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					testSpot.setFrequency(
 							new SimpleStringProperty("300")
 					);
-					testSpot.setQra("Testing DXC-Spot: Congrats, you donated $100!");
+					testSpot.setQra("DXC test: You donated $100!");
 					testSpot.setCallSign("DO5AMF");
 
 					if (!dxClusterServer

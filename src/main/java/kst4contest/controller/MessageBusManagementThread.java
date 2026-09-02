@@ -1847,14 +1847,14 @@ public class MessageBusManagementThread extends Thread {
 	 * @param sender station for which the DX Cluster spot is generated
 	 * @return locator with up to two optional AP entries
 	 */
-	private String buildDxClusterSpotComment(ChatMember sender) {
+	static String buildDxClusterSpotComment(ChatMember sender) {
 		if (sender == null) {
 			return "";
 		}
 
 		String locator = sender.getQra() == null
 				? ""
-				: sender.getQra().trim();
+				: sender.getQra().trim().toUpperCase(Locale.ROOT);
 
 		AirPlaneReflectionInfo reflectionInfo =
 				sender.getAirPlaneReflectInfo();
@@ -1882,7 +1882,7 @@ public class MessageBusManagementThread extends Thread {
 
 			aircraftComments.add(
 					aircraft.getArrivingDurationMinutes()
-							+ "min, "
+							+ "m/"
 							+ aircraft.getPotential()
 							+ "%"
 			);
@@ -1893,11 +1893,11 @@ public class MessageBusManagementThread extends Thread {
 		}
 
 		String apComment =
-				"AP: " + String.join("; ", aircraftComments);
+				"AP " + String.join(";", aircraftComments);
 
 		return locator.isEmpty()
 				? apComment
-				: locator + " , " + apComment;
+				: locator + " " + apComment;
 	}
 
 	/**

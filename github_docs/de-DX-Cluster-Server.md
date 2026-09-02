@@ -163,7 +163,7 @@ Die Schaltfläche **Send test spot** erzeugt folgenden Testeintrag:
 
 ```text
 Spotted callsign: DO5AMF
-Comment: Testing DXC-Spot: Congrats, you donated $100!
+Comment: DXC test: You donated $100!
 Frequency: .300 des konfigurierten Fallback-Bandes
 ```
 
@@ -191,7 +191,17 @@ Ein Spot enthält:
 - den Locator,
 - die aktuelle UTC-Zeit.
 
+Die Nutzzeile folgt einem festen, DXSpider-kompatiblen 75-Zeichen-Format. Das DX-Rufzeichen beginnt in Spalte 27, das Kommentarfeld umfasst genau 30 Zeichen und die UTC-Zeit beginnt in Spalte 71. Kurze Kommentare werden mit Leerzeichen aufgefüllt, längere kontrolliert auf 30 Zeichen begrenzt. Unterschiedlich lange Spotter-Rufzeichen und Frequenzen bis 24 GHz verschieben die nachfolgenden Felder nicht.
+
+Das vollständige DX-Rufzeichen wird nicht abgeschnitten. Ist es länger als zwölf Zeichen, verwirft KST4Contest den Spot stattdessen kontrolliert und protokolliert den Grund.
+
 Bei automatisch erzeugten Richtungs-Spots kann KST4Contest bis zu zwei aktuelle AirScout-Einträge als zusätzliche AP-Information in den Kommentar aufnehmen. Fehlende AirScout-Daten verhindern den Spot nicht. Ein manuell über die Stationskarte ausgelöster Spot verwendet den Locator der ausgewählten Station ohne diese optionale Ergänzung.
+
+Ein kompakter Kommentar mit AirScout-Information sieht beispielsweise so aus:
+
+```text
+JO51HK AP 1m/100%;4m/75%
+```
 
 ---
 

@@ -152,6 +152,7 @@ public class DXClusterThreadPooledServer implements Runnable {
     public boolean broadcastSingleDXClusterEntryToLoggers(
             ChatMember chatMember
     ) {
+        final byte[] clusterPayload;
         final String clusterMessage;
 
         try {
@@ -162,24 +163,27 @@ public class DXClusterThreadPooledServer implements Runnable {
                             .getNotify_optionalFrequencyPrefix()
             );
 
-            clusterMessage =
-                    "DX de "
-                            + chatController
+            clusterPayload = DXClusterSpotFormatter.formatPayload(
+                    chatController
                             .getChatPreferences()
                             .getNotify_DXCSrv_SpottersCallSign()
-                            .getValue()
-                            + ":   "
-                            + frequency
-                            + "  "
-                            + chatMember.getCallSign().toUpperCase()
-                            + "             "
-                            + chatMember.getQra().toUpperCase()
-                            + "  "
-                            + new Utils4KST()
+                            .getValue(),
+                    frequency,
+                    chatMember.getCallSign(),
+                    chatMember.getQra(),
+                    new Utils4KST()
                             .time_generateCurrenthhmmZTimeStringForClusterMessage()
-                            + ((char) 7)
-                            + ((char) 7)
-                            + "\r\n";
+            );
+            clusterMessage = new String(
+                    clusterPayload,
+                    StandardCharsets.US_ASCII
+            );
+        } catch (IllegalArgumentException exception) {
+            LOGGER.log(
+                    Level.WARNING,
+                    "DX Cluster spot rejected: " + exception.getMessage()
+            );
+            return false;
         } catch (Exception exception) {
             LOGGER.log(
                     Level.SEVERE,
@@ -204,11 +208,7 @@ public class DXClusterThreadPooledServer implements Runnable {
 
                 try {
                     OutputStream output = socket.getOutputStream();
-                    output.write(
-                            clusterMessage.getBytes(
-                                    StandardCharsets.US_ASCII
-                            )
-                    );
+                    output.write(clusterPayload);
                     output.flush();
                     deliveredClients++;
                 } catch (IOException exception) {

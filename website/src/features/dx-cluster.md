@@ -141,10 +141,12 @@ Every generated spot contains:
 
 Automatically generated directional spots can additionally include up to two current AirScout entries. A manually triggered map spot uses the selected station's locator without this optional addition.
 
+The payload is a fixed, DXSpider-compatible 75-character line. The DX callsign begins in column 27, the 30-character comment begins in column 40 and the UTC time begins in column 71. Short comments are padded; longer comments are limited to the available field. A DX callsign longer than twelve characters is rejected rather than silently truncated.
+
 An example comment with AirScout information may look like this:
 
 ```text
-JN49GL , AP: 1min, 100%; 4min, 75%
+JO51HK AP 1m/100%;4m/75%
 ```
 
 AirScout information is optional. A missing AirScout response does not prevent an automatic directional spot from being sent.
@@ -198,6 +200,8 @@ A missing password is acceptable inside the intended station network. It is not 
 ## Testing the connection
 
 Use **Send test spot** after the logger has connected.
+
+The test uses `DO5AMF` with the comment `DXC test: You donated $100!` and `.300` on the configured fallback band.
 
 A successful test confirms that at least one client received the generated spot. If the test works but real spots do not appear, the TCP connection is probably not the problem. In that case, check the conditions used for the actual directional opportunity:
 

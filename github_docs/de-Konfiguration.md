@@ -379,11 +379,13 @@ Folgende Einstellungen und Schaltflächen gehören zur lokalen DX-Cluster-Ausgab
 
 ```text
 Spotted callsign: DO5AMF
-Comment: Testing DXC-Spot: Congrats, you donated $100!
+Comment: DXC test: You donated $100!
 Frequency: .300 des ausgewählten Fallback-Bandes
 ```
 
 Bei einem Fallback-Band von `144 MHz` wird daraus beispielsweise eine Frequenz von ungefähr `144.300 MHz`.
+
+Alle Spots verwenden eine feste, DXSpider-kompatible 75-Zeichen-Nutzzeile mit einem 30 Zeichen breiten Kommentarfeld. Längere Kommentare werden an dieser Protokollgrenze kontrolliert gekürzt; das DX-Rufzeichen wird dagegen nicht abgeschnitten. Rufzeichen mit mehr als zwölf Zeichen führen dazu, dass der betreffende Spot verworfen und protokolliert wird.
 
 Der Kommentar des Testspots ist ein bewusst beibehaltenes Easteregg. Er hat keine technische Bedeutung und löst – trotz seiner erfreulich konkreten Formulierung – keine Zahlung aus. Entscheidend ist, dass der Spot im verbundenen Logprogramm erscheint.
 

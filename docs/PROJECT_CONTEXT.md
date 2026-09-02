@@ -66,6 +66,15 @@ Known integration areas include:
 
 CR/LF framing, XML framing, ports/transports, callsign normalization and frequency formatting are protocol behaviour and must not be changed as incidental cleanup.
 
+### Local DX Cluster output
+
+- Local spots use a fixed 75-character, DXSpider-compatible payload line followed by two BEL characters and CRLF.
+- The DX callsign begins in column 27 and occupies up to 12 characters. The 30-character comment begins in column 40, and the five-character UTC time begins in column 71.
+- Spotter and frequency padding is calculated dynamically so frequencies from 50 MHz through 24 GHz do not shift the following fields.
+- Comments are padded or truncated to exactly 30 characters. Automatic AirScout comments retain the locator first and use the compact form `JO51HK AP 1m/100%;4m/75%`.
+- A DX callsign longer than 12 characters is rejected and logged rather than truncated.
+- Trigger conditions, QRG recognition and normalisation, login, keepalive, multi-client delivery and the local-only trust boundary remain separate from line formatting.
+
 ### Logging and Worked-state persistence
 
 - The Simplelogfile interpreter reads the selected text file after connection startup and then once per minute using a fixed built-in callsign pattern.

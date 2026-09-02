@@ -163,7 +163,7 @@ The **Send test spot** button creates the following test entry:
 
 ```text
 Spotted callsign: DO5AMF
-Comment: Testing DXC-Spot: Congrats, you donated $100!
+Comment: DXC test: You donated $100!
 Frequency: .300 on the configured fallback band
 ```
 
@@ -191,12 +191,16 @@ A spot contains:
 - the locator; and
 - the current UTC time.
 
+The payload line uses a fixed, DXSpider-compatible 75-character format. The DX callsign starts in column 27, the comment field is exactly 30 characters wide and the UTC time starts in column 71. Short comments are padded with spaces; longer ones are deliberately limited to 30 characters. Different spotter-callsign lengths and frequencies up to 24 GHz do not move the following fields.
+
+KST4Contest does not truncate the complete DX callsign. If it exceeds twelve characters, the spot is rejected in a controlled manner and the reason is logged.
+
 For automatically generated directional spots, KST4Contest can add up to two current AirScout entries to the comment. Missing AirScout data does not prevent the spot from being sent. A spot triggered manually from the station map uses the selected station's locator without this optional addition.
 
 An automatic comment with AirScout information may look like this:
 
 ```text
-JN49GL , AP: 1min, 100%; 4min, 75%
+JO51HK AP 1m/100%;4m/75%
 ```
 
 ---
