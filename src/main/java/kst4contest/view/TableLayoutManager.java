@@ -22,8 +22,8 @@ import java.util.OptionalDouble;
  */
 public final class TableLayoutManager {
 
-    private static final double CELL_HORIZONTAL_PADDING = 28.0;
-    private static final double DEFAULT_MINIMUM_WIDTH = 42.0;
+    private static final double CELL_HORIZONTAL_PADDING = 16.0;
+    private static final double DEFAULT_MINIMUM_WIDTH = 24.0;
 
     private TableLayoutManager() {
     }
@@ -139,7 +139,11 @@ public final class TableLayoutManager {
                     measure(String.valueOf(value.getValue()), measurement)
             );
         }
-        return clamp(requiredWidth + CELL_HORIZONTAL_PADDING, spec.minimumWidth, spec.maximumInitialWidth);
+        return calculateInitialContentWidth(
+                requiredWidth,
+                spec.minimumWidth,
+                spec.maximumInitialWidth
+        );
     }
 
     private static <S> double flexibleInitialWidth(TableView<S> table, ColumnSpec spec) {
@@ -221,6 +225,18 @@ public final class TableLayoutManager {
 
     private static double clamp(double value, double minimum, double maximum) {
         return Math.max(minimum, Math.min(value, maximum));
+    }
+
+    /**
+     * Calculates a compact content width. Package-private for focused sizing tests.
+     */
+    @SuppressWarnings("PMD.CommentDefaultAccessModifier")
+    static double calculateInitialContentWidth(
+            final double measuredWidth,
+            final double minimum,
+            final double maximum
+    ) {
+        return clamp(measuredWidth + CELL_HORIZONTAL_PADDING, minimum, maximum);
     }
 
     public static final class ColumnSpec {
