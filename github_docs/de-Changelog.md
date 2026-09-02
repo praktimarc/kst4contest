@@ -44,6 +44,8 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 ### Geändert
 
+- **Tabellenlayout automatisch gesichert:** Tabellen werden beim ersten brauchbaren Inhalt sinnvoll dimensioniert. Manuell geänderte Spaltenbreiten, Fenstergrößen und relevante Divider werden verzögert in `preferences.xml` gespeichert; Haupt- und Monitorfenster behalten für DXCluster und QSO of the other getrennte Layouts. Gekürzte normale Zellwerte zeigen ihren Volltext im Tooltip, ohne funktionale Tooltips oder anklickbare Links zu verdrängen.
+
 - **DX-Cluster-Zeilenformat vereinheitlicht:** Lokale Spots verwenden jetzt eine feste, DXSpider-kompatible 75-Zeichen-Nutzzeile mit dem DX-Rufzeichen ab Spalte 27, einem 30 Zeichen breiten Kommentarfeld und der UTC-Zeit ab Spalte 71. Das Format bleibt auch bei Mikrowellenfrequenzen bis 24 GHz stabil. Überlange DX-Rufzeichen werden verworfen und protokolliert, statt still abgeschnitten zu werden; AirScout- und Testkommentare sind entsprechend kompakter.
 
 - **Sessionbezogene ON4KST-Verbindungssteuerung:** Socket, Reader, Writer, Messagebus und Warteschlangen gehören jetzt zu einer eindeutig identifizierten Verbindungssession. Veraltete Threads einer abgelösten Verbindung können dadurch keine Daten mehr verarbeiten oder die neue Verbindung schließen. `ONLINE` wird erst nach bestätigtem Login und vollständig empfangenen Benutzerlisten gemeldet. Verbindungsaufbau, Login und Synchronisation besitzen feste Zeitlimits; Heartbeats, ausbleibende Eingangsdaten, EOF sowie Lese- und Schreibfehler werden überwacht und lösen bei Bedarf einen kontrollierten Neuaufbau mit Backoff aus.

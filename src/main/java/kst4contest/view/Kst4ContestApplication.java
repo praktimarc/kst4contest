@@ -119,6 +119,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	private StationMapView stationMapView; //view class for the avl stn map
 	private StationMapBridge stationMapBridge; //bridge for mapping actions between map and view
+	private LayoutAutosave layoutAutosave;
 
 	private final Button btnConnectionStateIndicator = new Button("LINK");
 	private final Tooltip tipConnectionStateIndicator = new Tooltip();
@@ -186,7 +187,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			return;
 		}
 
-		stationMapView = new StationMapView(chatcontroller.getChatPreferences());
+		stationMapView = new StationMapView(
+				chatcontroller.getChatPreferences(),
+				this::requestLayoutSave
+		);
 		stationMapBridge = new StationMapBridge(
 				chatcontroller,
 				tbl_chatMember,
@@ -537,7 +541,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 * Builds the tooltip shown on a band-status cell: a fixed legend plus this row's
 	 * resolved status for the given band.
 	 */
-	private Tooltip buildBandCellStatusTooltip(ChatMember chatMember, Band band, String status) {
+	private String buildBandCellStatusTooltipText(ChatMember chatMember, Band band, String status) {
 		StringBuilder tooltip = new StringBuilder("Band status:\n")
 				.append("X = worked on this band\n")
 				.append("B+ = band available, not worked on this band yet (call already worked on another band)\n")
@@ -551,30 +555,26 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					.append("Status: ").append(status == null || status.isBlank() ? "-" : status);
 		}
 
-		return new Tooltip(tooltip.toString());
+		return tooltip.toString();
 	}
 
 	/**
 	 * Creates a shared cell factory for one band-status column, attaching the
-	 * {@link #buildBandCellStatusTooltip(ChatMember, Band, String)} tooltip.
+	 * {@link #buildBandCellStatusTooltipText(ChatMember, Band, String)} tooltip.
 	 */
 	private Callback<TableColumn<ChatMember, String>, TableCell<ChatMember, String>> createBandStatusCellFactory(Band band) {
-		return column -> new TableCell<ChatMember, String>() {
+		return column -> new TruncatedTextTableCell<ChatMember>(
+				java.util.function.Function.identity(),
+				(member, status) -> buildBandCellStatusTooltipText(member, band, status)
+		) {
 			@Override
 			protected void updateItem(String item, boolean empty) {
 				super.updateItem(item, empty);
 
 				if (empty) {
-					setText(null);
-					setTooltip(null);
 					setStyle("");
 					return;
 				}
-
-				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
-
-				setText(item);
-				setTooltip(buildBandCellStatusTooltip(member, band, item));
 				setAlignment(Pos.CENTER);
 				setStyle("-fx-font-weight: bold;");
 			}
@@ -1374,6 +1374,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
 //					System.out.println("<<<<<<<<<<<<<<<<<<< devider " + selectedCallSignSplitPane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  selectedCallSignSplitPane.getDividers().size());
 					chatcontroller.getChatPreferences().getGUIselectedCallSignSplitPane_dividerposition()[selectedCallSignSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+					requestLayoutSave();
 				}
 			});
 
@@ -1649,9 +1650,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		tbl_chatMemberTable.setTooltip(new Tooltip(
-				"Stations available \n\nUse right click to a station to select predefined texts\nor hit <strg> + <1> ... <9> to write textsnippet to selected station\n\nHit <enter> to send"));
-
 		TableColumn<ChatMember, String> callSignCol =
 				new TableColumn<ChatMember, String>("Callsign");
 
@@ -1669,7 +1667,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			return new SimpleStringProperty(displayedCallsign);
 		});
 
-		callSignCol.setCellFactory(column -> new TableCell<ChatMember, String>() {
+		callSignCol.setCellFactory(column -> new TruncatedTextTableCell<ChatMember>() {
 
 			@Override
 			protected void updateItem(String item, boolean empty) {
@@ -1757,14 +1755,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 * <p>No font weight is changed here. The compact worked/grid status such as
 		 * {@code xo} is emphasized only in the worked-any column.</p>
 		 */
-		qraCol.setCellFactory(column -> new TableCell<ChatMember, String>() {
+		qraCol.setCellFactory(column -> new TruncatedTextTableCell<ChatMember>(
+				java.util.function.Function.identity(),
+				(member, value) -> {
+					String grossField = WorkedGrossFieldCache.extractGrossField(value);
+					boolean gridWorked = member != null
+							&& chatcontroller != null
+							&& chatcontroller.isGridSquareWorkedAny(member);
+					return "Grid status: "
+							+ (grossField == null ? "unknown" : grossField)
+							+ "\nGrid worked any: "
+							+ (gridWorked ? "yes" : "no");
+				}
+		) {
 			@Override
 			protected void updateItem(String item, boolean empty) {
 				super.updateItem(item, empty);
 
 				if (empty || item == null) {
-					setText(null);
-					setTooltip(null);
 					setStyle("");
 					return;
 				}
@@ -1773,16 +1781,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				boolean gridWorked = member != null
 						&& chatcontroller != null
 						&& chatcontroller.isGridSquareWorkedAny(member);
-
-				String grossField = WorkedGrossFieldCache.extractGrossField(item);
-
-				setText(item);
-				setTooltip(new Tooltip(
-						"Grid status: "
-								+ (grossField == null ? "unknown" : grossField)
-								+ "\nGrid worked any: "
-								+ (gridWorked ? "yes" : "no")
-				));
 
 				/*
 				 * Important:
@@ -1929,7 +1927,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 */
 		airScoutCol.setCellFactory(new Callback<TableColumn<ChatMember, String>, TableCell<ChatMember, String>>() {
 			public TableCell call(TableColumn param) {
-				return new TableCell<ChatMember, String>() {
+				return new TruncatedTextTableCell<ChatMember>() {
 
 					@Override
 					public void updateItem(String item, boolean empty) {
@@ -1953,7 +1951,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 								this.getStyleClass().add("table-cell-50PercentAP");
 							}
 
-							setText(item);
 						}
 					}
 				};
@@ -2038,22 +2035,18 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		/**
 		 * Shows the compact worked/grid status and explains it by tooltip.
 		 */
-		wkdAny_subcol.setCellFactory(column -> new TableCell<ChatMember, String>() {
+		wkdAny_subcol.setCellFactory(column -> new TruncatedTextTableCell<ChatMember>(
+				java.util.function.Function.identity(),
+				(member, value) -> buildWorkedAnyGridStatusTooltip(member)
+		) {
 			@Override
 			protected void updateItem(String item, boolean empty) {
 				super.updateItem(item, empty);
 
 				if (empty) {
-					setText(null);
-					setTooltip(null);
 					setStyle("");
 					return;
 				}
-
-				ChatMember member = getTableRow() == null ? null : getTableRow().getItem();
-
-				setText(item);
-				setTooltip(new Tooltip(buildWorkedAnyGridStatusTooltip(member)));
 				setAlignment(Pos.CENTER);
 				setStyle("-fx-font-weight: bold;");
 			}
@@ -2389,7 +2382,38 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //		}, new Date(), 5000);
 
 		tbl_chatMemberTable.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
-		tbl_chatMemberTable.autosize();
+		applyTruncatedTextCells(
+				nameCol, qrBCol, qtfCol, tropoCol, priorityScoreCol,
+				lastActCol, notQRVCol, chatCategoryCol
+		);
+		TableLayoutManager.install(
+				tbl_chatMemberTable,
+				"chat-members",
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("callsign", callSignCol),
+				TableLayoutManager.column("name", nameCol).maximumInitialWidth(220),
+				TableLayoutManager.column("qra", qraCol),
+				TableLayoutManager.column("qrb", qrBCol),
+				TableLayoutManager.column("qtf", qtfCol),
+				TableLayoutManager.column("qrg", qrgCol),
+				TableLayoutManager.column("tropo", tropoCol),
+				TableLayoutManager.column("score", priorityScoreCol),
+				TableLayoutManager.column("activity", lastActCol),
+				TableLayoutManager.column("airscout", airScoutCol).maximumInitialWidth(190),
+				TableLayoutManager.column("worked-any", wkdAny_subcol),
+				TableLayoutManager.column("band-50", sixMCol_subcol),
+				TableLayoutManager.column("band-70", fourMCol_subcol),
+				TableLayoutManager.column("band-144", vhfCol_subcol),
+				TableLayoutManager.column("band-432", uhfCol_subcol),
+				TableLayoutManager.column("band-1296", shf23_subcol),
+				TableLayoutManager.column("band-2320", shf13_subcol),
+				TableLayoutManager.column("band-3400", shf9_subcol),
+				TableLayoutManager.column("band-5760", shf6_subcol),
+				TableLayoutManager.column("band-10g", shf3_subcol),
+				TableLayoutManager.column("not-qrv", notQRVCol).maximumInitialWidth(180),
+				TableLayoutManager.column("category", chatCategoryCol)
+		);
 
 
 		/**
@@ -3120,6 +3144,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		ObservableList<ChatMessage> toOtherMSGList = chatcontroller.getLst_toOtherMessageList();
 		tbl_furtherInfoAbtCallsignMSGTable.setItems(chatcontroller.getLst_selectedCallSignInfofilteredMessageList());
+		applyTruncatedTextCells(
+				timeCol, callSignTRCVCol, callSignRCVRCol, qrgTXerCol,
+				qrgRXerCol, workedRXCol, workedTXCol
+		);
+		TableLayoutManager.install(
+				tbl_furtherInfoAbtCallsignMSGTable,
+				"selected-station-messages",
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("time", timeCol),
+				TableLayoutManager.column("call-tx", callSignTRCVCol),
+				TableLayoutManager.column("call-rx", callSignRCVRCol),
+				TableLayoutManager.column("last-qrg-tx", qrgTXerCol),
+				TableLayoutManager.column("last-qrg-rx", qrgRXerCol),
+				TableLayoutManager.column("message", msgCol).flexible(360),
+				TableLayoutManager.column("worked-rx", workedRXCol),
+				TableLayoutManager.column("worked-tx", workedTXCol)
+		);
 
 		return tbl_furtherInfoAbtCallsignMSGTable;
 	}
@@ -3281,11 +3323,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		Tab dxClusterMessagesTab = new Tab("DXCluster messages");
 		dxClusterMessagesTab.setTooltip(new Tooltip("DXCluster spots."));
-		dxClusterMessagesTab.setContent(initDXClusterTable());
+		dxClusterMessagesTab.setContent(initDXClusterTable("dx-cluster-main"));
 
 		Tab qsoOfTheOtherTab = new Tab("QSO of the other");
 		qsoOfTheOtherTab.setTooltip(new Tooltip("Messages between other stations. This view is not tied to the selected ChatMember."));
-		qsoOfTheOtherTab.setContent(initChatToOtherMSGTable());
+		qsoOfTheOtherTab.setContent(initChatToOtherMSGTable("qso-other-main"));
 
 		bottomMessageTabs.getTabs().addAll(publicMessagesTab, dxClusterMessagesTab, qsoOfTheOtherTab);
 		bottomMessageTabs.getSelectionModel().select(publicMessagesTab);
@@ -3437,6 +3479,19 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		ObservableList<ChatMessage> generalMSGList = chatcontroller.getLst_toAllMessageList();
 		tbl_generalMSGTable.setItems(generalMSGList);
+		applyTruncatedTextCells(timeCol, callSignCol, nameCol, categoryCol);
+		TableLayoutManager.install(
+				tbl_generalMSGTable,
+				"public-messages",
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("time", timeCol),
+				TableLayoutManager.column("callsign", callSignCol),
+				TableLayoutManager.column("name", nameCol).maximumInitialWidth(220),
+				TableLayoutManager.column("message", msgCol).flexible(360),
+				TableLayoutManager.column("last-qrg", qrgCol),
+				TableLayoutManager.column("category", categoryCol)
+		);
 
 		tbl_generalMSGTable.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
@@ -3660,7 +3715,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		 */
 		airScoutCol.setCellFactory(new Callback<TableColumn<ChatMessage, String>, TableCell<ChatMessage, String>>() {
 			public TableCell call(TableColumn param) {
-				return new TableCell<ChatMessage, String>() {
+				return new TruncatedTextTableCell<ChatMessage>() {
 
 					@Override
 					public void updateItem(String item, boolean empty) {
@@ -3682,7 +3737,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 							}
 
-							setText(item);
 						}
 					}
 				};
@@ -3741,6 +3795,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		ObservableList<ChatMessage> privateMSGList = chatcontroller.getLst_toMeMessageList();
 		tbl_privateMSGTable.setItems(privateMSGList);
+		applyTruncatedTextCells(timeCol, callSignCol, nameCol, qraCol, qrbCol, categoryCol);
+		TableLayoutManager.install(
+				tbl_privateMSGTable,
+				"private-messages",
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("time", timeCol),
+				TableLayoutManager.column("callsign", callSignCol),
+				TableLayoutManager.column("name", nameCol).maximumInitialWidth(220),
+				TableLayoutManager.column("qra", qraCol),
+				TableLayoutManager.column("qrb", qrbCol),
+				TableLayoutManager.column("message", msgCol).flexible(360),
+				TableLayoutManager.column("last-qrg", qrgCol),
+				TableLayoutManager.column("airscout", airScoutCol).maximumInitialWidth(190),
+				TableLayoutManager.column("category", categoryCol)
+		);
 
 		tbl_privateMSGTable.addEventFilter(KeyEvent.KEY_PRESSED, new EventHandler<KeyEvent>() {
 			@Override
@@ -3812,7 +3882,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return tbl_privateMSGTable;
 	}
 
-	private TableView<ClusterMessage> initDXClusterTable() {
+	private TableView<ClusterMessage> initDXClusterTable(String layoutId) {
 
 		TableView<ClusterMessage> tbl_DXCTable = new TableView<ClusterMessage>();
 //		tbl_DXCTable.setTooltip(new Tooltip("Cluster Messages are shown here"));
@@ -3973,11 +4043,29 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		ObservableList<ClusterMessage> clusterMSGList = chatcontroller.getLst_clusterMemberList();
 		tbl_DXCTable.setItems(clusterMSGList);
+		applyTruncatedTextCells(
+				timeCol, callSignCol, locTXCol, callSignRXCol,
+				locRXCol, workedCol
+		);
+		TableLayoutManager.install(
+				tbl_DXCTable,
+				layoutId,
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("time", timeCol),
+				TableLayoutManager.column("call-tx", callSignCol),
+				TableLayoutManager.column("locator-tx", locTXCol),
+				TableLayoutManager.column("call-rx", callSignRXCol),
+				TableLayoutManager.column("locator-rx", locRXCol),
+				TableLayoutManager.column("qrg", qrgCol),
+				TableLayoutManager.column("message", msgCol).flexible(360),
+				TableLayoutManager.column("worked", workedCol)
+		);
 
 		return tbl_DXCTable;
 	}
 
-	private TableView<ChatMessage> initChatToOtherMSGTable() {
+	private TableView<ChatMessage> initChatToOtherMSGTable(String layoutId) {
 
 		TableView<ChatMessage> tbl_toOtherMSGTable = new TableView<ChatMessage>();
 //		tbl_toOtherMSGTable.setTooltip(new Tooltip("Messages between other member are shown here"));
@@ -4175,6 +4263,25 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		ObservableList<ChatMessage> toOtherMSGList = chatcontroller.getLst_toOtherMessageList();
 		tbl_toOtherMSGTable.setItems(toOtherMSGList);
+		applyTruncatedTextCells(
+				timeCol, callSignTRCVCol, qrgTXerCol, workedTXCol,
+				callSignRCVRCol, qrgRXerCol, workedRXCol, categoryCol
+		);
+		TableLayoutManager.install(
+				tbl_toOtherMSGTable,
+				layoutId,
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("time", timeCol),
+				TableLayoutManager.column("call-tx", callSignTRCVCol),
+				TableLayoutManager.column("last-qrg-tx", qrgTXerCol),
+				TableLayoutManager.column("worked-tx", workedTXCol),
+				TableLayoutManager.column("call-rx", callSignRCVRCol),
+				TableLayoutManager.column("last-qrg-rx", qrgRXerCol),
+				TableLayoutManager.column("worked-rx", workedRXCol),
+				TableLayoutManager.column("message", msgCol).flexible(360),
+				TableLayoutManager.column("category", categoryCol)
+		);
 
 		return tbl_toOtherMSGTable;
 	}
@@ -5261,6 +5368,28 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		tbl_chatMemberWkdDBTable.getColumns().addAll(callSignCol, workedCol);
 
 		tbl_chatMemberWkdDBTable.setItems(chatcontroller.getLst_DBBasedWkdCallSignList());
+		applyTruncatedTextCells(
+				callSignCol, wkdAny_subcol, sixMCol_subcol, fourMCol_subcol,
+				vhfCol_subcol, uhfCol_subcol, shf23_subcol, shf13_subcol,
+				shf9_subcol, shf6_subcol, shf3_subcol
+		);
+		TableLayoutManager.install(
+				tbl_chatMemberWkdDBTable,
+				"worked-database",
+				chatcontroller.getChatPreferences(),
+				layoutAutosave,
+				TableLayoutManager.column("callsign", callSignCol),
+				TableLayoutManager.column("worked-any", wkdAny_subcol),
+				TableLayoutManager.column("band-50", sixMCol_subcol),
+				TableLayoutManager.column("band-70", fourMCol_subcol),
+				TableLayoutManager.column("band-144", vhfCol_subcol),
+				TableLayoutManager.column("band-432", uhfCol_subcol),
+				TableLayoutManager.column("band-1296", shf23_subcol),
+				TableLayoutManager.column("band-2320", shf13_subcol),
+				TableLayoutManager.column("band-3400", shf9_subcol),
+				TableLayoutManager.column("band-5760", shf6_subcol),
+				TableLayoutManager.column("band-10g", shf3_subcol)
+		);
 
 		// TODO: https://www.youtube.com/watch?v=M_kp20qrtLw = tutorial dafuer
 
@@ -6100,6 +6229,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	@Override
 	public void stop() {
 		System.out.println("[Main.java, Info:] Stage is closing, killing all resources");
+		if (layoutAutosave != null) {
+			layoutAutosave.flushPending();
+		}
 		timer_buildWindowTitle.purge();
 		timer_buildWindowTitle.cancel();
 
@@ -6117,6 +6249,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 //	    Platform.exit();
 		System.exit(0);
+	}
+
+	private void requestLayoutSave() {
+		if (layoutAutosave != null) {
+			layoutAutosave.requestSave();
+		}
 	}
 
 	private Queue<Media> musicList = new LinkedList<Media>();
@@ -6544,6 +6682,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		ChatMember ownChatMemberObject = new ChatMember();
 
 		chatcontroller = new ChatController(ownChatMemberObject, this); // instantiate the Chatcontroller with the user object
+		layoutAutosave = new LayoutAutosave(chatcontroller.getChatPreferences());
 		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
 		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
 
@@ -6687,6 +6826,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				@Override
 				public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newWidthValue) {
 					chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[1] = newWidthValue.doubleValue();
+					requestLayoutSave();
 				}
 			});
 
@@ -6694,6 +6834,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				@Override
 				public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newHeightValue) {
 					chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW()[0] = newHeightValue.doubleValue();
+					requestLayoutSave();
 				}
 			});
 
@@ -7399,6 +7540,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
 						System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<< devider>>>>>> " + messageSectionSplitpane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  messageSectionSplitpane.getDividers().size());
 						chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition()[messageSectionSplitpane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+						requestLayoutSave();
 					}
 				});
 
@@ -8582,6 +8724,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
 						System.out.println("<<<<<<<<<<<<<<<<<<< mainWindowLeftSplitPanedevider " + mainWindowLeftSplitPane.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  mainWindowLeftSplitPane.getDividers().size());
 						chatcontroller.getChatPreferences().getGUImainWindowLeftSplitPane_dividerposition()[mainWindowLeftSplitPane.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+						requestLayoutSave();
 					}
 				});
 
@@ -8615,6 +8758,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 						if (dividerIndex >= 0 && dividerIndex < storedPositions.length) {
 							storedPositions[dividerIndex] = newDividerPosition.doubleValue();
+							requestLayoutSave();
 						} else {
 							// Avoid crashes if preferences are older than the current UI layout.
 							System.out.println("WARN: cannot store mainWindowRightSplitPane divider position: index="
@@ -8663,7 +8807,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		SplitPane pnl_directedMSGWin = new SplitPane();
 		pnl_directedMSGWin.setOrientation(Orientation.VERTICAL);
 		pnl_directedMSGWin.setDividerPositions(chatcontroller.getChatPreferences().getGUIpnl_directedMSGWin_dividerpositionDefault());
-		pnl_directedMSGWin.getItems().addAll(initDXClusterTable(), initChatToOtherMSGTable());
+		pnl_directedMSGWin.getItems().addAll(
+				initDXClusterTable("dx-cluster-monitor"),
+				initChatToOtherMSGTable("qso-other-monitor")
+		);
 
 
 		/**
@@ -8676,6 +8823,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
 					System.out.println("<<<<<<<<<<<<<<<<<<<|||||||||||||||||||| devider " + pnl_directedMSGWin.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  pnl_directedMSGWin.getDividers().size());
 					chatcontroller.getChatPreferences().getGUIpnl_directedMSGWin_dividerpositionDefault()[pnl_directedMSGWin.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
+					requestLayoutSave();
 				}
 			});
 
@@ -8689,6 +8837,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			@Override
 			public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newHeightValue) {
 				chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1] = newHeightValue.doubleValue();
+				requestLayoutSave();
 			}
 		});
 
@@ -8696,6 +8845,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			@Override
 			public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newWidthValue) {
 				chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0] = newWidthValue.doubleValue();
+				requestLayoutSave();
 			}
 		});
 
@@ -8809,6 +8959,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		System.out.println("SRVR Version: " + chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() + " // installed version " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
 
 		stage_updateStage.setScene(new Scene(vbxUpdateWindow, chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1]));
+		stage_updateStage.getScene().widthProperty().addListener((observable, oldValue, newValue) -> {
+			chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0] = newValue.doubleValue();
+			requestLayoutSave();
+		});
+		stage_updateStage.getScene().heightProperty().addListener((observable, oldValue, newValue) -> {
+			chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1] = newValue.doubleValue();
+			requestLayoutSave();
+		});
 
 
 //		if (chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() > ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER) {
@@ -11762,7 +11920,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 				System.out.println("saved");
 
-				chatcontroller.getChatPreferences().writePreferencesToXmlFile();
+				if (chatcontroller.getChatPreferences().writePreferencesToXmlFile()
+						&& layoutAutosave != null) {
+					layoutAutosave.cancelPending();
+				}
 				Alert a = new Alert(AlertType.INFORMATION);
 
 				a.setTitle("Info");
@@ -11800,6 +11961,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //        VBox vBox = new VBox(tabPaneOptions);
 		settingsScene = new Scene(optionsPanel, chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1]);
 		settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+		settingsScene.widthProperty().addListener((observable, oldValue, newValue) -> {
+			chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0] = newValue.doubleValue();
+			requestLayoutSave();
+		});
+		settingsScene.heightProperty().addListener((observable, oldValue, newValue) -> {
+			chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1] = newValue.doubleValue();
+			requestLayoutSave();
+		});
 
 		settingsStage.setScene(settingsScene);
 
@@ -12515,13 +12684,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 	private static <T> void applyQrgUiFormatting(TableColumn<T, String> col) {
-		col.setCellFactory(tc -> new TableCell<T, String>() {
-			@Override
-			protected void updateItem(String item, boolean empty) {
-				super.updateItem(item, empty);
-				setText(empty ? "" : formatQrgForUi(item));
-			}
-		});
+		col.setCellFactory(tc -> new TruncatedTextTableCell<>(Kst4ContestApplication::formatQrgForUi));
+	}
+
+	@SafeVarargs
+	private static <T> void applyTruncatedTextCells(TableColumn<T, String>... columns) {
+		for (TableColumn<T, String> column : columns) {
+			column.setCellFactory(ignored -> new TruncatedTextTableCell<>());
+		}
 	}
 
 	/**

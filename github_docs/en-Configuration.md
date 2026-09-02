@@ -4,7 +4,7 @@
 
 After the first start, the **settings window** opens – this is the central starting point for all configuration. It is recommended to keep the settings window open during operation (e.g. to quickly toggle the beacon on and off).
 
-> **Important**: Always click **"Save Settings"** after any change! Settings are stored in `~/.praktiKST/preferences.xml` on Linux and macOS and in `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows. From v1.21 onwards, window sizes and divider positions are also saved when you click Save.
+> **Important**: Use **Save Settings** for functional settings which should remain in effect after the next start. KST4Contest saves layout changes such as window sizes, divider positions and table-column widths automatically. The shared file is `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows.
 
 ---
 
@@ -943,8 +943,10 @@ Enable Dark Mode through **Windows → Use dark mode design**. Use **Windows →
 
 ## Saving Settings
 
-Click **"Save Settings"** after **every** change! Without saving, all changes will be lost on the next start.
+**Save Settings** stores functional settings and the complete current layout. Changes to window sizes and positions, relevant dividers and managed table-column widths are also saved automatically after a short delay. Any pending layout update is written when the programme exits.
 
 - Storage location: `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows
-- From v1.21: Window sizes and divider positions are also saved.
+- The automatic layout writer does not copy functional changes which have not yet been confirmed with **Save Settings**.
+- Configuration version 6 adds optional column-width entries below `guiOptions`. Older `preferences.xml` files remain readable. Missing or invalid widths simply cause KST4Contest to calculate useful initial widths again.
+- Older programme versions ignore the additional XML entries. If an older version rewrites the complete file, only the column widths may be lost.
 - If you encounter problems: delete the configuration file → KST4Contest will create a new one with default values.

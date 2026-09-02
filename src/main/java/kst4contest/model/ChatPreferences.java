@@ -1,11 +1,16 @@
 package kst4contest.model;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.OptionalDouble;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -50,7 +55,7 @@ public class ChatPreferences {
 	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
 	 */
 //	private static final int CONFIG_VERSION = 2;
-	public static final int CONFIG_VERSION = 5;
+	public static final int CONFIG_VERSION = 6;
 
 	// Prefer writing tag names that mirror variable names (human readable). Keep legacy tags for compatibility.
 	private static final String TAG_CONFIG_VERSION = "configVersion";
@@ -341,6 +346,11 @@ public class ChatPreferences {
 	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
 	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
 	private boolean GUIstationMapPathAnalysisVisible = true;
+	private final Map<String, Double> tableColumnWidths = new LinkedHashMap<>();
+
+	private static final String TAG_TABLE_COLUMN_WIDTH = "tableColumnWidth";
+	private static final double MIN_TABLE_COLUMN_WIDTH = 16.0;
+	private static final double MAX_TABLE_COLUMN_WIDTH = 10_000.0;
 
 
 	/*********************************************************************************
@@ -643,6 +653,31 @@ public class ChatPreferences {
 
 	public void setGUIstationMapPathAnalysisVisible(boolean GUIstationMapPathAnalysisVisible) {
 		this.GUIstationMapPathAnalysisVisible = GUIstationMapPathAnalysisVisible;
+	}
+
+	/**
+	 * Returns a stored width for one stable table/leaf-column identity.
+	 *
+	 * @param tableId stable table layout identifier
+	 * @param columnId stable leaf-column identifier
+	 * @return stored pixel width, or empty when no usable value exists
+	 */
+	public synchronized OptionalDouble getTableColumnWidth(String tableId, String columnId) {
+		if (!isValidTableColumnIdentity(tableId, columnId)) {
+			return OptionalDouble.empty();
+		}
+		Double width = tableColumnWidths.get(tableColumnWidthKey(tableId, columnId));
+		return isValidTableColumnWidth(width) ? OptionalDouble.of(width) : OptionalDouble.empty();
+	}
+
+	/**
+	 * Updates one table leaf-column width in memory. Persistence is coordinated by
+	 * the layout autosave layer.
+	 */
+	public synchronized void setTableColumnWidth(String tableId, String columnId, double width) {
+		if (isValidTableColumnIdentity(tableId, columnId) && isValidTableColumnWidth(width)) {
+			tableColumnWidths.put(tableColumnWidthKey(tableId, columnId), width);
+		}
 	}
 
 	public boolean isGuiOptions_defaultFilterNothing() {
@@ -1389,7 +1424,7 @@ public class ChatPreferences {
 	 *
 	 * @return true if the file writing was successful, else false
 	 */
-	public boolean writePreferencesToXmlFile() {
+	public synchronized boolean writePreferencesToXmlFile() {
 
 		DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
 		try {
@@ -2085,27 +2120,19 @@ public class ChatPreferences {
 			);
 			guiOptions.appendChild(GUIstationMapPathAnalysisVisible);
 
+			appendTableColumnWidths(doc, guiOptions);
+
 			/****************************************************************************************
 			 ****************************** now write this XML! *************************************
 			 ****************************************************************************************/
 
-			writeXml(doc, System.out);
-
-			// write dom document to a file
-			try (FileOutputStream output =
-						 new FileOutputStream(storeAndRestorePreferencesFileName)) {
-				writeXml(doc, output);
-			} catch (IOException e) {
-				e.printStackTrace();
-			} catch (TransformerException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			writeDocumentAtomically(doc);
 
 
-		} catch (ParserConfigurationException | TransformerException e1) {
+		} catch (ParserConfigurationException | TransformerException | IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+			return false;
 		}
 		return true;
 
@@ -2115,6 +2142,111 @@ public class ChatPreferences {
 
 		// write dom document to a file
 
+	}
+
+	/**
+	 * Writes only layout values into the existing preferences document. Functional
+	 * settings are deliberately read from disk and left untouched.
+	 */
+	public synchronized boolean writeLayoutPreferencesToXmlFile() {
+		Path preferencesPath = Path.of(storeAndRestorePreferencesFileName).toAbsolutePath();
+		if (!Files.isRegularFile(preferencesPath)) {
+			System.out.println("[ChatPreferences, Warning]: Cannot autosave layout because preferences.xml does not exist.");
+			return false;
+		}
+
+		try {
+			DocumentBuilder documentBuilder = createSecureDocumentBuilderFactory().newDocumentBuilder();
+			Document document = documentBuilder.parse(preferencesPath.toFile());
+			Element root = document.getDocumentElement();
+			if (root == null) {
+				return false;
+			}
+
+			upsertDirectChildText(document, root, TAG_CONFIG_VERSION, String.valueOf(CONFIG_VERSION));
+			Element guiOptions = getDirectChildElement(root, "guiOptions");
+			if (guiOptions == null) {
+				guiOptions = document.createElement("guiOptions");
+				root.appendChild(guiOptions);
+			}
+
+			updateLayoutElements(document, guiOptions);
+			removeDirectChildren(guiOptions, TAG_TABLE_COLUMN_WIDTH);
+			appendTableColumnWidths(document, guiOptions);
+			writeDocumentAtomically(document);
+			return true;
+		} catch (ParserConfigurationException | SAXException | IOException | TransformerException exception) {
+			exception.printStackTrace();
+			return false;
+		}
+	}
+
+	private void updateLayoutElements(Document document, Element guiOptions) {
+		upsertDirectChildText(document, guiOptions, "GUIscn_ChatwindowMainSceneSizeHW",
+				getGUIscn_ChatwindowMainSceneSizeHW()[0] + ";" + getGUIscn_ChatwindowMainSceneSizeHW()[1]);
+		upsertDirectChildText(document, guiOptions, "GUIclusterAndQSOMonStage_SceneSizeHW",
+				getGUIclusterAndQSOMonStage_SceneSizeHW()[0] + ";" + getGUIclusterAndQSOMonStage_SceneSizeHW()[1]);
+		upsertDirectChildText(document, guiOptions, "GUIstage_updateStage_SceneSizeHW",
+				getGUIstage_updateStage_SceneSizeHW()[0] + ";" + getGUIstage_updateStage_SceneSizeHW()[1]);
+		upsertDirectChildText(document, guiOptions, "GUIsettingsStageSceneSizeHW",
+				getGUIsettingsStageSceneSizeHW()[0] + ";" + getGUIsettingsStageSceneSizeHW()[1]);
+		upsertDirectChildText(document, guiOptions, "GUIselectedCallSignSplitPane_dividerposition",
+				doubleArrayToCSVString(getGUIselectedCallSignSplitPane_dividerposition()));
+		upsertDirectChildText(document, guiOptions, "GUImainWindowLeftSplitPane_dividerposition",
+				doubleArrayToCSVString(getGUImainWindowLeftSplitPane_dividerposition()));
+		upsertDirectChildText(document, guiOptions, "GUImessageSectionSplitpane_dividerposition",
+				doubleArrayToCSVString(getGUImessageSectionSplitpane_dividerposition()));
+		upsertDirectChildText(document, guiOptions, "GUImainWindowRightSplitPane_dividerposition",
+				doubleArrayToCSVString(getGUImainWindowRightSplitPane_dividerposition()));
+		upsertDirectChildText(document, guiOptions, "GUIpnl_directedMSGWin_dividerpositionDefault",
+				doubleArrayToCSVString(getGUIpnl_directedMSGWin_dividerpositionDefault()));
+		upsertDirectChildText(document, guiOptions, "GUIstationMapStageSceneSizeHW",
+				getGUIstationMapStageSceneSizeHW()[0] + ";" + getGUIstationMapStageSceneSizeHW()[1]);
+		upsertDirectChildText(document, guiOptions, "GUIstationMapStagePositionXY",
+				getGUIstationMapStagePositionXY()[0] + ";" + getGUIstationMapStagePositionXY()[1]);
+	}
+
+	private void appendTableColumnWidths(Document document, Element guiOptions) {
+		for (Map.Entry<String, Double> entry : tableColumnWidths.entrySet()) {
+			if (!isValidTableColumnWidth(entry.getValue())) {
+				continue;
+			}
+
+			int separatorIndex = entry.getKey().indexOf('\u0000');
+			if (separatorIndex <= 0 || separatorIndex >= entry.getKey().length() - 1) {
+				continue;
+			}
+
+			Element widthElement = document.createElement(TAG_TABLE_COLUMN_WIDTH);
+			widthElement.setAttribute("tableId", entry.getKey().substring(0, separatorIndex));
+			widthElement.setAttribute("columnId", entry.getKey().substring(separatorIndex + 1));
+			widthElement.setAttribute("pixels", String.valueOf(entry.getValue()));
+			guiOptions.appendChild(widthElement);
+		}
+	}
+
+	private void writeDocumentAtomically(Document document) throws IOException, TransformerException {
+		Path target = Path.of(storeAndRestorePreferencesFileName).toAbsolutePath();
+		Path parent = target.getParent();
+		Path fileName = target.getFileName();
+		if (parent == null || fileName == null) {
+			throw new IOException("Preferences path has no parent directory: " + target);
+		}
+
+		Files.createDirectories(parent);
+		Path temporary = Files.createTempFile(parent, fileName.toString(), ".tmp");
+		try {
+			try (OutputStream output = Files.newOutputStream(temporary)) {
+				writeXml(document, output);
+			}
+			try {
+				Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+			} catch (AtomicMoveNotSupportedException exception) {
+				Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+		} finally {
+			Files.deleteIfExists(temporary);
+		}
 	}
 
 	// write doc to output stream
@@ -2920,6 +3052,22 @@ public class ChatPreferences {
 						if (s5 != null) {
 							this.setGUIpnl_directedMSGWin_dividerpositionDefault(csvStringToDoubleArray(s5));
 						}
+
+						tableColumnWidths.clear();
+						NodeList widthElements = element.getElementsByTagName(TAG_TABLE_COLUMN_WIDTH);
+						for (int widthIndex = 0; widthIndex < widthElements.getLength(); widthIndex++) {
+							Node widthNode = widthElements.item(widthIndex);
+							if (!(widthNode instanceof Element widthElement)) {
+								continue;
+							}
+
+							String tableId = widthElement.getAttribute("tableId");
+							String columnId = widthElement.getAttribute("columnId");
+							double width = parseDoubleOrDefault(widthElement.getAttribute("pixels"), Double.NaN);
+							if (isValidTableColumnIdentity(tableId, columnId) && isValidTableColumnWidth(width)) {
+								tableColumnWidths.put(tableColumnWidthKey(tableId, columnId), width);
+							}
+						}
 					}
 				}
 			}
@@ -3098,6 +3246,63 @@ public class ChatPreferences {
 		}
 		Node n = nl.item(0);
 		return (n instanceof Element) ? (Element) n : null;
+	}
+
+	private static DocumentBuilderFactory createSecureDocumentBuilderFactory()
+			throws ParserConfigurationException {
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+		return factory;
+	}
+
+	private static Element getDirectChildElement(Element parent, String tagName) {
+		for (Node child = parent.getFirstChild(); child != null; child = child.getNextSibling()) {
+			if (child instanceof Element element && tagName.equals(element.getTagName())) {
+				return element;
+			}
+		}
+		return null;
+	}
+
+	private static void upsertDirectChildText(
+			Document document,
+			Element parent,
+			String tagName,
+			String value
+	) {
+		Element element = getDirectChildElement(parent, tagName);
+		if (element == null) {
+			element = document.createElement(tagName);
+			parent.appendChild(element);
+		}
+		element.setTextContent(value);
+	}
+
+	private static void removeDirectChildren(Element parent, String tagName) {
+		for (Node child = parent.getFirstChild(); child != null; ) {
+			Node next = child.getNextSibling();
+			if (child instanceof Element element && tagName.equals(element.getTagName())) {
+				parent.removeChild(child);
+			}
+			child = next;
+		}
+	}
+
+	private static String tableColumnWidthKey(String tableId, String columnId) {
+		if (!isValidTableColumnIdentity(tableId, columnId)) {
+			return "";
+		}
+		return tableId + '\u0000' + columnId;
+	}
+
+	private static boolean isValidTableColumnIdentity(String tableId, String columnId) {
+		return tableId != null && !tableId.isBlank() && tableId.indexOf('\u0000') < 0
+				&& columnId != null && !columnId.isBlank() && columnId.indexOf('\u0000') < 0;
+	}
+
+	private static boolean isValidTableColumnWidth(Double width) {
+		return width != null && Double.isFinite(width)
+				&& width >= MIN_TABLE_COLUMN_WIDTH && width <= MAX_TABLE_COLUMN_WIDTH;
 	}
 
 	/**

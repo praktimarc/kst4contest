@@ -50,6 +50,16 @@ JavaFX ObservableList / UI state
 
 `MessageBusManagementThread` must not directly iterate or mutate UI-bound JavaFX collections. UI-visible changes should cross the controller/UI boundary and run on the JavaFX Application Thread.
 
+## Configuration and Layout Persistence
+
+- `preferences.xml` configuration version 6 stores optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
+- Stored widths take precedence. Without a usable entry, a managed column is sized once when meaningful table data first becomes available. Message and similar free-text columns use a flexible initial width instead of following the longest value.
+- Main-window and separate-monitor DXCluster/QSO tables use distinct layout IDs even though they share the underlying message stores.
+- Window sizes and positions, relevant divider positions and managed column widths are selectively autosaved after a short debounce. A pending write is flushed during application shutdown.
+- Selective layout writes update the XML already on disk, preserve unknown XML nodes and must not persist unconfirmed functional settings from the current UI. **Save Settings** remains the full settings writer and includes the current layout.
+- Full and selective writes are synchronized and replace `preferences.xml` atomically. Missing, unknown or malformed width entries do not prevent loading and fall back to initial sizing.
+- Older configuration files require no migration. Older KST4Contest versions can ignore the additional elements; a complete rewrite by such a version may discard column widths without invalidating the remaining file.
+
 ## External Interfaces
 
 Treat current implementation/tests and authoritative upstream documentation as source of truth before modifying any interface.

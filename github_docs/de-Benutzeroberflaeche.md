@@ -152,7 +152,15 @@ Der Wert beeinflusst unter anderem:
 
 ---
 
-## Nachrichtentabellen
+## Tabellenbreiten und gekürzte Zellinhalte
+
+Beim ersten brauchbaren Datenbestand richtet KST4Contest die Spalten der Benutzerliste, der Nachrichtenansichten, der DXCluster- und QSO-Tabellen sowie der Worked-Datenbank einmalig nach Überschrift und vorhandenem Inhalt aus. Bereits gespeicherte Breiten haben Vorrang. **Name**, **AP** und **NOT QRV @** werden dabei begrenzt, damit einzelne lange Werte nicht den restlichen Tabellenbereich verdrängen. **Message** und vergleichbare Freitextspalten bleiben flexibel und richten sich nicht nach der längsten Nachricht.
+
+Manuell geänderte Spaltenbreiten werden automatisch gespeichert und beim nächsten Start wiederhergestellt. Spätere Nachrichten oder Stationsaktualisierungen überschreiben diese Auswahl nicht.
+
+Passt ein normaler Textwert nicht vollständig in seine Zelle, zeigt ein Tooltip den vollständigen Wert. Der Tooltip erscheint nur bei tatsächlich gekürztem Text. Funktionale Tooltips, etwa für QRA-, Worked- oder Bandzustände, bleiben erhalten; bei gekürztem Zelltext stehen Volltext und Erklärung gemeinsam im Tooltip.
+
+### Nachrichtentext und Links
 
 KST4Contest zeigt Nachrichtentexte bewusst einzeilig an. So bleiben auch bei hohem Chat-Aufkommen viele Einträge gleichzeitig sichtbar. Der Nachteil liegt auf der Hand: Bei einer schmalen **Message**-Spalte passt nicht jede Nachricht vollständig in die Zeile.
 
@@ -432,7 +440,7 @@ Zusätzlich öffnet KST4Contest das Fenster **Cluster & QSO of the other**. Es z
 
 ![Separates Cluster- und QSO-Monitorfenster](cluster_qso_monitor.png)
 
-Die Position des vertikalen Dividers sowie die Fenstergröße werden zusammen mit den übrigen UI-Einstellungen gespeichert. Nach einer Änderung **Save Settings** verwenden.
+Die Position des vertikalen Dividers sowie die Fenstergröße werden automatisch gespeichert. Die DXCluster- und QSO-Tabellen besitzen hier eigene Spaltenbreiten; Änderungen im Monitorfenster verändern daher nicht das Tabellenlayout der Hauptfenster-Tabs.
 
 Das Fenster lässt sich über das Menü aus- und wieder einblenden:
 
@@ -478,13 +486,13 @@ Die serverbezogenen Funktionen sind nur bei vollständig aufgebauter ON4KST-Verb
 
 ## Fenstergrößen und Divider
 
-Beim Klick auf **Save Settings** speichert KST4Contest die Größen der Programmfenster und die Positionen der relevanten Divider in der Konfigurationsdatei. Diese Werte werden beim nächsten Programmstart wiederverwendet.
+KST4Contest speichert Größen und Positionen der Programmfenster, die relevanten Divider sowie manuell geänderte Tabellenbreiten automatisch nach einer kurzen Verzögerung in der Konfigurationsdatei. Ein ausstehender Layoutstand wird beim Programmende noch geschrieben. **Save Settings** ist dafür nicht erforderlich, speichert aber weiterhin den vollständigen aktuellen Stand einschließlich Layout.
 
 Das Hauptfenster wird beim Start zusätzlich gegen den sichtbaren Bereich des primären Bildschirms geprüft. Ist die gespeicherte Größe zu groß, verkleinert und verschiebt KST4Contest das Fenster so, dass es wieder erreichbar bleibt. Die genaue Herleitung ist unter [Bildschirmgerechte Größe des Hauptfensters](de-Funktionen#bildschirmgerechte-größe-des-hauptfensters-ab-v141) beschrieben.
 
-Für die übrigen Programmfenster gilt diese zusätzliche Größenbegrenzung derzeit nicht. Wird beispielsweise das separate Monitorfenster nach einem Wechsel auf einen kleineren Bildschirm zu groß dargestellt, muss seine Größe manuell korrigiert und anschließend erneut mit **Save Settings** gespeichert werden.
+Für die übrigen Programmfenster gilt diese zusätzliche Größenbegrenzung derzeit nicht. Wird beispielsweise das separate Monitorfenster nach einem Wechsel auf einen kleineren Bildschirm zu groß dargestellt, genügt eine manuelle Korrektur; die neue Größe wird automatisch gespeichert.
 
-Bei einer ungünstigen Aufteilung sollten zuerst die Divider an eine brauchbare Position verschoben und die Einstellungen erneut gespeichert werden. Das Löschen der Konfigurationsdatei setzt zwar die UI-Werte zurück, entfernt aber auch die übrigen gespeicherten Programmeinstellungen und sollte deshalb nur verwendet werden, wenn sich die Oberfläche auf anderem Weg nicht mehr herstellen lässt.
+Bei einer ungünstigen Aufteilung sollten zuerst die Divider und Spaltenbreiten wieder an brauchbare Positionen verschoben werden. Das Löschen der Konfigurationsdatei setzt zwar die UI-Werte zurück, entfernt aber auch die übrigen gespeicherten Programmeinstellungen und sollte deshalb nur verwendet werden, wenn sich die Oberfläche auf anderem Weg nicht mehr herstellen lässt.
 
 ---
 

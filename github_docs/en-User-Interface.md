@@ -154,7 +154,15 @@ The value affects, among other things:
 
 ---
 
-## Message Tables
+## Table Widths and Truncated Cell Values
+
+When useful data first becomes available, KST4Contest sizes the columns of the user list, message views, DXCluster and QSO tables, and Worked database once from their headings and existing contents. Stored widths take precedence. The initial widths of **Name**, **AP** and **NOT QRV @** are capped so that one long value cannot displace the rest of the table. **Message** and similar free-text columns remain flexible and do not follow the longest message.
+
+Manually changed column widths are saved automatically and restored at the next start. Later messages or station updates do not overwrite that choice.
+
+If a normal text value does not fit in its cell, a tooltip shows the complete value. It appears only when the displayed text is actually truncated. Functional tooltips for QRA, Worked, band and similar states remain available. If such a cell is also truncated, the tooltip contains both the full value and the functional explanation.
+
+### Message Text and Links
 
 KST4Contest deliberately displays message text on a single line. This keeps a larger number of entries visible when chat activity is high. The disadvantage is obvious: if the **Message** column is narrow, not every message fits completely into its cell.
 
@@ -436,7 +444,7 @@ KST4Contest additionally opens the **Cluster & QSO of the other** window. It sho
 
 ![Separate monitor window for DX cluster traffic and directed messages between other stations](cluster_qso_monitor.png)
 
-The vertical divider position and window size are stored together with the other UI settings. Use **Save Settings** after changing them.
+The vertical divider position and window size are saved automatically. The DXCluster and QSO tables use their own column widths in this window, so changing the monitor layout does not alter the corresponding main-window tabs.
 
 The window can be hidden and restored through:
 
@@ -482,13 +490,13 @@ Functions which communicate with the server are available only after the ON4KST 
 
 ## Window Sizes and Dividers
 
-When **Save Settings** is clicked, KST4Contest stores the programme-window sizes and the positions of the relevant dividers in the configuration file. These values are reused at the next start.
+KST4Contest automatically stores programme-window sizes and positions, relevant dividers and manually changed table-column widths in the configuration file after a short delay. Any pending layout update is written when the programme exits. **Save Settings** is not required for these changes, but still stores the complete current state, including the layout.
 
 The main window is additionally checked against the visible area of the primary screen during startup. If the stored size is too large, KST4Contest reduces and moves the window so that it remains accessible. The complete process is described under [Screen-Aware Main Window Sizing](en-Features#screen-aware-main-window-sizing-from-v141).
 
-The other programme windows do not currently use this additional size restriction. If, for example, the separate monitor window appears too large after moving to a smaller screen, its size must be corrected manually and stored again using **Save Settings**.
+The other programme windows do not currently use this additional size restriction. If, for example, the separate monitor window appears too large after moving to a smaller screen, correcting it manually is sufficient; the new size is saved automatically.
 
-If the layout has become inconvenient, first move the dividers back to usable positions and save the settings again. Deleting the configuration file also resets the UI values, but it removes the other stored programme settings as well. It should therefore be used only when the interface cannot be restored in another way.
+If the layout has become inconvenient, first move the dividers and column widths back to usable positions. Deleting the configuration file also resets the UI values, but it removes the other stored programme settings as well. It should therefore be used only when the interface cannot be restored in another way.
 
 
 ---

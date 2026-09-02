@@ -44,6 +44,8 @@ v1.42 brings several previously separate calculations together. Band information
 
 ### Changed
 
+- **Automatic table-layout persistence:** Tables receive useful widths when their first meaningful contents arrive. Manually changed column widths, window sizes and relevant dividers are written to `preferences.xml` after a short delay; the main and monitor windows keep separate DXCluster and QSO-of-the-other layouts. Truncated normal cell values expose their full text in a tooltip without replacing functional tooltips or clickable links.
+
 - **Unified DX Cluster line format:** Local spots now use a fixed, DXSpider-compatible 75-character payload line with the DX callsign in column 27, a 30-character comment field and UTC time in column 71. The layout remains stable for microwave frequencies up to 24 GHz. Overlong DX callsigns are rejected and logged instead of being silently truncated; AirScout and test comments are correspondingly more compact.
 
 - **Session-based ON4KST connection lifecycle:** Each socket, reader, writer, message bus and queue now belongs to an explicitly identified connection session. Delayed threads from an obsolete connection can therefore no longer process data or close its replacement. `ONLINE` is reported only after the login has been accepted and all requested user lists have been received. Connection setup, login and synchronisation use bounded timeouts, while heartbeats, missing inbound traffic, EOF and read or write failures trigger controlled reconnect attempts with backoff where appropriate.

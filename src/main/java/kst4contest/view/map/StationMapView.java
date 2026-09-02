@@ -59,6 +59,7 @@ public final class StationMapView {
     private final Label detailPathModeValue = new Label("-");
 
     private final ChatPreferences chatPreferences;
+    private final Runnable layoutSaveRequester;
 
     private final Stage stage = new Stage();
     private final WebView webView = new WebView();
@@ -180,7 +181,12 @@ public final class StationMapView {
 
 
     public StationMapView(ChatPreferences chatPreferences) {
+        this(chatPreferences, () -> { });
+    }
+
+    public StationMapView(ChatPreferences chatPreferences, Runnable layoutSaveRequester) {
         this.chatPreferences = Objects.requireNonNull(chatPreferences, "chatPreferences");
+        this.layoutSaveRequester = Objects.requireNonNull(layoutSaveRequester, "layoutSaveRequester");
         GuiUtils.applyApplicationIcon(stage);
 
         try {
@@ -461,17 +467,25 @@ public final class StationMapView {
             stage.setY(pos[1]);
         }
 
-        stage.widthProperty().addListener((obs, oldValue, newValue) ->
-                chatPreferences.getGUIstationMapStageSceneSizeHW()[0] = newValue.doubleValue());
+        stage.widthProperty().addListener((obs, oldValue, newValue) -> {
+            chatPreferences.getGUIstationMapStageSceneSizeHW()[0] = newValue.doubleValue();
+            layoutSaveRequester.run();
+        });
 
-        stage.heightProperty().addListener((obs, oldValue, newValue) ->
-                chatPreferences.getGUIstationMapStageSceneSizeHW()[1] = newValue.doubleValue());
+        stage.heightProperty().addListener((obs, oldValue, newValue) -> {
+            chatPreferences.getGUIstationMapStageSceneSizeHW()[1] = newValue.doubleValue();
+            layoutSaveRequester.run();
+        });
 
-        stage.xProperty().addListener((obs, oldValue, newValue) ->
-                chatPreferences.getGUIstationMapStagePositionXY()[0] = newValue.doubleValue());
+        stage.xProperty().addListener((obs, oldValue, newValue) -> {
+            chatPreferences.getGUIstationMapStagePositionXY()[0] = newValue.doubleValue();
+            layoutSaveRequester.run();
+        });
 
-        stage.yProperty().addListener((obs, oldValue, newValue) ->
-                chatPreferences.getGUIstationMapStagePositionXY()[1] = newValue.doubleValue());
+        stage.yProperty().addListener((obs, oldValue, newValue) -> {
+            chatPreferences.getGUIstationMapStagePositionXY()[1] = newValue.doubleValue();
+            layoutSaveRequester.run();
+        });
 
         stage.setOnShown(event -> Platform.runLater(() -> {
             webView.requestFocus();
