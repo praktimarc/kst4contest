@@ -886,10 +886,11 @@ Der Dark Mode wird über **Windows → Use dark mode design** aktiviert. Mit **W
 
 ## Einstellungen speichern
 
-**Save Settings** speichert die fachlichen Einstellungen und den vollständigen aktuellen Layoutstand. Änderungen an Fenstergrößen und -positionen, relevanten Dividern sowie verwalteten Tabellenbreiten werden zusätzlich automatisch mit kurzer Verzögerung gespeichert. Ein ausstehender Layoutstand wird beim Programmende noch geschrieben.
+**Save Settings** speichert die fachlichen Einstellungen und den vollständigen aktuellen Layoutstand. Änderungen an Fenstergrößen und -positionen, relevanten Dividern, verwalteten Tabellenbreiten sowie der Karteneinstellung **Group nearby stations** werden zusätzlich automatisch mit kurzer Verzögerung gespeichert. Ein ausstehender Layoutstand wird beim Programmende noch geschrieben.
 
 - Speicherort: unter Linux und macOS `~/.praktiKST/preferences.xml` und unter Windows `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`)
 - Der automatische Layout-Writer übernimmt keine noch nicht mit **Save Settings** bestätigten fachlichen Änderungen.
 - Die Konfigurationsversion 6 ergänzt optionale Spaltenbreiten unter `guiOptions`. Ältere `preferences.xml`-Dateien bleiben lesbar; fehlen Breiten oder sind Einträge ungültig, ermittelt KST4Contest wieder brauchbare Anfangsbreiten.
-- Ältere Programmversionen ignorieren die zusätzlichen XML-Einträge. Wenn eine ältere Version die Datei vollständig neu speichert, können lediglich die Spaltenbreiten verloren gehen.
+- Die Konfigurationsversion 7 ergänzt `GUIstationMapClusteringEnabled` unter `guiOptions`. Fehlt der Eintrag oder ist sein Wert unbrauchbar, bleibt die räumliche Kartengruppierung aktiviert.
+- Ältere Programmversionen ignorieren die zusätzlichen XML-Einträge. Wenn eine ältere Version die Datei vollständig neu speichert, können die Spaltenbreiten und die gespeicherte Auswahl für **Group nearby stations** verloren gehen.
 - Bei Problemen: Konfigurationsdatei löschen → KST4Contest erstellt eine neue mit Standardwerten.

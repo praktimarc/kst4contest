@@ -831,7 +831,11 @@ Die Bandangaben verwenden dieselbe Herleitung wie die Bandspalten, der Filter **
 
 Treffen mehrere Zustände gleichzeitig zu, hat die für den Betrieb wichtigere Markierung Vorrang. Eine ausgewählte Station bleibt deshalb orange; eine Richtungsgelegenheit wird grün dargestellt, auch wenn das Rufzeichen bereits gearbeitet wurde.
 
-Bei niedrigen Zoomstufen werden räumlich dicht beieinanderliegende Stationen zu einem Cluster zusammengefasst. Die Zahl im Cluster gibt die Anzahl der enthaltenen Stationen an. Ein Klick zoomt weiter hinein, wählt aber noch keine einzelne Station aus. Die aktuell ausgewählte Station und grün markierte Richtungsgelegenheiten bleiben auch bei niedriger Zoomstufe als einzelne Marker sichtbar.
+Mit der Checkbox **Group nearby stations** lässt sich die räumliche Gruppierung steuern. Ist sie ausgewählt, werden bei niedrigen Zoomstufen dicht beieinanderliegende Marker zu einem Bildschirm-Cluster zusammengefasst. Die Zahl im Cluster gibt die Anzahl der enthaltenen Stationen an. Ein Klick zoomt weiter hinein, wählt aber noch keine einzelne Station aus. Die aktuell ausgewählte Station und grün markierte Richtungsgelegenheiten bleiben auch bei niedriger Zoomstufe möglichst als einzelne Marker sichtbar.
+
+Ist **Group nearby stations** nicht ausgewählt, erscheinen alle positionierbaren Stationen unabhängig von der Zoomstufe als einzelne Marker. Die Änderung wirkt sofort, ohne Stationsdaten neu zu laden oder Zoom, Kartenausschnitt und Auswahl zu verändern. KST4Contest speichert die Einstellung automatisch und stellt sie beim nächsten Start wieder her. Bestehende Installationen beginnen mit aktivierter Gruppierung und behalten damit zunächst das bisherige Verhalten.
+
+Diese Bildschirm-Cluster sind nicht mit der Zusammenfassung von Chatvarianten zu verwechseln. Mehrere aktive Varianten desselben normalisierten Basisrufzeichens werden weiterhin zu einem geografischen Marker zusammengeführt. Das Ausschalten von **Group nearby stations** erzeugt daraus keine zusätzlichen Marker und verändert weder Chatidentitäten noch Filter oder Stationsdaten.
 
 ### Auswahl und geografische Hilfen
 

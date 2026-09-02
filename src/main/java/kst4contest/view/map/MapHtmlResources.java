@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
  * - grid / beam / connection use non-interactive panes
  * - JavaScript errors are forwarded to Java through javaMapBridge
  * - setTheme(light|dark) aligns the map with the JavaFX application theme
+ * - setStationClusteringEnabled(boolean) re-renders the existing station data
  *
  * Important:
  * This version intentionally uses integer Leaflet zoom levels again.
@@ -356,6 +357,7 @@ public final class MapHtmlResources {
                          */
                         let stationData = [];
                         let stationsByCallsignRaw = {};
+                        let stationClusteringEnabled = true;
 
                         let clustersById = {};
                         let clusterSequence = 0;
@@ -810,11 +812,17 @@ public final class MapHtmlResources {
                                 return;
                             }
 
-                            if (Number(map.getZoom()) >= KST_CLUSTER_DISABLE_ZOOM) {
+                            if (!stationClusteringEnabled
+                                    || Number(map.getZoom()) >= KST_CLUSTER_DISABLE_ZOOM) {
                                 renderAllStationsIndividually();
                             } else {
                                 renderClusteredStations();
                             }
+                        }
+
+                        function setStationClusteringEnabled(enabled) {
+                            stationClusteringEnabled = Boolean(enabled);
+                            renderStationMarkers();
                         }
 
                         /**
@@ -1271,6 +1279,7 @@ public final class MapHtmlResources {
                             getViewportState: getViewportState,
                             setHome: setHome,
                             setStations: setStations,
+                            setStationClusteringEnabled: setStationClusteringEnabled,
                             setBeam: setBeam,
                             setConnection: setConnection,
                             setProfileHoverPoint: setProfileHoverPoint,

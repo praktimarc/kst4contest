@@ -55,7 +55,7 @@ public class ChatPreferences {
 	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
 	 */
 //	private static final int CONFIG_VERSION = 2;
-	public static final int CONFIG_VERSION = 6;
+	public static final int CONFIG_VERSION = 7;
 
 	// Prefer writing tag names that mirror variable names (human readable). Keep legacy tags for compatibility.
 	private static final String TAG_CONFIG_VERSION = "configVersion";
@@ -346,6 +346,7 @@ public class ChatPreferences {
 	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
 	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
 	private boolean GUIstationMapPathAnalysisVisible = true;
+	private boolean GUIstationMapClusteringEnabled = true;
 	private final Map<String, Double> tableColumnWidths = new LinkedHashMap<>();
 
 	private static final String TAG_TABLE_COLUMN_WIDTH = "tableColumnWidth";
@@ -653,6 +654,14 @@ public class ChatPreferences {
 
 	public void setGUIstationMapPathAnalysisVisible(boolean GUIstationMapPathAnalysisVisible) {
 		this.GUIstationMapPathAnalysisVisible = GUIstationMapPathAnalysisVisible;
+	}
+
+	public boolean isGUIstationMapClusteringEnabled() {
+		return GUIstationMapClusteringEnabled;
+	}
+
+	public void setGUIstationMapClusteringEnabled(boolean GUIstationMapClusteringEnabled) {
+		this.GUIstationMapClusteringEnabled = GUIstationMapClusteringEnabled;
 	}
 
 	/**
@@ -2120,6 +2129,12 @@ public class ChatPreferences {
 			);
 			guiOptions.appendChild(GUIstationMapPathAnalysisVisible);
 
+			Element GUIstationMapClusteringEnabled = doc.createElement("GUIstationMapClusteringEnabled");
+			GUIstationMapClusteringEnabled.setTextContent(
+					String.valueOf(this.isGUIstationMapClusteringEnabled())
+			);
+			guiOptions.appendChild(GUIstationMapClusteringEnabled);
+
 			appendTableColumnWidths(doc, guiOptions);
 
 			/****************************************************************************************
@@ -2204,6 +2219,8 @@ public class ChatPreferences {
 				getGUIstationMapStageSceneSizeHW()[0] + ";" + getGUIstationMapStageSceneSizeHW()[1]);
 		upsertDirectChildText(document, guiOptions, "GUIstationMapStagePositionXY",
 				getGUIstationMapStagePositionXY()[0] + ";" + getGUIstationMapStagePositionXY()[1]);
+		upsertDirectChildText(document, guiOptions, "GUIstationMapClusteringEnabled",
+				String.valueOf(isGUIstationMapClusteringEnabled()));
 	}
 
 	private void appendTableColumnWidths(Document document, Element guiOptions) {
@@ -2956,6 +2973,7 @@ public class ChatPreferences {
 			 * case read GUI options
 			 *
 			 ***********************************************/
+			this.setGUIstationMapClusteringEnabled(true);
 			list = doc.getElementsByTagName("guiOptions");
 			if (list.getLength() != 0) {
 
@@ -2992,6 +3010,17 @@ public class ChatPreferences {
 								element,
 								this.isGUIstationMapPathAnalysisVisible(),
 								"GUIstationMapPathAnalysisVisible"
+						));
+
+						/*
+						 * Files written before config version 7 do not contain this value.
+						 * Missing or malformed values keep clustering enabled so existing
+						 * installations retain the established map behaviour.
+						 */
+						this.setGUIstationMapClusteringEnabled(getBooleanOrDefault(
+								element,
+								true,
+								"GUIstationMapClusteringEnabled"
 						));
 
 						// Splitpane divider positions
@@ -3342,6 +3371,20 @@ public class ChatPreferences {
 			return defaultValue;
 		}
 		return "true".equalsIgnoreCase(v) || "1".equals(v) || "yes".equalsIgnoreCase(v);
+	}
+
+	private static boolean getBooleanOrDefault(Element parent, boolean defaultValue, String... tagNames) {
+		String value = getText(parent, null, tagNames);
+		if (value == null) {
+			return defaultValue;
+		}
+		if ("true".equalsIgnoreCase(value) || "1".equals(value) || "yes".equalsIgnoreCase(value)) {
+			return true;
+		}
+		if ("false".equalsIgnoreCase(value) || "0".equals(value) || "no".equalsIgnoreCase(value)) {
+			return false;
+		}
+		return defaultValue;
 	}
 
 	private static int getInt(Element parent, int defaultValue, String... tagNames) {

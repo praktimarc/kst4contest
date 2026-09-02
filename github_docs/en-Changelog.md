@@ -38,7 +38,7 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **Filter reset:** A dedicated reset button reliably removes the active user-list filter predicates.
 
-- **Map clustering:** Stations close to each other are grouped at lower zoom levels. The selected station and relevant direction opportunities remain individually visible.
+- **Optional map clustering:** **Group nearby stations** immediately enables or disables spatial grouping at lower zoom levels. The automatically stored setting changes neither the viewport nor the selected station; aggregation of active variants sharing one base callsign remains independent. This implements [Issue #79](https://github.com/praktimarc/kst4contest/issues/79).
 
 - **Hideable path analysis:** The terrain profile and analysis section of the station map can be hidden completely. The selected state is stored and restored at the next application start.
 

@@ -335,7 +335,11 @@ Ein einzelner Stationsmarker kann direkt angeklickt werden. KST4Contest:
 3. aktualisiert den **Further Info**-Bereich und
 4. bereitet das vollständige sichtbare Rufzeichen als `/cq`-Empfänger vor.
 
-Marker, die bei der aktuellen Zoomstufe zu dicht beieinanderliegen, werden als Cluster mit einer Stationsanzahl dargestellt. Ein Klick auf einen Cluster vergrößert den betreffenden Kartenausschnitt. Erst ein anschließend sichtbarer einzelner Marker wählt eine konkrete Station aus.
+Ist **Group nearby stations** ausgewählt, werden Marker, die bei niedrigen Zoomstufen zu dicht beieinanderliegen, als Cluster mit einer Stationsanzahl dargestellt. Ein Klick auf einen Cluster vergrößert den betreffenden Kartenausschnitt. Erst ein anschließend sichtbarer einzelner Marker wählt eine konkrete Station aus. Wird die Checkbox ausgeschaltet, zeigt die Karte unabhängig von der Zoomstufe alle positionierbaren Stationen als einzelne Marker.
+
+Das Umschalten wirkt sofort und verändert weder Zoom noch Kartenausschnitt oder Stationsauswahl. Die Einstellung wird automatisch gespeichert und beim nächsten Programmstart wiederhergestellt. Ohne gespeicherte Einstellung bleibt **Group nearby stations** ausgewählt, damit bestehende Installationen zunächst das bisherige Verhalten behalten.
+
+Der Schalter betrifft nur die räumlichen Cluster auf dem Bildschirm. Aktive Chatvarianten desselben normalisierten Basisrufzeichens können weiterhin einen gemeinsamen geografischen Marker verwenden und bleiben unabhängig davon getrennte Nachrichtenziele.
 
 Die Kopfzeile ergänzt bei ausgewählter Station:
 

@@ -90,6 +90,9 @@ public final class StationMapView {
 
     private final Button resetViewButton = new Button("Reset view");
     private final Tooltip statusTooltip = new Tooltip();
+    private final CheckBox stationClusteringCheckBox = new CheckBox("Group nearby stations");
+    private final Tooltip stationClusteringTooltip = new Tooltip(
+            "Group nearby stations into clusters at lower zoom levels.");
 
     private Runnable onResetView;
 
@@ -333,6 +336,21 @@ public final class StationMapView {
             }
         });
 
+        stationClusteringCheckBox.setMinWidth(Region.USE_PREF_SIZE);
+        stationClusteringCheckBox.setTooltip(stationClusteringTooltip);
+        stationClusteringCheckBox.setAccessibleText("Group nearby stations");
+        stationClusteringCheckBox.setAccessibleHelp(stationClusteringTooltip.getText());
+        stationClusteringCheckBox.setSelected(chatPreferences.isGUIstationMapClusteringEnabled());
+        stationClusteringCheckBox.selectedProperty().addListener((obs, oldValue, newValue) -> {
+            boolean enabled = newValue;
+            chatPreferences.setGUIstationMapClusteringEnabled(enabled);
+            if (mapReady) {
+                executeMapScriptSafely(
+                        "window.kstMapApi.setStationClusteringEnabled(" + enabled + ");");
+            }
+            layoutSaveRequester.run();
+        });
+
         pathAnalysisVisibilityButton.setMinWidth(Region.USE_PREF_SIZE);
         pathAnalysisVisibilityButton.setTooltip(pathAnalysisVisibilityTooltip);
         pathAnalysisVisibilityButton.setOnAction(event ->
@@ -535,6 +553,7 @@ public final class StationMapView {
                 statusLabel,
                 triggerClusterSpotButton,
                 resetViewButton,
+                stationClusteringCheckBox,
                 pathAnalysisHiddenHintLabel,
                 pathAnalysisVisibilityButton
         );
@@ -808,6 +827,9 @@ public final class StationMapView {
                 window.setMember("javaMapBridge", javaMapBridge);
 
                 executeMapScriptSafely("window.kstMapApi.init();");
+                executeMapScriptSafely(
+                        "window.kstMapApi.setStationClusteringEnabled("
+                                + chatPreferences.isGUIstationMapClusteringEnabled() + ");");
 
                 mapReady = true;
                 applyMapThemeToWebView(chatPreferences.isGUI_darkModeActive());

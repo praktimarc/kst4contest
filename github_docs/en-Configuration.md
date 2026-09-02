@@ -943,10 +943,11 @@ Enable Dark Mode through **Windows → Use dark mode design**. Use **Windows →
 
 ## Saving Settings
 
-**Save Settings** stores functional settings and the complete current layout. Changes to window sizes and positions, relevant dividers and managed table-column widths are also saved automatically after a short delay. Any pending layout update is written when the programme exits.
+**Save Settings** stores functional settings and the complete current layout. Changes to window sizes and positions, relevant dividers, managed table-column widths and the **Group nearby stations** map setting are also saved automatically after a short delay. Any pending layout update is written when the programme exits.
 
 - Storage location: `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows
 - The automatic layout writer does not copy functional changes which have not yet been confirmed with **Save Settings**.
 - Configuration version 6 adds optional column-width entries below `guiOptions`. Older `preferences.xml` files remain readable. Missing or invalid widths simply cause KST4Contest to calculate useful initial widths again.
-- Older programme versions ignore the additional XML entries. If an older version rewrites the complete file, only the column widths may be lost.
+- Configuration version 7 adds `GUIstationMapClusteringEnabled` below `guiOptions`. If the entry is missing or unusable, spatial map clustering remains enabled.
+- Older programme versions ignore the additional XML entries. If an older version rewrites the complete file, column widths and the stored **Group nearby stations** choice may be lost.
 - If you encounter problems: delete the configuration file → KST4Contest will create a new one with default values.

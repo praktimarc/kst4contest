@@ -44,6 +44,8 @@ The map retains the context already known by KST4Contest:
 
 Only stations with a usable six-character locator can be positioned. Active chat variants of the same normalised base callsign are combined into one marker, while their actual message destinations remain separate.
 
+At lower zoom levels, **Group nearby stations** keeps dense map areas readable by combining close markers into screen-based clusters. The grouping can be disabled immediately without changing the current viewport or selection, and KST4Contest remembers the choice. This setting does not split the geographical marker shared by active variants of the same base callsign.
+
 Green has a specific meaning: it marks a directional opportunity derived from directed ON4KST messages. It does not merely mean that the marker happens to lie inside the local antenna sector.
 
 ## Selection remains connected to the chat

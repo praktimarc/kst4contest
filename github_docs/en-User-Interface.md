@@ -339,7 +339,11 @@ A single station marker can be selected directly. KST4Contest then:
 
 Chat logins with the same normalised base callsign and position may share one marker. They nevertheless remain separate message targets inside KST4Contest.
 
-Markers which are too close together at the current zoom level are displayed as a cluster containing the number of stations. Clicking the cluster zooms into that area. A concrete station is selected only after an individual marker becomes visible and is clicked.
+When **Group nearby stations** is selected, markers which are too close together at lower zoom levels are displayed as a cluster containing the number of stations. Clicking the cluster zooms into that area. A concrete station is selected only after an individual marker becomes visible and is clicked. Clearing the checkbox displays every positionable station as an individual marker at every zoom level.
+
+The change takes effect immediately without changing the current zoom, viewport or station selection. It is saved automatically and restored at the next programme start. If no value has been stored yet, **Group nearby stations** remains selected so existing installations retain the previous behaviour.
+
+This switch controls only the spatial clusters on screen. Active chat variants of the same normalised base callsign may still share one geographical marker and remain separate message targets regardless of this setting.
 
 For a selected station, the header additionally shows:
 

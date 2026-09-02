@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-09-02
+Last reviewed: 2026-09-03
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -52,7 +52,8 @@ JavaFX ObservableList / UI state
 
 ## Configuration and Layout Persistence
 
-- `preferences.xml` configuration version 6 stores optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
+- The current `preferences.xml` configuration version is 7. Version 6 introduced optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
+- `GUIstationMapClusteringEnabled` is a layout preference below `guiOptions`. It defaults to `true`, is selectively autosaved and controls only screen-based clustering of nearby map markers. Missing or malformed values retain the enabled default for backward compatibility.
 - Stored widths take precedence. Without a usable entry, a managed column is sized once when meaningful table data first becomes available. Message and similar free-text columns use a flexible initial width instead of following the longest value.
 - Main-window and separate-monitor DXCluster/QSO tables use distinct layout IDs even though they share the underlying message stores.
 - Window sizes and positions, relevant divider positions and managed column widths are selectively autosaved after a short debounce. A pending write is flushed during application shutdown.
@@ -126,6 +127,8 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - Contest operating speed and low-friction interaction are primary goals.
 - Incidental code changes must not unexpectedly change selection, focus, sorting, tab state, map zoom or prefilled text.
 - Map reset clears the selected target without changing zoom unless explicitly redesigned.
+- **Group nearby stations** re-renders only the existing station-marker layer from JavaScript `stationData`. It must not reload the WebView, tiles or station data, request a new controller snapshot, or change zoom, viewport or selection.
+- Base-callsign aggregation into one geographical marker happens before screen-based clustering. Disabling clustering displays each resulting positionable map station individually but never splits active variants of the same normalised base callsign into separate geographical markers.
 - Station selection preserves the established `/cq callsign` prefill behaviour.
 - Sending without an explicitly selected send category preserves the established Main-category fallback unless explicitly changed.
 
@@ -184,6 +187,7 @@ Before implementing planned items, re-check current decisions and obtain a fresh
 - Historical project context is useful but may be stale; current code/tests win.
 - External service/API behaviour must be verified against current upstream documentation when uncertain.
 - Screenshots in manuals/website may need targeted replacement after visible UI changes; never fabricate them.
+- `station_map_path_analysis.png` and `station_map_reset.png` predate the **Group nearby stations** checkbox in the map header. Replace them with current screenshots when suitable source images are available; the website reuses `station_map_path_analysis.png` through `/manual/assets/`.
 
 ## Recent Significant Changes
 

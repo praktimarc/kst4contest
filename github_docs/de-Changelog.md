@@ -38,7 +38,7 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - **Filter zurücksetzen:** Ein eigener Reset-Button entfernt die aktiven Filterprädikate der Benutzerliste zuverlässig.
 
-- **Kartencluster:** Räumlich dicht beieinanderliegende Stationen werden bei niedrigen Zoomstufen zusammengefasst. Die ausgewählte Station und relevante Richtungsgelegenheiten bleiben einzeln sichtbar.
+- **Optionale Kartencluster:** **Group nearby stations** schaltet die räumliche Gruppierung bei niedrigen Zoomstufen unmittelbar ein oder aus. Die automatisch gespeicherte Auswahl verändert weder Kartenausschnitt noch Stationsauswahl; die Zusammenfassung aktiver Varianten desselben Basisrufzeichens bleibt davon unabhängig. Damit ist [Issue #79](https://github.com/praktimarc/kst4contest/issues/79) umgesetzt.
 
 - **Ausblendbare Streckenanalyse:** Geländeprofil und Analysebereich der Stationskarte können vollständig ausgeblendet werden. Die Auswahl wird gespeichert und beim nächsten Programmstart wiederhergestellt.
 

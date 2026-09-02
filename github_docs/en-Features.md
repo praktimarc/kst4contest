@@ -825,7 +825,11 @@ Marker colours provide a compact status indication:
 
 The selected state has the highest display priority, followed by the directional warning and Worked state. A selected station therefore remains orange even if it also meets one of the other conditions.
 
-At lower zoom levels, nearby markers are combined into screen-based clusters. This is a display function and does not merge the underlying chat members. Selected stations and important directional candidates remain individually visible where possible.
+The **Group nearby stations** checkbox controls spatial grouping. When selected, nearby markers are combined into screen-based clusters at lower zoom levels. The number inside a cluster shows how many stations it contains. Clicking a cluster zooms in but does not select an individual station. Selected stations and important directional candidates remain individually visible where possible.
+
+Clearing **Group nearby stations** displays every positionable station as an individual marker at every zoom level. The change takes effect immediately without reloading station data or changing the current zoom, viewport or selection. KST4Contest saves the setting automatically and restores it at the next start. Existing installations initially keep clustering enabled and therefore retain the previous behaviour.
+
+Screen-based clustering is separate from base-callsign aggregation. Active variants of the same normalised base callsign continue to share one geographical marker where applicable. Disabling **Group nearby stations** does not split that marker and does not change chat identities, filters or station data.
 
 Clicking a station marker selects the corresponding active chat member in the main window. KST4Contest scrolls to the entry in the user list, updates the **Further Info** panel and prepares the complete visible callsign as the message target. The chat suffix and category therefore remain relevant even though several variants may share one map marker.
 
