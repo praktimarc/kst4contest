@@ -1848,7 +1848,7 @@ private ObservableList<String>
 	 * assumption which one is the current run frequency. Therefore the legacy
 	 * frequency property is initialized only when exactly one explicit QRG exists.</p>
 	 */
-	private void initializeFrequencyFromStationNameIfUnambiguous(
+	/* package */ void initializeFrequencyFromStationNameIfUnambiguous(
 			ChatMember member
 	) {
 		if (member == null) {
@@ -1942,6 +1942,8 @@ private ObservableList<String>
 		int categoryNumber = category.getCategoryNumber();
 		List<ChatMember> safeMembers = completeMembers == null
 				? List.of() : new ArrayList<>(completeMembers);
+		Map<String, ChatMember> workedDataFromDatabase =
+				loadWorkedStateForInitialUserList(safeMembers);
 		for (ChatMember member : safeMembers) {
 			initializeFrequencyFromStationNameIfUnambiguous(member);
 		}
@@ -1966,8 +1968,46 @@ private ObservableList<String>
 					&& member.getChatCategory() != null
 					&& member.getChatCategory().getCategoryNumber() == categoryNumber);
 			lst_chatMemberList.addAll(safeMembers);
+			if (workedDataFromDatabase != null) {
+				getLst_DBBasedWkdCallSignList().setAll(
+						workedDataFromDatabase.values());
+			}
 			fireUserListUpdate("Complete ON4KST user list received");
 		});
+	}
+
+	/**
+	 * Loads one database snapshot for a completed initial ON4KST user list and
+	 * applies it before those members are published to the active model or UI.
+	 * Every callsign variant receives the state stored for its normalized base
+	 * callsign.
+	 *
+	 * @param initialMembers completed members of one chat category
+	 * @return loaded snapshot, or {@code null} when the database read failed
+	 */
+	/* package */ Map<String, ChatMember> loadWorkedStateForInitialUserList(
+			Collection<ChatMember> initialMembers
+	) {
+		if (dbHandler == null) {
+			LOGGER.warning(
+					"Cannot load Worked state for initial ON4KST user list: "
+							+ "database is not initialized");
+			return null;
+		}
+
+		try {
+			Map<String, ChatMember> workedDataFromDatabase =
+					dbHandler.fetchChatMemberWkdDataFromDB();
+			applyWorkedAndQrvStateFromDatabase(
+					initialMembers, workedDataFromDatabase);
+			return workedDataFromDatabase;
+		} catch (SQLException | RuntimeException exception) {
+			LOGGER.log(
+					Level.WARNING,
+					"Could not load Worked state for completed initial ON4KST user list",
+					exception);
+			return null;
+		}
 	}
 
 	/**
@@ -3854,15 +3894,6 @@ private ObservableList<String>
 
 		}
 
-		new Timer().schedule(new TimerTask() {
-
-			@Override
-			public void run() {
-				Thread.currentThread().setName("fetchWorkedFromDBTimer");
-				refreshWorkedStateAndDatabaseListFromDatabase();
-			}
-		}, 10000);
-
 //		new Timer().schedule(new TimerTask() {
 //			HashMap<String, ChatMember> getWorkedDataFromDb;
 //
@@ -3966,23 +3997,34 @@ private ObservableList<String>
 		HashMap<String, ChatMember> finalWorkedDataFromDatabase = workedDataFromDatabase;
 
 		Platform.runLater(() -> {
-			helper_applyWorkedAndQrvStateFromDatabase(finalWorkedDataFromDatabase);
+			applyWorkedAndQrvStateFromDatabase(
+					activeChatMembersByCallAndCategory.values(),
+					finalWorkedDataFromDatabase);
 			getLst_DBBasedWkdCallSignList().setAll(finalWorkedDataFromDatabase.values());
 			fireUserListUpdate("Worked database state refreshed");
 		});
 	}
 
 	/**
-	 * Applies the worked and not-QRV state from the database snapshot to all active
-	 * chatmember objects that are currently visible in the live chat list.
+	 * Applies the worked and not-QRV state from a database snapshot to chat members.
+	 * Database rows are keyed by normalized base callsign, so all active category
+	 * and suffix variants receive the same persisted state.
 	 *
+	 * @param chatMembers members that should receive persisted state
 	 * @param workedDataFromDatabase map keyed by normalized raw callsign
 	 */
-	private void helper_applyWorkedAndQrvStateFromDatabase(HashMap<String, ChatMember> workedDataFromDatabase) {
+	/* package */ static void applyWorkedAndQrvStateFromDatabase(
+			Collection<ChatMember> chatMembers,
+			Map<String, ChatMember> workedDataFromDatabase
+	) {
+		if (chatMembers == null || workedDataFromDatabase == null) {
+			return;
+		}
 
-		for (Iterator iterator = getLst_chatMemberList().iterator(); iterator.hasNext();) {
-
-			ChatMember activeChatMember = (ChatMember) iterator.next();
+		for (ChatMember activeChatMember : chatMembers) {
+			if (activeChatMember == null) {
+				continue;
+			}
 			ChatMember storedChatMemberState = workedDataFromDatabase.get(activeChatMember.getCallSignRaw());
 
 			if (storedChatMemberState == null) {

@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-08-28
+Last reviewed: 2026-09-02
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -34,6 +34,7 @@ KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/m
 - `NOT-QRV` overrides positive inferred band-availability hints.
 - Unknown/missing frequency, QRB, QTF or similar external data must remain unavailable rather than becoming a fabricated zero/default.
 - Features that depend on frequency should use the current/actual QRG according to current implemented rules; do not silently revert to a fixed 144 MHz default.
+- Complete digit-only frequencies use their final three digits as the kHz part and are accepted only when the resulting MHz value lies within a supported `Band` range. The same full-frequency parser is used for station names and public or directed chat messages. Relative QRG rules and bare three-digit context handling remain separate.
 
 ### JavaFX/threading
 
@@ -73,6 +74,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - The interpreter only adds positive runtime marks. It does not remove existing marks during the current session and does not reset automatically when a new contest starts. A database reset does not modify the file; callsigns contained in it are marked as worked again during the next periodic evaluation.
 - A missing selected file is created. Read, path and creation failures are contained so the periodic timer remains alive; successful creation triggers a one-time, non-blocking UI notice with the exact path and setup/contest checks.
 - Network-derived and manually assigned Worked, NOT-QRV and worked-grid state continues to use SQLite with its established lifetime and reset behaviour.
+- Each completed initial ON4KST user list loads one SQLite Worked/NOT-QRV snapshot. `ChatController` applies that snapshot by normalized base callsign to every new category and suffix variant before the completed category is published. The same event-driven path runs again after a reconnect; startup synchronization does not depend on a fixed-delay timer.
 - Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
 - UCXLog-compatible QSO packets and Win-Test `ADDQSO` packets are converted into one validated external-QSO state. Logger-specific numeric, metre and centimetre values and Win-Test band IDs are normalised once; the resolved band is then the sole source for per-band Worked and worked-grid state.
 - A missing or unknown logger band sets only the global Worked state. Worked-grid state requires both a recognised project band and a valid locator; no band or locator is inferred. Packets without a usable callsign are discarded without terminating the listener.

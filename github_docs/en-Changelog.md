@@ -48,7 +48,7 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **Validated ON4KST protocol commands:** Outgoing frames are built centrally and checked for valid categories, locators and prohibited frame delimiters. Because ON4KST maintains one locator per TCP session, the main locator is used for both chat categories and a conflicting secondary configuration is logged instead of sending contradictory commands to the server.
 
-- **More precise QRG recognition:** Complete and relative frequency references continue to be recognised. Bare three-digit numbers are treated as QRGs only when a frequency context is available. Signal reports, band designators and unrelated numbers therefore produce fewer false frequencies.
+- **More precise QRG recognition:** Complete frequencies are also recognised without a decimal separator, with the final three digits interpreted as the kHz part. Relative frequencies remain unchanged, and bare three-digit numbers still require recognisable frequency context. Signal reports, band designators and unrelated numbers therefore produce fewer false frequencies.
 
 - **Station-specific frequency context:** For relative QRGs, KST4Contest first uses a band context for the same station which is no more than 30 minutes old. The globally configured fallback band is used only when this context is unavailable.
 
@@ -93,6 +93,8 @@ v1.42 brings several previously separate calculations together. Band information
 ### Fixed
 
 - **Reliable initial user list:** Invalid or incomplete `UA0` member records are rejected and logged individually without preventing alphabetically following members from being processed. Valid entries are staged per category and published as one complete snapshot when the first corresponding `UE` end marker is received.
+
+- **Persisted Worked state during initial-list setup:** At the end of each initial ON4KST user list, the SQLite state is loaded once and applied to the new chat members before publication. This covers both categories, reconnects and every active variant of a base callsign.
 
 - **User list disappearing after login:** ON4KST may send additional `UE` frames for the same category after name, state or other live updates. Repeated end markers are now detected and ignored so that an already populated user list cannot be replaced by an empty snapshot.
 

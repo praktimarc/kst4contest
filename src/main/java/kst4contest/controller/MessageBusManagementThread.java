@@ -57,7 +57,7 @@ public class MessageBusManagementThread extends Thread {
 	/*
 	 * Frequency formats handled by the smart parser:
 	 *
-	 * Group 1: full frequencies, for example 144.210 or 10368.100
+	 * Group 1: full frequencies, for example 144.210, 144210 or 10368100
 	 * Group 2: relative frequencies with a separator, for example .210 or ,210
 	 * Group 3: bare three-digit values, for example 210
 	 *
@@ -66,7 +66,7 @@ public class MessageBusManagementThread extends Thread {
 	 * would be converted into plausible but incorrect frequencies.
 	 */
 	private static final Pattern SMART_FREQUENCY_PATTERN = Pattern.compile(
-			"(?<![\\d])(\\d{2,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?)(?![\\d])"
+			"(?<![A-Z0-9])(\\d{2,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?|\\d{5,8})(?![A-Z0-9])"
 					+ "|(?<![\\d])([.,]\\d{3}(?:[.,]\\d{1,3})?)(?![\\d])"
 					+ "|(?<=\\s|^)(\\d{3})(?=\\s|$)"
 	);
@@ -279,7 +279,7 @@ public class MessageBusManagementThread extends Thread {
 	 * @param message message whose text is inspected
 	 * @param prefs preferences containing the global fallback band
 	 */
-	private void smartFrequencyExtraction(ChatMessage message, ChatPreferences prefs) {
+	/* package */ void smartFrequencyExtraction(ChatMessage message, ChatPreferences prefs) {
 		if (message == null || message.getMessageText() == null) {
 			return;
 		}

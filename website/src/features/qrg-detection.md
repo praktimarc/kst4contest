@@ -37,8 +37,12 @@ Complete frequencies provide their band directly. Examples include:
 ```text
 144.210
 432,088
+144307
 10368.100
+10368100
 ```
+
+The separator is optional for a complete frequency. For a digit-only value, KST4Contest treats the final three digits as the kHz part. This turns `144307` in a station name into `144.307 MHz` and `10368100` in a public or directed chat message into `10368.100 MHz`. The result still has to fall within one of the supported band ranges.
 
 Relative forms omit the band and need additional context:
 

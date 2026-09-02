@@ -2391,3 +2391,4 @@ SM6VTZ;Chris .135;JO58UJ;StringProperty [value: 144.135]; wkd true; wkd144 true;
 SM6VTZ;Chris .135;JO58UJ;StringProperty [value: 432.135]; wkd true; wkd144 true; wkd432true; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
 LA0BY;Stefan @ hilltop;JO59IX;StringProperty [value: 144.062]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
 LA0BY;null;JO49ML;StringProperty [value: null]; wkd true; wkd144 false; wkd432true; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+OV3T;null;JO46CM;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null

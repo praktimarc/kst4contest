@@ -84,12 +84,14 @@ KST4Contest wertet deshalb den Text jeder öffentlichen und gerichteten Chat-Nac
 
 | Schreibweise | Beispiel | Verarbeitung |
 |---|---|---|
-| Vollständige Frequenz | `144.210`, `432,088`, `10368.100` | Das Band ergibt sich direkt aus der Frequenz. |
+| Vollständige Frequenz | `144.210`, `432,088`, `144307`, `10368100` | Das Band ergibt sich direkt aus der Frequenz. |
 | Relative Frequenz mit Punkt oder Komma | `.210`, `,088` | Das Band wird aus dem Stationskontext oder dem konfigurierten Fallback ergänzt. |
 | Dreistellige Frequenz mit Textkontext | `qrg 210`, `freq is 210`, `on 210`, `210 MHz` | Die Zahl wird als relative Frequenz behandelt. |
 | Dreistellige Zahl ohne Frequenzkontext | `210`, `599`, `144` | Die Zahl wird absichtlich nicht als QRG übernommen. |
 
 Die letzte Einschränkung verhindert plausible, aber falsche Ergebnisse. Mit einem Fallback von `144 MHz` ließe sich ein Signalrapport `599` technisch problemlos zu `144.599 MHz` zusammensetzen. Das Ergebnis wäre formal gültig und fachlich trotzdem Unsinn.
+
+Eine vollständige Frequenz kann auch ohne Punkt oder Komma geschrieben sein. KST4Contest behandelt dabei die letzten drei Ziffern als kHz-Anteil: `144307` im Namensfeld wird zu `144.307 MHz`, `10368100` in einer öffentlichen oder gerichteten Chatnachricht zu `10368.100 MHz`. Der Wert wird nur übernommen, wenn die daraus entstehende Frequenz innerhalb eines unterstützten Bandbereichs liegt.
 
 ### Wie wird das Band einer relativen QRG bestimmt?
 

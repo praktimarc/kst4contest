@@ -48,7 +48,7 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - **ON4KST-Protokollbefehle abgesichert:** Ausgehende Befehle werden zentral aufgebaut und auf gültige Kategorien, Locatoren und unerlaubte Frame-Trennzeichen geprüft. Da ON4KST pro TCP-Session nur einen Locator verwaltet, wird für beide Chat-Kategorien der Hauptlocator verwendet und eine abweichende zweite Konfiguration protokolliert, statt widersprüchliche Befehle an den Server zu senden.
 
-- **QRG-Erkennung präzisiert:** Vollständige und relative Frequenzangaben werden weiterhin erkannt. Nackte dreistellige Zahlen gelten nur noch bei erkennbarem Frequenzkontext als QRG. Signalrapporte, Bandangaben und andere Zahlen erzeugen dadurch seltener falsche Frequenzen.
+- **QRG-Erkennung präzisiert:** Vollständige Frequenzangaben werden auch ohne Dezimaltrenner erkannt; die letzten drei Ziffern bilden dabei den kHz-Anteil. Relative Frequenzen bleiben unverändert, und nackte dreistellige Zahlen gelten weiterhin nur bei erkennbarem Frequenzkontext als QRG. Signalrapporte, Bandangaben und andere Zahlen erzeugen dadurch seltener falsche Frequenzen.
 
 - **Stationsbezogener Frequenzkontext:** Bei relativen QRGs verwendet KST4Contest zuerst einen höchstens 30 Minuten alten Bandkontext derselben Station. Erst wenn dieser fehlt, wird das global konfigurierte Fallback-Band verwendet.
 
@@ -93,6 +93,8 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 ### Behoben
 
 - **Zuverlässige Benutzerliste beim Login:** Ungültige oder unvollständige `UA0`-Teilnehmerdatensätze werden einzeln verworfen und protokolliert, ohne die Verarbeitung der alphabetisch folgenden Teilnehmer abzubrechen. Die gültigen Einträge werden zunächst pro Kategorie gesammelt und erst mit dem ersten zugehörigen `UE`-Abschlussframe vollständig veröffentlicht.
+
+- **Persistierter Worked-Status beim Listenaufbau:** Beim Abschluss jeder initialen ON4KST-Benutzerliste wird der SQLite-Zustand einmal geladen und vor der Veröffentlichung auf die neuen Chatmember angewendet. Das gilt für beide Kategorien, erneute Verbindungen und alle aktiven Varianten eines Basisrufzeichens.
 
 - **Benutzerliste verschwindet nach dem Login:** ON4KST kann nach Namens-, Status- oder anderen Live-Änderungen weitere `UE`-Frames für dieselbe Kategorie senden. Wiederholte Abschlussframes werden jetzt erkannt und ignoriert, damit eine bereits gefüllte Benutzerliste nicht durch eine leere Momentaufnahme ersetzt wird.
 

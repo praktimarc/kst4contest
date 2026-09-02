@@ -84,12 +84,14 @@ KST4Contest therefore evaluates the text of every public and directed chat messa
 
 | Notation | Example | Processing |
 |---|---|---|
-| Complete frequency | `144.210`, `432,088`, `10368.100` | The frequency determines the band directly. |
+| Complete frequency | `144.210`, `432,088`, `144307`, `10368100` | The frequency determines the band directly. |
 | Relative frequency with a dot or comma | `.210`, `,088` | The band is added from the station context or configured fallback. |
 | Three-digit frequency with text context | `qrg 210`, `freq is 210`, `on 210`, `210 MHz` | The number is treated as a relative frequency. |
 | Three-digit number without frequency context | `210`, `599`, `144` | The number is deliberately not accepted as a QRG. |
 
 The final restriction prevents plausible-looking but incorrect results. With a fallback of `144 MHz`, a signal report of `599` could easily be turned into `144.599 MHz`. The result would be formally valid and operationally useless.
+
+A complete frequency may also be written without a dot or comma. KST4Contest treats the final three digits as the kHz part: `144307` in a station name becomes `144.307 MHz`, while `10368100` in a public or directed chat message becomes `10368.100 MHz`. The value is accepted only if the resulting frequency falls within a supported band range.
 
 ### How Is the Band of a Relative QRG Determined?
 

@@ -13,9 +13,10 @@ import java.util.regex.Pattern;
  * Common parser for explicit amateur-radio frequencies embedded in text.
  *
  * <p>This parser deliberately handles only complete frequencies such as
- * 144.300, 432.357 or 10368.100. Relative forms such as ".210" or ambiguous
- * bare values such as "210" require additional message context and remain the
- * responsibility of the chat-message parser.</p>
+ * 144.300, 432.357, 10368.100 or their compact digit-only forms. Relative
+ * forms such as ".210" or ambiguous bare values such as "210" require
+ * additional message context and remain the responsibility of the
+ * chat-message parser.</p>
  */
 public final class FrequencyTextParser {
 
@@ -26,14 +27,18 @@ public final class FrequencyTextParser {
      * 432,357
      * 10368.100
      * 144.300.03
+     * 144300
+     * 10368100
      *
-     * At least two digits are required before the decimal separator. This
-     * intentionally prevents "1.2" from being interpreted as a frequency.
+     * At least two digits are required before a decimal separator. Compact
+     * values need at least five digits because their final three digits form
+     * the kHz part. This intentionally prevents "1.2" and bare values such as
+     * "210" from being interpreted as complete frequencies.
      */
     private static final Pattern EXPLICIT_FREQUENCY_PATTERN = Pattern.compile(
             "(?<![A-Z0-9])"
-                    + "(\\d{2,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?)"
-                    + "(?!\\d)",
+                    + "(\\d{2,5}[.,]\\d{1,3}(?:[.,]\\d{1,3})?|\\d{5,8})"
+                    + "(?![A-Z0-9])",
             Pattern.CASE_INSENSITIVE
     );
 
@@ -93,12 +98,12 @@ public final class FrequencyTextParser {
             return null;
         }
 
-        String normalized =
-                normalizeFrequencyString(
-                        rawFrequency
-                                .trim()
-                                .replace(',', '.')
-                );
+        final String trimmedFrequency = rawFrequency.trim();
+        final String normalized = trimmedFrequency.matches("\\d{5,8}")
+                ? trimmedFrequency.substring(0, trimmedFrequency.length() - 3)
+                        + "."
+                        + trimmedFrequency.substring(trimmedFrequency.length() - 3)
+                : normalizeFrequencyString(trimmedFrequency.replace(',', '.'));
 
         try {
             double frequencyMHz =
