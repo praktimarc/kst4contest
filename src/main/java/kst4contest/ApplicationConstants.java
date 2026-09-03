@@ -27,7 +27,7 @@ public class ApplicationConstants {
      * application versions still exist.
      */
     @Deprecated
-    public static final double APPLICATION_CURRENTVERSIONNUMBER = 1.42;
+    public static final double APPLICATION_CURRENTVERSIONNUMBER = 1.43;
 
     public static final String VERSIONINFOURLFORUPDATES_KST4CONTEST = "https://kst4contest.hamradioonline.de/kst4ContestVersionInfo.xml";
     public static final String VERSIONINFDOWNLOADEDLOCALFILE  = "kst4ContestVersionInfo.xml";
