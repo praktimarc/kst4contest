@@ -8,6 +8,72 @@ Published Stable versions and their application packages are available under [Gi
 
 ---
 
+## v1.43.1 (2026-09-03)
+
+**Corrected version metadata**
+
+v1.43.1 contains the same functional changes as v1.43.0. It corrects the application and build metadata used for display, ON4KST identification and update comparison. Some metadata in the first v1.43.0 package set still identified the build as version 1.42.
+
+### Fixed
+
+- **Consistent semantic version:** The user-visible application version now uses the complete `1.43.1` form. The compact value `1.431` remains only in the deprecated numeric field required for compatibility with older update feeds.
+
+- **Tagged-release update feed:** The website build, version-feed validation and artifact upload now run as actual workflow steps after the GitHub Release has been published. They were previously indented into the release action's artifact list and therefore skipped.
+
+Users of v1.43.0 should install v1.43.1. The functionality is unchanged; the update only corrects the version metadata and release workflow.
+
+The corrected version is available as [Release v1.43.1](https://github.com/praktimarc/kst4contest/releases/tag/v1.43.1).
+
+---
+
+## v1.43.0 (2026-09-03)
+
+**More reliable log synchronisation, persistent layouts and better DX Cluster compatibility**
+
+v1.43 concentrates on reliability around external log data and long-running contest operation. It also adds practical control over table layouts and station grouping on the map.
+
+### Added
+
+- **Optional map clustering:** **Group nearby stations** immediately enables or disables spatial grouping at lower zoom levels. The stored setting changes neither the viewport nor the selected station; aggregation of active variants sharing one base callsign remains independent. This implements [Issue #79](https://github.com/praktimarc/kst4contest/issues/79).
+
+- **Automatic table-layout persistence:** Tables receive useful widths when their first meaningful contents arrive. Manually changed column widths, window sizes and relevant dividers are written to `preferences.xml` after a short delay. The main and monitor windows keep separate DXCluster and QSO-of-the-other layouts.
+
+- **Tooltips for truncated table values:** Normal table cells expose their complete text when the visible column is too narrow, without replacing functional tooltips or clickable links.
+
+- **Simplelogfile creation notice:** When the selected file does not exist, KST4Contest creates it and displays a notice with the file path, a concrete test procedure and a link to the relevant manual section.
+
+### Changed
+
+- **Robust Simplelogfile evaluation:** The selected file is evaluated once per minute and closed after every pass so that the logging application can replace or rotate it. Detected callsigns apply the global Worked state to every active suffix variant of the base callsign. Disabling the function prevents any file access, while read or creation errors no longer terminate the periodic task.
+
+- **Consistent external logger bands:** UCXLog-compatible packets and Win-Test events use one shared band normalisation. Numeric values, metre and centimetre designators and the existing Win-Test IDs now set the same Worked flags and worked grid squares. Values including `2320`, `5760` and `10368` are handled reliably; a missing or unknown band sets only the global Worked state.
+
+- **Compact full-frequency recognition:** Complete frequencies without a decimal separator are accepted across the supported bands, with the final three digits interpreted as the kHz part. Bare three-digit numbers still require recognisable frequency context so that signal reports and unrelated numbers are not treated as QRGs.
+
+- **DXSpider-compatible spot format:** Local DX Cluster spots use a fixed 75-character payload line with the DX callsign in column 27, a 30-character comment field and UTC time in column 71. The format remains stable up to 24 GHz. Overlong DX callsigns are rejected and logged instead of being silently truncated. This resolves [Issue #86](https://github.com/praktimarc/kst4contest/issues/86).
+
+- **Active ON4KST connection probe:** A quiet chat server is checked with an explicit session-wide probe before the connection is treated as dead. Heartbeats and probe frames retain the required CR/LF framing.
+
+- **Reliable private-message age highlighting:** Incoming private messages use the defined green age levels for up to five minutes. Locally sent messages retain their separate style, and empty or reused table rows return to the normal design instead of keeping an obsolete highlight.
+
+### Fixed
+
+- **Worked state after login:** Persisted SQLite Worked information is loaded and applied before each initial ON4KST user list is published. Reconnects, both categories and all active variants of a base callsign therefore start with the correct state. This resolves [Issue #85](https://github.com/praktimarc/kst4contest/issues/85).
+
+- **False disconnect during quiet periods:** A valid ON4KST connection is no longer closed merely because the server currently has no activity lines to send.
+
+### Documentation and packaging
+
+- The German and English manuals were revised against the implementation. A new contest-workflow chapter connects the individual functions into a practical operating sequence, while the sections on dual chat, private-message handling, QRG synchronisation, Simplelogfile evaluation and configuration were clarified.
+
+- The website feature pages now describe band and direction opportunities, the station map, QRG handling, filters, global message views, private-message handling and logger synchronisation in more detail.
+
+- The AUR package definitions were updated for v1.43.0.
+
+The complete v1.43.0 functionality is available in [Release v1.43.0](https://github.com/praktimarc/kst4contest/releases/tag/v1.43.0). Because its embedded version metadata is inconsistent, v1.43.1 is the recommended package set.
+
+---
+
 ## v1.42.0 (2026-08-22)
 
 **Shared band context, session-based ON4KST connection and signed macOS packages**
@@ -38,21 +104,17 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **Filter reset:** A dedicated reset button reliably removes the active user-list filter predicates.
 
-- **Optional map clustering:** **Group nearby stations** immediately enables or disables spatial grouping at lower zoom levels. The automatically stored setting changes neither the viewport nor the selected station; aggregation of active variants sharing one base callsign remains independent. This implements [Issue #79](https://github.com/praktimarc/kst4contest/issues/79).
+- **Map clustering:** Stations close to each other are grouped at lower zoom levels. The selected station and relevant direction opportunities remain individually visible.
 
 - **Hideable path analysis:** The terrain profile and analysis section of the station map can be hidden completely. The selected state is stored and restored at the next application start.
 
 ### Changed
 
-- **Automatic table-layout persistence:** Tables receive useful widths when their first meaningful contents arrive. Manually changed column widths, window sizes and relevant dividers are written to `preferences.xml` after a short delay; the main and monitor windows keep separate DXCluster and QSO-of-the-other layouts. Truncated normal cell values expose their full text in a tooltip without replacing functional tooltips or clickable links.
-
-- **Unified DX Cluster line format:** Local spots now use a fixed, DXSpider-compatible 75-character payload line with the DX callsign in column 27, a 30-character comment field and UTC time in column 71. The layout remains stable for microwave frequencies up to 24 GHz. Overlong DX callsigns are rejected and logged instead of being silently truncated; AirScout and test comments are correspondingly more compact.
-
 - **Session-based ON4KST connection lifecycle:** Each socket, reader, writer, message bus and queue now belongs to an explicitly identified connection session. Delayed threads from an obsolete connection can therefore no longer process data or close its replacement. `ONLINE` is reported only after the login has been accepted and all requested user lists have been received. Connection setup, login and synchronisation use bounded timeouts, while heartbeats, missing inbound traffic, EOF and read or write failures trigger controlled reconnect attempts with backoff where appropriate.
 
 - **Validated ON4KST protocol commands:** Outgoing frames are built centrally and checked for valid categories, locators and prohibited frame delimiters. Because ON4KST maintains one locator per TCP session, the main locator is used for both chat categories and a conflicting secondary configuration is logged instead of sending contradictory commands to the server.
 
-- **More precise QRG recognition:** Complete frequencies are also recognised without a decimal separator, with the final three digits interpreted as the kHz part. Relative frequencies remain unchanged, and bare three-digit numbers still require recognisable frequency context. Signal reports, band designators and unrelated numbers therefore produce fewer false frequencies.
+- **More precise QRG recognition:** Complete and relative frequency references continue to be recognised. Bare three-digit numbers are treated as QRGs only when a frequency context is available. Signal reports, band designators and unrelated numbers therefore produce fewer false frequencies.
 
 - **Station-specific frequency context:** For relative QRGs, KST4Contest first uses a band context for the same station which is no more than 30 minutes old. The globally configured fallback band is used only when this context is unavailable.
 
@@ -86,10 +148,6 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **DXLog full-log import:** In addition to `contactinfo`, the UCXLog-compatible UDP listener processes `contactreplace`. This allows a complete log broadcast by DXLog.net to be imported.
 
-- **Consistent logger band values:** Numeric, metre and centimetre values from UCXLog-compatible QSO packets and Win-Test band IDs are normalised once and then used consistently for Worked marks and worked grid squares. In particular, `2320`, `5760` and `10368` now reliably set their existing band marks. A missing or unknown band continues to set only the global Worked status.
-
-- **Defined Simplelogfile behaviour:** The selected text file is evaluated once per minute using a fixed callsign pattern. Matches set the global Worked status for all active variants of the base callsign but are not persisted in SQLite. A missing file is created, and read or creation errors do not terminate the periodic task. A database reset does not change the file, so callsigns contained in it are marked as worked again during the next evaluation.
-
 - **Guarded automatic QRG updates:** `MYQRG` is updated only by an enabled interface which actually supplies valid `RadioInfo` or Win-Test `STATUS` packets. An enabled source which provides no data does not remove the need for a functional check or manual QRG maintenance.
 
 - **Improved version comparison:** Versions are compared semantically so that patch releases and Nightly versions are not misclassified by conversion to a floating-point number.
@@ -97,8 +155,6 @@ v1.42 brings several previously separate calculations together. Band information
 ### Fixed
 
 - **Reliable initial user list:** Invalid or incomplete `UA0` member records are rejected and logged individually without preventing alphabetically following members from being processed. Valid entries are staged per category and published as one complete snapshot when the first corresponding `UE` end marker is received.
-
-- **Persisted Worked state during initial-list setup:** At the end of each initial ON4KST user list, the SQLite state is loaded once and applied to the new chat members before publication. This covers both categories, reconnects and every active variant of a base callsign.
 
 - **User list disappearing after login:** ON4KST may send additional `UE` frames for the same category after name, state or other live updates. Repeated end markers are now detected and ignored so that an already populated user list cannot be replaced by an empty snapshot.
 

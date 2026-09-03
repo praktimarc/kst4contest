@@ -786,45 +786,45 @@ jobs:
             release-assets/macos/KST4Contest-${{ github.ref_name }}-macos-*.dmg,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-en.pdf,
             release-assets/docs/KST4Contest-${{ github.ref_name }}-manual-de.pdf
-            
-            # The update feed is generated only after GitHub has published the
-            # release. Otherwise the Releases API cannot return the release notes
-            # belonging to the tag which triggered this workflow.
-            - name: Set up Node.js for website build
-              uses: actions/setup-node@v4
-              with:
-                node-version: "24"
-                cache: npm
-                cache-dependency-path: website/package-lock.json
 
-            - name: Build and validate website after release publication
-              working-directory: website
-              run: |
-                npm ci
-                npm test
-                npm run build
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The update feed is generated only after GitHub has published the
+      # release. Otherwise the Releases API cannot return the release notes
+      # belonging to the tag which triggered this workflow.
+      - name: Set up Node.js for website build
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: website/package-lock.json
 
-            - name: Verify Stable release in update feed
-              if: ${{ !startsWith(github.ref_name, 'beta-') }}
-              working-directory: website
-              run: npm run validate:version-info
-              env:
-                EXPECTED_STABLE_VERSION: ${{ github.ref_name }}
+      - name: Build and validate website after release publication
+        working-directory: website
+        run: |
+          npm ci
+          npm test
+          npm run build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Attach verified version info to tagged release
-              run: >-
-                gh release upload "${GITHUB_REF_NAME}"
-                website/_site/kst4ContestVersionInfo.xml
-                --clobber
-              env:
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify Stable release in update feed
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
+        working-directory: website
+        run: npm run validate:version-info
+        env:
+          EXPECTED_STABLE_VERSION: ${{ github.ref_name }}
 
-            - name: Upload verified website artifact
-              uses: actions/upload-artifact@v4.3.4
-              with:
-                name: kst4contest-website-${{ github.ref_name }}
-                path: website/_site/
-                if-no-files-found: error
-                retention-days: 14
+      - name: Attach verified version info to tagged release
+        run: >-
+          gh release upload "${GITHUB_REF_NAME}"
+          website/_site/kst4ContestVersionInfo.xml
+          --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload verified website artifact
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: kst4contest-website-${{ github.ref_name }}
+          path: website/_site/
+          if-no-files-found: error
+          retention-days: 14

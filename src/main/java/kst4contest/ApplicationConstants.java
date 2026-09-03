@@ -20,7 +20,7 @@ public class ApplicationConstants {
     /**
      * Version shown to the user and used for semantic version comparison.
      */
-    public static final String APPLICATION_CURRENT_VERSION = "1.431";
+    public static final String APPLICATION_CURRENT_VERSION = "1.43.1";
 
     /**
      * Legacy numeric representation used only while older update feeds and

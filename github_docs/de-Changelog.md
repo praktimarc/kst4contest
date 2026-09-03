@@ -8,6 +8,72 @@ Die veröffentlichten Stable-Versionen und ihre Programmpakete stehen unter [Git
 
 ---
 
+## v1.43.1 (2026-09-03)
+
+**Korrigierte Versionsmetadaten**
+
+v1.43.1 enthält dieselben funktionalen Änderungen wie v1.43.0. Korrigiert wurden die Anwendungs- und Build-Metadaten für Anzeige, ON4KST-Kennung und Update-Vergleich. Ein Teil der Metadaten des ersten v1.43.0-Pakets wies den Build noch als Version 1.42 aus.
+
+### Behoben
+
+- **Einheitliche semantische Version:** Die sichtbare Anwendungsversion verwendet jetzt vollständig `1.43.1`. Der kompakte Wert `1.431` bleibt ausschließlich im veralteten numerischen Feld für die Kompatibilität mit älteren Update-Feeds erhalten.
+
+- **Update-Feed im Tagged-Release-Workflow:** Website-Build, Prüfung des Versionsfeeds und Upload der Artefakte laufen jetzt tatsächlich nach der Veröffentlichung des GitHub Releases. Diese Schritte waren zuvor versehentlich in die Artefaktliste der Release-Action eingerückt und wurden deshalb übersprungen.
+
+Wer v1.43.0 installiert hat, sollte v1.43.1 verwenden. Die Funktionen bleiben unverändert; korrigiert werden nur die Versionsmetadaten und der Release-Workflow.
+
+Die korrigierte Version ist als [Release v1.43.1](https://github.com/praktimarc/kst4contest/releases/tag/v1.43.1) verfügbar.
+
+---
+
+## v1.43.0 (2026-09-03)
+
+**Zuverlässigere Log-Synchronisation, gespeicherte Tabellenlayouts und bessere DX-Cluster-Kompatibilität**
+
+v1.43 konzentriert sich auf die zuverlässige Verarbeitung externer Logdaten und den stabilen Betrieb während längerer Conteste. Hinzu kommen praktische Einstellmöglichkeiten für Tabellenlayouts und die Stationsgruppierung auf der Karte.
+
+### Neu
+
+- **Optionale Kartencluster:** **Group nearby stations** schaltet die räumliche Gruppierung bei niedrigen Zoomstufen unmittelbar ein oder aus. Die gespeicherte Auswahl verändert weder Kartenausschnitt noch Stationsauswahl; die Zusammenfassung aktiver Varianten desselben Basisrufzeichens bleibt davon unabhängig. Damit ist [Issue #79](https://github.com/praktimarc/kst4contest/issues/79) umgesetzt.
+
+- **Tabellenlayout automatisch gesichert:** Tabellen erhalten beim ersten brauchbaren Inhalt sinnvolle Breiten. Manuell geänderte Spaltenbreiten, Fenstergrößen und relevante Divider werden nach kurzer Verzögerung in `preferences.xml` geschrieben. Haupt- und Monitorfenster behalten getrennte Layouts für DXCluster und QSO of the other.
+
+- **Tooltips für gekürzte Tabellenwerte:** Normale Tabellenzellen zeigen ihren vollständigen Inhalt, wenn die sichtbare Spalte zu schmal ist. Funktionale Tooltips und anklickbare Links bleiben davon unberührt.
+
+- **Hinweis bei neu angelegtem Simplelogfile:** Fehlt die ausgewählte Datei, legt KST4Contest sie an und zeigt einen Hinweis mit Dateipfad, konkretem Testablauf und Link zum passenden Abschnitt des Handbuchs.
+
+### Geändert
+
+- **Robuste Simplelogfile-Auswertung:** Die ausgewählte Datei wird einmal pro Minute ausgewertet und nach jedem Durchlauf geschlossen, damit das Logprogramm sie ersetzen oder rotieren kann. Erkannte Rufzeichen setzen den globalen Worked-Status für alle aktiven Suffixvarianten des Basisrufzeichens. Bei deaktivierter Funktion findet kein Dateizugriff statt; Lese- oder Erstellungsfehler beenden die periodische Aufgabe nicht mehr.
+
+- **Einheitliche Bandwerte externer Logger:** UCXLog-kompatible Pakete und Win-Test-Ereignisse verwenden eine gemeinsame Bandnormalisierung. Numerische Werte, Meter- und Zentimeterangaben sowie die vorhandenen Win-Test-IDs setzen damit dieselben Worked-Markierungen und Worked-Großfelder. Insbesondere `2320`, `5760` und `10368` werden zuverlässig verarbeitet; bei fehlendem oder unbekanntem Band wird nur der globale Worked-Status gesetzt.
+
+- **Kompakte vollständige Frequenzen erkannt:** Vollständige Frequenzangaben ohne Dezimaltrenner werden auf allen unterstützten Bändern akzeptiert; die letzten drei Ziffern bilden den kHz-Anteil. Nackte dreistellige Zahlen benötigen weiterhin einen erkennbaren Frequenzkontext, damit Signalrapporte und andere Zahlen nicht als QRG behandelt werden.
+
+- **DXSpider-kompatibles Spotformat:** Lokale DX-Cluster-Spots verwenden eine feste 75-Zeichen-Nutzzeile mit dem DX-Rufzeichen ab Spalte 27, einem 30 Zeichen breiten Kommentarfeld und der UTC-Zeit ab Spalte 71. Das Format bleibt bis 24 GHz stabil. Überlange DX-Rufzeichen werden verworfen und protokolliert, statt unbemerkt abgeschnitten zu werden. Damit ist [Issue #86](https://github.com/praktimarc/kst4contest/issues/86) behoben.
+
+- **Aktive ON4KST-Verbindungsprüfung:** Ein ruhiger Chatserver wird mit einer expliziten, sitzungsweiten Abfrage geprüft, bevor die Verbindung als unterbrochen gilt. Heartbeat und Prüftelegramme behalten das erforderliche CR/LF-Framing.
+
+- **Zuverlässige Altersmarkierung privater Nachrichten:** Eingehende Privatnachrichten verwenden bis zu fünf Minuten lang die definierten grünen Altersstufen. Eigene Nachrichten behalten ihre separate Darstellung; leere oder wiederverwendete Tabellenzeilen kehren zum normalen Design zurück und behalten keine veraltete Hervorhebung.
+
+### Behoben
+
+- **Worked-Status nach dem Login:** Persistierte SQLite-Informationen werden vor der Veröffentlichung jeder initialen ON4KST-Benutzerliste geladen und angewendet. Erneute Verbindungen, beide Kategorien und alle aktiven Varianten eines Basisrufzeichens starten dadurch mit dem richtigen Status. Damit ist [Issue #85](https://github.com/praktimarc/kst4contest/issues/85) behoben.
+
+- **Fehlerhafte Trennung bei ruhigem Server:** Eine gültige ON4KST-Verbindung wird nicht mehr beendet, nur weil der Server gerade keine Aktivitätszeilen überträgt.
+
+### Dokumentation und Auslieferung
+
+- Das deutsche und englische Handbuch wurden mit der Implementierung abgeglichen und überarbeitet. Ein neues Kapitel zum Contest-Workflow verbindet die einzelnen Funktionen zu einem praktischen Betriebsablauf; außerdem wurden die Abschnitte zu Dual Chat, Privatnachrichten, QRG-Synchronisation, Simplelogfile-Auswertung und Konfiguration präzisiert.
+
+- Die Website beschreibt Band- und Richtungsgelegenheiten, Stationskarte, QRG-Verarbeitung, Filter, globale Nachrichtenansichten, Privatnachrichten und Log-Synchronisation jetzt ausführlicher.
+
+- Die AUR-Paketdefinitionen wurden auf v1.43.0 aktualisiert.
+
+Die vollständige Funktionalität von v1.43.0 steht im [Release v1.43.0](https://github.com/praktimarc/kst4contest/releases/tag/v1.43.0) bereit. Wegen der inkonsistenten eingebetteten Versionsmetadaten ist v1.43.1 der empfohlene Paketstand.
+
+---
+
 ## v1.42.0 (2026-08-22)
 
 **Gemeinsamer Bandkontext, sitzungsbasierte ON4KST-Verbindung und signierte macOS-Pakete**
@@ -38,21 +104,17 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - **Filter zurücksetzen:** Ein eigener Reset-Button entfernt die aktiven Filterprädikate der Benutzerliste zuverlässig.
 
-- **Optionale Kartencluster:** **Group nearby stations** schaltet die räumliche Gruppierung bei niedrigen Zoomstufen unmittelbar ein oder aus. Die automatisch gespeicherte Auswahl verändert weder Kartenausschnitt noch Stationsauswahl; die Zusammenfassung aktiver Varianten desselben Basisrufzeichens bleibt davon unabhängig. Damit ist [Issue #79](https://github.com/praktimarc/kst4contest/issues/79) umgesetzt.
+- **Kartencluster:** Räumlich dicht beieinanderliegende Stationen werden bei niedrigen Zoomstufen zusammengefasst. Die ausgewählte Station und relevante Richtungsgelegenheiten bleiben einzeln sichtbar.
 
 - **Ausblendbare Streckenanalyse:** Geländeprofil und Analysebereich der Stationskarte können vollständig ausgeblendet werden. Die Auswahl wird gespeichert und beim nächsten Programmstart wiederhergestellt.
 
 ### Geändert
 
-- **Tabellenlayout automatisch gesichert:** Tabellen werden beim ersten brauchbaren Inhalt sinnvoll dimensioniert. Manuell geänderte Spaltenbreiten, Fenstergrößen und relevante Divider werden verzögert in `preferences.xml` gespeichert; Haupt- und Monitorfenster behalten für DXCluster und QSO of the other getrennte Layouts. Gekürzte normale Zellwerte zeigen ihren Volltext im Tooltip, ohne funktionale Tooltips oder anklickbare Links zu verdrängen.
-
-- **DX-Cluster-Zeilenformat vereinheitlicht:** Lokale Spots verwenden jetzt eine feste, DXSpider-kompatible 75-Zeichen-Nutzzeile mit dem DX-Rufzeichen ab Spalte 27, einem 30 Zeichen breiten Kommentarfeld und der UTC-Zeit ab Spalte 71. Das Format bleibt auch bei Mikrowellenfrequenzen bis 24 GHz stabil. Überlange DX-Rufzeichen werden verworfen und protokolliert, statt still abgeschnitten zu werden; AirScout- und Testkommentare sind entsprechend kompakter.
-
 - **Sessionbezogene ON4KST-Verbindungssteuerung:** Socket, Reader, Writer, Messagebus und Warteschlangen gehören jetzt zu einer eindeutig identifizierten Verbindungssession. Veraltete Threads einer abgelösten Verbindung können dadurch keine Daten mehr verarbeiten oder die neue Verbindung schließen. `ONLINE` wird erst nach bestätigtem Login und vollständig empfangenen Benutzerlisten gemeldet. Verbindungsaufbau, Login und Synchronisation besitzen feste Zeitlimits; Heartbeats, ausbleibende Eingangsdaten, EOF sowie Lese- und Schreibfehler werden überwacht und lösen bei Bedarf einen kontrollierten Neuaufbau mit Backoff aus.
 
 - **ON4KST-Protokollbefehle abgesichert:** Ausgehende Befehle werden zentral aufgebaut und auf gültige Kategorien, Locatoren und unerlaubte Frame-Trennzeichen geprüft. Da ON4KST pro TCP-Session nur einen Locator verwaltet, wird für beide Chat-Kategorien der Hauptlocator verwendet und eine abweichende zweite Konfiguration protokolliert, statt widersprüchliche Befehle an den Server zu senden.
 
-- **QRG-Erkennung präzisiert:** Vollständige Frequenzangaben werden auch ohne Dezimaltrenner erkannt; die letzten drei Ziffern bilden dabei den kHz-Anteil. Relative Frequenzen bleiben unverändert, und nackte dreistellige Zahlen gelten weiterhin nur bei erkennbarem Frequenzkontext als QRG. Signalrapporte, Bandangaben und andere Zahlen erzeugen dadurch seltener falsche Frequenzen.
+- **QRG-Erkennung präzisiert:** Vollständige und relative Frequenzangaben werden weiterhin erkannt. Nackte dreistellige Zahlen gelten nur noch bei erkennbarem Frequenzkontext als QRG. Signalrapporte, Bandangaben und andere Zahlen erzeugen dadurch seltener falsche Frequenzen.
 
 - **Stationsbezogener Frequenzkontext:** Bei relativen QRGs verwendet KST4Contest zuerst einen höchstens 30 Minuten alten Bandkontext derselben Station. Erst wenn dieser fehlt, wird das global konfigurierte Fallback-Band verwendet.
 
@@ -86,10 +148,6 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 
 - **DXLog-Gesamtlog übernommen:** Der UCXLog-kompatible UDP-Listener verarbeitet neben `contactinfo` auch `contactreplace`. Dadurch kann ein von DXLog.net als vollständiges Log ausgesendeter Datenbestand eingelesen werden.
 
-- **Logger-Bandwerte vereinheitlicht:** Numerische sowie Meter- und Zentimeterangaben aus UCXLog-kompatiblen QSO-Paketen und die Band-IDs von Win-Test werden einmal normalisiert und danach einheitlich für Worked-Markierungen und Worked-Großfelder verwendet. Dadurch setzen insbesondere `2320`, `5760` und `10368` zuverlässig ihre vorhandenen Bandmarkierungen. Bei einem fehlenden oder unbekannten Band bleibt es beim globalen Worked-Status.
-
-- **Simplelogfile-Verhalten präzisiert:** Die ausgewählte Textdatei wird einmal pro Minute mit einem festen Rufzeichenmuster ausgewertet. Treffer setzen den globalen Worked-Status aller aktiven Varianten des Basisrufzeichens, werden aber nicht in SQLite persistiert. Eine fehlende Datei wird angelegt; Lese- und Erstellungsfehler beenden die periodische Auswertung nicht. Ein Datenbank-Reset verändert die Datei nicht, sodass enthaltene Rufzeichen bei der nächsten Auswertung erneut als gearbeitet markiert werden.
-
 - **Automatische QRG-Übernahme abgesichert:** `MYQRG` wird nur von einer aktivierten Schnittstelle aktualisiert, die tatsächlich gültige `RadioInfo`- beziehungsweise Win-Test-`STATUS`-Pakete liefert. Eine aktivierte, aber nicht liefernde Quelle ersetzt die notwendige Funktionsprüfung oder manuelle QRG-Pflege nicht.
 
 - **Versionserkennung verbessert:** Versionsnummern werden semantisch verglichen, damit beispielsweise Patch-Versionen und Nightly-Stände nicht mehr durch eine einfache Fließkommazahl falsch eingeordnet werden.
@@ -97,8 +155,6 @@ v1.42 führt mehrere bisher getrennte Auswertungen zusammen. Bandinformationen, 
 ### Behoben
 
 - **Zuverlässige Benutzerliste beim Login:** Ungültige oder unvollständige `UA0`-Teilnehmerdatensätze werden einzeln verworfen und protokolliert, ohne die Verarbeitung der alphabetisch folgenden Teilnehmer abzubrechen. Die gültigen Einträge werden zunächst pro Kategorie gesammelt und erst mit dem ersten zugehörigen `UE`-Abschlussframe vollständig veröffentlicht.
-
-- **Persistierter Worked-Status beim Listenaufbau:** Beim Abschluss jeder initialen ON4KST-Benutzerliste wird der SQLite-Zustand einmal geladen und vor der Veröffentlichung auf die neuen Chatmember angewendet. Das gilt für beide Kategorien, erneute Verbindungen und alle aktiven Varianten eines Basisrufzeichens.
 
 - **Benutzerliste verschwindet nach dem Login:** ON4KST kann nach Namens-, Status- oder anderen Live-Änderungen weitere `UE`-Frames für dieselbe Kategorie senden. Wiederholte Abschlussframes werden jetzt erkannt und ignoriert, damit eine bereits gefüllte Benutzerliste nicht durch eine leere Momentaufnahme ersetzt wird.
 

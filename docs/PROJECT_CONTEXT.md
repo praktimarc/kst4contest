@@ -162,6 +162,10 @@ The repository contains the KST4Contest website under `website/`, published sepa
 
 Current website/deployment scripts and update-feed behaviour must be inspected before changes; do not rely on historical assumptions.
 
+- `APPLICATION_CURRENT_VERSION` is the user-visible semantic version and must use the dotted `major.minor.patch` form. `APPLICATION_CURRENTVERSIONNUMBER` is retained only for older feeds and encodes patch releases by appending the patch digit, for example `1.43.1` as `1.431`.
+- The tagged-release workflow creates the GitHub Release before building the website update feed. This ordering is required because `versionInfo.js` reads the published release body through the GitHub Releases API.
+- After publication, the workflow tests and builds the website, validates the expected Stable version, attaches `kst4ContestVersionInfo.xml` to the release and uploads the complete website build as a workflow artifact.
+
 ## Important Decisions and Workarounds
 
 - Preserve full callsign/category identity while applying base-call normalisation only to specifically defined features.
