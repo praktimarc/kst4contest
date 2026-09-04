@@ -1204,10 +1204,11 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 					return;
 				}
 
-				InetAddress broadcastAddress = InetAddress.getByName(
-						chatPreferences
-								.getLogsynch_wintestNetworkBroadcastAddress()
-				);
+				InetAddress broadcastAddress =
+						winTestAddressResolver.resolveBroadcastAddress(
+								chatPreferences
+										.getLogsynch_wintestNetworkBroadcastAddress()
+						);
 
 				int port =
 						chatPreferences.getLogsynch_wintestNetworkPort();
@@ -1647,6 +1648,21 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	private int port = 23001; // kst4contest.test 4 23001 //TODO: auslagern in Chatprefs
 	private ReadUDPbyUCXMessageThread readUDPbyUCXThread;
     private ReadUDPByWintestThread readUDPByWintestThread;
+
+	/**
+	 * Shared resolver for the Win-Test broadcast address. Win-Test only reacts
+	 * to broadcasts, so both the log synchronization and the SKED handover have
+	 * to reach the network the station was actually heard on.
+	 */
+	private final WinTestNetworkAddressResolver winTestAddressResolver =
+			new WinTestNetworkAddressResolver();
+
+	/**
+	 * @return resolver for outgoing Win-Test packets
+	 */
+	public WinTestNetworkAddressResolver getWinTestAddressResolver() {
+		return winTestAddressResolver;
+	}
 	private WriteThread writeThread;
 	private ReadThread readThread;
 	private InputReaderThread consoleReader;

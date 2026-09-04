@@ -49,6 +49,8 @@ The general UDP listener processes packets from UCXLog, N1MM+, QARTest and DXLog
 
 Win-Test uses a separate listener for its native network protocol. KST4Contest resolves the Win-Test band ID, including 50 and 70 MHz, and stores the resulting Worked information in the same internal database.
 
+QSOs logged before KST4Contest was started are recovered from Win-Test as well. As soon as a Win-Test station is detected, the missing part of its log is requested over the native protocol, so stations already worked are marked as worked even when the client joins the contest late. The recovery needs no setting, keeps running to close gaps caused by lost packets, and covers every log in a multi-station network.
+
 STATUS packets can also update the local QRG when QRG synchronisation is enabled and valid packets actually arrive. Enabling the source alone does not supply a frequency. In multi-operator networks, a station-name filter prevents STATUS packets from another operating position from replacing the frequency of the intended radio.
 
 Win-Test can additionally receive skeds created in KST4Contest. The handover only takes place when a QRG matching the selected band can be determined. No fixed fallback frequency is inserted merely to make the packet technically valid.

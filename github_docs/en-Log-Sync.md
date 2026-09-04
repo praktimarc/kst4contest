@@ -102,6 +102,24 @@ Band IDs for 50 and 70 MHz are processed in the same way as the VHF, UHF and SHF
 
 The information is written to the same internal database as Worked data received through the other QSO UDP interfaces and is restored after a restart.
 
+#### Recovering QSOs logged earlier
+
+Win-Test broadcasts every new QSO. QSOs logged before KST4Contest was started are not part of those broadcasts. KST4Contest therefore requests them itself as soon as the Win-Test network listener detects a Win-Test station on the network.
+
+The recovery needs no dedicated setting and no operating step:
+
+- Win-Test announces with `IHAVE` which QSO numbers of which log it holds.
+- KST4Contest requests the missing ranges with `NEEDQSO`, at most 50 QSOs per request.
+- Win-Test answers with ordinary `ADDQSO` packets. They are processed exactly like a QSO logged live.
+
+Stations already worked therefore appear as worked even when KST4Contest is started during the contest. The recovery stays active afterwards and also picks up individual packets lost during operation. Known QSOs are recognised and not stored again.
+
+When several Win-Test stations are active on the network, every log is recovered. The per-band Worked marks of all band stations are then complete. The station name filter still applies to the QRG synchronisation only and does not restrict the log recovery.
+
+If a detected station sends no usable `IHAVE`, for example an older Win-Test version, KST4Contest requests the QSOs in blocks starting at QSO number 1 until a block remains unanswered.
+
+The Win-Test network must be enabled. No recovery takes place while the Win-Test network or the listener in KST4Contest is disabled.
+
 #### Handing skeds over to Win-Test
 
 Pressing **Create sked** first creates an internal KST4Contest sked. If the Win-Test network listener is enabled, KST4Contest then automatically attempts to send the sked to the Win-Test network as an `ADDSKED` packet.
@@ -154,7 +172,11 @@ In the **TRX sync** tab:
 - `Use pass frequency from Win-Test STATUS`
 - `Win-Test station name filter`
 
-The Win-Test network must be enabled in Win-Test. When several computers are used, the broadcast address must reach the relevant local network. The station name should identify the sending KST4Contest instance unambiguously within the Win-Test network.
+The Win-Test network must be enabled in Win-Test. The station name should identify the sending KST4Contest instance unambiguously within the Win-Test network.
+
+KST4Contest determines the broadcast address itself: the source address of the received Win-Test packets identifies the matching local network, and the broadcast address of that network is used. The configured address serves as the fallback when no local network matches the Win-Test station, for example when Win-Test is located behind a router.
+
+This matters because Win-Test only reacts to broadcasts, and an address in a network that does not exist raises no error: the packet is routed away silently. An outdated entry, for instance from a different network, therefore used to disable both the sked handover and the log recovery.
 
 Detailed settings: [Win-Test Network Listener](en-Configuration#win-test-network-listener-from-v131)
 

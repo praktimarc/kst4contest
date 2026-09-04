@@ -2392,3 +2392,14 @@ SM6VTZ;Chris .135;JO58UJ;StringProperty [value: 432.135]; wkd true; wkd144 true;
 LA0BY;Stefan @ hilltop;JO59IX;StringProperty [value: 144.062]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; 2: 144/432 MHz
 LA0BY;null;JO49ML;StringProperty [value: null]; wkd true; wkd144 false; wkd432true; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
 OV3T;null;JO46CM;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+DK0TR;null;JO40QL;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+DD0VF;null;JO61TB;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+F5DYD;null;JN03KG;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+F6DRO;null;JN03TJ;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+F4VRB;null;IN98PT;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+DK0TR;null;JO40QL;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+DD0VF;null;JO61TB;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+F5DYD;null;JN03KG;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+F6DRO;null;JN03TJ;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+F4VRB;null;IN98PT;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null
+DK5KMA;null;JO50IK;StringProperty [value: null]; wkd true; wkd144 true; wkd432false; wkd1240false; wkd2300false; wkd3400false; wkd5600false; wkd10Gfalse ; null

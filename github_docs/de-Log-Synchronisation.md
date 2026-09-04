@@ -102,6 +102,24 @@ Die Band-IDs für 50 und 70 MHz werden ebenso verarbeitet wie die VHF-, UHF- und
 
 Die Daten werden in derselben internen Datenbank abgelegt wie Worked-Informationen aus den übrigen QSO-UDP-Schnittstellen und nach einem Neustart wiederhergestellt.
 
+#### Bereits geloggte QSOs nachladen
+
+Win-Test sendet jedes neue QSO als Broadcast. QSOs, die vor dem Start von KST4Contest geloggt wurden, sind darin nicht enthalten. KST4Contest fordert diese QSOs deshalb selbst an, sobald der Win-Test-Netzwerk-Listener eine Win-Test-Station im Netzwerk erkennt.
+
+Der Abgleich benötigt keine eigene Einstellung und keinen Bedienschritt:
+
+- Win-Test meldet mit `IHAVE`, welche QSO-Nummern welches Logs es führt.
+- KST4Contest fordert die fehlenden Bereiche mit `NEEDQSO` an, höchstens 50 QSOs pro Anfrage.
+- Win-Test beantwortet die Anfrage mit gewöhnlichen `ADDQSO`-Paketen. Sie werden genauso ausgewertet wie ein live geloggtes QSO.
+
+Bereits gearbeitete Stationen erscheinen dadurch auch dann als gearbeitet, wenn KST4Contest erst während des Contests gestartet wird. Der Abgleich bleibt anschließend aktiv und holt auch einzelne Pakete nach, die im laufenden Betrieb verloren gegangen sind. Bereits bekannte QSOs werden erkannt und nicht erneut gespeichert.
+
+Sind mehrere Win-Test-Stationen im Netzwerk aktiv, wird jedes Log abgeglichen. Damit sind die bandbezogenen Worked-Markierungen aller Bandstationen vollständig. Der Stationsnamensfilter wirkt weiterhin nur auf die QRG-Synchronisation und schränkt den Logabgleich nicht ein.
+
+Meldet eine erkannte Station kein auswertbares `IHAVE`, etwa bei einer älteren Win-Test-Version, fordert KST4Contest die QSOs blockweise ab QSO-Nummer 1 an, bis ein Block unbeantwortet bleibt.
+
+Voraussetzung ist ein aktiviertes Win-Test-Netzwerk. Ist das Win-Test-Netzwerk oder der Listener in KST4Contest deaktiviert, findet kein Abgleich statt.
+
 #### Skeds an Win-Test übergeben
 
 Mit **Create sked** wird zunächst ein interner KST4Contest-Sked angelegt. Ist der Win-Test-Netzwerk-Listener aktiviert, versucht KST4Contest anschließend automatisch, den Sked als `ADDSKED` an das Win-Test-Netzwerk zu übertragen.
@@ -154,7 +172,11 @@ Im Reiter **TRX sync**:
 - `Use pass frequency from Win-Test STATUS`
 - `Win-Test station name filter`
 
-Das Win-Test-Netzwerk muss in Win-Test aktiviert sein. Bei mehreren Computern muss die Broadcast-Adresse das betreffende lokale Netzwerk erreichen. Der Stationsname sollte die sendende KST4Contest-Instanz innerhalb des Win-Test-Netzwerks eindeutig erkennen lassen.
+Das Win-Test-Netzwerk muss in Win-Test aktiviert sein. Der Stationsname sollte die sendende KST4Contest-Instanz innerhalb des Win-Test-Netzwerks eindeutig erkennen lassen.
+
+Die Broadcast-Adresse ermittelt KST4Contest selbst: Aus der Absenderadresse der empfangenen Win-Test-Pakete wird das passende lokale Netzwerk bestimmt und dessen Broadcast-Adresse verwendet. Die eingetragene Adresse dient als Rückfallebene, wenn kein lokales Netzwerk zur Win-Test-Station passt, etwa wenn Win-Test hinter einem Router liegt.
+
+Das ist wichtig, weil Win-Test ausschließlich auf Broadcasts reagiert und eine Adresse in einem nicht vorhandenen Netzwerk keinen Fehler auslöst: Das Paket wird ohne Meldung weggeroutet. Eine veraltete Eintragung, etwa aus einem anderen Netzwerk, machte dadurch früher sowohl die Sked-Übergabe als auch den Logabgleich wirkungslos.
 
 Ausführliche Beschreibung der Einstellungen: [Win-Test-Netzwerk-Listener](de-Konfiguration#win-test-netzwerk-listener-ab-v131)
 

@@ -17,8 +17,10 @@ import java.nio.charset.StandardCharsets;
  */
 public class WinTestMessage {
 
-    /** Win-Test message types relevant for SKED management. */
+    /** Win-Test message types sent by KST4Contest. */
     public enum MessageType {
+        /** Requests a range of QSOs of one Win-Test log for log synchronization. */
+        NEEDQSO,
         LOCKSKED,
         UNLOCKSKED,
         ADDSKED,

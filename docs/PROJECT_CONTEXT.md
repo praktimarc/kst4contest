@@ -101,6 +101,16 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - External logger threads do not read or mutate the JavaFX user-list projection. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the JavaFX Application Thread before evaluating a band-upgrade notice.
 - The established Win-Test handling for 24, 47 and 76 GHz remains unchanged. Their Worked flags are retained, while only frequencies represented by the project `Band` model can create worked-grid state.
 
+### Win-Test log recovery
+
+- Win-Test only broadcasts new QSOs. A listener started later never sees the earlier ones, so KST4Contest pulls them with the Win-Test `IHAVE` / `NEEDQSO` protocol, ported from the wtKST `WtLogSync` implementation. The answers are ordinary `ADDQSO` packets and reuse the established Worked path; the recovery itself never touches database or UI.
+- The recovery is not configurable. It is bound to the existing Win-Test network listener, runs automatically once a station is detected through `HELLO` or `STATUS`, and stays active so gaps caused by lost broadcasts are refetched.
+- The station-name filter remains a QRG-sync setting. Log recovery covers every station in the network, because each band station of a multi-station setup keeps its own log and contributes per-band Worked state.
+- A QSO is identified by `StationName@LogUniqueID` plus the Win-Test QSO number. That identity deduplicates the answers of overlapping requests, so a recovered log is written once instead of once per resend.
+- Win-Test framing must be resolved on the raw datagram bytes: the checksum byte is not valid ASCII and would otherwise corrupt the trailing fields, which carry the log ID of `ADDQSO` and the run-length inventory of `IHAVE`. A broken checksum discards `IHAVE` only; the established handling of the other message types is unchanged and still does not verify checksums.
+- Win-Test answers broadcasts only; an identical unicast request to the same station stays unanswered (verified against Win-Test). Outgoing Win-Test packets therefore derive their broadcast address from the source address of received Win-Test packets, with the configured address as fallback for a station behind a router. A configured address pointing at a non-existent network raises no send error, so it silently disabled both log recovery and SKED handover before. Only genuine Win-Test message types update that address; internal control packets such as the poison pill must not redirect outgoing traffic.
+- `IHAVE` inventories are run-length encoded and may be split, so the announced first row is honoured instead of assuming that an inventory starts at QSO number one. A station that never sends a usable inventory is served by a blind block fallback starting at QSO number one.
+
 ### Terrain data providers
 
 - The active terrain profile provider is Open-Meteo using Copernicus GLO-90 data.
