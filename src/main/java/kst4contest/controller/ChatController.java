@@ -1643,7 +1643,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 //	private String hostname = "109.90.0.130";
     private String hostname;
 //	private String praktiKSTVersion = "praktiKST 1.0";
-	private String praktiKSTVersionInfo = "2022-10 - 2022-12\ndeveloped by DO5AMF, Marc\nContact: praktimarc@gmail.com\nDonations via paypal are welcome";
+	private String praktiKSTVersionInfo = "2022-10 - 2022-12\ndeveloped by DO5AMF, Marc and DN9APW, Philipp Wagner\nContact: praktimarc@gmail.com\nDonations via paypal are welcome";
 
 	private int port = 23001; // kst4contest.test 4 23001 //TODO: auslagern in Chatprefs
 	private ReadUDPbyUCXMessageThread readUDPbyUCXThread;

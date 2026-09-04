@@ -5753,7 +5753,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				Alert a = new Alert(AlertType.INFORMATION);
 
 				a.setTitle("About kst4contest");
-				a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION + ": ON4KST Chatclient by DO5AMF");
+				a.setHeaderText("kst4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION
+						+ ": ON4KST Chatclient by DO5AMF and DN9APW");
 				a.setContentText(chatcontroller.getChatPreferences().getProgramVersion());
 				a.show();
 			}

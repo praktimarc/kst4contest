@@ -148,7 +148,7 @@ public class ChatPreferences {
 	 *
 	 */
 
-	String programVersion = "Chat is powered by ON4KST \n\nUsage is free. You are welcome to support: \n\n- my project (donations, bugreports, good ideas are welcome), \n- ON4KST Servers, \n- AirScout developers and \n- OV3T (best AS-data provider of the world). \n\n73 de DO5AMF, Marc (DM5M / DARC X08)";
+	String programVersion = "Chat is powered by ON4KST \n\nUsage is free. You are welcome to support: \n\n- my project (donations, bugreports, good ideas are welcome), \n- ON4KST Servers, \n- AirScout developers and \n- OV3T (best AS-data provider of the world). \n\n73 de DO5AMF, Marc (DM5M / DARC X08)\nand DN9APW, Philipp Wagner";
 	String logsynch_storeWorkedCallSignsFileNameUDPMessageBackup = "udpReaderBackup.txt";
 	String storeAndRestorePreferencesFileName = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, PREFERENCES_FILE);
 	String chatState; // working variable only for use by primarystage (title bar)
