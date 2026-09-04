@@ -646,6 +646,9 @@ jobs:
     name: Publish Flatpak OSTree Repo (${{ github.ref_name }})
     runs-on: ubuntu-latest
     needs: build-flatpak
+    concurrency:
+      group: flatpak-repo-publish
+      cancel-in-progress: false
 
     steps:
       - name: Install Flatpak tooling
