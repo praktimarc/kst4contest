@@ -15,6 +15,7 @@ import java.util.logging.SimpleFormatter;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.collections.FXCollections;
@@ -72,6 +73,8 @@ import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.controller.ActiveOperatorProfile;
 import kst4contest.controller.OperatorProfileStore;
+import kst4contest.controller.OperatorProfilePaths;
+import kst4contest.model.OperatorProfile;
 import kst4contest.model.OperatorProfileSelection;
 import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
@@ -5503,6 +5506,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 
+		MenuItem menuItemFileSwitchProfile = new MenuItem("Switch operator profile...");
+		menuItemFileSwitchProfile.setOnAction(event -> showOperatorProfileSwitchDialog());
+
 		MenuItem m10 = new MenuItem("Exit + disconnect");
 		m10.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
@@ -5513,6 +5519,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		// add menu items to menu
 		fileMenu.getItems().add(menuItemFileConnect);
 		fileMenu.getItems().add(menuItemFileDisconnect);
+		fileMenu.getItems().add(menuItemFileSwitchProfile);
 		fileMenu.getItems().add(m10);
 
 		Menu optionsMenu = new Menu("Options");
@@ -6099,6 +6106,17 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	FlowPane flwPane_textSnippets;
     FlowPane flwpne_StatusBar;
 
+	/**
+	 * True once this runtime released its resources. Shutdown must stay idempotent
+	 * because it is reached both through the JavaFX stop() callback and explicitly.
+	 */
+	private boolean runtimeShutdownDone;
+
+	/**
+	 * The primary stage of this runtime, remembered so shutdown can close it.
+	 */
+	private Stage ownPrimaryStage;
+
 	Stage clusterAndQSOMonStage;
 //	Stage stage_selectedCallSignInfoStage;
 	ChatMember selectedCallSignInfoStageChatMember;
@@ -6290,29 +6308,191 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return " - " + activeProfile.getProfile().getDisplayName();
 	}
 
+	/**
+	 * Lets the operator pick another profile and rebuilds the runtime for it.
+	 *
+	 * <p>Offers to create a second profile when only one exists, because the menu entry
+	 * is the discoverable place to find the feature at all.</p>
+	 */
+	private void showOperatorProfileSwitchDialog() {
+
+		OperatorProfileStore profileStore = new OperatorProfileStore();
+		List<OperatorProfile> selectableProfiles = profileStore.loadProfiles();
+
+		if (selectableProfiles.size() < 2) {
+			Alert noProfilesYet = new Alert(AlertType.INFORMATION);
+			noProfilesYet.setTitle("Operator profiles");
+			noProfilesYet.setHeaderText("Only one operator profile is configured.");
+			noProfilesYet.setContentText(
+					"Additional profiles are created in the settings window on the "
+							+ "\"Profiles\" tab. Each profile keeps its own settings and layout, "
+							+ "and can either share the station worked database or use its own.");
+			noProfilesYet.showAndWait();
+			return;
+		}
+
+		OperatorProfileSelection activeProfile = ActiveOperatorProfile.get();
+		String activeProfileId = activeProfile == null ? null : activeProfile.getProfile().getProfileId();
+
+		Optional<OperatorProfile> chosenProfile =
+				OperatorProfilePickerDialog.showAndSelect(selectableProfiles, activeProfileId);
+
+		if (chosenProfile.isEmpty()) {
+			return;
+		}
+
+		if (chosenProfile.get().getProfileId().equalsIgnoreCase(activeProfileId)) {
+			return;
+		}
+
+		if (!confirmOperatorProfileSwitch(chosenProfile.get())) {
+			return;
+		}
+
+		ApplicationRuntimeLauncher.switchProfile(chosenProfile.get());
+	}
+
+	/**
+	 * Asks whether the running session may be given up for a profile switch.
+	 *
+	 * @param targetProfile profile the operator selected
+	 * @return true if the switch may proceed
+	 */
+	private boolean confirmOperatorProfileSwitch(OperatorProfile targetProfile) {
+
+		Alert confirmation = new Alert(AlertType.CONFIRMATION);
+		confirmation.setTitle("Switch operator profile");
+		confirmation.setHeaderText("Switch to \"" + targetProfile.getDisplayName() + "\"?");
+		confirmation.setContentText(
+				"The ON4KST connection is closed and all windows are rebuilt with the "
+						+ "settings and layout of the selected profile.\n\n"
+						+ "Unsaved settings of the current profile are lost. Window sizes, "
+						+ "divider and column widths are saved automatically.");
+
+		ButtonType switchButton = new ButtonType("Switch profile", ButtonBar.ButtonData.OK_DONE);
+		ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+		confirmation.getButtonTypes().setAll(switchButton, cancelButton);
+
+		return confirmation.showAndWait().orElse(cancelButton) == switchButton;
+	}
+
 	@Override
 	public void stop() {
-		System.out.println("[Main.java, Info:] Stage is closing, killing all resources");
-		if (layoutAutosave != null) {
-			layoutAutosave.flushPending();
+		shutdownRuntime();
+		System.exit(0);
+	}
+
+	/**
+	 * Releases every resource this runtime owns, without terminating the process.
+	 *
+	 * <p>Separated from {@link #stop()} so the same teardown can be reused when the
+	 * operator switches to another profile and a fresh runtime is built afterwards.
+	 * The method is idempotent and tolerates a runtime that never connected, because a
+	 * switch may happen before the first login.</p>
+	 */
+	public void shutdownRuntime() {
+
+		if (runtimeShutdownDone) {
+			return;
 		}
-		timer_buildWindowTitle.purge();
-		timer_buildWindowTitle.cancel();
+
+		runtimeShutdownDone = true;
+
+		System.out.println("[Main.java, Info:] Stage is closing, killing all resources");
+
+		if (layoutAutosave != null) {
+			// Flush before cancelling, otherwise a pending debounced write would either
+			// be lost or land after a profile switch.
+			layoutAutosave.flushPending();
+			layoutAutosave.cancelPending();
+		}
+
+		cancelViewTimer(timer_buildWindowTitle);
+		timer_buildWindowTitle = null;
 
 //		timer_chatMemberTableSortTimer.purge();
 //		timer_chatMemberTableSortTimer.cancel();
 
-		timer_updatePrivatemessageTable.purge();
-		timer_updatePrivatemessageTable.cancel();
+		cancelViewTimer(timer_updatePrivatemessageTable);
+		timer_updatePrivatemessageTable = null;
+
+		stopAnimation(userListRefreshCoalescer);
+		userListRefreshCoalescer = null;
+		stopAnimation(skedWarnBlinkTimeline);
+		skedWarnBlinkTimeline = null;
+		stopAnimation(bandUpgradeBlinkTimeline);
+		bandUpgradeBlinkTimeline = null;
+
+		if (stationMapBridge != null) {
+			stationMapBridge.uninstall();
+			stationMapBridge = null;
+		}
+
+		if (stationMapView != null) {
+			stationMapView.dispose();
+			stationMapView = null;
+		}
+
+		closeOwnedStages();
 
 		try {
-			chatcontroller.disconnect("CLOSEALL");
+			if (chatcontroller != null) {
+				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECT_AND_CLOSE);
+			}
 		} catch (Exception e) {
 			System.out.println("[Main.java, Warning:] Exception during disconnect: " + e.getMessage());
 		}
+	}
 
-//	    Platform.exit();
-		System.exit(0);
+	/**
+	 * Cancels a timer created during user interface construction.
+	 *
+	 * @param timerToCancel timer to cancel, may be null when startup did not get that far
+	 */
+	private static void cancelViewTimer(Timer timerToCancel) {
+
+		if (timerToCancel == null) {
+			return;
+		}
+
+		timerToCancel.purge();
+		timerToCancel.cancel();
+	}
+
+	/**
+	 * Stops a JavaFX animation if it exists.
+	 *
+	 * @param animationToStop animation to stop, may be null
+	 */
+	private static void stopAnimation(Animation animationToStop) {
+
+		if (animationToStop != null) {
+			animationToStop.stop();
+		}
+	}
+
+	/**
+	 * Closes every window this runtime opened, so no stale window survives a profile
+	 * switch. The map window is closed by its own dispose method.
+	 */
+	private void closeOwnedStages() {
+
+		for (Stage ownedStage : new Stage[] {
+				settingsStage, clusterAndQSOMonStage, stage_updateStage, ownPrimaryStage }) {
+
+			if (ownedStage != null) {
+				try {
+					ownedStage.close();
+				} catch (Exception e) {
+					System.out.println("[Main.java, Warning:] Could not close a window: " + e.getMessage());
+				}
+			}
+		}
+
+		settingsStage = null;
+		clusterAndQSOMonStage = null;
+		stage_updateStage = null;
+		ownPrimaryStage = null;
 	}
 
 	private void requestLayoutSave() {
@@ -6722,6 +6902,20 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		if (!resolveOperatorProfileIfRequired()) {
 			return;
 		}
+
+		ownPrimaryStage = primaryStage;
+
+		/*
+		 * A profile switch closes every window of the old runtime before the new one
+		 * exists. With the JavaFX default that would end the process, so the application
+		 * takes over the exit decision and closing the main window is handled explicitly.
+		 */
+		Platform.setImplicitExit(false);
+		primaryStage.setOnCloseRequest(closeRequest -> {
+			closeRequest.consume();
+			ApplicationRuntimeLauncher.exitApplication();
+		});
+		ApplicationRuntimeLauncher.setCurrent(this);
 
 		GuiUtils.applyApplicationIcon(primaryStage);
 
@@ -12261,10 +12455,12 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			if (res.get().equals(ButtonType.CANCEL)) {
 //				event.consume();
 			} else {
-				System.out.println("closewindowevent: Platform.exit");
+				System.out.println("closewindowevent: exiting the application");
 
-
-				Platform.exit();
+				// Routed through the launcher so the runtime that is actually live
+				// releases its resources. After a profile switch that is no longer the
+				// instance JavaFX would call stop() on.
+				ApplicationRuntimeLauncher.exitApplication();
 			}
 		}
 //        }
