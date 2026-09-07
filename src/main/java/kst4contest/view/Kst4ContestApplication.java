@@ -70,6 +70,9 @@ import javafx.stage.Screen;
 import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.view.map.StationMapBridge;
+import kst4contest.controller.ActiveOperatorProfile;
+import kst4contest.controller.OperatorProfileStore;
+import kst4contest.model.OperatorProfileSelection;
 import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
 import kst4contest.controller.WorkedGrossFieldCache;
@@ -6227,6 +6230,66 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		return txMessageButtons;
 	}
 
+	/**
+	 * Resolves the operator profile this runtime works with.
+	 *
+	 * <p>Only executed on the very first launch. A profile switch sets the profile before
+	 * building the new runtime, so the resolution is skipped there.</p>
+	 *
+	 * <p>An installation with no or exactly one profile is resolved without asking
+	 * anything, which keeps the single operator startup exactly as it was.</p>
+	 *
+	 * @return true if the application may continue starting up
+	 */
+	private boolean resolveOperatorProfileIfRequired() {
+
+		if (ActiveOperatorProfile.isInitialized()) {
+			return true;
+		}
+
+		OperatorProfileBootstrap bootstrap = new OperatorProfileBootstrap();
+		OperatorProfileSelection resolvedProfile = bootstrap.resolveAtStartup(
+				new OperatorProfileStore(),
+				CommandLineOptions.remembered(),
+				OperatorProfilePickerDialog::showAndSelect);
+
+		if (bootstrap.getStartupWarning() != null) {
+			Alert startupWarning = new Alert(AlertType.WARNING);
+			startupWarning.setTitle("Operator profile");
+			startupWarning.setHeaderText("The requested operator profile was not found.");
+			startupWarning.setContentText(bootstrap.getStartupWarning());
+			startupWarning.showAndWait();
+		}
+
+		if (resolvedProfile == null) {
+			Platform.exit();
+			System.exit(0);
+			return false;
+		}
+
+		ActiveOperatorProfile.set(resolvedProfile);
+		return true;
+	}
+
+	/**
+	 * Returns the window title suffix naming the active operator profile.
+	 *
+	 * <p>Empty for the historic single profile installation, so nothing changes visually
+	 * for operators who never create a second profile.</p>
+	 *
+	 * @return the suffix to append to a window title, never null
+	 */
+	private String buildOperatorProfileTitleSuffix() {
+
+		OperatorProfileSelection activeProfile = ActiveOperatorProfile.get();
+
+		if (activeProfile == null || activeProfile.getProfile().isRootProfile()) {
+			return "";
+		}
+
+		return " - " + activeProfile.getProfile().getDisplayName();
+	}
+
 	@Override
 	public void stop() {
 		System.out.println("[Main.java, Info:] Stage is closing, killing all resources");
@@ -6645,7 +6708,20 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 	@Override
+	public void init() {
+
+		Parameters applicationParameters = getParameters();
+
+		CommandLineOptions.remember(CommandLineOptions.parse(
+				applicationParameters == null ? null : applicationParameters.getRaw()));
+	}
+
+	@Override
 	public void start(Stage primaryStage) throws InterruptedException, IOException, URISyntaxException {
+
+		if (!resolveOperatorProfileIfRequired()) {
+			return;
+		}
 
 		GuiUtils.applyApplicationIcon(primaryStage);
 
@@ -6681,8 +6757,15 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, STYLE_DEFAULTCSSDAY_RESOURCE, STYLE_DEFAULTCSSDAY_FILE);
 		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, STYLE_DEFAULTCSSEVENING_RESOURCE, STYLE_DEFAULTCSSEVENING_FILE);
 		ChatMember ownChatMemberObject = new ChatMember();
+		OperatorProfileSelection activeOperatorProfile = ActiveOperatorProfile.get();
 
-		chatcontroller = new ChatController(ownChatMemberObject, this); // instantiate the Chatcontroller with the user object
+		// instantiate the Chatcontroller with the user object and the files of the active profile
+		chatcontroller = new ChatController(
+				ownChatMemberObject,
+				this,
+				activeOperatorProfile.getPreferencesRelativeFileName(),
+				activeOperatorProfile.getWorkedDatabaseRelativeFileName(),
+				activeOperatorProfile.isSeedWorkedDatabaseFromResource());
 		layoutAutosave = new LayoutAutosave(chatcontroller.getChatPreferences());
 		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
 		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
@@ -7200,7 +7283,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			txt_ownqrgSecondCategory.setFocusTraversable(false);
 			txt_ownqrgSecondCategory.setTooltip(new Tooltip("Enter frequency for second chat-category here by hand! <fixme>"));
 
-			primaryStage.setTitle(chatcontroller.getChatPreferences().getChatState());
+			primaryStage.setTitle(chatcontroller.getChatPreferences().getChatState() + buildOperatorProfileTitleSuffix());
 
 			timer_buildWindowTitle = new Timer();
 			timer_buildWindowTitle.scheduleAtFixedRate(new TimerTask() {
@@ -7255,7 +7338,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 							chatcontroller.getChatPreferences().setChatState(chatState);
 						}
 
-						primaryStage.setTitle(chatcontroller.getChatPreferences().getChatState());
+						primaryStage.setTitle(chatcontroller.getChatPreferences().getChatState() + buildOperatorProfileTitleSuffix());
 
 //						System.out.println(chatcontroller.getChatPreferences().getChatState());
 					});
