@@ -2,6 +2,7 @@ package kst4contest.view.map;
 
 import javafx.animation.PauseTransition;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.TableView;
 import javafx.util.Duration;
@@ -54,6 +55,16 @@ public final class StationMapBridge {
 
     private final PauseTransition refreshCoalescer = new PauseTransition(Duration.seconds(1.0));
 
+    /*
+     * The listeners are kept so install() can be undone. Without that, the coalescing
+     * animation and the registered listeners would keep a discarded runtime reachable
+     * after an operator profile switch.
+     */
+    private ListChangeListener<ChatMember> chatMemberListListener;
+    private ChangeListener<ChatMember> selectedChatMemberListener;
+    private ChangeListener<Number> antennaDirectionListener;
+    private ListChangeListener<Predicate<ChatMember>> filterPredicateListener;
+
     public StationMapBridge(ChatController chatController,
                             TableView<ChatMember> chatMemberTable,
                             StationMapView stationMapView,
@@ -81,23 +92,57 @@ public final class StationMapBridge {
 
         stationMapView.setOnResetView(this::handleMapReset);
 
-        chatController.getLst_chatMemberSortedFilteredList().addListener(
-                (ListChangeListener<ChatMember>) change -> scheduleRefresh()
-        );
+        chatMemberListListener = change -> scheduleRefresh();
+        chatController.getLst_chatMemberSortedFilteredList().addListener(chatMemberListListener);
 
-        chatController.getScoreService().selectedChatMemberProperty().addListener(
-                (obs, oldValue, newValue) -> requestImmediateRefresh()
-        );
+        selectedChatMemberListener = (obs, oldValue, newValue) -> requestImmediateRefresh();
+        chatController.getScoreService().selectedChatMemberProperty()
+                .addListener(selectedChatMemberListener);
 
-        chatController.getChatPreferences().getActualQTF().addListener(
-                (obs, oldValue, newValue) -> scheduleRefresh()
-        );
+        antennaDirectionListener = (obs, oldValue, newValue) -> scheduleRefresh();
+        chatController.getChatPreferences().getActualQTF().addListener(antennaDirectionListener);
 
-        chatController.getLst_chatMemberListFilterPredicates().addListener(
-                (ListChangeListener<Predicate<ChatMember>>) change -> requestImmediateRefresh()
-        );
+        filterPredicateListener = change -> requestImmediateRefresh();
+        chatController.getLst_chatMemberListFilterPredicates().addListener(filterPredicateListener);
 
         requestImmediateRefresh();
+    }
+
+    /**
+     * Removes everything {@link #install()} registered and stops the coalescing timer.
+     *
+     * <p>Needed when the runtime owning this bridge is discarded, for example during an
+     * operator profile switch. A running {@link PauseTransition} would otherwise keep
+     * firing into a dead user interface.</p>
+     */
+    public void uninstall() {
+
+        refreshCoalescer.stop();
+
+        stationMapView.setOnCallsignRawSelected(null);
+        stationMapView.setOnTriggerClusterSpot(null);
+        stationMapView.setOnResetView(null);
+
+        if (chatMemberListListener != null) {
+            chatController.getLst_chatMemberSortedFilteredList().removeListener(chatMemberListListener);
+            chatMemberListListener = null;
+        }
+
+        if (selectedChatMemberListener != null) {
+            chatController.getScoreService().selectedChatMemberProperty()
+                    .removeListener(selectedChatMemberListener);
+            selectedChatMemberListener = null;
+        }
+
+        if (antennaDirectionListener != null) {
+            chatController.getChatPreferences().getActualQTF().removeListener(antennaDirectionListener);
+            antennaDirectionListener = null;
+        }
+
+        if (filterPredicateListener != null) {
+            chatController.getLst_chatMemberListFilterPredicates().removeListener(filterPredicateListener);
+            filterPredicateListener = null;
+        }
     }
 
     private void handleMapReset() {
