@@ -73,6 +73,7 @@ import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.controller.ActiveOperatorProfile;
 import kst4contest.controller.OperatorProfileStore;
+import kst4contest.controller.OperatorProfileManagementService;
 import kst4contest.controller.OperatorProfilePaths;
 import kst4contest.model.OperatorProfile;
 import kst4contest.model.OperatorProfileSelection;
@@ -6345,11 +6346,24 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			return;
 		}
 
-		if (!confirmOperatorProfileSwitch(chosenProfile.get())) {
+		requestOperatorProfileSwitch(chosenProfile.get());
+	}
+
+	/**
+	 * Confirms and performs a switch to another operator profile.
+	 *
+	 * <p>Shared by the File menu and the profile settings tab, so both ask the same
+	 * question before giving up the running session.</p>
+	 *
+	 * @param targetProfile profile to activate
+	 */
+	private void requestOperatorProfileSwitch(OperatorProfile targetProfile) {
+
+		if (targetProfile == null || !confirmOperatorProfileSwitch(targetProfile)) {
 			return;
 		}
 
-		ApplicationRuntimeLauncher.switchProfile(chosenProfile.get());
+		ApplicationRuntimeLauncher.switchProfile(targetProfile);
 	}
 
 	/**
@@ -12028,6 +12042,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		Tab tbInternalDB = new Tab("Workedstn database", vbxInternalDB);
 		Tab tbGui = new Tab("GUI", vbxGuiOptions);
 
+		/*
+		 * Appended last on purpose so no established tab position shifts. Contest
+		 * operators navigate these tabs by muscle memory.
+		 */
+		Tab tbProfiles = new Tab("Profiles", new OperatorProfileSettingsPane(
+				new OperatorProfileManagementService(),
+				this::requestOperatorProfileSwitch));
+
 
 		/**
 		 * Automatic update of tab contents out of the database
@@ -12043,7 +12065,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 		tabPaneOptions.getTabs().addAll(tbStationSettings, tbLogSynchSet, tbTRXSynchSet, tbAirScoutSettings, tbNotify,
-				tbShorts, tbBeacon, tbMsgHandling, tbInternalDB, tbGui);
+				tbShorts, tbBeacon, tbMsgHandling, tbInternalDB, tbGui, tbProfiles);
 
 		optionsPanel.setLeft(tabPaneOptions);
 
