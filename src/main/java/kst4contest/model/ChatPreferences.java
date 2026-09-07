@@ -187,8 +187,14 @@ public class ChatPreferences {
 	int stn_pstRotatorPort = 12000;
 
 	boolean stn_loginAFKState = false; //always start as here
-	String stn_loginCallSign = "do5amf";
-	String stn_loginCallSignRaw = "do5amf"; //for example: do5amf instead of logincallsign do5amf-2
+	/*
+	 * The login credentials default to empty on purpose. A missing or empty value in
+	 * preferences.xml means "not configured yet", and falling back to a real callsign
+	 * would let an operator transmit under someone else's call. This matters for every
+	 * additional operator profile, whose preferences are created without credentials.
+	 */
+	String stn_loginCallSign = "";
+	String stn_loginCallSignRaw = ""; //for example: do5amf instead of logincallsign do5amf-2
 	String stn_loginPassword = "";
 	String stn_loginNameMainCat = "KST4Contest";
 	String stn_loginNameSecondCat = "KST4ContestSHF";
