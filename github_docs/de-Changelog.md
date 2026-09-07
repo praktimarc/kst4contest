@@ -8,6 +8,39 @@ Die veröffentlichten Stable-Versionen und ihre Programmpakete stehen unter [Git
 
 ---
 
+## v1.50 (in Entwicklung)
+
+**Operator-Profile**
+
+Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators und Layouts verwenden, ohne sich gegenseitig die Konfiguration zu überschreiben. Damit ist [Issue #57](https://github.com/praktimarc/kst4contest/issues/57) umgesetzt.
+
+### Neu
+
+- **Operator-Profile:** Jedes Profil hat seine eigene `preferences.xml` und damit eigene fachliche Einstellungen und einen eigenen Layoutstand. Verwaltet werden Profile im neuen Reiter **Profiles** des Einstellungsfensters: anlegen, duplizieren, umbenennen, löschen und aktivieren.
+
+- **Gemeinsame oder eigene gearbeitete Stationen:** Pro Profil wird entschieden, ob es eine eigene Worked-Datenbank bekommt oder die gemeinsame Stationsdatenbank benutzt. Eine Multi-OP-Station mit einem einzigen Stationslog teilt den Worked-Status, zwei OMs mit verschiedenen Rufzeichen an einem Rechner trennen ihn.
+
+- **Profilwahl beim Start:** Mit nur einem Profil fragt KST4Contest beim Start nichts und verhält sich unverändert. Ab zwei Profilen erscheint eine kleine Auswahl mit vorausgewähltem letzten Profil; Enter oder Doppelklick starten sofort. Der Aufrufparameter `--profile=<Name>` überspringt die Auswahl.
+
+- **Profilwechsel im laufenden Betrieb:** **File → Switch operator profile...** trennt die Verbindung und baut die Oberfläche mit den Einstellungen des gewählten Profils neu auf, ohne Programmneustart.
+
+### Geändert
+
+- **Rufzeichen-Vorgabe ist leer:** Fehlt in der `preferences.xml` ein Login-Rufzeichen, bleibt das Feld jetzt leer, statt auf ein im Programm hinterlegtes Rufzeichen zurückzufallen. Ein neu angelegtes Profil startet damit bewusst ohne Anmeldedaten.
+
+### Behoben
+
+- **Freigegebene Hintergrundressourcen:** Der ON4KST-Überwachungsthread, der Sked-Erinnerungs-Scheduler, der Reachability-Executor, der PSTRotator-Wiederholungs-Scheduler und der Kachel-Proxy der Karte werden beim Schließen des Chatcontrollers freigegeben. Bisher liefen sie bis zum Programmende weiter.
+
+### Hinweise zur Aktualisierung
+
+- Bestehende Installationen werden **nicht** verändert: `preferences.xml` und `praktiKST.db` bleiben genau dort liegen, wo sie sind, und werden zum Profil **Default**. Es wird keine Datei verschoben oder kopiert.
+- Eine Profil-Registry entsteht erst beim Anlegen des zweiten Profils. Wer nur ein Profil benutzt, merkt von der Änderung nichts.
+- Eine Rückkehr zu einer älteren KST4Contest-Version bleibt möglich; sie findet ihre Dateien unverändert vor.
+- Passwörter stehen weiterhin im Klartext in der `preferences.xml` des jeweiligen Profils. Profile trennen die Konfiguration, sie sind kein Zugriffsschutz.
+
+---
+
 ## v1.43.1 (2026-09-03)
 
 **Korrigierte Versionsmetadaten**

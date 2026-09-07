@@ -8,6 +8,39 @@ Published Stable versions and their application packages are available under [Gi
 
 ---
 
+## v1.50 (in development)
+
+**Operator profiles**
+
+Several operators sharing one computer can now use their own callsigns, locators and layouts without overwriting each other's configuration. This implements [Issue #57](https://github.com/praktimarc/kst4contest/issues/57).
+
+### New
+
+- **Operator profiles:** every profile has its own `preferences.xml`, and therefore its own settings and its own window layout. Profiles are managed on the new **Profiles** tab of the settings window: create, duplicate, rename, delete and activate.
+
+- **Shared or own worked stations:** each profile decides whether it gets its own worked database or uses the common station database. A multi operator station with a single station log shares the worked state; two operators with different callsigns on one computer keep it apart.
+
+- **Choosing a profile at startup:** with only one profile, KST4Contest asks nothing at startup and behaves exactly as before. From two profiles on, a small selection appears with the last used profile preselected; Enter or a double click start immediately. The `--profile=<name>` argument skips the selection.
+
+- **Switching profiles while running:** **File > Switch operator profile...** closes the connection and rebuilds the user interface with the settings of the selected profile, without restarting the program.
+
+### Changed
+
+- **The default login callsign is empty:** if `preferences.xml` has no login callsign, the field now stays empty instead of falling back to a callsign compiled into the program. A newly created profile therefore deliberately starts without credentials.
+
+### Fixed
+
+- **Background resources are released:** the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler and the map tile proxy are released when the chat controller is closed. They used to keep running until the program ended.
+
+### Upgrade notes
+
+- Existing installations are **not** modified: `preferences.xml` and `praktiKST.db` stay exactly where they are and become the **Default** profile. No file is moved or copied.
+- A profile registry only appears when the second profile is created. Anyone using a single profile will not notice the change.
+- Going back to an older KST4Contest release stays possible; it finds its files unchanged.
+- Passwords are still stored in clear text in each profile's `preferences.xml`. Profiles separate configuration; they are not an access control mechanism.
+
+---
+
 ## v1.43.1 (2026-09-03)
 
 **Corrected version metadata**
