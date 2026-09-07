@@ -2866,9 +2866,35 @@ private ObservableList<String>
 	 * @param setOwnChatMemberObject
 	 */
 	public ChatController(ChatMember setOwnChatMemberObject,StatusUpdateListener listener) {
+		this(setOwnChatMemberObject,
+				listener,
+				ChatPreferences.PREFERENCES_FILE,
+				DBController.DATABASE_FILE,
+				true);
+	}
+
+	/**
+	 * Creates a chat controller bound to the files of one operator profile.
+	 *
+	 * <p>Both file names are resolved below the application directory. This is the only
+	 * place where the active operator profile enters the controller; everything below
+	 * works on the resulting {@link ChatPreferences} and {@link DBController} instances
+	 * without knowing about profiles at all.</p>
+	 *
+	 * @param setOwnChatMemberObject          chat member object representing the local station
+	 * @param listener                        callback for thread status updates
+	 * @param preferencesRelativeFileName     preferences file name relative to the application directory
+	 * @param workedDatabaseRelativeFileName  worked-station database file name relative to the application directory
+	 * @param seedWorkedDatabaseFromResource  true to seed a missing database from the bundled template
+	 */
+	public ChatController(ChatMember setOwnChatMemberObject,
+			StatusUpdateListener listener,
+			String preferencesRelativeFileName,
+			String workedDatabaseRelativeFileName,
+			boolean seedWorkedDatabaseFromResource) {
 		super();
 
-        chatPreferences = new ChatPreferences();
+        chatPreferences = new ChatPreferences(preferencesRelativeFileName);
         chatPreferences.readPreferencesFromXmlFile();
 //        this.statusListener = listener;
 		lstNotify_QSOSniffer_sniffedCallSignList =
@@ -2930,7 +2956,7 @@ private ObservableList<String>
 			}
 		});
 
-		dbHandler = new DBController();
+		dbHandler = new DBController(workedDatabaseRelativeFileName, seedWorkedDatabaseFromResource);
 		reachabilityService = new ReachabilityService(this);
 		rebuildWorkedGrossFieldCacheFromDatabase();
 

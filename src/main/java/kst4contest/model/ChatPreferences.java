@@ -79,7 +79,26 @@ public class ChatPreferences {
 	 * TODO: delete this from the kst4contest.view/Main.java!
 	 */
 	public ChatPreferences() {
-		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, PREFERENCES_FILE);
+		this(PREFERENCES_FILE);
+	}
+
+	/**
+	 * Creates preferences bound to one operator profile.
+	 *
+	 * <p>The file name is resolved below the application directory, so both
+	 * "preferences.xml" for the root installation and "profiles/OP2/preferences.xml"
+	 * for an additional operator profile are valid. A missing file is seeded from the
+	 * bundled template, which gives a new profile the same clean defaults a first-ever
+	 * installation gets.</p>
+	 *
+	 * @param applicationRelativeFileName preferences file name relative to the application directory
+	 */
+	public ChatPreferences(final String applicationRelativeFileName) {
+		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, applicationRelativeFileName);
+		this.storeAndRestorePreferencesFileName = ApplicationFileUtils.getFilePath(
+				ApplicationConstants.APPLICATION_NAME,
+				applicationRelativeFileName
+		);
 
 //        lstNotify_QSOSniffer_sniffedCallSignList.add("DF0GEB");
 
