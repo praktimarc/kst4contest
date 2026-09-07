@@ -26,6 +26,8 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 ### Geändert
 
+- **Zwischenspeicher der Geländeprofile getrennt:** Berechnete Geländeprofile liegen jetzt in der eigenen, gemeinsam genutzten Datei `terrainprofilecache.db` und werden nach Besitzer getrennt gespeichert. Bisher wurde der gesamte Zwischenspeicher gelöscht, sobald sich Rufzeichen oder Locator änderten; bei einem Profilwechsel wäre damit jedes berechnete Profil verloren gegangen.
+
 - **Rufzeichen-Vorgabe ist leer:** Fehlt in der `preferences.xml` ein Login-Rufzeichen, bleibt das Feld jetzt leer, statt auf ein im Programm hinterlegtes Rufzeichen zurückzufallen. Ein neu angelegtes Profil startet damit bewusst ohne Anmeldedaten.
 
 ### Behoben
