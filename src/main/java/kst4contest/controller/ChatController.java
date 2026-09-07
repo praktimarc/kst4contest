@@ -1083,7 +1083,33 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 				rotatorClient.stop();
 				rotatorClient = null;
 			}
+
+			releaseBackgroundExecutors();
 		}
+	}
+
+	/**
+	 * Stops the background executors that live as long as this controller.
+	 *
+	 * <p>These are not bound to one ON4KST session, so disconnecting leaves them running
+	 * on purpose. When the controller itself is discarded they have to go, otherwise a
+	 * discarded controller stays reachable through its own threads.</p>
+	 */
+	private void releaseBackgroundExecutors() {
+
+		on4KstConnectionManager.shutdown();
+		skedReminderService.shutdown();
+
+		if (reachabilityService != null) {
+			reachabilityService.shutdown();
+		}
+
+		if (pendingRotatorRetry != null) {
+			pendingRotatorRetry.cancel(false);
+			pendingRotatorRetry = null;
+		}
+
+		rotatorCommandScheduler.shutdownNow();
 	}
 
 	private void cancelTimer(Timer timer) {

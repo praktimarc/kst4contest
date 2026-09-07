@@ -34,6 +34,24 @@ public final class SkedReminderService {
     }
 
     /**
+     * Cancels every armed reminder and stops the scheduler thread.
+     *
+     * <p>Called when the runtime that owns this service is torn down, so a discarded
+     * runtime does not keep a thread and pending reminders alive.</p>
+     */
+    public void shutdown() {
+
+        for (List<ScheduledFuture<?>> remindersOfOneCall : scheduledByCallRaw.values()) {
+            for (ScheduledFuture<?> armedReminder : remindersOfOneCall) {
+                armedReminder.cancel(false);
+            }
+        }
+
+        scheduledByCallRaw.clear();
+        scheduler.shutdownNow();
+    }
+
+    /**
      * Arms reminders for one sked. Existing reminders for this call are cancelled.
      *
      * @param callSignRaw target call

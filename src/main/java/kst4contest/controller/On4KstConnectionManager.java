@@ -140,6 +140,20 @@ final class On4KstConnectionManager {
     }
 
     /**
+     * Stops the supervisor thread of this manager for good.
+     *
+     * <p>{@link #stopByUser()} only ends the current ON4KST session; the periodic
+     * session monitor keeps running. That is correct while the application lives, but a
+     * manager belonging to a discarded runtime must release its thread, otherwise every
+     * operator profile switch would leave another supervisor behind holding the dead
+     * controller.</p>
+     */
+    void shutdown() {
+        scheduler.shutdownNow();
+        LOGGER.fine("ON4KST connection supervisor shut down");
+    }
+
+    /**
      * Stops the current session and invalidates every scheduled callback or reconnect
      * belonging to it.
      */
