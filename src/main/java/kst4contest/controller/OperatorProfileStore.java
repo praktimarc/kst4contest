@@ -348,11 +348,17 @@ public class OperatorProfileStore {
         Path targetPath = Path.of(registryFilePath).toAbsolutePath();
         Path parentDirectory = targetPath.getParent();
 
-        try {
-            if (parentDirectory != null) {
-                Files.createDirectories(parentDirectory);
-            }
+        if (parentDirectory == null) {
+            LOGGER.log(Level.SEVERE,
+                    "The operator profile registry path has no directory: {0}", registryFilePath);
+            return false;
+        }
 
+        try {
+            Files.createDirectories(parentDirectory);
+
+            // The temporary file has to live next to the target so the final move can be
+            // atomic; both must be on the same file system.
             Path temporaryPath = Files.createTempFile(
                     parentDirectory, PROFILES_REGISTRY_FILE, ".tmp");
 
