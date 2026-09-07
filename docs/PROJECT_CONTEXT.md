@@ -135,6 +135,8 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 ### Terrain data providers
 
 - The active terrain profile provider is Open-Meteo using Copernicus GLO-90 data.
+- The terrain profile cache lives in its own global database `~/.praktiKST/terrainprofilecache.db`. It is deliberately not part of an operator profile: terrain profiles are pure geometry derived from two locators and a sample count, and at a multi operator station both operators share one location, so a per-profile copy would only double the traffic against the terrain service.
+- Cached entries are separated by owner identity through the primary key (`owner_callsign_raw` + `owner_locator6`). Earlier versions stored a single owner identity in a meta table and dropped the whole cache whenever the configured callsign or locator changed; with several operator profiles that would discard every computed profile on each switch. The old `TerrainProfileCache*` tables inside `praktiKST.db` are left in place and are still readable by older releases; the new file starts empty and refills itself.
 - `OfflineDemImportService` only prepares a local directory and copies manually selected Copernicus GLO-30 GeoTIFF files into it. Importing files does not activate an offline provider or change the active calculation chain.
 
 ### ON4KST session and authentication
