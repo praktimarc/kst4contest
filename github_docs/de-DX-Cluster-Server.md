@@ -240,6 +240,24 @@ Prüfe zuerst, welche Frequenzen für die betreffende Station innerhalb der letz
 
 Ist kein aktueller Stationskontext vorhanden, prüfe die Auswahl unter **Fallback band for relative QRG detection**. Das Fallback wird nur benötigt, wenn sich das Band weder aus einer vollständigen Frequenz noch aus dem aktuellen Kontext des Absenders ergibt.
 
+### Das Logprogramm läuft in einer eigenen Sandbox
+
+Ein Logprogramm, das als Flatpak oder über eine Wine-Umgebung wie Bottles gestartet wird, benutzt die Netzwerkrechte dieser Sandbox. Teilt die Sandbox das Netzwerk des Rechners nicht, ist `127.0.0.1` darin nicht das `127.0.0.1`, auf dem KST4Contest lauscht. Die Verbindung wird dann abgewiesen, obwohl KST4Contest den Port korrekt meldet.
+
+Bei einem Flatpak-Logprogramm lassen sich die Rechte so prüfen:
+
+```bash
+flatpak info --show-permissions <Anwendungs-ID>
+```
+
+Im Abschnitt `[Context]` muss `shared=network` stehen. Nachträglich vergeben lässt es sich mit:
+
+```bash
+flatpak override --user --share=network <Anwendungs-ID>
+```
+
+Das Gleiche gilt, wenn KST4Contest selbst als Flatpak läuft. Dessen veröffentlichtes Manifest enthält `--share=network` bereits, ein lauschender Port ist daher vom Rechner selbst und von anderen Anwendungen darauf erreichbar.
+
 ### Der Spot wird vom Logger ausgeblendet
 
 Verwende ein Spotter-Rufzeichen, das nicht mit dem eigenen Contest-Rufzeichen identisch ist. Abhängig vom Logger können eigene Spots gefiltert oder besonders behandelt werden.
