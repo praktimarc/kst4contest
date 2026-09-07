@@ -1,9 +1,11 @@
 package kst4contest.view.map;
 
 import kst4contest.ApplicationConstants;
-import kst4contest.controller.DBController;
 import kst4contest.utils.ApplicationFileUtils;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -15,30 +17,44 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Persistent terrain profile cache stored in the application's existing SQLite database.
+ * Persistent terrain profile cache, stored globally in its own SQLite database.
  *
- * The cache is intentionally owner-bound:
- * if the configured own callsign or own locator changes, all cached terrain
- * profiles are cleared automatically.
+ * <p>Terrain profiles are pure geometry derived from two locators and a sample count.
+ * They do not belong to one operator, so the cache is deliberately not part of an
+ * operator profile: at a multi operator station both operators share one location, and
+ * duplicating the cache would double the traffic against an external terrain service.</p>
+ *
+ * <p>Entries are separated by owner identity through the primary key instead. Earlier
+ * versions kept a single owner identity and dropped the whole cache whenever the
+ * configured callsign or locator changed; with several operator profiles that would
+ * discard every computed profile on each switch.</p>
  */
 public final class TerrainProfileCacheRepository {
 
-    private static final String META_KEY_OWNER_CALLSIGN_RAW = "terrain_cache_owner_callsign_raw";
-    private static final String META_KEY_OWNER_LOCATOR6 = "terrain_cache_owner_locator6";
+    /**
+     * File name of the global terrain profile cache below the application directory.
+     */
+    public static final String TERRAIN_CACHE_DATABASE_FILE = "terrainprofilecache.db";
 
     private final String databasePath;
 
     public TerrainProfileCacheRepository() {
-        ApplicationFileUtils.copyResourceIfRequired(
-                ApplicationConstants.APPLICATION_NAME,
-                DBController.DATABASE_RESOURCE,
-                DBController.DATABASE_FILE
-        );
-
         this.databasePath = ApplicationFileUtils.getFilePath(
                 ApplicationConstants.APPLICATION_NAME,
-                DBController.DATABASE_FILE
+                TERRAIN_CACHE_DATABASE_FILE
         );
+
+        // SQLite only creates the database file itself, not the directory holding it.
+        Path applicationDirectory = Path.of(databasePath).getParent();
+
+        if (applicationDirectory != null) {
+            try {
+                Files.createDirectories(applicationDirectory);
+            } catch (IOException exception) {
+                System.err.println("[StationMap] Terrain cache directory could not be created: "
+                        + exception.getMessage());
+            }
+        }
     }
 
     public synchronized Optional<TerrainProfileData> load(String ownerCallsignRaw,
@@ -183,60 +199,37 @@ public final class TerrainProfileCacheRepository {
                     """);
 
             statement.executeUpdate("""
-                    CREATE TABLE IF NOT EXISTS TerrainProfileCacheMeta (
-                        meta_key TEXT NOT NULL PRIMARY KEY,
-                        meta_value TEXT NOT NULL
+                    CREATE TABLE IF NOT EXISTS TerrainProfileCacheOwner (
+                        owner_callsign_raw TEXT NOT NULL,
+                        owner_locator6 TEXT NOT NULL,
+                        last_used_epoch_ms INTEGER NOT NULL,
+                        PRIMARY KEY (owner_callsign_raw, owner_locator6)
                     )
                     """);
         }
     }
 
+    /**
+     * Records that the given owner identity is in use.
+     *
+     * <p>Entries of other owners stay untouched. The cached profiles of an identity are
+     * separated by the primary key already, so a different callsign or locator simply
+     * misses the cache instead of invalidating everybody else's entries.</p>
+     */
     private void ensureOwnerIdentity(Connection connection,
                                      String currentOwnerCallsignRaw,
                                      String currentOwnerLocator6) throws Exception {
 
-        String normalizedOwnerCallsignRaw = normalize(currentOwnerCallsignRaw);
-        String normalizedOwnerLocator6 = normalize(currentOwnerLocator6);
-
-        String storedOwnerCallsignRaw = readMetaValue(connection, META_KEY_OWNER_CALLSIGN_RAW);
-        String storedOwnerLocator6 = readMetaValue(connection, META_KEY_OWNER_LOCATOR6);
-
-        boolean callsignChanged = storedOwnerCallsignRaw != null && !storedOwnerCallsignRaw.equals(normalizedOwnerCallsignRaw);
-        boolean locatorChanged = storedOwnerLocator6 != null && !storedOwnerLocator6.equals(normalizedOwnerLocator6);
-
-        if (callsignChanged || locatorChanged) {
-            clearTerrainCache(connection);
-        }
-
-        writeMetaValue(connection, META_KEY_OWNER_CALLSIGN_RAW, normalizedOwnerCallsignRaw);
-        writeMetaValue(connection, META_KEY_OWNER_LOCATOR6, normalizedOwnerLocator6);
-    }
-
-    private void clearTerrainCache(Connection connection) throws Exception {
-        try (Statement statement = connection.createStatement()) {
-            statement.executeUpdate("DELETE FROM TerrainProfileCache");
-        }
-    }
-
-    private String readMetaValue(Connection connection, String key) throws Exception {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT meta_value FROM TerrainProfileCacheMeta WHERE meta_key = ?")) {
-            statement.setString(1, key);
-
-            try (ResultSet resultSet = statement.executeQuery()) {
-                return resultSet.next() ? resultSet.getString(1) : null;
-            }
-        }
-    }
-
-    private void writeMetaValue(Connection connection, String key, String value) throws Exception {
         try (PreparedStatement statement = connection.prepareStatement("""
-                INSERT INTO TerrainProfileCacheMeta (meta_key, meta_value)
-                VALUES (?, ?)
-                ON CONFLICT(meta_key) DO UPDATE SET meta_value = excluded.meta_value
+                INSERT INTO TerrainProfileCacheOwner (
+                    owner_callsign_raw, owner_locator6, last_used_epoch_ms
+                ) VALUES (?, ?, ?)
+                ON CONFLICT(owner_callsign_raw, owner_locator6) DO UPDATE SET
+                    last_used_epoch_ms = excluded.last_used_epoch_ms
                 """)) {
-            statement.setString(1, key);
-            statement.setString(2, value == null ? "" : value);
+            statement.setString(1, normalize(currentOwnerCallsignRaw));
+            statement.setString(2, normalize(currentOwnerLocator6));
+            statement.setLong(3, System.currentTimeMillis());
             statement.executeUpdate();
         }
     }

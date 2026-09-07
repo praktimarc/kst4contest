@@ -891,6 +891,8 @@ Mehrere Operateure an einem Rechner brauchen unterschiedliche Rufzeichen, Locato
 
 Unter Windows entsprechend unterhalb von `%USERPROFILE%\.praktiKST\`.
 
+Alle übrigen Daten bleiben gemeinsam: Klangdateien, Farbschemata, DEM- und Terrainpakete, der Zwischenspeicher der Geländeprofile (`terrainprofilecache.db`), das Fehlerprotokoll und die Versionsinformationen.
+
 Das Profil **Default** benutzt weiterhin genau die Dateien, die eine bestehende Installation schon hat. **Bei der Aktualisierung auf v1.50 wird keine Datei verschoben, kopiert oder umgeschrieben.** Wer eine ältere KST4Contest-Version wieder installiert, findet seine Konfiguration und seine gearbeiteten Stationen unverändert vor.
 
 ### Gemeinsame oder eigene gearbeitete Stationen

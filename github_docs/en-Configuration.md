@@ -948,6 +948,8 @@ Several operators sharing one computer need different callsigns, locators and la
 
 On Windows the same files live below `%USERPROFILE%\.praktiKST\`.
 
+Everything else stays shared: audio files, colour schemes, DEM and terrain packages, the terrain profile cache (`terrainprofilecache.db`), the error log and the version information.
+
 The **Default** profile keeps using exactly the files an existing installation already has. **Upgrading to v1.50 moves, copies and rewrites nothing.** Anyone reinstalling an older KST4Contest release finds their configuration and their worked stations unchanged.
 
 ### Shared or own worked stations

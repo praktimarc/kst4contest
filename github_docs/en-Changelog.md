@@ -26,6 +26,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 ### Changed
 
+- **The terrain profile cache is separate:** computed terrain profiles now live in their own shared file `terrainprofilecache.db` and are stored per owner. Previously the whole cache was dropped whenever the callsign or locator changed, which would have discarded every computed profile on each profile switch.
+
 - **The default login callsign is empty:** if `preferences.xml` has no login callsign, the field now stays empty instead of falling back to a callsign compiled into the program. A newly created profile therefore deliberately starts without credentials.
 
 ### Fixed
