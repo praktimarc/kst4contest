@@ -1,0 +1,9 @@
+# Include inside the kst4contest.hamradioonline.de HTTPS server block. Grant
+# the Nginx worker read access to the file and directory, but no write access.
+location = /visitor-count.json {
+    alias /var/lib/hamradioonline-analytics/public/kst4contest/visitor-count.json;
+    default_type application/json;
+    access_log off;
+    add_header Cache-Control "public, max-age=3600" always;
+    add_header X-Content-Type-Options "nosniff" always;
+}

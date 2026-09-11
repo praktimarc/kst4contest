@@ -1,0 +1,36 @@
+# Only page GET requests which are candidates for the reach statistics enter
+# the dedicated analytics log. GoAccess performs the second bot-classification
+# layer, including unknown browsers and operating systems.
+map $request_method $hamradioonline_analytics_method {
+    default 0;
+    GET 1;
+}
+
+map $uri $hamradioonline_analytics_path {
+    default 1;
+
+    /visitor-count.json 0;
+    /kst4ContestVersionInfo.xml 0;
+    /sitemap.xml 0;
+    /robots.txt 0;
+    /favicon.ico 0;
+    /assets/favicon.svg 0;
+    /health 0;
+    /healthz 0;
+    /ping 0;
+    /status 0;
+
+    ~*^/(?:assets|manual/assets)/ 0;
+    ~*\.(?:css|js|mjs|map|json|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|otf|eot|xml|txt|pdf|zip|gz|wasm|mp4|webm)$ 0;
+}
+
+map $http_user_agent $hamradioonline_analytics_known_bot {
+    default 0;
+    ~*(?:bot|crawler|spider|slurp|headless|monitor|healthcheck|uptime|wget|curl) 1;
+}
+
+map "$hamradioonline_analytics_method:$hamradioonline_analytics_path:$hamradioonline_analytics_known_bot"
+    $hamradioonline_analytics_loggable {
+    default 0;
+    "1:1:0" 1;
+}

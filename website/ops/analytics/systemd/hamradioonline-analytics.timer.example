@@ -1,0 +1,11 @@
+[Unit]
+Description=Run hamradioonline analytics once per hour
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=4m
+AccuracySec=1m
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,14 @@
+/var/log/nginx/*-analytics.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    compress
+    # Keep .1 uncompressed because the regular generator reads it directly.
+    delaycompress
+    create 0640 www-data hamradio-analytics
+    sharedscripts
+    postrotate
+        invoke-rc.d nginx rotate >/dev/null 2>&1
+    endscript
+}

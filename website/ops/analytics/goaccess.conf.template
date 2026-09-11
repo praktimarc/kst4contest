@@ -1,0 +1,43 @@
+# Rendered by generate-reports.js. Do not use this file without replacing
+# all {{...}} placeholders.
+
+datetime-format %Y-%m-%dT%H:%M:%S%z
+log-format %v\t%h\t%x\t%m\t%U\t%H\t%s\t%b\t"%u"
+
+anonymize-ip true
+anonymize-level 2
+ignore-crawlers true
+unknowns-as-crawlers true
+keep-last 395
+
+persist true
+{{RESTORE_DIRECTIVE}}
+db-path {{DB_PATH}}
+
+geoip-database {{GEOIP_COUNTRY_DATABASE}}
+
+json-pretty-print true
+no-progress true
+no-parsing-spinner true
+no-color true
+agent-list false
+http-method true
+http-protocol true
+max-items 500
+
+# The Nginx analytics log contains $uri rather than $request_uri, so query
+# strings never reach GoAccess. These panels are deliberately unavailable.
+ignore-panel HOSTS
+ignore-panel OS
+ignore-panel BROWSERS
+ignore-panel REFERRERS
+ignore-panel REFERRING_SITES
+ignore-panel KEYPHRASES
+ignore-panel REMOTE_USER
+ignore-panel REQUESTS_STATIC
+ignore-panel VISIT_TIMES
+ignore-panel NOT_FOUND
+ignore-panel ASN
+ignore-panel MIME_TYPE
+ignore-panel TLS_TYPE
+ignore-panel CACHE_STATUS

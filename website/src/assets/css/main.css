@@ -659,6 +659,12 @@ a:hover {
     padding: clamp(28px, 5vw, 60px);
 }
 
+.visitor-count {
+    margin: 24px 0 0;
+    color: var(--soft);
+    font-size: 0.9rem;
+}
+
 .manual-content {
     max-width: 980px;
 }

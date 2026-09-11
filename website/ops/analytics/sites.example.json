@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "stateDirectory": "/var/lib/hamradioonline-analytics",
+  "counterStatePath": "/var/lib/hamradioonline-analytics/public-counter-state.json",
+  "lockFile": "/run/hamradioonline-analytics/generator.lock",
+  "geoIpCountryDatabase": "/var/lib/GeoIP/GeoLite2-Country.mmdb",
+  "combined": {
+    "reportOutputDirectory": "/var/lib/hamradioonline-analytics/reports/combined"
+  },
+  "sites": [
+    {
+      "id": "kst4contest",
+      "hostname": "kst4contest.hamradioonline.de",
+      "analyticsLog": "/var/log/nginx/kst4contest-analytics.log",
+      "activatedOn": "2026-09-11",
+      "publicCounter": true,
+      "reportOutputDirectory": "/var/lib/hamradioonline-analytics/reports/kst4contest",
+      "publicJsonPath": "/var/lib/hamradioonline-analytics/public/kst4contest/visitor-count.json"
+    }
+  ]
+}

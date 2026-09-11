@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-09-03
+Last reviewed: 2026-09-11
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -175,6 +175,21 @@ Current website/deployment scripts and update-feed behaviour must be inspected b
 - `APPLICATION_CURRENT_VERSION` is the user-visible semantic version and must use the dotted `major.minor.patch` form. `APPLICATION_CURRENTVERSIONNUMBER` is retained only for older feeds and encodes patch releases by appending the patch digit, for example `1.43.1` as `1.431`.
 - The tagged-release workflow creates the GitHub Release before building the website update feed. This ordering is required because `versionInfo.js` reads the published release body through the GitHub Releases API.
 - After publication, the workflow tests and builds the website, validates the expected Stable version, attaches `kst4ContestVersionInfo.xml` to the release and uploads the complete website build as a workflow artifact.
+
+### Server-side website statistics
+
+- The home page can display a public visit total from the same-origin `GET /visitor-count.json` endpoint. The versioned public contract contains only `schemaVersion`, `visits`, `since` and `updatedAt`.
+- `visits` is the sum of daily approximate unique visits since `since`, based on GoAccess visitor semantics. It is not a count of unique people and remains separate from page views.
+- The home page validates the complete payload, formats the date and number for `en-GB`, and inserts the result through `textContent`. Missing, timed-out, failed or invalid responses leave the initially hidden element invisible and do not affect the rest of the page.
+- The display makes no third-party request, sends no credentials and uses no cookies or local storage. The counter request is excluded from the statistic itself.
+- The counter endpoint disables its own access log and serves the public JSON with a one-hour public cache policy and `X-Content-Type-Options: nosniff`.
+- GoAccess is the server-side source. A registry keeps stable site IDs, hostnames, current analytics-log paths, activation dates, public-counter switches and output targets separate for each project subdomain. The Country database is `/var/lib/GeoIP/GeoLite2-Country.mmdb`. A combined report uses only the registered project sites; `stats.hamradioonline.de` is excluded.
+- The regular generator passes each current analytics log and its optional uncompressed `.1` rotation directly to GoAccess and relies on the persistent GoAccess database for incremental processing. Logrotate therefore uses `delaycompress`. Older `.gz` rotations are not imported during regular runs, and missing Zlib support is an accepted, explicitly reported capability state for the GoAccess 1.8.1 production baseline.
+- Node.js 18.19.1 is the production runtime baseline. `--check` requires readable input files, prepared writable output directories and GoAccess built with GeoIP2/MMDB support. OpenSSL and absent Zlib support remain informational. Dry-runs use temporary state and never acquire the production lock.
+- The generator runs as `hamradio-analytics`. The state root is mode `0711`; only explicitly prepared report and public-output directories are shared read-only with Nginx through the `www-data` group. GoAccess databases and public counter state remain private. No ACL support is assumed.
+- The protected statistics vhost is enabled in two stages: an IPv4-only HTTP bootstrap obtains the certificate through `/snap/bin/certbot`, then the final configuration retains an IPv4 HTTP block for the webroot ACME challenge and permanently redirects all other HTTP requests to HTTPS. The HTTPS block uses the existing Certbot TLS options and redirects authenticated requests from `/` to `/combined/`. IPv6 remains disabled until the DNS AAAA record has been confirmed.
+- Dedicated analytics raw logs are retained for 14 days. IP addresses are anonymised before the detailed GoAccess aggregates are persisted for a rolling 395 days. Separate non-personal daily counter values remain available from activation onward so the public total does not shrink with the detailed retention window.
+- Repository templates are installed with explicit Unix owners and modes because ZIP metadata created on Windows is not trusted. Production activation, credentials, password hashes, certificate keys, GeoIP acquisition credentials and backups remain outside the repository.
 
 ## Important Decisions and Workarounds
 

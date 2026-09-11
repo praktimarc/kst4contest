@@ -1,0 +1,17 @@
+# Temporary HTTP-only virtual host for initial certificate provisioning.
+# Replace it with stats-vhost.conf.example after Certbot has succeeded.
+server {
+    listen 80;
+    server_name stats.hamradioonline.de;
+
+    access_log off;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/letsencrypt;
+        default_type text/plain;
+    }
+
+    location / {
+        return 404;
+    }
+}

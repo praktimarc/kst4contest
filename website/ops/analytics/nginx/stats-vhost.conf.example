@@ -1,0 +1,57 @@
+# Keep this HTTP server active so Certbot can renew the webroot certificate.
+server {
+    listen 80;
+    server_name stats.hamradioonline.de;
+
+    access_log off;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/lib/letsencrypt;
+        default_type text/plain;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# This server exposes static reports only. Provision the certificate and the
+# htpasswd file outside the repository. Do not add this host to sites.json.
+server {
+    listen 443 ssl http2;
+    server_name stats.hamradioonline.de;
+
+    ssl_certificate /etc/letsencrypt/live/stats.hamradioonline.de/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/stats.hamradioonline.de/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /var/lib/hamradioonline-analytics/reports;
+    index report.html;
+
+    auth_basic "Private project statistics";
+    auth_basic_user_file /etc/nginx/htpasswd/hamradioonline-analytics;
+
+    access_log off;
+    add_header Cache-Control "private, no-store" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+
+    location = / {
+        try_files /__no_report_at_root__ @combined_reports;
+    }
+
+    location @combined_reports {
+        return 302 /combined/;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}
+
+# IPv6 is deliberately omitted until the DNS AAAA record has been confirmed.
