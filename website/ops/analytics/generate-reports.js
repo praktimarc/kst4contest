@@ -450,9 +450,9 @@ function validateReport(report, combined) {
     if (!report || typeof report !== "object" || Array.isArray(report)) {
         throw new Error("GoAccess JSON report must be an object");
     }
-    const requiredPanels = ["visitors", "requests", "status_codes", "geo_location"];
+    const requiredPanels = ["visitors", "requests", "status_codes", "geolocation"];
     if (combined) {
-        requiredPanels.push("virtual_hosts");
+        requiredPanels.push("vhosts");
     }
     if (!report.general || typeof report.general !== "object") {
         throw new Error("GoAccess JSON report has no general summary");
@@ -682,10 +682,15 @@ function prepareReport(job, context) {
     const args = [
         ...job.logs,
         "--no-global-config",
-        "--config-file", runConfig,
+        "--config-file", runConfig
+    ];
+    if (job.combined) {
+        args.push("--enable-panel=VIRTUAL_HOSTS");
+    }
+    args.push(
         "--output", outputJson,
         "--output", outputHtml
-    ];
+    );
     context.runGoAccess({
         binary: context.goaccessBinary,
         args,

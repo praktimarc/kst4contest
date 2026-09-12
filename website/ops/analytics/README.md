@@ -262,6 +262,12 @@ day, requested pages, countries, HTTP status codes and virtual hosts. Host,
 remote-user, referrer, keyphrase, operating-system, browser and other detailed
 panels are disabled.
 
+GoAccess 1.8.1 writes the Country panel under the JSON key `geolocation`.
+Combined jobs explicitly pass `--enable-panel=VIRTUAL_HOSTS` and require the
+resulting `vhosts` key. Site jobs do not enable that panel. The generator treats
+either missing key as an invalid report rather than publishing incomplete
+statistics.
+
 The Country database is provided through the registry at
 `/var/lib/GeoIP/GeoLite2-Country.mmdb`. A file whose name contains `City` is
 rejected. Do not replace it with a City database merely because one happens to

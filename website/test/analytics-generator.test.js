@@ -7,7 +7,8 @@ const test = require("node:test");
 const {
     formatGoAccessCheck,
     generateReports,
-    parseGoAccessVersion
+    parseGoAccessVersion,
+    validateReport
 } = require("../ops/analytics/generate-reports");
 
 const GOACCESS_WITHOUT_ZLIB = {
@@ -28,10 +29,10 @@ function goAccessReport(dailyVisits, combined = false) {
         },
         requests: { data: [] },
         status_codes: { data: [] },
-        geo_location: { data: [] }
+        geolocation: { data: [] }
     };
     if (combined) {
-        report.virtual_hosts = { data: [] };
+        report.vhosts = { data: [] };
     }
     return report;
 }
@@ -230,6 +231,9 @@ test("processes subdomains separately and together without publishing disabled c
             calls[2].args.slice(0, 3),
             [...alphaLogs, ...bravoLogs]
         );
+        assert.equal(calls[0].args.includes("--enable-panel=VIRTUAL_HOSTS"), false);
+        assert.equal(calls[1].args.includes("--enable-panel=VIRTUAL_HOSTS"), false);
+        assert.equal(calls[2].args.includes("--enable-panel=VIRTUAL_HOSTS"), true);
         assert.equal(calls.some(call => call.args.some(argument => argument.endsWith(".gz"))), false);
         assert.equal(fs.existsSync(path.join(
             testFixture.registry.stateDirectory,
@@ -243,6 +247,30 @@ test("processes subdomains separately and together without publishing disabled c
     } finally {
         testFixture.cleanup();
     }
+});
+
+test("validates GoAccess 1.8.1 panel names strictly", () => {
+    const siteReport = goAccessReport({ "2026-09-11": 3 });
+    const combinedReport = goAccessReport({ "2026-09-11": 3 }, true);
+
+    assert.doesNotThrow(() => validateReport(siteReport, false));
+    assert.doesNotThrow(() => validateReport(combinedReport, true));
+
+    const missingGeolocation = goAccessReport({ "2026-09-11": 3 });
+    delete missingGeolocation.geolocation;
+    missingGeolocation.geo_location = { data: [] };
+    assert.throws(
+        () => validateReport(missingGeolocation, false),
+        /GoAccess JSON report has no geolocation panel/
+    );
+
+    const missingVhosts = goAccessReport({ "2026-09-11": 3 }, true);
+    delete missingVhosts.vhosts;
+    missingVhosts.virtual_hosts = { data: [] };
+    assert.throws(
+        () => validateReport(missingVhosts, true),
+        /GoAccess JSON report has no vhosts panel/
+    );
 });
 
 test("dry-run validates generated data without changing production paths", () => {
