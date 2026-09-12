@@ -48,4 +48,13 @@ Nginx serves this directory.
 
 ## Build Strategy
 
-GitHub Actions will later build the 11ty website and deploy the generated output to the server.
+The production server keeps a checkout at `/srv/git/kst4contest`. A root cron
+job runs `/srv/scripts/deploy-kst4contest-website.sh` every five minutes. The
+script resets the checkout to `origin/main`, installs the locked npm
+dependencies, builds and validates the Eleventy site, and synchronises the
+result to `/srv/www/kst4contest/current` with the ownership required by Nginx.
+
+This deploy path updates only the static website. Server-side analytics,
+Nginx, systemd, Logrotate, GeoIP, Basic Auth and Certbot configuration are
+installed and maintained separately as described in
+[`ops/analytics/README.md`](ops/analytics/README.md).
