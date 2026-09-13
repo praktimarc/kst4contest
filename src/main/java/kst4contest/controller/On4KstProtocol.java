@@ -54,13 +54,32 @@ final class On4KstProtocol {
                 + "|0|";
     }
 
-    /** Builds the active liveness probe for the session's main chat. */
-    static String connectionProbe(int category) {
-        return "RDXQ|" + category(category) + "|";
+    /** Builds the session-wide liveness probe initiated by this client. */
+    static String clientLivenessProbe() {
+        return "CK|";
     }
 
-    /** Returns whether a server frame is the expected liveness-probe response. */
-    static boolean isConnectionProbeResponse(String frame) {
+    /** Returns whether a server frame acknowledges a client-initiated probe. */
+    static boolean isClientLivenessProbeResponse(String frame) {
+        if (frame == null) {
+            return false;
+        }
+        String normalized = frame.trim().toUpperCase(Locale.ROOT);
+        return "OK".equals(normalized) || "OK|".equals(normalized);
+    }
+
+    /** Returns whether ON4KST initiated its own liveness check. */
+    static boolean isServerLivenessProbe(String frame) {
+        return "CK".equals(opcode(frame));
+    }
+
+    /** Builds the established empty response to a server-initiated {@code CK}. */
+    static String serverLivenessProbeResponse() {
+        return "";
+    }
+
+    /** Preserves the existing internal handling of DXQ server data. */
+    static boolean isInternalDxqResponse(String frame) {
         return "DXQ".equals(opcode(frame));
     }
 

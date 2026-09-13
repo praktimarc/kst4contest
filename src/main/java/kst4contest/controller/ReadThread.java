@@ -86,9 +86,18 @@ public class ReadThread extends Thread {
                     throw new EOFException("ON4KST closed the TCP connection");
                 }
 
+                if (!sessionIsActive.test(sessionId)) {
+                    break;
+                }
+
                 inboundActivity.accept(response);
                 if (!sessionIsActive.test(sessionId)) {
                     break;
+                }
+
+                if (On4KstProtocol.isClientLivenessProbeResponse(response)) {
+                    // OK and OK| acknowledge the client-side CK| probe.
+                    continue;
                 }
 
                 ChatMessage message = new ChatMessage();

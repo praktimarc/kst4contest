@@ -877,10 +877,9 @@ public class MessageBusManagementThread extends Thread {
 				|| messageToProcess.getMessageText().isEmpty()) {
 			// No processable data.
 		} else {
-			if (On4KstProtocol.isConnectionProbeResponse(
+			if (On4KstProtocol.isInternalDxqResponse(
 					messageToProcess.getMessageText())) {
-				// DXQ is the internal response to the active connection probe.
-				// Liveness was already recorded by the session manager.
+				// Preserve the established internal handling of DXQ server data.
 				return;
 			}
 
@@ -2183,7 +2182,7 @@ public class MessageBusManagementThread extends Thread {
 //								e.printStackTrace();
 //							}
 
-					if (!On4KstProtocol.isConnectionProbeResponse(
+					if (!On4KstProtocol.isInternalDxqResponse(
 							messageTextRaw.getMessageText())) {
 						System.out.println(messageTextRaw.getMessageText() + " <- RXed"); // Stdout at
 						// Console#######################################################TODO:Wichtig

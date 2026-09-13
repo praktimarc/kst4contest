@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-09-12
+Last reviewed: 2026-09-13
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -126,11 +126,11 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 
 ### ON4KST session liveness
 
-- After 90 seconds without inbound data, the application keeps the established empty CRLF heartbeat.
-- At about 180 seconds of inbound idle time, the TCP session sends one `RDXQ|<main chat id>|` probe. The probe state belongs to the session, so a two-category session still sends only one probe per idle phase.
-- Any subsequent inbound server frame confirms the probe. `DXQ` is accepted as the expected internal response and is not published as chat content.
+- Only after the session is fully authenticated and synchronized, more than 90 seconds without inbound server data trigger one client-side `CK|\r\n` liveness probe. The trailing pipe matches the framing used by the server for its own `CK|\r\n` probe. The probe state belongs to the TCP session, so a two-category session still sends only one probe per idle phase.
+- The live ON4KST test returned `OK|\r\n` for `CK|\r\n`. KST4Contest treats both that confirmed frame and the originally specified `OK\r\n` form as internal responses: it records inbound activity, confirms the outstanding probe and does not publish the response as chat content. Any other inbound server frame also confirms reachability and starts a new idle phase.
+- A `CK` initiated by the server remains a separate protocol case and receives the established empty CRLF response. It must not be confused with the client-side probe.
 - If no inbound frame arrives by about 210 seconds, the existing reconnect flow remains responsible for replacing the session.
-- Probe diagnostics contain the session id, main category, opcode and timing only. They must not include credentials, complete server frames or normal chat messages.
+- Liveness diagnostics contain the session id, opcode and timing only. They must not include credentials, complete server frames or normal chat messages.
 
 ## User Workflow / UI Invariants
 
