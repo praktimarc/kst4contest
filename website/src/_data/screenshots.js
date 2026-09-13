@@ -1,23 +1,32 @@
 module.exports = [
     {
-        id: "main-window",
-        title: "Main Window",
-        image: "/assets/screenshots/main-window.png",
-        alt: "KST4Contest ON4KST contest chat client main window",
-        caption: "Contest-oriented ON4KST chat workflow with candidate awareness."
+        id: "main-window-light",
+        title: "Main window · Light theme",
+        image: "/assets/completeViewLight.png",
+        alt: "KST4Contest main window in the light theme with ON4KST chat, station filters, priority candidates and sked controls",
+        caption: "The complete contest view brings chat messages, active bands, filters and priority candidates together."
     },
     {
-        id: "priority-candidates",
-        title: "Priority Candidates",
-        image: "/assets/screenshots/priority-candidates.png",
-        alt: "Priority candidate list in KST4Contest",
-        caption: "Score-based candidate ranking for faster operator decisions."
+        id: "main-window-dark",
+        title: "Main window · Dark theme",
+        image: "/assets/completeViewDark.png",
+        alt: "KST4Contest main window in the dark theme with ON4KST chat, station filters, priority candidates and sked controls",
+        caption: "The same operating view in the dark theme, including worked status, candidate priorities and message preparation."
     },
     {
         id: "timeline",
-        title: "Timeline View",
-        image: "/assets/screenshots/timeline.png",
-        alt: "KST4Contest AP timeline view",
-        caption: "Timeline support for AP windows and candidate timing."
+        title: "AP and sked timeline",
+        image: "/assets/timeline.png",
+        alt: "KST4Contest timeline showing scheduled contacts and Aircraft Scatter crossing windows",
+        caption: "Skeds and Aircraft Scatter opportunities share one time axis, making upcoming operating windows easier to coordinate.",
+        wide: true
+    },
+    {
+        id: "airscout",
+        title: "KST4Contest with AirScout",
+        image: "/assets/complete_incl_AS.png",
+        alt: "KST4Contest main window alongside AirScout path and aircraft information",
+        caption: "AirScout adds path and aircraft information while KST4Contest keeps the related chat and station context visible.",
+        wide: true
     }
 ];

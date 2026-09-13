@@ -641,18 +641,31 @@ a:hover {
     margin-top: 30px;
 }
 
-.screenshot-placeholder {
-    display: grid;
-    place-items: center;
-    min-height: 180px;
+.screenshot-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.screenshot-card--wide {
+    grid-column: 1 / -1;
+}
+
+.screenshot-link {
+    display: block;
     margin-bottom: 16px;
     border-radius: 18px;
-    background:
-            linear-gradient(135deg, rgba(56, 189, 248, 0.20), rgba(168, 85, 247, 0.20)),
-            rgba(2, 6, 23, 0.7);
+    overflow: hidden;
     border: 1px solid var(--border);
-    color: white;
-    font-weight: 800;
+    background: rgba(2, 6, 23, 0.7);
+}
+
+.screenshot-image {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.screenshot-card h3 {
+    margin-bottom: 8px;
 }
 
 .cta-panel {
@@ -717,6 +730,14 @@ code {
     .site-header {
         align-items: flex-start;
         flex-direction: column;
+    }
+
+    .screenshot-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .screenshot-card--wide {
+        grid-column: auto;
     }
 }
 
