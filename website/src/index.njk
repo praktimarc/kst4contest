@@ -15,15 +15,15 @@ visitorCount: true
     <h1>KST4Contest</h1>
 
     <p class="lead">
-      ON4KST shows you the traffic. KST4Contest helps turn it into an operating
-      decision by combining chat, candidate prioritisation, sked planning,
-      AirScout data and logger integration in one desktop client.
+      KST4Contest is an ON4KST client for VHF, UHF and SHF contest operation
+      on 144 MHz and above. It keeps active stations, frequencies, skeds and
+      aircraft-scatter opportunities in view while connecting chat information
+      with logger and station interfaces.
     </p>
 
     <p>
-      The available information is filtered, related to active stations and
-      presented in a contest-oriented workflow. The final decision still
-      belongs to the operator.
+      The client helps the operator choose the next useful station and prepare
+      the next operating step. It does not automate the radio contact itself.
     </p>
 
     <div class="actions">
@@ -36,57 +36,71 @@ visitorCount: true
   <div class="hero-panel">
     <div class="terminal-bar">
       <span></span><span></span><span></span>
-      <strong>Functions sharing the same station context</strong>
+      <strong>Contest information ready for the next decision</strong>
     </div>
 
     <div class="mock-grid">
-      {% for feature in collections.sortedFeatures %}
-        {% if loop.index <= 6 %}
-          <div class="mini-card">
-            <strong>{{ feature.data.icon }} {{ feature.data.title }}</strong>
-            <small>{{ feature.data.summary }}</small>
-          </div>
-        {% endif %}
-      {% endfor %}
+      <div class="mini-card">
+        <strong>Active stations and QRGs</strong>
+        <small>Chat messages, recognised frequencies and known bands stay connected to the station.</small>
+      </div>
+      <div class="mini-card">
+        <strong>Skeds and AP windows</strong>
+        <small>Scheduled contacts and AirScout timing remain visible while the contest continues.</small>
+      </div>
+      <div class="mini-card">
+        <strong>Logger and station status</strong>
+        <small>Worked information, the current TRX QRG and rotor direction inform the same workflow.</small>
+      </div>
     </div>
   </div>
 </section>
 
+{% if collections.latestNews.length %}
+  {% set latestPost = collections.latestNews[0] %}
+  <section class="section narrow" aria-labelledby="latest-news-heading">
+    <article class="card">
+      <p class="eyebrow">Latest news · {{ latestPost.date | readableDate }}</p>
+      <h2 id="latest-news-heading"><a href="{{ latestPost.url }}">{{ latestPost.data.title }}</a></h2>
+      <p>{{ latestPost.data.summary }}</p>
+      <a href="{{ latestPost.url }}">Open this update →</a>
+    </article>
+  </section>
+{% endif %}
+
 <section class="section">
   <div class="section-heading">
-    <p class="eyebrow">The operating problem</p>
-    <h2>The useful station is rarely the only station in the chat</h2>
+    <p class="eyebrow">Practical tasks</p>
+    <h2>From chat traffic to the next operating step</h2>
     <p>
-      During an active contest, messages, sked requests, frequency information
-      and band changes arrive continuously. The task is to identify which part
-      of that traffic matters now, which candidate should be monitored and
-      which contact is better scheduled for later.
+      Messages, station activity and station interfaces provide different
+      pieces of the same operating situation. KST4Contest brings them together
+      where they are needed.
     </p>
   </div>
 
   <div class="grid">
     <article class="card">
-      <h3>Observe</h3>
+      <h3>Keep track of chat and active stations</h3>
       <p>
-        Messages, locators, detected frequencies and known band activity are
-        assigned to stations across as many as two ON4KST chat categories.
+        Follow messages across two ON4KST categories, see active bands and keep
+        recognised frequencies attached to the callsign that sent them.
       </p>
     </article>
 
     <article class="card">
-      <h3>Evaluate</h3>
+      <h3>Select and plan contacts</h3>
       <p>
-        Direction, distance, worked status, NOT-QRV information, chat activity,
-        sked context and aircraft scatter data feed filters and candidate scores.
+        Use filters and priorities to find candidates, schedule skeds and keep
+        their timing visible in the timeline together with AirScout data.
       </p>
     </article>
 
     <article class="card">
-      <h3>Act</h3>
+      <h3>Connect logger and station components</h3>
       <p>
-        Candidates can be contacted, scheduled or monitored. Skeds remain
-        visible, while supported loggers and station interfaces receive the
-        information required for the next operating step.
+        Synchronise Worked status with supported loggers and pass useful context
+        to the TRX, rotator and local DX Cluster interfaces.
       </p>
     </article>
   </div>
@@ -94,25 +108,77 @@ visitorCount: true
 
 <section class="section">
   <div class="section-heading">
-    <p class="eyebrow">Functions</p>
-    <h2>One workflow, shared context</h2>
+    <p class="eyebrow">What the chat data showed</p>
+    <h2>Useful detail makes a reply easier</h2>
     <p>
-      The individual functions are not isolated tools. They use the same
-      station, message, band and timing information, so that a change in one
-      part of the workflow can also affect filters, priorities and reminders.
+      Archived ON4KST chat logs from several IARU contests in the preceding two
+      years were analysed. The concrete example comes from the July 2025 contest
+      and combines the 144/432 MHz and Microwave categories. It compares sked
+      requests with the replies and sked windows they produced.
+    </p>
+    <p>
+      The text analysis considered action and sked words, frequency, timing,
+      beam direction, aircraft-scatter information, locator, mode and courtesy
+      or anchor words. Within this sample, requests containing AP and beam
+      information were associated with an almost 30% higher chat reply rate
+      than short, unspecific requests such as “Hi noname, try 2m?”.
+    </p>
+    <p>
+      This measures chat replies, not completed QSOs. It is a correlation within
+      the investigated sample, not general proof of causation and not a promise
+      that an individual sked will succeed. The practical point is modest:
+      information that can be used immediately saves the other operator from
+      having to ask for it first. KST4Contest supplies part of that context when
+      preparing messages and skeds.
+    </p>
+    <p>
+      Source: Marc Fröhlich, “Chat-Mining: Jagdinstinkte wecken mit KST4Contest”,
+      conference paper for GHz-Tagung Dorsten 2026, section “Erfolgsrezept”.
+      <a href="/background/#paper-2026">Read the background and download the paper</a>.
+    </p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-heading">
+    <p class="eyebrow">Selected functions</p>
+    <h2>The parts most often used during a contest</h2>
+    <p>
+      These examples show how station, band, message and timing information is
+      used in practice. The complete function overview remains available for
+      configuration details and less frequently used tools.
     </p>
   </div>
 
   <div class="grid">
-    {% for feature in collections.sortedFeatures %}
-      <article class="card feature-card">
-        <div class="feature-icon">{{ feature.data.icon }}</div>
-        <p class="eyebrow">{{ feature.data.category }}</p>
-        <h3><a href="{{ feature.url }}">{{ feature.data.title }}</a></h3>
-        <p>{{ feature.data.summary }}</p>
-        <a href="{{ feature.url }}">Read how it works →</a>
-      </article>
-    {% endfor %}
+    <article class="card feature-card">
+      <h3><a href="/features/global-message-views/">Chat overview and station filters</a></h3>
+      <p>Separate global and private views keep the traffic readable, while station filters narrow the candidate list without hiding the underlying chat context.</p>
+    </article>
+    <article class="card feature-card">
+      <h3><a href="/features/priority-score/">Priority and band opportunities</a></h3>
+      <p>Candidate scores combine available station information with Worked and band state so that a useful next call is easier to find.</p>
+    </article>
+    <article class="card feature-card">
+      <h3><a href="/features/timeline/">Skeds and AP timeline</a></h3>
+      <p>Manual skeds, reminders and aircraft-scatter windows remain visible instead of disappearing in the continuing chat stream.</p>
+    </article>
+    <article class="card feature-card">
+      <h3><a href="/features/airscout/">AirScout and path information</a></h3>
+      <p>AirScout data adds timing and path context to a selected station without turning that assessment into a propagation promise.</p>
+    </article>
+    <article class="card feature-card">
+      <h3><a href="/features/log-sync/">Logger and Worked synchronisation</a></h3>
+      <p>Supported logger data updates global and per-band Worked information across the active callsign variants.</p>
+    </article>
+    <article class="card feature-card">
+      <h3><a href="/features/trx-qrg-synchronisation/">TRX, rotator and DX Cluster integration</a></h3>
+      <p>The current QRG, rotor direction and local spots carry selected station information into the next manual operating step.</p>
+    </article>
+  </div>
+
+  <div class="actions">
+    <a class="button secondary" href="/features/">Open the complete function overview</a>
   </div>
 </section>
 
@@ -121,10 +187,9 @@ visitorCount: true
     <p class="eyebrow">Limits</p>
     <h2>A priority score is not a propagation forecast</h2>
     <p>
-      KST4Contest can only evaluate the information it knows. Scores, AP
-      windows, filters and path profiles support the operator's decision; they
-      do not guarantee a contact. If the input data is incomplete or outdated,
-      the result can be incomplete or outdated as well.
+      Priorities are not a propagation forecast. Scores, filters and AP windows
+      depend on the data available to the client. They help with sorting and
+      timing, but they do not guarantee a QSO.
     </p>
 
     <div class="actions">
@@ -139,11 +204,9 @@ visitorCount: true
     <p class="eyebrow">Project status</p>
     <h2>Stable for operation, Nightly for testing</h2>
     <p>
-      KST4Contest is open-source software. The current stable release is the
-      normal choice for contest operation. Nightly builds follow ongoing
-      development and are useful when a particular fix or feature needs
-      testing. A few minutes before a contest is not the ideal time to discover
-      what changed.
+      Stable is the normal choice for contest operation. Nightly contains the
+      latest development state and is intended for testing. Changing versions
+      immediately before a contest is still not recommended.
     </p>
 
     <div class="actions">

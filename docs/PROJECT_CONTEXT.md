@@ -170,6 +170,9 @@ After implementation use targeted documentation-impact checks. Do not run a comp
 
 The repository contains the KST4Contest website under `website/`, published separately from the desktop application build.
 
+- Historical GHz-Tagung papers are published as German and English PDF assets below `website/src/assets/papers/` and explained on `/background/`. Their editable ODT sources remain outside the public Eleventy input tree and must never be copied into the generated site.
+- The home-page news teaser is derived from the date-sorted Eleventy `news` tag collection. It deliberately renders nothing when that collection is empty; it must not be pinned to a release version.
+
 Current website/deployment scripts and update-feed behaviour must be inspected before changes; do not rely on historical assumptions.
 
 - `APPLICATION_CURRENT_VERSION` is the user-visible semantic version and must use the dotted `major.minor.patch` form. `APPLICATION_CURRENTVERSIONNUMBER` is retained only for older feeds and encodes patch releases by appending the patch digit, for example `1.43.1` as `1.431`.

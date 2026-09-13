@@ -73,6 +73,12 @@ function getManualPageOrder(lang, slug) {
     return index >= 0 ? index : 999;
 }
 
+function selectLatestNews(newsItems) {
+    return [...(newsItems || [])]
+        .sort((first, second) => second.date - first.date)
+        .slice(0, 1);
+}
+
 function githubCompatibleSlug(value) {
     return (value || "")
         .trim()
@@ -150,6 +156,12 @@ module.exports = function (eleventyConfig) {
             .sort((a, b) => {
                 return (a.data.order || 999) - (b.data.order || 999);
             });
+    });
+
+    eleventyConfig.addCollection("latestNews", function (collectionApi) {
+        return selectLatestNews(
+            collectionApi.getFilteredByTag("news")
+        );
     });
 
     eleventyConfig.addFilter("whereTag", function(collection, tag) {
@@ -231,3 +243,5 @@ module.exports = function (eleventyConfig) {
         htmlTemplateEngine: "njk"
     };
 };
+
+module.exports.selectLatestNews = selectLatestNews;
