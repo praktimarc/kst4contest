@@ -5,6 +5,11 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
+const {
+    UPDATE_INFO_PATH,
+    generatePrivateMetrics,
+    validateImportOptions
+} = require("./private-metrics");
 
 const STATE_SCHEMA_VERSION = 1;
 const PUBLIC_SCHEMA_VERSION = 1;
@@ -156,6 +161,34 @@ function validateRegistry(registry) {
         }
         analyticsLogPaths.add(analyticsLog);
 
+        const websiteMetricsSince = parseIsoDate(site.websiteMetricsSince);
+        if (!websiteMetricsSince) {
+            throw new ConfigurationError(`${label}.websiteMetricsSince must be a valid ISO date`);
+        }
+        if (!site.updateInfo || typeof site.updateInfo !== "object" || Array.isArray(site.updateInfo)) {
+            throw new ConfigurationError(`${label}.updateInfo must be an object`);
+        }
+        if (site.updateInfo.path !== UPDATE_INFO_PATH) {
+            throw new ConfigurationError(`${label}.updateInfo.path must be ${UPDATE_INFO_PATH}`);
+        }
+        const updateInfoLog = requireAbsolutePath(
+            site.updateInfo.analyticsLog,
+            `${label}.updateInfo.analyticsLog`
+        );
+        if (/\.(?:\d+|gz)$/i.test(path.basename(updateInfoLog))) {
+            throw new ConfigurationError(
+                `${label}.updateInfo.analyticsLog must identify the current uncompressed log`
+            );
+        }
+        if (analyticsLogPaths.has(updateInfoLog)) {
+            throw new ConfigurationError(`analytics log is registered more than once: ${updateInfoLog}`);
+        }
+        analyticsLogPaths.add(updateInfoLog);
+        const updateMetricsSince = parseIsoDate(site.updateInfo.metricsSince);
+        if (!updateMetricsSince) {
+            throw new ConfigurationError(`${label}.updateInfo.metricsSince must be a valid ISO date`);
+        }
+
         const reportOutputDirectory = requireAbsolutePath(
             site.reportOutputDirectory,
             `${label}.reportOutputDirectory`
@@ -190,6 +223,12 @@ function validateRegistry(registry) {
             activatedOn,
             publicCounter: site.publicCounter,
             analyticsLog,
+            websiteMetricsSince,
+            updateInfo: {
+                path: UPDATE_INFO_PATH,
+                analyticsLog: updateInfoLog,
+                metricsSince: updateMetricsSince
+            },
             reportOutputDirectory,
             publicJsonPath
         };
@@ -214,6 +253,34 @@ function validateRegistry(registry) {
         );
     }
 
+    if (!registry.privateMetrics || typeof registry.privateMetrics !== "object"
+        || Array.isArray(registry.privateMetrics)) {
+        throw new ConfigurationError("registry.privateMetrics must be an object");
+    }
+    const privateMetricsStatePath = requireAbsolutePath(
+        registry.privateMetrics.statePath,
+        "registry.privateMetrics.statePath"
+    );
+    if (!isWithin(stateDirectory, privateMetricsStatePath)
+        || privateMetricsStatePath === counterStatePath) {
+        throw new ConfigurationError("private metrics statePath must be a distinct path below stateDirectory");
+    }
+    const privateMetricsReportOutputDirectory = requireAbsolutePath(
+        registry.privateMetrics.reportOutputDirectory,
+        "registry.privateMetrics.reportOutputDirectory"
+    );
+    if (!isWithin(stateDirectory, privateMetricsReportOutputDirectory)
+        || outputDirectories.has(privateMetricsReportOutputDirectory)
+        || privateMetricsReportOutputDirectory === combinedReportOutputDirectory) {
+        throw new ConfigurationError("private metrics reportOutputDirectory must be distinct below stateDirectory");
+    }
+    if (registry.privateMetrics.timeZone !== "Europe/Berlin") {
+        throw new ConfigurationError("registry.privateMetrics.timeZone must be Europe/Berlin");
+    }
+    if (registry.privateMetrics.detailRetentionDays !== 14) {
+        throw new ConfigurationError("registry.privateMetrics.detailRetentionDays must be 14");
+    }
+
     return {
         schemaVersion: 1,
         stateDirectory,
@@ -225,6 +292,12 @@ function validateRegistry(registry) {
         ),
         combined: {
             reportOutputDirectory: combinedReportOutputDirectory
+        },
+        privateMetrics: {
+            statePath: privateMetricsStatePath,
+            reportOutputDirectory: privateMetricsReportOutputDirectory,
+            timeZone: "Europe/Berlin",
+            detailRetentionDays: 14
         },
         sites
     };
@@ -304,6 +377,10 @@ function validateInputs(registry, configTemplate) {
         site.id,
         resolveAnalyticsLogs(site)
     ]));
+    const updateLogsBySite = new Map(registry.sites.map(site => [
+        site.id,
+        resolveAnalyticsLogs({ analyticsLog: site.updateInfo.analyticsLog })
+    ]));
 
     let geoStats;
     try {
@@ -330,6 +407,10 @@ function validateInputs(registry, configTemplate) {
         registry.combined.reportOutputDirectory,
         "combined report output directory"
     );
+    requireWritableDirectory(
+        registry.privateMetrics.reportOutputDirectory,
+        "private metrics report output directory"
+    );
     for (const site of registry.sites) {
         requireWritableDirectory(
             site.reportOutputDirectory,
@@ -343,7 +424,7 @@ function validateInputs(registry, configTemplate) {
         }
     }
 
-    return analyticsLogsBySite;
+    return { analyticsLogsBySite, updateLogsBySite };
 }
 
 function renderGoAccessConfig(template, dbPath, restore, geoIpCountryDatabase) {
@@ -604,6 +685,11 @@ function atomicCopyFile(source, destination) {
     atomicWriteFile(destination, fs.readFileSync(source));
 }
 
+function addPrivateMetricsLink(html) {
+    const link = '<p style="margin:1rem"><a href="/metrics/">Private daily and annual metrics</a></p>';
+    return /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${link}</body>`) : `${html}\n${link}\n`;
+}
+
 function replaceDirectory(source, destination) {
     fs.mkdirSync(path.dirname(destination), { recursive: true });
     const backup = `${destination}.previous-${process.pid}`;
@@ -720,7 +806,12 @@ function generateReports(options, dependencies = {}) {
     const checkGoAccess = dependencies.checkGoAccess || defaultCheckGoAccess;
     const now = dependencies.now ? dependencies.now() : new Date();
 
-    const analyticsLogsBySite = validateInputs(registry, configTemplate);
+    const { analyticsLogsBySite, updateLogsBySite } = validateInputs(registry, configTemplate);
+    try {
+        validateImportOptions(options, registry);
+    } catch (error) {
+        throw new ConfigurationError(error.message);
+    }
     const goAccess = checkGoAccess(options.goaccessBinary || "goaccess");
     if (!goAccess || !goAccess.geoIpMmdb) {
         throw new ConfigurationError(
@@ -777,15 +868,24 @@ function generateReports(options, dependencies = {}) {
                 content: `${JSON.stringify(publicPayload(state, site, now), null, 2)}\n`
             }));
 
+        const privateMetrics = generatePrivateMetrics({
+            registry,
+            analyticsLogsBySite,
+            updateLogsBySite,
+            options,
+            visitState: state,
+            context: {
+                ...context,
+                now
+            }
+        });
+
         if (!options.dryRun) {
             for (const report of prepared) {
-                atomicCopyFile(
-                    report.outputJson,
-                    path.join(report.outputDirectory, "report.json")
-                );
-                atomicCopyFile(
-                    report.outputHtml,
-                    path.join(report.outputDirectory, "report.html")
+                atomicCopyFile(report.outputJson, path.join(report.outputDirectory, "report.json"));
+                atomicWriteFile(
+                    path.join(report.outputDirectory, "report.html"),
+                    addPrivateMetricsLink(fs.readFileSync(report.outputHtml, "utf8"))
                 );
             }
             for (const report of prepared) {
@@ -798,6 +898,14 @@ function generateReports(options, dependencies = {}) {
             for (const publicFile of publicFiles) {
                 atomicWriteFile(publicFile.destination, publicFile.content, 0o644);
             }
+            atomicWriteFile(
+                registry.privateMetrics.statePath,
+                `${JSON.stringify(privateMetrics.state, null, 2)}\n`
+            );
+            for (const report of privateMetrics.files) {
+                fs.mkdirSync(path.dirname(report.destination), { recursive: true });
+                atomicWriteFile(report.destination, report.content);
+            }
         }
 
         return {
@@ -805,7 +913,9 @@ function generateReports(options, dependencies = {}) {
             dryRun: Boolean(options.dryRun),
             sites: registry.sites.length,
             reports: prepared.length,
-            publicCounters: publicFiles.length
+            publicCounters: publicFiles.length,
+            privateMetricReports: privateMetrics.files.length,
+            historicalImport: privateMetrics.imported
         };
     } finally {
         if (runDirectory && fs.existsSync(runDirectory)) {
@@ -816,7 +926,12 @@ function generateReports(options, dependencies = {}) {
 }
 
 function parseArguments(argv) {
-    const options = { check: false, dryRun: false, goaccessBinary: "goaccess" };
+    const options = {
+        check: false,
+        dryRun: false,
+        goaccessBinary: "goaccess",
+        importLogs: []
+    };
 
     for (let index = 0; index < argv.length; index += 1) {
         const argument = argv[index];
@@ -824,7 +939,10 @@ function parseArguments(argv) {
             options.check = true;
         } else if (argument === "--dry-run") {
             options.dryRun = true;
-        } else if (["--registry", "--config-template", "--goaccess"].includes(argument)) {
+        } else if ([
+            "--registry", "--config-template", "--goaccess", "--import-log", "--import-format",
+            "--import-site", "--coverage-from", "--coverage-through"
+        ].includes(argument)) {
             const value = argv[index + 1];
             if (!value) {
                 throw new ConfigurationError(`${argument} requires a value`);
@@ -833,6 +951,11 @@ function parseArguments(argv) {
             if (argument === "--registry") options.registryPath = value;
             if (argument === "--config-template") options.configTemplatePath = value;
             if (argument === "--goaccess") options.goaccessBinary = value;
+            if (argument === "--import-log") options.importLogs.push(value);
+            if (argument === "--import-format") options.importFormat = value;
+            if (argument === "--import-site") options.importSite = value;
+            if (argument === "--coverage-from") options.coverageFrom = value;
+            if (argument === "--coverage-through") options.coverageThrough = value;
         } else {
             throw new ConfigurationError(`unknown argument: ${argument}`);
         }
@@ -841,7 +964,9 @@ function parseArguments(argv) {
     if (!options.registryPath || !options.configTemplatePath) {
         throw new ConfigurationError(
             "usage: generate-reports.js --registry FILE --config-template FILE "
-            + "[--goaccess FILE] [--check|--dry-run]"
+            + "[--goaccess FILE] [--check|--dry-run] "
+            + "[--import-log FILE ... --import-format nginx-combined|analytics-tsv "
+            + "--import-site ID --coverage-from DATE --coverage-through DATE]"
         );
     }
     if (options.check && options.dryRun) {

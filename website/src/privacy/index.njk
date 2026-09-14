@@ -47,16 +47,37 @@ description: Privacy policy for the KST4Contest website.
       browsers or operating systems are treated as crawlers.
     </p>
     <p>
-      IP addresses are anonymised before data is stored in the statistics aggregates. The dedicated
-      analytics raw logs are retained for 14 days. Anonymised detailed aggregates are retained on a
-      rolling basis for 395 days. They include countries, but no city or host statistics. Countries
-      are derived with a Country database only.
+      IP addresses are anonymised before data is stored in the GoAccess statistics aggregates. The
+      dedicated analytics raw logs are retained for 14 days. Anonymised GoAccess detail is retained
+      on a rolling basis for 395 days. Daily totals for visits and page views, absolute country
+      totals per day and page views for each normalised path are retained permanently. No permanent
+      table combines an individual page view with both its path and country.
     </p>
     <p>
       A visit is an approximate daily value based on the combination of IP address, date and user
       agent used by GoAccess. It must not be read as a number of unique people. Page views and visits
-      remain separate measures. Bots, monitoring requests, software update checks and static assets
-      are excluded as far as they can be identified.
+      remain separate measures. Known bots, monitoring requests, software update checks and static
+      assets are excluded from the website page and visit statistics as far as they can be identified.
+      Query strings are not included in the recorded page paths.
+    </p>
+
+    <h2>Update-information statistics</h2>
+    <p>
+      Successful <code>GET</code> requests with status <code>200</code> for the exact path
+      <code>/kst4ContestVersionInfo.xml</code> are recorded separately from the website statistics.
+      They do not increase its page views or the public visitor count. Daily totals and absolute
+      country totals per day are retained permanently. Hourly totals and recognisable client groups
+      derived from the user agent are retained for no more than 14 days.
+    </p>
+    <p>
+      Browsers and bots can request the update-information file too. Existing KST4Contest versions
+      do not send a reliable application-specific user agent. The resulting number therefore does
+      not establish a program start, a single user or a particular person.
+    </p>
+    <p>
+      Country information for both statistics is derived locally from the GeoLite2-Country database.
+      No visitor address is sent to an external location service. Country assignment is approximate;
+      it is not an exact location determination.
     </p>
 
     <h2>Public visitor count</h2>

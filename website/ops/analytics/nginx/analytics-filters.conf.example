@@ -34,3 +34,10 @@ map "$hamradioonline_analytics_method:$hamradioonline_analytics_path:$hamradioon
     default 0;
     "1:1:0" 1;
 }
+
+# Count the update-information file separately. This deliberately does not
+# filter user agents: browsers and bots can fetch the file too.
+map "$request_method:$uri:$status" $hamradioonline_update_information_loggable {
+    default 0;
+    "GET:/kst4ContestVersionInfo.xml:200" 1;
+}

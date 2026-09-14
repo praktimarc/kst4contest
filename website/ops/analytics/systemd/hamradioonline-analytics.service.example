@@ -1,5 +1,5 @@
 [Unit]
-Description=Generate private GoAccess reports and public project counters
+Description=Generate private analytics reports and public project counters
 After=nginx.service
 
 [Service]

@@ -7,9 +7,10 @@ log_format hamradioonline_analytics
 # Include the maps below in the Nginx http context as well.
 include /etc/nginx/snippets/hamradioonline-analytics-filters.conf;
 
-# Add this extra log to each registered project server block. Keep the
+# Add these extra logs to each registered project server block. Keep the
 # existing operational access_log directive; do not replace it implicitly.
 #
 # access_log /var/log/nginx/kst4contest-analytics.log
 #     hamradioonline_analytics if=$hamradioonline_analytics_loggable;
-
+# access_log /var/log/nginx/kst4contest-update-information.log
+#     hamradioonline_analytics if=$hamradioonline_update_information_loggable;

@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-14
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -188,23 +188,28 @@ section records only the durable architecture and operational boundaries.
 #### Architecture and data flow
 
 - Production runs on Ubuntu Server 24.04 with Nginx 1.24, Node.js 18.19.1 and GoAccess 1.8.1. GoAccess has GeoIP2/MMDB and OpenSSL support but no Zlib support; missing Zlib is intentional for this operating model.
-- Nginx writes eligible `GET` page requests to a reduced, tab-separated analytics log in addition to the normal operational log. It records server name, client IP, time, method, normalized path without query string, protocol, status, bytes and user agent; referrer and remote user are omitted.
-- Nginx removes assets, downloads, status/monitoring paths, update feed, counter requests and known crawler clients before logging. GoAccess supplies the second crawler-classification layer, anonymises IP addresses at the configured level and performs Country lookup locally through GeoLite2-Country.
-- The hourly systemd timer starts the Node.js generator. Each registered site is processed from its optional uncompressed `.1` rotation followed by the current log; older `.gz` files are not part of regular processing. Logrotate retains raw analytics logs for 14 days and requires `delaycompress` for this handover.
-- GoAccess maintains one private report/database per registered site and one combined report/database. The generator then updates its separate daily counter state and publishes `visitor-count.json` for enabled sites. Private reports are served with Basic Auth from `stats.hamradioonline.de`; the public home page requests only its same-origin counter file.
+- Nginx writes eligible `GET` page requests to a reduced, tab-separated website analytics log in addition to the normal operational log. It records server name, client IP, time, method, normalized path without query string, protocol, status, bytes and user agent; referrer and remote user are omitted.
+- Nginx removes assets, downloads, status/monitoring paths, update feed, counter requests and known crawler clients from the website log. GoAccess supplies the second crawler-classification layer, anonymises IP addresses at the configured level and performs Country lookup locally through GeoLite2-Country.
+- A second reduced Nginx log contains only case-sensitive `GET` requests with final status `200` for the exact path `/kst4ContestVersionInfo.xml`. It deliberately retains browser and bot requests and stays excluded from website page views, visits and the public visitor counter.
+- The hourly systemd timer starts the Node.js generator. Each registered site and both reduced streams are processed from the optional uncompressed `.1` rotation followed by the current log; older `.gz` files are not part of regular processing. Logrotate retains raw logs for 14 days and requires `delaycompress` for this handover.
+- GoAccess maintains one private report/database per registered site and one combined report/database. The generator then updates its separate daily visit-counter state, publishes `visitor-count.json` for enabled sites, and produces durable private website/update-information day and year views. Private reports are served with Basic Auth from `stats.hamradioonline.de`; the public home page requests only its same-origin counter file.
 
 #### Durable invariants and persistence
 
 - GoAccess defines a visit by IP address, date and user agent. The public value is therefore an approximate visit total, not a count of unique people, and remains separate from page views.
 - The public contract contains only `schemaVersion`, `visits`, `since` and `updatedAt`. The browser uses no analytics cookie, local storage or third-party request; failed or invalid responses leave the counter hidden.
-- The site registry at `/etc/hamradioonline-analytics/sites.json` owns stable site IDs, hostnames, current uncompressed log paths, activation dates and output targets. `stats.hamradioonline.de` is never registered as an analytics site. Existing counter state cannot be continued with a changed hostname or `activatedOn` without an explicit migration or reset decision.
-- GoAccess databases below `/var/lib/hamradioonline-analytics/db` retain rolling 395-day detail through `--persist` and `--restore`. `/var/lib/hamradioonline-analytics/public-counter-state.json` retains daily values from activation onward and is the durable business source for the lifetime public total. Reports and public JSON files are derived outputs.
+- The site registry at `/etc/hamradioonline-analytics/sites.json` owns stable site IDs, hostnames, current uncompressed log paths, activation/coverage dates and output targets. `stats.hamradioonline.de` is never registered as an analytics site. Existing state cannot be continued with a changed hostname or activation/coverage identity without an explicit migration or reset decision.
+- GoAccess databases below `/var/lib/hamradioonline-analytics/db` retain rolling 395-day detail through `--persist` and `--restore`. `/var/lib/hamradioonline-analytics/public-counter-state.json` retains daily visit values from activation onward and remains the durable business source for the lifetime public total. Its schema and public meaning are unchanged.
+- `/var/lib/hamradioonline-analytics/private-metrics-state.json` permanently retains website page-view totals, absolute Country values and normalized path totals per day, plus update-information request totals and absolute Country values per day. It contains no per-request IP address, raw user agent or timestamp. Update hours and conservative client groups are retained only for the latest 14 `Europe/Berlin` calendar days. There is no permanent path-by-Country request matrix.
+- Update-information requests are not program starts or user counts. Browsers and bots can fetch the XML, and existing application versions do not send a reliable KST4Contest-specific user agent; a Java user agent identifies only an unknown Java application.
 - GoAccess 1.8.1 exposes Country data as `geolocation`; combined jobs explicitly enable `VIRTUAL_HOSTS` and require `vhosts`. Individual site jobs do not enable that panel. `geo_location` and `virtual_hosts` are invalid interface names.
-- Generator inputs and staged GoAccess outputs are validated before publication. Files are replaced atomically, dry-runs use temporary state without the production lock, and productive runs use `/run/hamradioonline-analytics/generator.lock`. Exit codes are 1 for runtime/publication errors, 2 for configuration errors and 3 when the production lock cannot be acquired.
+- Private daily values are upserted rather than added. Regular hourly reprocessing and historical imports are repeatable; overlapping aggregates must be equal or monotonically more complete. The generator fails on inconsistent overlaps or when path sums differ from the existing GoAccess page-request definition.
+- The explicit historical-import mode accepts verified Nginx combined or reduced TSV logs and inclusive coverage dates. Node.js reads `.gz` files without relying on Zlib support in GoAccess. Missing earlier history remains unknown rather than becoming zero, and the first covered date is stored and displayed.
+- Generator inputs and staged GoAccess outputs are validated before publication. Files are replaced atomically, temporary normalized per-day inputs use private run directories and are removed after the run, dry-runs use temporary state without the production lock, and productive runs use `/run/hamradioonline-analytics/generator.lock`. Exit codes are 1 for runtime/publication errors, 2 for configuration errors and 3 when the production lock cannot be acquired.
 
 #### Components, roles and external services
 
-- `hamradio-analytics` is the locked, non-login service account which reads configuration, Country MMDB and analytics logs and writes service state. Nginx runs as `www-data`, writes the analytics log and can read only reports and the public counter, not private databases or counter state. `stats-reader` is a local Nginx Basic Auth login whose password file remains outside Git.
+- `hamradio-analytics` is the locked, non-login service account which reads configuration, Country MMDB and reduced logs and writes service state. Nginx runs as `www-data`, writes both reduced logs and can read only reports and the public counter, not private databases or either state file. `stats-reader` is a local Nginx Basic Auth login whose password file remains outside Git.
 - Root-managed program/configuration lives below `/opt/hamradioonline-analytics` and `/etc/hamradioonline-analytics`; service state lives below `/var/lib/hamradioonline-analytics`. Report/public directories are shared read-only with Nginx through group ownership; no ACL dependency exists.
 - MaxMind is used only by `geoipupdate` to download GeoLite2-Country. Visitor lookups are local; Account ID and License Key remain in the protected server configuration. Let's Encrypt supplies TLS for the statistics vhost through the permanent ACME webroot and `/snap/bin/certbot`. GitHub supplies website source and deployment, not analytics processing.
 - The website deploy checks out `origin/main`, builds the static site and publishes it to the Nginx document root. It does not install or overwrite analytics programs/configuration, systemd, Nginx, Logrotate, GeoIP, Basic Auth or Certbot state; those remain separate manual server operations.
@@ -212,8 +217,8 @@ section records only the durable architecture and operational boundaries.
 
 #### Open operational work
 
-- The server has no comprehensive automated backup plan yet. A future server-wide plan must include the non-regenerable counter state, GoAccess databases and protected operational configuration without extending the published 14-day raw-log retention.
-- The first real rotation of the dedicated analytics log still requires an explicit operational check of `.1`, ownership/readability, subsequent generator success and absence of duplicate counting. This is not a current service blocker.
+- The server has no comprehensive automated backup plan yet. A future server-wide plan must include both non-regenerable state files, GoAccess databases and protected operational configuration without extending the published 14-day raw-log retention.
+- Repository implementation and tests do not install server configuration or import production data. The first real rotation after installing the XML log still requires an explicit operational check of both `.1` handovers, ownership/readability, subsequent generator success and absence of duplicate counting. The actual regular Nginx log format and complete historical coverage must be verified on the server before import.
 
 ## Important Decisions and Workarounds
 
