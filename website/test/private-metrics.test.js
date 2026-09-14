@@ -57,6 +57,12 @@ test("parses analytics and regular Nginx combined records without query strings"
     assert.equal(analytics.hour, "23");
     assert.equal(analytics.path, "/privacy/");
 
+    const emptyPath = parseAnalyticsLine(
+        'kst4contest.hamradioonline.de\t192.0.2.1\t2026-09-14T23:30:00+02:00\tGET\t\tHTTP/1.1\t400\t166\t"-"'
+    );
+    assert.equal(emptyPath.path, null);
+    assert.equal(isEligibleWebsiteRequest(emptyPath), false);
+
     const combined = parseCombinedLine(
         '192.0.2.2 - - [14/Sep/2026:23:31:00 +0200] "GET /news/?x=1 HTTP/1.1" 200 43 "-" "Mozilla/5.0 Firefox/130"',
         "kst4contest.hamradioonline.de"
@@ -84,7 +90,7 @@ test("uses Europe/Berlin across both daylight-saving transitions", () => {
 
 test("keeps absolute countries including Switzerland, United Kingdom and unknown", () => {
     const website = aggregateGoAccessReport({
-        general: { total_requests: 5 },
+        general: { total_requests: 2245, valid_requests: 5 },
         geolocation: { data: [
             { data: "Europe", hits: { count: 3 }, items: [
                 { data: "Germany", hits: { count: 1 } },
@@ -107,10 +113,27 @@ test("keeps absolute countries including Switzerland, United Kingdom and unknown
     });
     assert.deepEqual(website.paths, { "/": 2, "/privacy/": 2, "/news/": 1 });
     assert.throws(() => aggregateGoAccessReport({
-        general: { total_requests: 2 },
+        general: { total_requests: 10, valid_requests: 2 },
         geolocation: { data: [{ data: "Germany", hits: { count: 2 } }] },
         requests: { data: [{ data: "/", hits: { count: 1 } }] }
-    }, "website"), /differs from the GoAccess request-panel definition/);
+    }, "website"), /valid-request count differs from the request-panel definition/);
+
+    const updates = aggregateGoAccessReport({
+        general: { total_requests: 9, valid_requests: 2 },
+        geolocation: { data: [{ data: "Germany", hits: { count: 2 } }] },
+        requests: { data: [{ data: "/kst4ContestVersionInfo.xml", hits: { count: 2 } }] }
+    }, "updateInfo");
+    assert.equal(updates.requests, 2);
+    assert.throws(() => aggregateGoAccessReport({
+        general: { total_requests: 2, valid_requests: 1 },
+        geolocation: { data: [{ data: "Germany", hits: { count: 2 } }] },
+        requests: { data: [{ data: "/", hits: { count: 1 } }] }
+    }, "website"), /country total exceeds/);
+    assert.throws(() => aggregateGoAccessReport({
+        general: { total_requests: 1, valid_requests: 1 },
+        geolocation: { data: [{ data: "Germany", hits: { count: 1 } }] },
+        requests: { data: [{ data: "/unexpected", hits: { count: 1 } }] }
+    }, "updateInfo"), /unexpected request path/);
 });
 
 test("deduplicates overlapping import files and reads gzip without GoAccess Zlib", () => {

@@ -76,8 +76,8 @@ function parseAnalyticsLine(line, timeZone = "Europe/Berlin") {
     const status = Number(fields[6]);
     const bytes = fields[7] === "-" ? 0 : Number(fields[7]);
     const local = localParts(fields[2], timeZone);
-    const requestPath = normalizePath(fields[4]);
-    if (!local || !requestPath || !/^\d{3}$/.test(fields[6])
+    const requestPath = fields[4] === "" ? null : normalizePath(fields[4]);
+    if (!local || (fields[4] !== "" && !requestPath) || !/^\d{3}$/.test(fields[6])
         || !Number.isSafeInteger(bytes) || bytes < 0) return null;
     let userAgent = fields[8];
     if (userAgent.startsWith("\"") && userAgent.endsWith("\"")) {
@@ -157,7 +157,7 @@ function isKnownBot(userAgent) {
 }
 
 function isEligibleWebsiteRequest(record) {
-    if (record.method !== "GET" || isKnownBot(record.userAgent)) return false;
+    if (record.method !== "GET" || !record.path || isKnownBot(record.userAgent)) return false;
     if (["/visitor-count.json", UPDATE_INFO_PATH, "/sitemap.xml", "/robots.txt", "/favicon.ico",
         "/assets/favicon.svg", "/health", "/healthz", "/ping", "/status"].includes(record.path)) {
         return false;
@@ -270,17 +270,25 @@ function sumValues(values) {
 }
 
 function aggregateGoAccessReport(report, kind) {
-    const total = report && report.general && report.general.total_requests;
-    if (!Number.isSafeInteger(total) || total < 0) throw new Error("GoAccess report contains an invalid total request count");
+    const validRequests = report && report.general && report.general.valid_requests;
+    if (!Number.isSafeInteger(validRequests) || validRequests < 0) {
+        throw new Error("GoAccess report contains an invalid valid-request count");
+    }
+    const paths = countPanel(report, "requests");
+    const total = sumValues(paths);
+    if (validRequests !== total) {
+        throw new Error("GoAccess valid-request count differs from the request-panel definition");
+    }
     const countries = countCountries(report);
     const countryTotal = sumValues(countries);
     if (countryTotal > total) throw new Error("GoAccess country total exceeds the request total");
     if (countryTotal < total) addCount(countries, UNKNOWN_COUNTRY, total - countryTotal);
 
-    if (kind === "updateInfo") return { requests: total, countries };
-    const paths = countPanel(report, "requests");
-    if (sumValues(paths) !== total) {
-        throw new Error("website page total differs from the GoAccess request-panel definition");
+    if (kind === "updateInfo") {
+        if (Object.keys(paths).some(requestPath => requestPath !== UPDATE_INFO_PATH)) {
+            throw new Error("update-information report contains an unexpected request path");
+        }
+        return { requests: total, countries };
     }
     return { pageViews: total, countries, paths };
 }
@@ -299,6 +307,76 @@ function renderMetricsConfig(template, dbPath, geoIpCountryDatabase, includeCraw
     return rendered;
 }
 
+function runMetricGoAccess({ records, jobId, metricKind, site, context, includeCrawlers }) {
+    const jobDirectory = path.join(context.runDirectory, jobId);
+    const dbPath = path.join(jobDirectory, "db");
+    const inputPath = path.join(jobDirectory, "input.log");
+    const outputJson = path.join(jobDirectory, "report.json");
+    const runConfig = path.join(jobDirectory, "goaccess.conf");
+    fs.mkdirSync(dbPath, { recursive: true });
+    fs.writeFileSync(inputPath, `${records.map(record => record.line).join("\n")}\n`, { mode: 0o600 });
+    fs.writeFileSync(runConfig, renderMetricsConfig(
+        context.configTemplate,
+        dbPath,
+        context.registry.geoIpCountryDatabase,
+        includeCrawlers
+    ), { mode: 0o600 });
+    context.runGoAccess({
+        binary: context.goaccessBinary,
+        args: [inputPath, "--no-global-config", "--config-file", runConfig, "--output", outputJson],
+        id: jobId,
+        metricKind,
+        date: records[0].date,
+        outputJson,
+        dbPath
+    });
+    try {
+        return JSON.parse(fs.readFileSync(outputJson, "utf8"));
+    } catch (error) {
+        throw new Error(`private metric GoAccess JSON is invalid for ${site.id}/${records[0].date}: ${error.message}`);
+    }
+}
+
+function filterWebsiteRecordsWithGoAccess(records, date, site, context) {
+    const representatives = [];
+    const pathByUserAgent = new Map();
+    for (const record of records) {
+        if (pathByUserAgent.has(record.userAgent)) continue;
+        const classifierPath = `/__client/${pathByUserAgent.size}`;
+        pathByUserAgent.set(record.userAgent, classifierPath);
+        const representative = {
+            ...record,
+            ip: "192.0.2.1",
+            method: "GET",
+            path: classifierPath,
+            protocol: "HTTP/1.1",
+            status: 200,
+            bytes: 0
+        };
+        representative.line = toAnalyticsLine(representative);
+        representatives.push(representative);
+    }
+    const report = runMetricGoAccess({
+        records: representatives,
+        jobId: `metrics-${site.id}-website-classifier-${date}`,
+        metricKind: "websiteClassifier",
+        site,
+        context,
+        includeCrawlers: false
+    });
+    const acceptedPaths = countPanel(report, "requests");
+    const knownPaths = new Set(pathByUserAgent.values());
+    for (const [classifierPath, count] of Object.entries(acceptedPaths)) {
+        if (!knownPaths.has(classifierPath) || count !== 1) {
+            throw new Error(`website client classification is invalid for ${site.id}/${date}`);
+        }
+    }
+    const acceptedUserAgents = new Set([...pathByUserAgent]
+        .filter(([_userAgent, classifierPath]) => Object.hasOwn(acceptedPaths, classifierPath))
+        .map(([userAgent]) => userAgent));
+    return records.filter(record => acceptedUserAgents.has(record.userAgent));
+}
+
 function aggregateDays({ records, dates, kind, site, context }) {
     const byDate = new Map(dates.map(date => [date, []]));
     for (const record of records) {
@@ -306,7 +384,16 @@ function aggregateDays({ records, dates, kind, site, context }) {
     }
     const daily = {};
     for (const date of dates) {
-        const dayRecords = byDate.get(date);
+        let dayRecords = byDate.get(date);
+        if (dayRecords.length === 0) {
+            daily[date] = kind === "website"
+                ? { pageViews: 0, countries: {}, paths: {} }
+                : { requests: 0, countries: {}, hours: {}, clients: {} };
+            continue;
+        }
+        if (kind === "website") {
+            dayRecords = filterWebsiteRecordsWithGoAccess(dayRecords, date, site, context);
+        }
         if (dayRecords.length === 0) {
             daily[date] = kind === "website"
                 ? { pageViews: 0, countries: {}, paths: {} }
@@ -314,34 +401,14 @@ function aggregateDays({ records, dates, kind, site, context }) {
             continue;
         }
         const jobId = `metrics-${site.id}-${kind}-${date}`;
-        const jobDirectory = path.join(context.runDirectory, jobId);
-        const dbPath = path.join(jobDirectory, "db");
-        const inputPath = path.join(jobDirectory, "input.log");
-        const outputJson = path.join(jobDirectory, "report.json");
-        const runConfig = path.join(jobDirectory, "goaccess.conf");
-        fs.mkdirSync(dbPath, { recursive: true });
-        fs.writeFileSync(inputPath, `${dayRecords.map(record => record.line).join("\n")}\n`, { mode: 0o600 });
-        fs.writeFileSync(runConfig, renderMetricsConfig(
-            context.configTemplate,
-            dbPath,
-            context.registry.geoIpCountryDatabase,
-            kind === "updateInfo"
-        ), { mode: 0o600 });
-        context.runGoAccess({
-            binary: context.goaccessBinary,
-            args: [inputPath, "--no-global-config", "--config-file", runConfig, "--output", outputJson],
-            id: jobId,
+        const report = runMetricGoAccess({
+            records: dayRecords,
+            jobId,
             metricKind: kind,
-            date,
-            outputJson,
-            dbPath
+            site,
+            context,
+            includeCrawlers: true
         });
-        let report;
-        try {
-            report = JSON.parse(fs.readFileSync(outputJson, "utf8"));
-        } catch (error) {
-            throw new Error(`private metric GoAccess JSON is invalid for ${site.id}/${date}: ${error.message}`);
-        }
         daily[date] = aggregateGoAccessReport(report, kind);
         if (kind === "updateInfo") {
             const hours = {};

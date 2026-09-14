@@ -150,14 +150,18 @@ function fakeGoAccess(reports, calls, failureId) {
             throw new Error("simulated GoAccess failure");
         }
         if (invocation.metricKind) {
-            const lines = fs.readFileSync(invocation.args[0], "utf8").trim().split(/\r?\n/);
+            const sourceLines = fs.readFileSync(invocation.args[0], "utf8").trim().split(/\r?\n/);
+            invocation.inputLines = sourceLines;
+            const lines = invocation.metricKind === "websiteClassifier"
+                ? sourceLines.filter(line => !line.includes("UnknownScanner/1.0"))
+                : sourceLines;
             const paths = {};
             for (const line of lines) {
                 const requestPath = line.split("\t")[4];
                 paths[requestPath] = (paths[requestPath] || 0) + 1;
             }
             const report = {
-                general: { total_requests: lines.length },
+                general: { total_requests: lines.length, valid_requests: lines.length },
                 requests: {
                     data: Object.entries(paths).map(([requestPath, count]) => ({
                         data: requestPath,
@@ -180,6 +184,42 @@ function fakeGoAccess(reports, calls, failureId) {
         fs.writeFileSync(path.join(invocation.dbPath, "persisted.db"), invocation.id);
     };
 }
+
+test("uses GoAccess client classification before aggregating website paths and countries", () => {
+    const testFixture = fixture([{ id: "alpha", publicCounter: true }]);
+    const calls = [];
+    const reports = {
+        alpha: goAccessReport({ "2026-09-11": 2 }),
+        combined: goAccessReport({ "2026-09-11": 2 }, true)
+    };
+    fs.appendFileSync(testFixture.registry.sites[0].analyticsLog, analyticsLine({
+        requestPath: "/scanner/",
+        userAgent: "UnknownScanner/1.0"
+    }));
+    try {
+        generateReports({
+            registryPath: testFixture.registryPath,
+            configTemplatePath: testFixture.configTemplatePath,
+            goaccessBinary: "fake-goaccess"
+        }, {
+            checkGoAccess: () => GOACCESS_WITHOUT_ZLIB,
+            runGoAccess: fakeGoAccess(reports, calls),
+            now: () => new Date("2026-09-11T12:00:00Z"),
+            skipLock: true
+        });
+
+        const state = JSON.parse(fs.readFileSync(testFixture.registry.privateMetrics.statePath, "utf8"));
+        assert.equal(state.sites.alpha.website.daily["2026-09-11"].pageViews, 2);
+        assert.equal(state.sites.alpha.website.daily["2026-09-11"].paths["/scanner/"], undefined);
+        const classifierCall = calls.find(call => call.metricKind === "websiteClassifier");
+        const aggregationCall = calls.find(call => call.metricKind === "website");
+        assert.equal(classifierCall.inputLines.some(line => line.includes("UnknownScanner/1.0")), true);
+        assert.equal(classifierCall.inputLines.every(line => line.split("\t")[4].startsWith("/__client/")), true);
+        assert.equal(aggregationCall.inputLines.some(line => line.includes("UnknownScanner/1.0")), false);
+    } finally {
+        testFixture.cleanup();
+    }
+});
 
 function run(testFixture, reports, calls = [], failureId) {
     return generateReports({
