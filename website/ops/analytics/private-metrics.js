@@ -277,7 +277,9 @@ function aggregateGoAccessReport(report, kind) {
     const paths = countPanel(report, "requests");
     const total = sumValues(paths);
     if (validRequests !== total) {
-        throw new Error("GoAccess valid-request count differs from the request-panel definition");
+        throw new Error(
+            `GoAccess valid-request count ${validRequests} differs from request-panel total ${total}`
+        );
     }
     const countries = countCountries(report);
     const countryTotal = sumValues(countries);
@@ -338,24 +340,19 @@ function runMetricGoAccess({ records, jobId, metricKind, site, context, includeC
 }
 
 function filterWebsiteRecordsWithGoAccess(records, date, site, context) {
-    const representatives = [];
-    const pathByUserAgent = new Map();
-    for (const record of records) {
-        if (pathByUserAgent.has(record.userAgent)) continue;
-        const classifierPath = `/__client/${pathByUserAgent.size}`;
-        pathByUserAgent.set(record.userAgent, classifierPath);
+    const recordIndexByPath = new Map();
+    const representatives = records.map((record, index) => {
+        const extension = path.posix.extname(record.path);
+        const classifierPath = `/__request/${index}${extension}`;
+        recordIndexByPath.set(classifierPath, index);
         const representative = {
             ...record,
             ip: "192.0.2.1",
-            method: "GET",
-            path: classifierPath,
-            protocol: "HTTP/1.1",
-            status: 200,
-            bytes: 0
+            path: classifierPath
         };
         representative.line = toAnalyticsLine(representative);
-        representatives.push(representative);
-    }
+        return representative;
+    });
     const report = runMetricGoAccess({
         records: representatives,
         jobId: `metrics-${site.id}-website-classifier-${date}`,
@@ -365,16 +362,14 @@ function filterWebsiteRecordsWithGoAccess(records, date, site, context) {
         includeCrawlers: false
     });
     const acceptedPaths = countPanel(report, "requests");
-    const knownPaths = new Set(pathByUserAgent.values());
+    const acceptedIndexes = new Set();
     for (const [classifierPath, count] of Object.entries(acceptedPaths)) {
-        if (!knownPaths.has(classifierPath) || count !== 1) {
+        if (!recordIndexByPath.has(classifierPath) || count !== 1) {
             throw new Error(`website client classification is invalid for ${site.id}/${date}`);
         }
+        acceptedIndexes.add(recordIndexByPath.get(classifierPath));
     }
-    const acceptedUserAgents = new Set([...pathByUserAgent]
-        .filter(([_userAgent, classifierPath]) => Object.hasOwn(acceptedPaths, classifierPath))
-        .map(([userAgent]) => userAgent));
-    return records.filter(record => acceptedUserAgents.has(record.userAgent));
+    return records.filter((_record, index) => acceptedIndexes.has(index));
 }
 
 function aggregateDays({ records, dates, kind, site, context }) {
@@ -409,7 +404,11 @@ function aggregateDays({ records, dates, kind, site, context }) {
             context,
             includeCrawlers: true
         });
-        daily[date] = aggregateGoAccessReport(report, kind);
+        try {
+            daily[date] = aggregateGoAccessReport(report, kind);
+        } catch (error) {
+            throw new Error(`private metric aggregation failed for ${site.id}/${kind}/${date}: ${error.message}`);
+        }
         if (kind === "updateInfo") {
             const hours = {};
             const clients = {};

@@ -153,7 +153,10 @@ function fakeGoAccess(reports, calls, failureId) {
             const sourceLines = fs.readFileSync(invocation.args[0], "utf8").trim().split(/\r?\n/);
             invocation.inputLines = sourceLines;
             const lines = invocation.metricKind === "websiteClassifier"
-                ? sourceLines.filter(line => !line.includes("UnknownScanner/1.0"))
+                ? sourceLines.filter(line => {
+                    const fields = line.split("\t");
+                    return fields[6] !== "404" && !line.includes("UnknownScanner/1.0");
+                })
                 : sourceLines;
             const paths = {};
             for (const line of lines) {
@@ -196,6 +199,18 @@ test("uses GoAccess client classification before aggregating website paths and c
         requestPath: "/scanner/",
         userAgent: "UnknownScanner/1.0"
     }));
+    fs.appendFileSync(testFixture.registry.sites[0].analyticsLog, analyticsLine({
+        requestPath: "/missing/",
+        status: 404
+    }));
+    fs.appendFileSync(testFixture.registry.sites[0].analyticsLog, analyticsLine({
+        requestPath: "/cached/",
+        status: 304
+    }));
+    fs.appendFileSync(testFixture.registry.sites[0].analyticsLog, analyticsLine({
+        requestPath: "/page.html",
+        userAgent: "Mozilla/5.0 Chrome/140.0"
+    }));
     try {
         generateReports({
             registryPath: testFixture.registryPath,
@@ -209,13 +224,18 @@ test("uses GoAccess client classification before aggregating website paths and c
         });
 
         const state = JSON.parse(fs.readFileSync(testFixture.registry.privateMetrics.statePath, "utf8"));
-        assert.equal(state.sites.alpha.website.daily["2026-09-11"].pageViews, 2);
+        assert.equal(state.sites.alpha.website.daily["2026-09-11"].pageViews, 4);
         assert.equal(state.sites.alpha.website.daily["2026-09-11"].paths["/scanner/"], undefined);
+        assert.equal(state.sites.alpha.website.daily["2026-09-11"].paths["/missing/"], undefined);
+        assert.equal(state.sites.alpha.website.daily["2026-09-11"].paths["/cached/"], 1);
+        assert.equal(state.sites.alpha.website.daily["2026-09-11"].paths["/page.html"], 1);
         const classifierCall = calls.find(call => call.metricKind === "websiteClassifier");
         const aggregationCall = calls.find(call => call.metricKind === "website");
         assert.equal(classifierCall.inputLines.some(line => line.includes("UnknownScanner/1.0")), true);
-        assert.equal(classifierCall.inputLines.every(line => line.split("\t")[4].startsWith("/__client/")), true);
+        assert.equal(classifierCall.inputLines.every(line => line.split("\t")[4].startsWith("/__request/")), true);
+        assert.equal(classifierCall.inputLines.some(line => line.split("\t")[4].endsWith(".html")), true);
         assert.equal(aggregationCall.inputLines.some(line => line.includes("UnknownScanner/1.0")), false);
+        assert.equal(aggregationCall.inputLines.some(line => line.split("\t")[6] === "404"), false);
     } finally {
         testFixture.cleanup();
     }

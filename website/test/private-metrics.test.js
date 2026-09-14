@@ -116,7 +116,7 @@ test("keeps absolute countries including Switzerland, United Kingdom and unknown
         general: { total_requests: 10, valid_requests: 2 },
         geolocation: { data: [{ data: "Germany", hits: { count: 2 } }] },
         requests: { data: [{ data: "/", hits: { count: 1 } }] }
-    }, "website"), /valid-request count differs from the request-panel definition/);
+    }, "website"), /valid-request count 2 differs from request-panel total 1/);
 
     const updates = aggregateGoAccessReport({
         general: { total_requests: 9, valid_requests: 2 },
