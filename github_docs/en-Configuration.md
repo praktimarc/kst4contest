@@ -935,6 +935,61 @@ Display and derivation: [Worked Callsigns, New Bands and New Grid Squares](en-Fe
 
 ---
 
+## Operator Profiles (from v1.50)
+
+Several operators sharing one computer need different callsigns, locators and layouts. An operator profile bundles exactly that: **every profile has its own `preferences.xml`, and therefore its own settings and its own window layout.**
+
+### Where the profiles live
+
+| Profile | Settings | Worked stations |
+|---|---|---|
+| **Default** | `~/.praktiKST/preferences.xml` | `~/.praktiKST/praktiKST.db` |
+| additional profiles | `~/.praktiKST/profiles/<profile ID>/preferences.xml` | shared, or `~/.praktiKST/profiles/<profile ID>/praktiKST.db` |
+
+On Windows the same files live below `%USERPROFILE%\.praktiKST\`.
+
+Everything else stays shared: audio files, colour schemes, DEM and terrain packages, the terrain profile cache (`terrainprofilecache.db`), the error log and the version information.
+
+The **Default** profile keeps using exactly the files an existing installation already has. **Upgrading to v1.50 moves, copies and rewrites nothing.** Anyone reinstalling an older KST4Contest release finds their configuration and their worked stations unchanged.
+
+### Shared or own worked stations
+
+When a profile is created you decide where its worked, NOT-QRV and grid data come from:
+
+- **Own worked stations** (default): the profile gets its own, initially empty database. This is what two operators with different callsigns sharing a private computer want.
+- **Common station database**: the profile uses `~/.praktiKST/praktiKST.db`, the same database as the **Default** profile. This is the **multi operator station** case: there is only one station log, so the worked state should be the same for every operator.
+
+Switching between the two settings moves no data. Worked data already collected stays where it was created. The three day expiry and the reset button always act on the database of the currently active profile.
+
+### Managing profiles
+
+The **Profiles** tab in the settings window lists all profiles with their name, the kind of worked data they use and when they were last used.
+
+- **New profile...** creates a profile. It starts **without callsign and password**; both are entered afterwards on the **Station** tab.
+- **Duplicate...** copies the complete configuration of the selected profile - antenna, locator, layout, beacon, integrations - **except callsign and password**. Worked stations are never copied.
+- **Rename...** changes the displayed name only. Folders and files are untouched.
+- **Delete...** removes the profile folder permanently. The **Default** profile and the currently active profile cannot be deleted. For a profile using the common station database, that database is left untouched.
+- **Change worked stations...** switches between the common and an own database.
+- **Switch to selected profile...** changes the profile while the application is running.
+
+### Choosing a profile at startup
+
+- As long as only **one** profile exists, KST4Contest asks **nothing** at startup and starts exactly as before. No profile registry is created either; only creating the second profile writes `~/.praktiKST/profiles.xml`.
+- From **two** profiles on, a small selection appears at startup. The last used profile is preselected, and **Enter** or a double click start immediately.
+- The `--profile=<name>` argument skips the selection and starts the named profile directly. Both the profile ID and the displayed name are accepted, case insensitively. An unknown name produces a note and then the normal selection - startup is never refused.
+
+### Switching profiles while running
+
+**File > Switch operator profile...**, or the button on the **Profiles** tab, switches without restarting the program. After a confirmation the ON4KST connection is closed and the user interface is rebuilt with the settings and layout of the selected profile. The layout of the previous profile is saved first; settings not yet confirmed with **Save Settings** are lost.
+
+Once more than one profile exists, the main window title also shows the profile name.
+
+### A note about passwords
+
+As before, the ON4KST password is stored in clear text in the `preferences.xml` of each profile. On a shared computer, anyone with access to the user account can read the passwords of all profiles. Profiles separate configuration; they are **not** an access control mechanism.
+
+---
+
 ## Dark Mode (from v1.26)
 
 Enable Dark Mode through **Windows → Use dark mode design**. Use **Windows → Use default mode design** to restore the normal light colour scheme.

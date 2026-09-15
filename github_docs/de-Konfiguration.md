@@ -878,6 +878,61 @@ Anzeige und Herleitung: [Gearbeitete Rufzeichen, neue Bänder und neue Großfeld
 
 ---
 
+## Operator-Profile (ab v1.50)
+
+Mehrere Operateure an einem Rechner brauchen unterschiedliche Rufzeichen, Locators und Layouts. Ein Operator-Profil bündelt genau das: **jedes Profil hat seine eigene `preferences.xml` und damit seine eigenen fachlichen Einstellungen und seinen eigenen Layoutstand.**
+
+### Wo die Profile liegen
+
+| Profil | Einstellungen | Gearbeitete Stationen |
+|---|---|---|
+| **Default** | `~/.praktiKST/preferences.xml` | `~/.praktiKST/praktiKST.db` |
+| weitere Profile | `~/.praktiKST/profiles/<Profil-ID>/preferences.xml` | je nach Einstellung gemeinsam oder `~/.praktiKST/profiles/<Profil-ID>/praktiKST.db` |
+
+Unter Windows entsprechend unterhalb von `%USERPROFILE%\.praktiKST\`.
+
+Alle übrigen Daten bleiben gemeinsam: Klangdateien, Farbschemata, DEM- und Terrainpakete, der Zwischenspeicher der Geländeprofile (`terrainprofilecache.db`), das Fehlerprotokoll und die Versionsinformationen.
+
+Das Profil **Default** benutzt weiterhin genau die Dateien, die eine bestehende Installation schon hat. **Bei der Aktualisierung auf v1.50 wird keine Datei verschoben, kopiert oder umgeschrieben.** Wer eine ältere KST4Contest-Version wieder installiert, findet seine Konfiguration und seine gearbeiteten Stationen unverändert vor.
+
+### Gemeinsame oder eigene gearbeitete Stationen
+
+Beim Anlegen eines Profils wird entschieden, woher dessen Worked-, NOT-QRV- und Großfeld-Daten kommen:
+
+- **Eigene gearbeitete Stationen** (Vorgabe): Das Profil bekommt eine eigene, zunächst leere Datenbank. Sinnvoll, wenn sich zwei OMs mit verschiedenen Rufzeichen einen Rechner teilen.
+- **Gemeinsame Stationsdatenbank**: Das Profil benutzt `~/.praktiKST/praktiKST.db`, also dieselbe Datenbank wie das Profil **Default**. Das ist der Fall der **Multi-OP-Station**: es gibt nur ein Stationslog, also soll auch der Worked-Status für alle Operateure derselbe sein.
+
+Ein Wechsel zwischen beiden Einstellungen verschiebt keine Daten. Bereits gesammelte Worked-Daten bleiben dort liegen, wo sie entstanden sind. Der Drei-Tage-Ablauf und die Reset-Schaltfläche wirken jeweils auf die Datenbank des gerade aktiven Profils.
+
+### Profile verwalten
+
+Der Reiter **Profiles** im Einstellungsfenster zeigt alle Profile mit Name, Art der Worked-Daten und letzter Benutzung.
+
+- **New profile...** legt ein Profil an. Es startet **ohne Rufzeichen und ohne Passwort**; beides wird anschließend im Reiter **Station** eingetragen.
+- **Duplicate...** übernimmt die komplette Konfiguration des gewählten Profils — Antenne, Locator, Layout, Beacon, Integrationen — **außer Rufzeichen und Passwort**. Gearbeitete Stationen werden nie mitkopiert.
+- **Rename...** ändert nur den angezeigten Namen. Verzeichnisse und Dateien bleiben unberührt.
+- **Delete...** entfernt das Profilverzeichnis endgültig. Das Profil **Default** und das gerade aktive Profil lassen sich nicht löschen. Bei einem Profil mit gemeinsamer Stationsdatenbank bleibt diese unangetastet.
+- **Change worked stations...** schaltet zwischen gemeinsamer und eigener Datenbank um.
+- **Switch to selected profile...** wechselt das Profil im laufenden Betrieb.
+
+### Profilwahl beim Start
+
+- Solange nur **ein** Profil existiert, fragt KST4Contest beim Start **nichts** und startet wie bisher. Es wird auch keine Profil-Registry angelegt. Erst das Anlegen des zweiten Profils erzeugt `~/.praktiKST/profiles.xml`.
+- Ab **zwei** Profilen erscheint beim Start eine kleine Auswahl. Das zuletzt benutzte Profil ist vorausgewählt, **Enter** oder ein Doppelklick starten sofort.
+- Der Aufrufparameter `--profile=<Name>` überspringt die Auswahl und startet direkt das genannte Profil. Erlaubt sind die Profil-ID und der angezeigte Name, Groß- und Kleinschreibung spielen keine Rolle. Ein unbekannter Name führt zu einem Hinweis und danach zur normalen Auswahl — der Start wird nie verweigert.
+
+### Profil im laufenden Betrieb wechseln
+
+**File → Switch operator profile...** oder die Schaltfläche im Reiter **Profiles** wechseln ohne Programmneustart. Nach einer Sicherheitsabfrage wird die ON4KST-Verbindung getrennt und die Oberfläche mit den Einstellungen und dem Layout des gewählten Profils neu aufgebaut. Der Layoutstand des bisherigen Profils wird vorher gesichert; noch nicht mit **Save Settings** bestätigte fachliche Änderungen gehen dabei verloren.
+
+Sobald mehr als ein Profil existiert, zeigt die Titelzeile des Hauptfensters zusätzlich den Profilnamen.
+
+### Hinweis zu Passwörtern
+
+Das ON4KST-Passwort steht wie bisher im Klartext in der `preferences.xml` des jeweiligen Profils. Auf einem gemeinsam genutzten Rechner kann jeder, der Zugriff auf das Benutzerkonto hat, die Passwörter aller Profile lesen. Profile trennen die Konfiguration, sie sind **kein** Zugriffsschutz.
+
+---
+
 ## Dark Mode (ab v1.26)
 
 Der Dark Mode wird über **Windows → Use dark mode design** aktiviert. Mit **Windows → Use default mode design** wird wieder das normale helle Farbschema geladen.

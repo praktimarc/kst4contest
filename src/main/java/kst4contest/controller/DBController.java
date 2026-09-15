@@ -6,9 +6,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMember;
@@ -52,34 +56,128 @@ public class DBController {
 	 */
 	private static final long EXPIRATION_CLEANUP_MIN_INTERVAL_IN_MILLISECONDS = 60L * 1000L;
 
-	private static final DBController dbcontroller = new DBController();
-	private static Connection connection;
-	private static String DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
+	/**
+	 * Lazily created controller for the root installation database. It is created on
+	 * first use only, because an eagerly created instance would open a database file
+	 * before the application knows which operator profile is active.
+	 */
+	private static volatile DBController defaultInstance;
+
+	private Connection connection;
+
+	/**
+	 * File name of this database relative to the application directory, for example
+	 * "praktiKST.db" or "profiles/OP2/praktiKST.db".
+	 */
+	private final String databaseRelativeFileName;
+
+	/**
+	 * Absolute path of the database file, resolved once during construction.
+	 */
+	private final String databaseFilePath;
+
+	/**
+	 * True if a missing database file should be seeded from the shipped template.
+	 */
+	private final boolean seedFromResource;
+
+	/**
+	 * Shutdown hook of this instance. It is remembered so it can be deregistered when
+	 * the connection is closed. Without that, every operator profile switch would leave
+	 * another hook behind that keeps a dead connection alive until the process ends.
+	 */
+	private Thread databaseShutdownHook;
 
 	/**
 	 * Remembers the last timestamp at which the expiration cleanup had been executed.
 	 */
 	private long lastExpirationCleanupExecutionEpochMs = 0L;
 
+	/**
+	 * Creates a controller for the worked-station database of the root installation.
+	 */
 	public DBController() {
-		initDBConnection();
-	}
-
-	public static DBController getInstance() {
-		return dbcontroller;
+		this(DATABASE_FILE, true);
 	}
 
 	/**
-	 * Closes the database connection if it is still open.
+	 * Creates a controller for the worked-station database of one operator profile.
+	 *
+	 * @param databaseRelativeFileName file name relative to the application directory
+	 * @param seedFromResource         true to copy the shipped template database when the file
+	 *                                 does not exist yet, false to create an empty database and
+	 *                                 let the schema creation build all required tables
+	 */
+	public DBController(final String databaseRelativeFileName, final boolean seedFromResource) {
+		this.databaseRelativeFileName =
+				Objects.requireNonNull(databaseRelativeFileName, "databaseRelativeFileName");
+		this.seedFromResource = seedFromResource;
+		this.databaseFilePath = ApplicationFileUtils.getFilePath(
+				ApplicationConstants.APPLICATION_NAME,
+				databaseRelativeFileName
+		);
+
+		initDBConnection();
+	}
+
+	/**
+	 * Returns a controller for the root installation database, creating it on first use.
+	 *
+	 * @return the shared controller for the root installation database
+	 */
+	public static synchronized DBController getInstance() {
+
+		if (defaultInstance == null) {
+			defaultInstance = new DBController();
+		}
+
+		return defaultInstance;
+	}
+
+	/**
+	 * Returns the absolute path of the database file this controller works on.
+	 *
+	 * @return absolute database file path
+	 */
+	public String getDatabaseFilePath() {
+		return databaseFilePath;
+	}
+
+	/**
+	 * Closes the database connection if it is still open and deregisters the shutdown
+	 * hook of this instance.
 	 */
 	public synchronized void closeDBConnection() {
+
+		closeConnectionQuietly();
+
+		if (databaseShutdownHook != null) {
+			try {
+				Runtime.getRuntime().removeShutdownHook(databaseShutdownHook);
+			} catch (IllegalStateException shutdownAlreadyInProgress) {
+				// Expected while the JVM is shutting down; the hook is running anyway.
+			}
+
+			databaseShutdownHook = null;
+		}
+	}
+
+	/**
+	 * Closes the connection without touching the shutdown hook. This is also the body of
+	 * the shutdown hook itself.
+	 */
+	private synchronized void closeConnectionQuietly() {
+
 		try {
 			if (connection != null && !connection.isClosed()) {
 				connection.close();
+				System.out.println("Connection to Database closed: " + databaseFilePath);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
+
+		connection = null;
 	}
 
 	/**
@@ -91,22 +189,17 @@ public class DBController {
 		System.out.println("DBH: initiate new db connection");
 
 		try {
-			ApplicationFileUtils.copyResourceIfRequired(
-					ApplicationConstants.APPLICATION_NAME,
-					DATABASE_RESOURCE,
-					DATABASE_FILE
-			);
-
 			if (connection != null && !connection.isClosed()) {
 				return;
 			}
 
+			prepareDatabaseFile();
+
 			System.out.println("Creating Connection to Database...");
 
-			DB_PATH = ApplicationFileUtils.getFilePath(ApplicationConstants.APPLICATION_NAME, DATABASE_FILE);
-			connection = DriverManager.getConnection("jdbc:sqlite:" + DB_PATH);
+			connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFilePath);
 
-			System.out.println("[DBH, Info]: Path = " + DB_PATH);
+			System.out.println("[DBH, Info]: Path = " + databaseFilePath);
 
 			if (!connection.isClosed()) {
 				System.out.println("...Connection established");
@@ -115,23 +208,48 @@ public class DBController {
 			throw new RuntimeException(e);
 		}
 
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				try {
-					if (connection != null && !connection.isClosed()) {
-						connection.close();
-
-						if (connection.isClosed()) {
-							System.out.println("Connection to Database closed");
-						}
-					}
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
-			}
-		});
+		databaseShutdownHook = new Thread(this::closeConnectionQuietly,
+				"DBController-shutdown-" + databaseRelativeFileName);
+		Runtime.getRuntime().addShutdownHook(databaseShutdownHook);
 
 		ensureChatMemberTableCompatibility();
+	}
+
+	/**
+	 * Makes sure the database file can be opened.
+	 *
+	 * <p>The database of the root installation is seeded from the shipped template so
+	 * existing installations keep their historic content. A database that belongs to an
+	 * additional operator profile is created empty on purpose: the shipped template
+	 * carries several thousand foreign callsigns and an outdated schema version, which
+	 * would present a new operator with foreign data and trigger the full callsign
+	 * normalization rebuild. The required tables are created by
+	 * {@link #ensureChatMemberTableCompatibility()} in both cases.</p>
+	 */
+	private synchronized void prepareDatabaseFile() {
+
+		if (seedFromResource) {
+			ApplicationFileUtils.copyResourceIfRequired(
+					ApplicationConstants.APPLICATION_NAME,
+					DATABASE_RESOURCE,
+					databaseRelativeFileName
+			);
+
+			return;
+		}
+
+		Path parentDirectory = Path.of(databaseFilePath).getParent();
+
+		if (parentDirectory == null) {
+			return;
+		}
+
+		try {
+			Files.createDirectories(parentDirectory);
+		} catch (IOException e) {
+			throw new RuntimeException(
+					"[DBH, ERROR:] Could not create database directory " + parentDirectory, e);
+		}
 	}
 
 	/**

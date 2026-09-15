@@ -244,6 +244,25 @@ public final class StationMapView {
         stage.hide();
     }
 
+    /**
+     * Releases every resource this map window owns.
+     *
+     * <p>The tile proxy is a local server socket with its own thread pool. It used to
+     * live until the process ended, which was harmless while the map existed exactly
+     * once per process. A runtime that is discarded, for example during an operator
+     * profile switch, has to hand it back.</p>
+     */
+    public void dispose() {
+
+        if (tileProxyServer != null) {
+            tileProxyServer.stop();
+            tileProxyServer = null;
+        }
+
+        webEngine.load(null);
+        stage.close();
+    }
+
     public boolean isShowing() {
         return stage.isShowing();
     }

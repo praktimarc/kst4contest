@@ -79,7 +79,26 @@ public class ChatPreferences {
 	 * TODO: delete this from the kst4contest.view/Main.java!
 	 */
 	public ChatPreferences() {
-		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, PREFERENCES_FILE);
+		this(PREFERENCES_FILE);
+	}
+
+	/**
+	 * Creates preferences bound to one operator profile.
+	 *
+	 * <p>The file name is resolved below the application directory, so both
+	 * "preferences.xml" for the root installation and "profiles/OP2/preferences.xml"
+	 * for an additional operator profile are valid. A missing file is seeded from the
+	 * bundled template, which gives a new profile the same clean defaults a first-ever
+	 * installation gets.</p>
+	 *
+	 * @param applicationRelativeFileName preferences file name relative to the application directory
+	 */
+	public ChatPreferences(final String applicationRelativeFileName) {
+		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, applicationRelativeFileName);
+		this.storeAndRestorePreferencesFileName = ApplicationFileUtils.getFilePath(
+				ApplicationConstants.APPLICATION_NAME,
+				applicationRelativeFileName
+		);
 
 //        lstNotify_QSOSniffer_sniffedCallSignList.add("DF0GEB");
 
@@ -168,8 +187,14 @@ public class ChatPreferences {
 	int stn_pstRotatorPort = 12000;
 
 	boolean stn_loginAFKState = false; //always start as here
-	String stn_loginCallSign = "do5amf";
-	String stn_loginCallSignRaw = "do5amf"; //for example: do5amf instead of logincallsign do5amf-2
+	/*
+	 * The login credentials default to empty on purpose. A missing or empty value in
+	 * preferences.xml means "not configured yet", and falling back to a real callsign
+	 * would let an operator transmit under someone else's call. This matters for every
+	 * additional operator profile, whose preferences are created without credentials.
+	 */
+	String stn_loginCallSign = "";
+	String stn_loginCallSignRaw = ""; //for example: do5amf instead of logincallsign do5amf-2
 	String stn_loginPassword = "";
 	String stn_loginNameMainCat = "KST4Contest";
 	String stn_loginNameSecondCat = "KST4ContestSHF";
