@@ -133,6 +133,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private On4KstConnectionState lastDisplayedConnectionState;
 	private String lastDisplayedConnectionDetail = "";
 
+	/** Scenes whose stylesheet follows the light/dark design switch. */
+	private final List<Scene> themedScenes = new ArrayList<>();
+
 	private final Button btnBandUpgradeIndicator = new Button("BAND+");
 	private final Tooltip tipBandUpgradeIndicator = new Tooltip();
 	private Timeline bandUpgradeBlinkTimeline;
@@ -4589,7 +4592,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		root.setCenter(listView);
 		root.setBottom(new Label("Double-click a candidate to select it."));
 
-		stage.setScene(new Scene(root, 360, 500));
+		Scene candidatesScene = new Scene(root, 360, 500);
+		registerThemedScene(candidatesScene);
+		stage.setOnHidden(event -> themedScenes.remove(candidatesScene));
+		stage.setScene(candidatesScene);
 		stage.show();
 	}
 
@@ -5621,21 +5627,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		window30.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
-				System.out.println("KST4ContestApp, info: switching to dark mode");
-
-				scn_ChatwindowMainScene.getStylesheets().clear();
-				clusterAndQSOMonScene.getStylesheets().clear();
-				settingsScene.getStylesheets().clear();
-				setUserAgentStylesheet(null);
-
-				scn_ChatwindowMainScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
-				clusterAndQSOMonScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
-				settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING);
-
-				chatcontroller.getChatPreferences().setGUI_darkModeActive(true);
-				if (stationMapBridge != null) {
-					stationMapBridge.applyThemeFromPreferences(); //dark mode for the map
-				}
+				// quick switch for this session only, the startup design is set per profile in the GUI options
+				applyTheme(true);
 			}
 		});
 
@@ -5643,21 +5636,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		window40.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
-				System.out.println("KST4ContestApp, info: switching to default mode");
-
-				scn_ChatwindowMainScene.getStylesheets().clear();
-				clusterAndQSOMonScene.getStylesheets().clear();
-				settingsScene.getStylesheets().clear();
-				setUserAgentStylesheet(null);
-
-				scn_ChatwindowMainScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
-				clusterAndQSOMonScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
-				settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
-				chatcontroller.getChatPreferences().setGUI_darkModeActive(false);
-
-				if (stationMapBridge != null) {
-					stationMapBridge.applyThemeFromPreferences();
-				}
+				// quick switch for this session only, the startup design is set per profile in the GUI options
+				applyTheme(false);
 			}
 		});
 
@@ -5777,6 +5757,43 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		menubar.getMenus().addAll(fileMenu, optionsMenu, windowMenu, helpMenu); // macromenu deleted
 
 		return menubar;
+	}
+
+	/**
+	 * Registers a scene whose stylesheet follows the light/dark design switch and
+	 * applies the currently active design to it.
+	 */
+	private void registerThemedScene(Scene scene) {
+		if (scene == null) {
+			return;
+		}
+		themedScenes.add(scene);
+		applyThemeStylesheet(scene, chatcontroller.getChatPreferences().isGUI_darkModeActive());
+	}
+
+	/**
+	 * Switches all registered windows and the station map to the dark or light design
+	 * for the running session. The per-profile startup design is not changed here.
+	 */
+	private void applyTheme(boolean darkMode) {
+		LOGGER.info("Switching GUI design to " + (darkMode ? "dark" : "light") + " mode");
+
+		chatcontroller.getChatPreferences().setGUI_darkModeActive(darkMode);
+		setUserAgentStylesheet(null);
+
+		for (Scene scene : themedScenes) {
+			applyThemeStylesheet(scene, darkMode);
+		}
+
+		if (stationMapBridge != null) {
+			stationMapBridge.applyThemeFromPreferences();
+		}
+	}
+
+	private static void applyThemeStylesheet(Scene scene, boolean darkMode) {
+		scene.getStylesheets().setAll(darkMode
+				? ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING
+				: ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
 	}
 
 
@@ -6979,6 +6996,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		setDebugFileLoggingEnabled(chatcontroller.getChatPreferences()
 				.isMessageHandling_debugModeToFileEnabled());
 		layoutAutosave = new LayoutAutosave(chatcontroller.getChatPreferences());
+		// Every profile starts with its own configured design; the menu quick switch only lasts for the session.
+		chatcontroller.getChatPreferences().setGUI_darkModeActive(
+				chatcontroller.getChatPreferences().isGUI_darkModeActiveByDefault());
 		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
 		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
 
@@ -7113,7 +7133,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					screenAwareMainSceneSizeHW[0]
 			);
 
-			scn_ChatwindowMainScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+			registerThemedScene(scn_ChatwindowMainScene);
 
 
 
@@ -9127,7 +9147,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 		clusterAndQSOMonScene = new Scene(pnl_directedMSGWin, chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1]);
-		clusterAndQSOMonScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+		registerThemedScene(clusterAndQSOMonScene);
 
 		clusterAndQSOMonScene.heightProperty().addListener(new ChangeListener<Number>() {
 			@Override
@@ -9255,6 +9275,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		System.out.println("SRVR Version: " + chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() + " // installed version " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
 
 		stage_updateStage.setScene(new Scene(vbxUpdateWindow, chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1]));
+		registerThemedScene(stage_updateStage.getScene());
 		stage_updateStage.getScene().widthProperty().addListener((observable, oldValue, newValue) -> {
 			chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0] = newValue.doubleValue();
 			requestLayoutSave();
@@ -11973,6 +11994,33 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		grdPnlGuiOptions.add(lblShowFreshCallHint, 0, 6);
 		grdPnlGuiOptions.add(chkBxShowFreshCallHint, 1, 6);
 
+		// Startup design of this operator profile; the Windows menu only switches for the session.
+		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Design"), 0, 7, 2, 1);
+
+		ToggleGroup guiOptions_tglGrpDesign = new ToggleGroup();
+		RadioButton designLightModeRB = new RadioButton("Light mode ");
+		designLightModeRB.setToggleGroup(guiOptions_tglGrpDesign);
+		RadioButton designDarkModeRB = new RadioButton("Dark mode ");
+		designDarkModeRB.setToggleGroup(guiOptions_tglGrpDesign);
+
+		if (chatcontroller.getChatPreferences().isGUI_darkModeActiveByDefault()) {
+			designDarkModeRB.setSelected(true);
+		} else {
+			designLightModeRB.setSelected(true);
+		}
+
+		guiOptions_tglGrpDesign.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
+			if (newToggle == null) {
+				return;
+			}
+			boolean darkMode = newToggle == designDarkModeRB;
+			chatcontroller.getChatPreferences().setGUI_darkModeActiveByDefault(darkMode);
+			applyTheme(darkMode);
+		});
+
+		grdPnlGuiOptions.add(new Label("Design at startup of this profile:"), 0, 8);
+		grdPnlGuiOptions.add(new HBox(designLightModeRB, designDarkModeRB), 1, 8);
+
 
 
 
@@ -12289,7 +12337,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 //        VBox vBox = new VBox(tabPaneOptions);
 		settingsScene = new Scene(optionsPanel, chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1]);
-		settingsScene.getStylesheets().add(ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+		registerThemedScene(settingsScene);
 		settingsScene.widthProperty().addListener((observable, oldValue, newValue) -> {
 			chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0] = newValue.doubleValue();
 			requestLayoutSave();

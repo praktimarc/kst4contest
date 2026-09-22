@@ -317,7 +317,7 @@ KST4Contest signs in to ON4KST once with one local login callsign and password. 
 
 ## Dark Mode (from v1.26)
 
-Enable it through **Windows → Use dark mode design**. Use **Windows → Use default mode design** to return to the normal light colour scheme.
+Each operator profile sets its startup colour scheme on the **GUI** tab under **Design**. **Windows → Use dark mode design** and **Windows → Use default mode design** switch quickly for the running session.
 
 The green private-message age scale remains available in both designs. Text colour, normal table colour and the separate highlight for locally sent messages follow the selected built-in design.
 

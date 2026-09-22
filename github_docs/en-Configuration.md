@@ -1015,7 +1015,9 @@ As before, the ON4KST password is stored in clear text in the `preferences.xml` 
 
 ## Dark Mode (from v1.26)
 
-Enable Dark Mode through **Windows → Use dark mode design**. Use **Windows → Use default mode design** to restore the normal light colour scheme.
+Each operator profile sets its own startup colour scheme: on the **GUI** tab under **Design**, choose **Light mode** or **Dark mode**. The choice takes effect immediately and is stored in the profile's `preferences.xml` with **Save Settings**.
+
+For a quick change during operation, use **Windows → Use dark mode design** and **Windows → Use default mode design**. This switch only lasts until the next start or profile switch; after that the setting on the **GUI** tab applies again.
 
 ---
 

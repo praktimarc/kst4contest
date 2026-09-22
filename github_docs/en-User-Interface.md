@@ -486,8 +486,9 @@ Functions which communicate with the server are available only after the ON4KST 
 
 - **Hide cluster / stranger QSOs** and **Show cluster / stranger QSOs** hide or restore the separate cluster and QSO monitor window.
 - **hide options** and **show options** hide or restore the settings window.
-- **Use dark mode design** activates the dark colour scheme.
-- **Use default mode design** restores the standard light colour scheme.
+- **Use dark mode design** activates the dark colour scheme for the running session.
+- **Use default mode design** restores the standard light colour scheme for the running session.
+  The startup colour scheme is set per profile on the **GUI** settings tab under **Design**.
 - **Show / hide station map** opens or closes the separate station-map and path-analysis window.
 
 ---

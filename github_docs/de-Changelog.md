@@ -30,7 +30,13 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **Rufzeichen-Vorgabe ist leer:** Fehlt in der `preferences.xml` ein Login-Rufzeichen, bleibt das Feld jetzt leer, statt auf ein im Programm hinterlegtes Rufzeichen zurückzufallen. Ein neu angelegtes Profil startet damit bewusst ohne Anmeldedaten.
 
+- **Dark Mode pro Profil:** Im Reiter **GUI** legt jedes Operator-Profil unter **Design** fest, ob KST4Contest hell oder dunkel startet. Die Menüeinträge unter **Windows** schalten weiterhin schnell um, gelten aber nur für die laufende Sitzung. Das Farbschema erfasst jetzt auch das Update-Fenster und die Liste der Top-Kandidaten.
+
 ### Behoben
+
+- **Einheitliche Schriftgröße:** Unter macOS und Linux verwendet JavaFX eine etwas größere Standardschrift als unter Windows. Dadurch wurden Beschriftungen in fest bemessenen Bedienelementen abgeschnitten. KST4Contest verwendet jetzt auf allen Systemen dieselbe Grundschriftgröße; unter Windows ändert sich nichts.
+
+- **Dark Mode nach dem Neustart:** Das Hauptfenster startete immer hell, auch wenn zuletzt der Dark Mode aktiv war, während die Stationskarte dunkel blieb. Jetzt starten alle Fenster einheitlich mit dem Farbschema des Profils.
 
 - **Freigegebene Hintergrundressourcen:** Der ON4KST-Überwachungsthread, der Sked-Erinnerungs-Scheduler, der Reachability-Executor, der PSTRotator-Wiederholungs-Scheduler und der Kachel-Proxy der Karte werden beim Schließen des Chatcontrollers freigegeben. Bisher liefen sie bis zum Programmende weiter.
 
