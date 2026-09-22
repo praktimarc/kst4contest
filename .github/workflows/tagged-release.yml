@@ -718,6 +718,90 @@ jobs:
     steps:
       - name: Checkout release source
         uses: actions/checkout@v4.1.7
+        with:
+          # Full history and tags, needed to list the commits since the previous release.
+          fetch-depth: 0
+
+      # GitHub's generated release notes list merged pull requests only. Commits
+      # pushed directly to main are added here as their own section:
+      #   ## What's Changed
+      #   ### Commits on main   (first-parent commits, no merges, no bots)
+      #   ### Merged PRs        (GitHub's generated PR list)
+      # The body also feeds the in-app update feed (website/src/_data/versionInfo.js,
+      # cleanReleaseBody), which drops headings and keeps the "* ..." lines.
+      - name: Build release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Stable releases compare against the previous stable release, betas
+          # against the previous tag of any kind.
+          if [[ "$TAG" == beta-* ]]; then
+            PREVIOUS_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          else
+            PREVIOUS_TAG="$(git describe --tags --abbrev=0 --exclude 'beta-*' "${TAG}^" 2>/dev/null || true)"
+          fi
+          echo "Previous tag: ${PREVIOUS_TAG:-<none>}"
+
+          RANGE="$TAG"
+          [ -n "$PREVIOUS_TAG" ] && RANGE="${PREVIOUS_TAG}..${TAG}"
+
+          # --first-parent keeps the commits made directly on main; commits inside
+          # pull requests are covered by the PR list. Squash-merged PRs end in
+          # "(#123)" and are listed by GitHub as well.
+          git log --first-parent --no-merges --format='%an%x09%s' "$RANGE" \
+            | awk -F '\t' '$1 != "github-actions[bot]" { print $2 }' \
+            | grep -Ev '\(#[0-9]+\)$' \
+            | sed 's/^/* /' > direct-commits.md || true
+
+          # Let GitHub generate the PR part for the same range.
+          if [ -n "$PREVIOUS_TAG" ]; then
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$TAG" -f previous_tag_name="$PREVIOUS_TAG" --jq .body > generated-notes.md
+          else
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$TAG" --jq .body > generated-notes.md
+          fi
+
+          python3 - <<'PY'
+          import re
+
+          commits = open("direct-commits.md", encoding="utf-8").read().strip()
+          generated = open("generated-notes.md", encoding="utf-8").read()
+
+          # GitHub's body: "## What's Changed" with the PR list, optionally
+          # "## New Contributors", and a closing "**Full Changelog**" line.
+          prs, rest = [], []
+          section = None
+          for line in generated.splitlines():
+              if re.match(r"^##\s+What's Changed", line):
+                  section = "prs"
+                  continue
+              if line.startswith("## ") or line.startswith("**Full Changelog**"):
+                  section = "rest"
+              if section == "prs":
+                  if line.strip():
+                      prs.append(line)
+              elif line.strip() or rest:
+                  rest.append(line)
+
+          parts = []
+          if commits or prs:
+              parts.append("## What's Changed")
+              if commits:
+                  parts.append("### Commits on main\n" + commits)
+              if prs:
+                  parts.append("### Merged PRs\n" + "\n".join(prs))
+          if rest:
+              parts.append("\n".join(rest).strip())
+
+          with open("release-notes.md", "w", encoding="utf-8") as out:
+              out.write("\n\n".join(parts) + "\n")
+          PY
+
+          cat release-notes.md
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4.1.3
@@ -778,7 +862,8 @@ jobs:
           allowUpdates: false
           replacesArtifacts: false
           makeLatest: ${{ !startsWith(github.ref_name, 'beta-') }}
-          generateReleaseNotes: true
+          bodyFile: release-notes.md
+          generateReleaseNotes: false
           artifacts: >-
             release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
             release-assets/linux/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage,
