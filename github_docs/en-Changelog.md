@@ -30,7 +30,13 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **The default login callsign is empty:** if `preferences.xml` has no login callsign, the field now stays empty instead of falling back to a callsign compiled into the program. A newly created profile therefore deliberately starts without credentials.
 
+- **Dark mode per profile:** on the **GUI** tab each operator profile sets under **Design** whether KST4Contest starts light or dark. The entries in the **Windows** menu still switch quickly, but only for the running session. The colour scheme now also covers the update window and the top candidates list.
+
 ### Fixed
+
+- **Consistent font size:** on macOS and Linux JavaFX uses a slightly larger default font than on Windows, which cut off labels in fixed-size controls. KST4Contest now uses the same base font size on all systems; nothing changes on Windows.
+
+- **Dark mode after a restart:** the main window always started light, even if dark mode had been active, while the station map stayed dark. All windows now start consistently with the profile's colour scheme.
 
 - **Background resources are released:** the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler and the map tile proxy are released when the chat controller is closed. They used to keep running until the program ended.
 

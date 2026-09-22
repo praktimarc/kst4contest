@@ -318,7 +318,7 @@ KST4Contest meldet sich mit einem lokalen Login-Rufzeichen und Passwort einmal b
 
 ## Dark Mode (ab v1.26)
 
-Aktivierbar über **Windows → Use dark mode design**. Mit **Windows → Use default mode design** wird wieder auf das normale helle Farbschema umgeschaltet.
+Welches Farbschema beim Start gilt, wird pro Operator-Profil im Reiter **GUI** unter **Design** festgelegt. Über **Windows → Use dark mode design** und **Windows → Use default mode design** lässt sich für die laufende Sitzung schnell umschalten.
 
 Die grüne Altersskala der Privatnachrichten bleibt in beiden Darstellungen erhalten. Textfarbe, normale Tabellenfarbe und die separate Hervorhebung eigener Nachrichten folgen dem jeweils geladenen Standarddesign.
 

@@ -1,4 +1,6 @@
 .root {
+    /* Same base font size on all platforms: macOS/Linux default to 13px, Windows to 12px. */
+    -fx-font-size: 12px;
     -fx-accent: #1e74c6;
     -fx-focus-color: -fx-accent;
     -fx-base: #373e43;

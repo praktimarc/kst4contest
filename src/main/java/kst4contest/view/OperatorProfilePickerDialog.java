@@ -90,6 +90,8 @@ public final class OperatorProfilePickerDialog {
                 profileListView,
                 buttonRow);
         dialogContent.setPadding(new Insets(15));
+        // No application stylesheet yet: use the same base font size as the main windows.
+        dialogContent.setStyle("-fx-font-size: 12px;");
 
         dialogStage.setScene(new Scene(dialogContent, 380, 280));
         profileListView.requestFocus();

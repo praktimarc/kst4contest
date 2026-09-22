@@ -1,3 +1,8 @@
+.root {
+    /* Same base font size on all platforms: macOS/Linux default to 13px, Windows to 12px. */
+    -fx-font-size: 12px;
+}
+
 .button:pressed {
     -fx-border-color: #ff0000;
 }

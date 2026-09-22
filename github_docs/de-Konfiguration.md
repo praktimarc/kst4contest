@@ -935,7 +935,9 @@ Das ON4KST-Passwort steht wie bisher im Klartext in der `preferences.xml` des je
 
 ## Dark Mode (ab v1.26)
 
-Der Dark Mode wird über **Windows → Use dark mode design** aktiviert. Mit **Windows → Use default mode design** wird wieder das normale helle Farbschema geladen.
+Mit welchem Farbschema KST4Contest startet, legt jedes Operator-Profil selbst fest: im Reiter **GUI** unter **Design** mit **Light mode** oder **Dark mode**. Die Auswahl wirkt sofort und wird mit **Save Settings** in der `preferences.xml` des Profils gespeichert.
+
+Für einen kurzen Wechsel während des Betriebs gibt es **Windows → Use dark mode design** und **Windows → Use default mode design**. Diese Umschaltung gilt nur bis zum nächsten Start oder Profilwechsel; danach gilt wieder die Einstellung im Reiter **GUI**.
 
 ---
 
