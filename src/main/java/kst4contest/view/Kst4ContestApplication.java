@@ -69,6 +69,7 @@ import javafx.stage.Screen;
 import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.utils.ApplicationFileLogging;
 import kst4contest.utils.ApplicationFileUtils;
+import kst4contest.utils.PlatformUtils;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.controller.ActiveOperatorProfile;
 import kst4contest.controller.OperatorProfileStore;
@@ -133,6 +134,11 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private On4KstConnectionState lastDisplayedConnectionState;
 	private String lastDisplayedConnectionDetail = "";
 
+	/** Main window menu bar; its menus are shared with the secondary windows on macOS. */
+	private MenuBar mainScreenMenuBar;
+	/** macOS only: connection state shown as menu title in the system menu bar. */
+	private final Menu menuConnectionStateMacOs = new Menu("LINK");
+	private final MenuItem menuItemConnectionStateDetailMacOs = new MenuItem();
 	/** Scenes whose stylesheet follows the light/dark design switch. */
 	private final List<Scene> themedScenes = new ArrayList<>();
 
@@ -201,6 +207,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				chatcontroller.getChatPreferences(),
 				this::requestLayoutSave
 		);
+		installSharedSystemMenuBar(stationMapView.getScene());
 		stationMapBridge = new StationMapBridge(
 				chatcontroller,
 				tbl_chatMember,
@@ -4595,6 +4602,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		Scene candidatesScene = new Scene(root, 360, 500);
 		registerThemedScene(candidatesScene);
 		stage.setOnHidden(event -> themedScenes.remove(candidatesScene));
+		installSharedSystemMenuBar(candidatesScene);
 		stage.setScene(candidatesScene);
 		stage.show();
 	}
@@ -5756,7 +5764,44 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		MenuBar menubar = new MenuBar();
 		menubar.getMenus().addAll(fileMenu, optionsMenu, windowMenu, helpMenu); // macromenu deleted
 
+		// On macOS the menu belongs into the system menu bar at the top of the screen.
+		// The node stays in the status bar pane but is not rendered there.
+		// The connection state indicator moves into the menu bar as a read-only menu.
+		if (PlatformUtils.isMacOs()) {
+			menuItemConnectionStateDetailMacOs.setDisable(true);
+			menuConnectionStateMacOs.getItems().setAll(menuItemConnectionStateDetailMacOs);
+			menubar.getMenus().add(menuConnectionStateMacOs);
+			menubar.setUseSystemMenuBar(true);
+		}
+
 		return menubar;
+	}
+
+	/**
+	 * On macOS, attaches an invisible system menu bar to a secondary window, so the
+	 * main menus stay visible in the screen menu bar while that window has the focus.
+	 * The menus are shared with the main window instead of copied, so enabled state and
+	 * labels stay consistent everywhere. Does nothing on other platforms.
+	 */
+	private void installSharedSystemMenuBar(Scene scene) {
+		if (!PlatformUtils.isMacOs() || mainScreenMenuBar == null || scene == null) {
+			return;
+		}
+
+		Pane rootPane;
+		if (scene.getRoot() instanceof Pane pane) {
+			rootPane = pane;
+		} else {
+			// Controls like SplitPane do not accept extra children, so wrap them.
+			rootPane = new BorderPane(scene.getRoot());
+			scene.setRoot(rootPane);
+		}
+
+		MenuBar sharedMenuBar = new MenuBar();
+		sharedMenuBar.setUseSystemMenuBar(true);
+		sharedMenuBar.setManaged(false);
+		Bindings.bindContent(sharedMenuBar.getMenus(), mainScreenMenuBar.getMenus());
+		rootPane.getChildren().add(sharedMenuBar);
 	}
 
 	/**
@@ -5794,6 +5839,22 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		scene.getStylesheets().setAll(darkMode
 				? ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING
 				: ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT);
+	}
+
+	/**
+	 * Title of the macOS connection state menu, e.g. "🟢 LINK: Connected".
+	 */
+	static String macOsConnectionStateMenuTitle(On4KstConnectionState state) {
+		On4KstConnectionState effectiveState = state == null
+				? On4KstConnectionState.DISCONNECTED : state;
+		return switch (effectiveState) {
+			case ONLINE -> "🟢 LINK: Connected";
+			case CONNECTING, WAITING_FOR_LOGIN_PROMPT, AUTHENTICATING,
+			     SYNCING_MAIN_CHAT, SYNCING_SECOND_CHAT -> "🟡 LINK: Connecting…";
+			case STOPPING -> "🟡 LINK: Disconnecting…";
+			case RECONNECT_WAIT -> "🔴 LINK: Reconnecting…";
+			case DISCONNECTED -> "🔴 LINK: Disconnected";
+		};
 	}
 
 
@@ -5864,6 +5925,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		tipConnectionStateIndicator.setText(
 				"ON4KST link: " + effectiveState.name() + "\n" + stateDetail);
 		btnConnectionStateIndicator.setAccessibleHelp(stateDetail);
+		menuConnectionStateMacOs.setText(macOsConnectionStateMenuTitle(effectiveState));
+		menuItemConnectionStateDetailMacOs.setText(stateDetail);
 
 		String commonStyle =
 				"-fx-font-size: 10px;"
@@ -7178,14 +7241,17 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
 
-			MenuBar mainScreenMenuBar = initMenuBar();
+			mainScreenMenuBar = initMenuBar();
             flwpne_StatusBar = new FlowPane();
 
             flwpne_StatusBar.getChildren().add(mainScreenMenuBar);
 			bPaneChatWindow.setTop(flwpne_StatusBar);
 
 			initConnectionStateIndicatorButton();
-			flwpne_StatusBar.getChildren().add(btnConnectionStateIndicator);
+			// On macOS the connection state is shown in the system menu bar instead.
+			if (!PlatformUtils.isMacOs()) {
+				flwpne_StatusBar.getChildren().add(btnConnectionStateIndicator);
+			}
 
 			initSkedWarnIndicatorButton();
 
@@ -9165,6 +9231,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
+		installSharedSystemMenuBar(clusterAndQSOMonScene);
 		clusterAndQSOMonStage.setScene(clusterAndQSOMonScene);
 		clusterAndQSOMonStage.show();
 
@@ -9276,6 +9343,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		stage_updateStage.setScene(new Scene(vbxUpdateWindow, chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1]));
 		registerThemedScene(stage_updateStage.getScene());
+		installSharedSystemMenuBar(stage_updateStage.getScene());
 		stage_updateStage.getScene().widthProperty().addListener((observable, oldValue, newValue) -> {
 			chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0] = newValue.doubleValue();
 			requestLayoutSave();
@@ -12347,6 +12415,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			requestLayoutSave();
 		});
 
+		installSharedSystemMenuBar(settingsScene);
 		settingsStage.setScene(settingsScene);
 
 //		settingsStage.getScene().getWindow().addEventFilter(WindowEvent.WINDOW_CLOSE_REQUEST, this::closeWindowEvent);

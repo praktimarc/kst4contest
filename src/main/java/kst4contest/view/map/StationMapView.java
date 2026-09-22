@@ -277,6 +277,13 @@ public final class StationMapView {
         return stage.isShowing();
     }
 
+    /**
+     * @return the map window scene, e.g. to attach the shared macOS system menu bar
+     */
+    public Scene getScene() {
+        return scene;
+    }
+
     public void applyThemeFromPreferences() {
         boolean darkMode = chatPreferences.isGUI_darkModeActive();
         applySceneTheme(darkMode);
