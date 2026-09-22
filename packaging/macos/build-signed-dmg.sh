@@ -208,8 +208,92 @@ STAGE="$(mktemp -d)"
 ditto "$APP" "$STAGE/KST4Contest.app"
 ln -s /Applications "$STAGE/Applications"
 
-hdiutil create -volname "KST4Contest" -srcfolder "$STAGE" \
-    -ov -format UDZO -quiet "$DMG"
+# The installer window shows a background with an arrow from the app to the
+# Applications folder. Finder only stores that layout (.DS_Store) when it has
+# arranged a mounted, writable image itself, so this drives Finder through
+# AppleScript. That can fail, e.g. without automation permission for Finder or
+# on a headless CI runner; the DMG is then built without the layout and only a
+# warning is printed. Window size and icon positions must match
+# packaging/macos/dmg/render-background.swift.
+DMG_BACKGROUND="packaging/macos/dmg/background.tiff"
+VOLUME_NAME="KST4Contest"
+
+build_dmg_with_layout() {
+    local mount_point="/Volumes/$VOLUME_NAME"
+    local rw_dir rw_dmg size_mb
+
+    if [ ! -f "$DMG_BACKGROUND" ]; then
+        echo "    $DMG_BACKGROUND is missing" >&2
+        return 1
+    fi
+    # Finder addresses the disk by its name; a second mounted volume of the same
+    # name would get another name and break the stored background reference.
+    if [ -e "$mount_point" ]; then
+        echo "    $mount_point is already mounted, eject it first" >&2
+        return 1
+    fi
+
+    rw_dir="$(mktemp -d)"
+    rw_dmg="$rw_dir/KST4Contest-rw.dmg"
+    # Some headroom for the background picture and the .DS_Store Finder writes.
+    size_mb=$(( $(du -sm "$STAGE" | cut -f1) + 20 ))
+
+    hdiutil create -volname "$VOLUME_NAME" -srcfolder "$STAGE" -fs HFS+ \
+        -format UDRW -size "${size_mb}m" -ov -quiet "$rw_dmg" || { rm -rf "$rw_dir"; return 1; }
+    hdiutil attach "$rw_dmg" -readwrite -noverify -noautoopen -quiet || { rm -rf "$rw_dir"; return 1; }
+
+    local layout_ok=0
+    mkdir -p "$mount_point/.background" \
+        && cp "$DMG_BACKGROUND" "$mount_point/.background/background.tiff" \
+        && osascript <<APPLESCRIPT || layout_ok=1
+tell application "Finder"
+    tell disk "$VOLUME_NAME"
+        open
+        set current view of container window to icon view
+        set toolbar visible of container window to false
+        set statusbar visible of container window to false
+        set the bounds of container window to {200, 120, 840, 520}
+        set viewOptions to the icon view options of container window
+        set arrangement of viewOptions to not arranged
+        set icon size of viewOptions to 128
+        set text size of viewOptions to 13
+        set background picture of viewOptions to file ".background:background.tiff"
+        set position of item "KST4Contest.app" of container window to {170, 180}
+        set position of item "Applications" of container window to {470, 180}
+        close
+        open
+        update without registering applications
+        delay 2
+        close
+    end tell
+end tell
+APPLESCRIPT
+
+    # Give Finder time to write .DS_Store before the image is detached.
+    sync
+    sleep 2
+    rm -rf "$mount_point/.fseventsd"
+    hdiutil detach "$mount_point" -quiet \
+        || hdiutil detach "$mount_point" -force -quiet \
+        || { rm -rf "$rw_dir"; return 1; }
+
+    if [ "$layout_ok" -ne 0 ]; then
+        rm -rf "$rw_dir"
+        return 1
+    fi
+
+    hdiutil convert "$rw_dmg" -format UDZO -ov -quiet -o "$DMG" || { rm -rf "$rw_dir"; return 1; }
+    rm -rf "$rw_dir"
+}
+
+if build_dmg_with_layout; then
+    echo "    installer window layout applied"
+else
+    echo "WARNING: could not apply the DMG window layout, building a plain DMG instead" >&2
+    rm -f "$DMG"
+    hdiutil create -volname "$VOLUME_NAME" -srcfolder "$STAGE" \
+        -ov -format UDZO -quiet "$DMG"
+fi
 rm -rf "$STAGE"
 [ -f "$DMG" ] || { echo "hdiutil produced no DMG" >&2; exit 1; }
 
