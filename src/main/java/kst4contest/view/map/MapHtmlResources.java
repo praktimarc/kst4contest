@@ -795,8 +795,8 @@ public final class MapHtmlResources {
                         /**
                          * Re-renders station markers for the current zoom and viewport.
                          *
-                         * This is called when stations arrive from Java and after zoom/move
-                         * events, because screen-grid clusters depend on the current viewport.
+                         * This is called when stations arrive from Java, clustering changes and
+                         * after zoom events. Panning keeps the existing screen-grid clusters.
                          */
                         function renderStationMarkers() {
                             if (!map || !stationLayer) {
@@ -941,7 +941,6 @@ public final class MapHtmlResources {
                             });
 
                             map.on('moveend', function () {
-                                renderStationMarkers();
                                 notifyViewport();
                             });
 

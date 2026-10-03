@@ -2198,12 +2198,6 @@ public class MessageBusManagementThread extends Thread {
 //								e.printStackTrace();
 //							}
 
-					if (!On4KstProtocol.isInternalDxqResponse(
-							messageTextRaw.getMessageText())) {
-						LOGGER.log(Level.FINE, "ON4KST RX: {0}",
-								messageTextRaw.getMessageText());
-					}
-
 					try {
 						processRXMessage23001(messageTextRaw);
 					} catch (IOException e) {

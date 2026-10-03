@@ -19,6 +19,8 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import kst4contest.model.Band;
 import java.util.function.Predicate;
@@ -34,6 +36,9 @@ import java.util.function.Predicate;
  */
 public final class StationMapBridge {
 
+    /** Application logger for map refresh diagnostics. */
+    private static final Logger LOGGER =
+            Logger.getLogger(StationMapBridge.class.getName());
 
     private final AtomicLong pathAnalysisGeneration = new AtomicLong(0);
 
@@ -48,6 +53,9 @@ public final class StationMapBridge {
 
 
     private final MapCallsignRawSnapshotBuilder snapshotBuilder = new MapCallsignRawSnapshotBuilder();
+    /** Tracks one deferred refresh while the map window is hidden. */
+    private final StationMapPerformanceSupport.RefreshState refreshState =
+            new StationMapPerformanceSupport.RefreshState();
 
 
     private String lastPathAnalysisRequestSignature = "";
@@ -131,10 +139,14 @@ public final class StationMapBridge {
 
     public void showWindow() {
         stationMapView.showWindow();
-        requestImmediateRefresh();
+        if (refreshState.consumeDirtyOnShow()) {
+            requestImmediateRefresh();
+        }
     }
 
     public void hideWindow() {
+        refreshCoalescer.stop();
+        refreshState.markDirty();
         stationMapView.hideWindow();
     }
 
@@ -184,19 +196,35 @@ public final class StationMapBridge {
     }
 
     private void scheduleRefresh() {
-        if (Platform.isFxApplicationThread()) {
+        final Runnable scheduleAction = () -> {
+            if (!stationMapView.isShowing()) {
+                refreshCoalescer.stop();
+                refreshState.markDirty();
+                return;
+            }
             refreshCoalescer.playFromStart();
+        };
+
+        if (Platform.isFxApplicationThread()) {
+            scheduleAction.run();
         } else {
-            Platform.runLater(() -> refreshCoalescer.playFromStart());
+            Platform.runLater(scheduleAction);
         }
     }
 
     private void refreshNow() {
-        List<ChatMember> visibleChatMembers = new ArrayList<>(chatController.getLst_chatMemberSortedFilteredList());
-        ChatMember selectedChatMember = chatController.getScoreService().getSelectedChatMember();
-        EnumSet<Band> selectedBands = chatController.getReachabilityService().getEnabledStationBands();
+        if (!refreshState.shouldRefreshNow(stationMapView.isShowing())) {
+            refreshCoalescer.stop();
+            return;
+        }
 
-        List<MapCallsignRawSnapshot> snapshots = snapshotBuilder.buildSnapshots(
+        final long refreshStart = System.nanoTime();
+        final long snapshotStart = refreshStart;
+        final List<ChatMember> visibleChatMembers = new ArrayList<>(chatController.getLst_chatMemberSortedFilteredList());
+        final ChatMember selectedChatMember = chatController.getScoreService().getSelectedChatMember();
+        final EnumSet<Band> selectedBands = chatController.getReachabilityService().getEnabledStationBands();
+
+        final List<MapCallsignRawSnapshot> snapshots = snapshotBuilder.buildSnapshots(
                 visibleChatMembers,
                 selectedChatMember,
                 selectedBands
@@ -204,17 +232,19 @@ public final class StationMapBridge {
 
         MapCallsignRawSnapshot selectedSnapshot = null;
         if (selectedChatMember != null && selectedChatMember.getCallSignRaw() != null) {
-            String selectedCallsignRaw = normalizeCallsignRaw(selectedChatMember.getCallSignRaw());
+            final String selectedCallsignRaw = normalizeCallsignRaw(selectedChatMember.getCallSignRaw());
             selectedSnapshot = snapshots.stream()
                     .filter(snapshot -> snapshot.callSignRaw().equals(selectedCallsignRaw))
                     .findFirst()
                     .orElse(null);
         }
+        final long snapshotNanos = System.nanoTime() - snapshotStart;
 
-        boolean filteredViewActive = visibleChatMembers.size() < chatController.getLst_chatMemberList().size();
+        final boolean filteredViewActive = visibleChatMembers.size() < chatController.getLst_chatMemberList().size();
 
-        ChatPreferences preferences = chatController.getChatPreferences();
+        final ChatPreferences preferences = chatController.getChatPreferences();
 
+        final long renderStart = System.nanoTime();
         stationMapView.refreshMap(
                 snapshots,
                 selectedSnapshot,
@@ -224,8 +254,22 @@ public final class StationMapBridge {
                 preferences.getStn_maxQRBDefault(),
                 filteredViewActive
         );
+        final long renderNanos = System.nanoTime() - renderStart;
 
         requestPathAnalysisAsync(preferences.getStn_loginLocatorMainCat(), selectedSnapshot);
+
+        final long totalNanos = System.nanoTime() - refreshStart;
+        if (preferences.isMessageHandling_debugModeToFileEnabled()
+                && StationMapPerformanceSupport.isSlowRefresh(totalNanos)
+                && LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.log(Level.FINE,
+                    StationMapPerformanceSupport.formatSlowRefreshMessage(
+                            totalNanos,
+                            snapshotNanos,
+                            renderNanos,
+                            visibleChatMembers.size(),
+                            snapshots.size()));
+        }
     }
 
     /**
@@ -300,8 +344,6 @@ public final class StationMapBridge {
     }
 
     private void handleMapCallsignSelection(String callSignRaw) {
-        System.out.println("########################### map selected callsign " + callSignRaw);
-
         ChatMember resolved = resolveBestChatMember(callSignRaw);
         if (resolved == null) {
             return;

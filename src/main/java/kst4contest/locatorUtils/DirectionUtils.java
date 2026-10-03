@@ -22,7 +22,6 @@ public class DirectionUtils {
 
         // Check if distance exceeds my setted maximum range
         if (distanceFromMeToLocSender > maxRangeKm) {
-            System.out.println("too far, " + distanceFromMeToLocSender + " km");
             return false;
         }
 

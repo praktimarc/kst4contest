@@ -150,6 +150,10 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - Map reset clears the selected target without changing zoom unless explicitly redesigned.
 - **Group nearby stations** re-renders only the existing station-marker layer from JavaScript `stationData`. It must not reload the WebView, tiles or station data, request a new controller snapshot, or change zoom, viewport or selection.
 - Base-callsign aggregation into one geographical marker happens before screen-based clustering. Disabling clustering displays each resulting positionable map station individually but never splits active variants of the same normalised base callsign into separate geographical markers.
+- A hidden Station Map is not continuously refreshed. Relevant background changes mark it dirty; the next `showWindow()` performs one current full refresh before normal visible-window updates resume.
+- Maidenhead grid construction depends only on viewport bounds, zoom and WebView size. Ordinary station-data refreshes must not rebuild or serialise the grid when those inputs are unchanged.
+- Panning updates viewport and grid state through `notifyViewport()` without rebuilding station markers or screen-based clusters. Zoom changes, station-data changes and clustering toggles still rebuild the marker layer.
+- Debug file logging reports Station Map refreshes only when total FX-thread refresh time reaches 100 ms. The diagnostic separates snapshot and render time and includes visible-member and station counts.
 - Station selection preserves the established `/cq callsign` prefill behaviour.
 - Sending without an explicitly selected send category preserves the established Main-category fallback unless explicitly changed.
 

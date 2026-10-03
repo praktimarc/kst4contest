@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -43,6 +45,10 @@ import javafx.scene.layout.HBox;
  * - routes critical click/zoom interactions directly from JavaFX when the DOM listeners are unreliable
  */
 public final class StationMapView {
+
+    /** Application logger for map failures that must remain visible. */
+    private static final Logger LOGGER =
+            Logger.getLogger(StationMapView.class.getName());
 
     /**
      * Enables verbose map debug output.
@@ -130,6 +136,9 @@ public final class StationMapView {
     private String lastRenderedBeamJson = "";
     private String lastRenderedConnectionJson = "";
     private String lastRenderedGridJson = "";
+    /** Rejects unchanged viewport inputs before expensive grid construction. */
+    private final StationMapPerformanceSupport.GridRenderState gridRenderState =
+            new StationMapPerformanceSupport.GridRenderState();
 
     /**
      * Prevent periodic refreshes from panning the map back to the selected station.
@@ -195,7 +204,8 @@ public final class StationMapView {
         try {
             tileProxyServer = new TileProxyServer();
         } catch (IOException e) {
-            System.err.println("[StationMap] tile proxy failed to start: " + e.getMessage());
+            LOGGER.log(Level.WARNING,
+                    "Station map tile proxy failed to start", e);
         }
         initializeUi();
         initializeWebView();
@@ -362,8 +372,14 @@ public final class StationMapView {
         webView.setFocusTraversable(true);
         webView.setPickOnBounds(true);
 
-        webView.addEventHandler(MouseEvent.MOUSE_PRESSED, event -> logWebViewMouseEvent("MOUSE_PRESSED", event));
-        webView.addEventHandler(MouseEvent.MOUSE_RELEASED, event -> logWebViewMouseEvent("MOUSE_RELEASED", event));
+        if (MAP_DEBUG_LOGGING) {
+            webView.addEventHandler(
+                    MouseEvent.MOUSE_PRESSED,
+                    event -> logWebViewMouseEvent("MOUSE_PRESSED", event));
+            webView.addEventHandler(
+                    MouseEvent.MOUSE_RELEASED,
+                    event -> logWebViewMouseEvent("MOUSE_RELEASED", event));
+        }
         webView.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> handleWebViewClick(event));
 
         webView.addEventHandler(ScrollEvent.SCROLL, event -> {
@@ -374,8 +390,10 @@ public final class StationMapView {
                         + " deltaY=" + event.getDeltaY());
             }
 
-            InteractiveTarget target = inspectInteractiveTarget(event.getX(), event.getY());
             if (MAP_DEBUG_LOGGING) {
+                final InteractiveTarget target = inspectInteractiveTarget(
+                        event.getX(),
+                        event.getY());
                 System.out.println("[StationMap FX] inspect scroll -> " + target);
             }
 
@@ -784,19 +802,21 @@ public final class StationMapView {
         try {
             Object result = webEngine.executeScript("window.kstMapApi.getViewportState();");
             if (result == null) {
-                System.err.println("[StationMap FX] getViewportState returned null");
+                LOGGER.warning("Station map getViewportState returned null");
                 return;
             }
 
             String raw = result.toString();
             if (raw.isBlank()) {
-                System.err.println("[StationMap FX] getViewportState returned blank");
+                LOGGER.warning("Station map getViewportState returned blank");
                 return;
             }
 
             String[] parts = raw.split("\\|");
             if (parts.length != 5) {
-                System.err.println("[StationMap FX] getViewportState unexpected format: " + raw);
+                LOGGER.log(Level.WARNING,
+                        "Station map getViewportState returned unexpected format: {0}",
+                        raw);
                 return;
             }
 
@@ -806,15 +826,19 @@ public final class StationMapView {
             viewportEastLon = Double.parseDouble(parts[3]);
             viewportZoom = (int) Math.round(Double.parseDouble(parts[4]));
 
-            System.out.println("[StationMap FX] pulled viewport south=" + viewportSouthLat
-                    + " west=" + viewportWestLon
-                    + " north=" + viewportNorthLat
-                    + " east=" + viewportEastLon
-                    + " zoom=" + viewportZoom);
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap FX] pulled viewport south=" + viewportSouthLat
+                        + " west=" + viewportWestLon
+                        + " north=" + viewportNorthLat
+                        + " east=" + viewportEastLon
+                        + " zoom=" + viewportZoom);
+            }
 
             renderGridIfViewportKnown();
         } catch (Exception exception) {
-            System.err.println("[StationMap FX] pullViewportFromJsAndRedrawGrid failed: " + exception.getMessage());
+            LOGGER.log(Level.WARNING,
+                    "Station map viewport pull and grid redraw failed",
+                    exception);
         }
     }
 
@@ -854,28 +878,37 @@ public final class StationMapView {
 
 
 
-    private void handleWebViewClick(MouseEvent event) {
+    private void handleWebViewClick(final MouseEvent event) {
         logWebViewMouseEvent("MOUSE_CLICKED", event);
 
-        InteractiveTarget target = inspectInteractiveTarget(event.getX(), event.getY());
-        System.out.println("[StationMap FX] inspect click -> " + target);
+        final InteractiveTarget target = inspectInteractiveTarget(
+                event.getX(), event.getY());
+        if (MAP_DEBUG_LOGGING) {
+            System.out.println("[StationMap FX] inspect click -> " + target);
+        }
 
         switch (target.kind()) {
             case STATION -> {
                 if (target.callSignRaw() != null && !target.callSignRaw().isBlank() && onCallsignRawSelected != null) {
-                    System.out.println("[StationMap FX] selecting station " + target.callSignRaw());
+                    if (MAP_DEBUG_LOGGING) {
+                        System.out.println("[StationMap FX] selecting station " + target.callSignRaw());
+                    }
                     onCallsignRawSelected.accept(target.callSignRaw());
                     event.consume();
                 }
             }
             case ZOOM_IN -> {
-                System.out.println("[StationMap FX] zoom in click routed by JavaFX");
+                if (MAP_DEBUG_LOGGING) {
+                    System.out.println("[StationMap FX] zoom in click routed by JavaFX");
+                }
                 executeMapScriptSafely("window.kstMapApi.zoomIn();");
                 requestViewportPullFromJs();
                 event.consume();
             }
             case ZOOM_OUT -> {
-                System.out.println("[StationMap FX] zoom out click routed by JavaFX");
+                if (MAP_DEBUG_LOGGING) {
+                    System.out.println("[StationMap FX] zoom out click routed by JavaFX");
+                }
                 executeMapScriptSafely("window.kstMapApi.zoomOut();");
                 requestViewportPullFromJs();
                 event.consume();
@@ -887,18 +920,27 @@ public final class StationMapView {
         }
     }
 
-    private void logWebViewMouseEvent(String type, MouseEvent event) {
-        System.out.println("[StationMap FX] " + type
-                + " x=" + (int) event.getX()
-                + " y=" + (int) event.getY()
-                + " target=" + event.getTarget().getClass().getSimpleName()
-                + " button=" + event.getButton());
-
-        probeDomElementAt(event.getX(), event.getY());
+    private void logWebViewMouseEvent(
+            final String type,
+            final MouseEvent event
+    ) {
+        StationMapPerformanceSupport.runDebugIfEnabled(
+                MAP_DEBUG_LOGGING,
+                () -> {
+                    System.out.println("[StationMap FX] " + type
+                            + " x=" + (int) event.getX()
+                            + " y=" + (int) event.getY()
+                            + " target=" + event.getTarget().getClass().getSimpleName()
+                            + " button=" + event.getButton());
+                    probeDomElementAt(event.getX(), event.getY());
+                });
     }
 
-    private void probeDomElementAt(double x, double y) {
-        if (!mapReady) {
+    private void probeDomElementAt(
+            final double xCoordinate,
+            final double yCoordinate
+    ) {
+        if (!MAP_DEBUG_LOGGING || !mapReady) {
             return;
         }
 
@@ -921,13 +963,15 @@ public final class StationMapView {
                     }
                     return "tag=" + el.tagName + " class=" + cls + " id=" + id + " text=" + text;
                 })();
-                """, x, y);
+                """, xCoordinate, yCoordinate);
 
         try {
             Object result = webEngine.executeScript(script);
             System.out.println("[StationMap FX] elementFromPoint -> " + result);
         } catch (Exception exception) {
-            System.err.println("[StationMap FX] elementFromPoint failed: " + exception.getMessage());
+            LOGGER.log(Level.WARNING,
+                    "Station map elementFromPoint probe failed",
+                    exception);
         }
     }
 
@@ -963,7 +1007,9 @@ public final class StationMapView {
                 default -> new InteractiveTarget(InteractiveKind.NONE, "", tag, cssClass, text);
             };
         } catch (Exception exception) {
-            System.err.println("[StationMap FX] inspectInteractiveTarget failed: " + exception.getMessage());
+            LOGGER.log(Level.WARNING,
+                    "Station map interactive-target inspection failed",
+                    exception);
             return InteractiveTarget.none();
         }
     }
@@ -1185,7 +1231,6 @@ public final class StationMapView {
         renderStations();
         renderBeam();
         renderConnectionLine();
-        renderGridIfViewportKnown();
         focusSelectedStationOnlyWhenSelectionChanged();
     }
 
@@ -1269,10 +1314,23 @@ public final class StationMapView {
             return;
         }
 
-        double viewportWidthPx = Math.max(1.0, webView.getWidth());
-        double viewportHeightPx = Math.max(1.0, webView.getHeight());
+        final double viewportWidthPx = Math.max(1.0, webView.getWidth());
+        final double viewportHeightPx = Math.max(1.0, webView.getHeight());
 
-        MaidenheadGridRenderPlanner.GridRenderPlan renderPlan = MaidenheadGridRenderPlanner.createPlan(
+        final StationMapPerformanceSupport.GridRenderInput renderInput =
+                new StationMapPerformanceSupport.GridRenderInput(
+                        viewportSouthLat,
+                        viewportWestLon,
+                        viewportNorthLat,
+                        viewportEastLon,
+                        viewportZoom,
+                        viewportWidthPx,
+                        viewportHeightPx);
+        if (!gridRenderState.shouldRender(renderInput)) {
+            return;
+        }
+
+        final MaidenheadGridRenderPlanner.GridRenderPlan renderPlan = MaidenheadGridRenderPlanner.createPlan(
                 viewportZoom,
                 viewportSouthLat,
                 viewportWestLon,
@@ -1282,7 +1340,7 @@ public final class StationMapView {
                 viewportHeightPx
         );
 
-        List<MaidenheadGridUtils.GridCell> visibleGridCells = MaidenheadGridUtils.buildVisibleCells(
+        final List<MaidenheadGridUtils.GridCell> visibleGridCells = MaidenheadGridUtils.buildVisibleCells(
                 viewportSouthLat,
                 viewportWestLon,
                 viewportNorthLat,
@@ -1290,13 +1348,15 @@ public final class StationMapView {
                 renderPlan.precision()
         );
 
-        System.out.println("[StationMap] renderGridIfViewportKnown zoom=" + viewportZoom
-                + " precision=" + renderPlan.precision().locatorLength()
-                + " labelStride=" + renderPlan.labelColumnStride() + "x" + renderPlan.labelRowStride()
-                + " cellPx=" + String.format(Locale.US, "%.1f/%.1f", renderPlan.estimatedCellWidthPx(), renderPlan.estimatedCellHeightPx())
-                + " cells=" + visibleGridCells.size());
+        if (MAP_DEBUG_LOGGING) {
+            System.out.println("[StationMap] renderGridIfViewportKnown zoom=" + viewportZoom
+                    + " precision=" + renderPlan.precision().locatorLength()
+                    + " labelStride=" + renderPlan.labelColumnStride() + "x" + renderPlan.labelRowStride()
+                    + " cellPx=" + String.format(Locale.US, "%.1f/%.1f", renderPlan.estimatedCellWidthPx(), renderPlan.estimatedCellHeightPx())
+                    + " cells=" + visibleGridCells.size());
+        }
 
-        String gridJson = toGridJson(visibleGridCells, renderPlan);
+        final String gridJson = toGridJson(visibleGridCells, renderPlan);
         if (gridJson.equals(lastRenderedGridJson)) {
             return;
         }
@@ -1393,8 +1453,9 @@ public final class StationMapView {
         try {
             webEngine.executeScript(script);
         } catch (Exception exception) {
-            System.err.println("[StationMap] executeScript failed: " + exception.getMessage());
-            exception.printStackTrace();
+            LOGGER.log(Level.WARNING,
+                    "Station map JavaScript execution failed",
+                    exception);
         }
     }
 
@@ -1596,17 +1657,19 @@ public final class StationMapView {
     public final class JavaMapBridge {
 
         public void onMapReady() {
-            System.out.println("[StationMap JS] onMapReady");
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap JS] onMapReady");
+            }
             mapReady = true;
             renderAll();
             requestMapInvalidateSize();
         }
 
-        public void onViewportChanged(double southLat,
-                                      double westLon,
-                                      double northLat,
-                                      double eastLon,
-                                      double zoom) {
+        public void onViewportChanged(final double southLat,
+                                      final double westLon,
+                                      final double northLat,
+                                      final double eastLon,
+                                      final double zoom) {
 
             viewportSouthLat = southLat;
             viewportWestLon = westLon;
@@ -1614,7 +1677,9 @@ public final class StationMapView {
             viewportEastLon = eastLon;
             viewportZoom = (int) Math.round(zoom);
 
-            System.out.println("[StationMap JS] onViewportChanged zoom=" + viewportZoom);
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap JS] onViewportChanged zoom=" + viewportZoom);
+            }
 
             if (Platform.isFxApplicationThread()) {
                 renderGridIfViewportKnown();
@@ -1623,19 +1688,25 @@ public final class StationMapView {
             }
         }
 
-        public void onCallsignRawClicked(String callSignRaw) {
-            System.out.println("[StationMap JS] onCallsignRawClicked " + callSignRaw);
+        public void onCallsignRawClicked(final String callSignRaw) {
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap JS] onCallsignRawClicked " + callSignRaw);
+            }
             if (onCallsignRawSelected != null) {
                 onCallsignRawSelected.accept(callSignRaw);
             }
         }
 
-        public void onJsLog(String message) {
-            System.out.println("[StationMap JS] " + message);
+        public void onJsLog(final String message) {
+            if (MAP_DEBUG_LOGGING) {
+                System.out.println("[StationMap JS] " + message);
+            }
         }
 
-        public void onJsError(String message) {
-            System.err.println("[StationMap JS ERROR] " + message);
+        public void onJsError(final String message) {
+            LOGGER.log(Level.WARNING,
+                    "Station map JavaScript error: {0}",
+                    message);
         }
     }
 

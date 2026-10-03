@@ -27,7 +27,6 @@ public class Utils4KST {
 	public String time_generateCurrenthhmmZTimeStringForClusterMessage() {
 
 		OffsetDateTime currentTimeInUtc = OffsetDateTime.now(ZoneOffset.UTC);
-//		System.out.println("Utils generated current time " + currentTimeInUtc + " --> " + currentTimeInUtc.format(DateTimeFormatter.ofPattern("HHmm"))+"Z");
 		return currentTimeInUtc.format(DateTimeFormatter.ofPattern("HHmm"))+"Z";
 
 	}
