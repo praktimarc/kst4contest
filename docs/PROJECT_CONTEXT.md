@@ -204,6 +204,7 @@ section records only the durable architecture and operational boundaries.
 - A second reduced Nginx log contains only case-sensitive `GET` requests with final status `200` for the exact path `/kst4ContestVersionInfo.xml`. It deliberately retains browser and bot requests and stays excluded from website page views, visits and the public visitor counter.
 - The hourly systemd timer starts the Node.js generator. Each registered site and both reduced streams are processed from the optional uncompressed `.1` rotation followed by the current log; older `.gz` files are not part of regular processing. Logrotate retains raw logs for 14 days and requires `delaycompress` for this handover.
 - GoAccess maintains one private report/database per registered site and one combined report/database. The generator then updates its separate daily visit-counter state, publishes `visitor-count.json` for enabled sites, and produces durable private website/update-information day and year views. Private reports are served with Basic Auth from `stats.hamradioonline.de`; the public home page requests only its same-origin counter file.
+- The manual production rollout was completed and verified on 2026-09-14. The hourly timer is active. Durable website metrics are covered from 2026-09-13, and separate live update-information metrics are covered from 2026-09-14. Earlier dates remain unknown until a verified historical import extends either series.
 
 #### Durable invariants and persistence
 
@@ -229,7 +230,9 @@ section records only the durable architecture and operational boundaries.
 #### Open operational work
 
 - The server has no comprehensive automated backup plan yet. A future server-wide plan must include both non-regenerable state files, GoAccess databases and protected operational configuration without extending the published 14-day raw-log retention.
-- Repository implementation and tests do not install server configuration or import production data. The first real rotation after installing the XML log still requires an explicit operational check of both `.1` handovers, ownership/readability, subsequent generator success and absence of duplicate counting. The actual regular Nginx log format and complete historical coverage must be verified on the server before import.
+- Historical production data has not been imported. The actual regular Nginx log format and complete available coverage must be verified before selecting an import range; missing history must not be represented as zero.
+- The first real rotation after installing the XML log still requires an explicit operational check of both `.1` handovers, ownership/readability, subsequent generator success and absence of duplicate counting.
+- The combined GoAccess 1.8.1 report remains unchanged. A finer Country-level graphic under `/combined/` is deliberately deferred; no decision has been made between a later GoAccess upgrade and a custom report integration.
 
 ## Important Decisions and Workarounds
 
