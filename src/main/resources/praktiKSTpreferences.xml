@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <praktiKST>
+    <configVersion>8</configVersion>
     <station>
         <LoginCallSign>DO5AMF</LoginCallSign>
         <LoginPassword>changeMe</LoginPassword>
@@ -128,6 +129,7 @@
         <autoAnswerTextSecondCat>Hi, sry I am not qrv, just testing new features of KST4Contest 1.251</autoAnswerTextSecondCat>
         <autoAnswerEnabledSecondCat>false</autoAnswerEnabledSecondCat>
         <autoAnswerToQrgRequestEnabled>true</autoAnswerToQrgRequestEnabled>
+        <messageHandling_debugModeToFileEnabled>true</messageHandling_debugModeToFileEnabled>
     </messageHandling>
     <guiSaveableOptions>
         <guiOptions_defaultFilterNothing>false</guiOptions_defaultFilterNothing>

@@ -113,7 +113,7 @@ class ChatPreferencesLayoutPersistenceTest {
         assertFalse(writtenXml.contains("UNSAVED-CALL"));
         assertTrue(writtenXml.contains("<futureExtension mode=\"keep-me\">"));
         assertTrue(writtenXml.contains("<futureLayoutValue>untouched</futureLayoutValue>"));
-        assertTrue(writtenXml.contains("<configVersion>7</configVersion>"));
+        assertTrue(writtenXml.contains("<configVersion>8</configVersion>"));
         assertTrue(writtenXml.contains("<GUIscn_ChatwindowMainSceneSizeHW>812.0;1340.0"));
         assertTrue(writtenXml.contains("<GUIstationMapClusteringEnabled>false"
                 + "</GUIstationMapClusteringEnabled>"));
@@ -127,8 +127,6 @@ class ChatPreferencesLayoutPersistenceTest {
     }
 
     private ChatPreferences preferencesAt(Path preferencesFile) {
-        ChatPreferences preferences = new ChatPreferences();
-        preferences.setStoreAndRestorePreferencesFileName(preferencesFile.toString());
-        return preferences;
+        return new ChatPreferences(preferencesFile);
     }
 }

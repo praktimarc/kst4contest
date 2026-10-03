@@ -285,7 +285,7 @@ public final class ScoreService {
             member.setCurrentPriorityScore(score == null ? 0.0 : score);
         }
 
-        controller.fireUserListUpdate("Priority scores projected to ChatMember");
+        controller.fireUserListUpdate();
     }
 
     private void updateSelectedScoreFromSnapshot(ScoreSnapshot snap) {

@@ -8,10 +8,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -68,6 +66,7 @@ import javafx.scene.shape.Polygon;
 import javafx.stage.Screen;
 
 import kst4contest.logic.BandOpportunityResolver;
+import kst4contest.utils.ApplicationFileLogging;
 import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.view.map.StationMapBridge;
 import kst4contest.view.map.StationMapView;
@@ -84,6 +83,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	private static final Logger LOGGER = Logger.getLogger(
 			Kst4ContestApplication.class.getName());
+	private static ApplicationFileLogging fileLogging;
 	private static final String SIMPLE_LOG_MANUAL_URL =
 			"https://kst4contest.hamradioonline.de/manual/en/log-sync/"
 					+ "#method-1-universal-file-based-callsign-interpreter-simplelogfile";
@@ -6229,7 +6229,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	@Override
 	public void stop() {
-		System.out.println("[Main.java, Info:] Stage is closing, killing all resources");
+		LOGGER.info("Application is shutting down and closing all resources");
 		if (layoutAutosave != null) {
 			layoutAutosave.flushPending();
 		}
@@ -6245,8 +6245,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		try {
 			chatcontroller.disconnect("CLOSEALL");
 		} catch (Exception e) {
-			System.out.println("[Main.java, Warning:] Exception during disconnect: " + e.getMessage());
+			LOGGER.log(Level.WARNING, "Exception during disconnect", e);
 		}
+		chatcontroller.getMessageHistoryRecorder().close();
+		closeFileLogging();
 
 //	    Platform.exit();
 		System.exit(0);
@@ -6683,6 +6685,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		ChatMember ownChatMemberObject = new ChatMember();
 
 		chatcontroller = new ChatController(ownChatMemberObject, this); // instantiate the Chatcontroller with the user object
+		setDebugFileLoggingEnabled(chatcontroller.getChatPreferences()
+				.isMessageHandling_debugModeToFileEnabled());
 		layoutAutosave = new LayoutAutosave(chatcontroller.getChatPreferences());
 		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
 		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
@@ -11475,6 +11479,31 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		grdPnlMessageHandlingBeacon.add(chkbx_messageHandlingAutoQRGInfoEnabled, 0, 2, 2, 1);
 
+		grdPnlMessageHandlingBeacon.add(generateLabeledSeparator(
+				100, "Debug and contest history"), 0, 3, 2, 1);
+
+		CheckBox chkbxDebugModeToFile =
+				new CheckBox("Enable debug mode to file");
+		chkbxDebugModeToFile.setSelected(chatcontroller.getChatPreferences()
+				.isMessageHandling_debugModeToFileEnabled());
+		chkbxDebugModeToFile.setTooltip(new Tooltip(
+				"Records complete ON4KST RX/TX session traffic in Messagehistory.raw "
+						+ "and adds diagnostic details to kst4contest-errors.log.\n"
+						+ "Login passwords are redacted. Warnings and errors are always logged."));
+		chkbxDebugModeToFile.selectedProperty().addListener(
+				(observable, oldValue, enabled) -> {
+					chatcontroller.getChatPreferences()
+							.setMessageHandling_debugModeToFileEnabled(enabled);
+					if (enabled) {
+						setDebugFileLoggingEnabled(true);
+						chatcontroller.setMessageHistoryRecordingEnabled(true);
+					} else {
+						chatcontroller.setMessageHistoryRecordingEnabled(false);
+						setDebugFileLoggingEnabled(false);
+					}
+				});
+		grdPnlMessageHandlingBeacon.add(chkbxDebugModeToFile, 0, 4, 2, 1);
+
 		VBox vbxMsgHandlBeacon = new VBox();
 		vbxMsgHandlBeacon.setPadding(new Insets(10, 10, 10, 10));
 		vbxMsgHandlBeacon.getChildren().addAll(grdPnlMessageHandlingBeacon);
@@ -12218,17 +12247,30 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 	private static void setupFileLogging() {
+		if (fileLogging != null) {
+			return;
+		}
 		try {
-			String logDir = Path.of(System.getProperty("user.home"), ".praktiKST").toString();
-			new File(logDir).mkdirs();
-			FileHandler fileHandler = new FileHandler(logDir + "/kst4contest-errors.log", true);
-			// Connection loss/reconnect diagnostics are warnings, not fatal crashes.
-			fileHandler.setLevel(Level.WARNING);
-			fileHandler.setFormatter(new SimpleFormatter());
-			Logger rootLogger = Logger.getLogger("");
-			rootLogger.addHandler(fileHandler);
+			Path logFile = Path.of(ApplicationFileUtils.getFilePath(
+					ApplicationConstants.APPLICATION_NAME,
+					"kst4contest-errors.log"));
+			// Start conservatively until the persisted preference has been loaded.
+			fileLogging = new ApplicationFileLogging(logFile, false);
 		} catch (IOException e) {
 			System.err.println("Could not set up file logging: " + e.getMessage());
+		}
+	}
+
+	private static void setDebugFileLoggingEnabled(boolean enabled) {
+		if (fileLogging != null) {
+			fileLogging.setDebugEnabled(enabled);
+		}
+	}
+
+	private static void closeFileLogging() {
+		if (fileLogging != null) {
+			fileLogging.close();
+			fileLogging = null;
 		}
 	}
 
@@ -12351,13 +12393,27 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 	@Override
-	public void onUserListUpdated(String reason) {
+	public void onUserListUpdated() {
+		scheduleUserListRefresh(null);
+	}
+
+	@Override
+	public void onUserListUpdated(final String reason) {
+		scheduleUserListRefresh(reason);
+	}
+
+	private void scheduleUserListRefresh(final String diagnosticReason) {
 		Platform.runLater(() -> {
-			pendingUserListUpdateReason = reason;
+			if (diagnosticReason != null && !diagnosticReason.isBlank()) {
+				pendingUserListUpdateReason = diagnosticReason;
+			}
 
 			if (userListRefreshCoalescer == null) {
 				userListRefreshCoalescer = new PauseTransition(Duration.millis(300));
 				userListRefreshCoalescer.setOnFinished(event -> {
+					final String completedDiagnosticReason = pendingUserListUpdateReason;
+					pendingUserListUpdateReason = "";
+
 					forceChatMemberFilterRefresh();
 
 					if (tbl_chatMember != null) {
@@ -12366,7 +12422,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					refreshStationMapIfVisible();
 
-					System.out.println("KST4Capp, UI Update Trigger: " + pendingUserListUpdateReason);
+					if (!completedDiagnosticReason.isEmpty()) {
+						System.out.println("KST4Capp, UI Update Trigger: "
+								+ completedDiagnosticReason);
+					}
 				});
 			}
 

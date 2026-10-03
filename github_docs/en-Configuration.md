@@ -711,6 +711,29 @@ If no QRG is available for the incoming category, KST4Contest does not send an i
 
 When both automatic-reply functions are enabled, the QRG reply takes precedence. A recognised QRG request does not additionally produce the general reply. If the required QRG is missing, KST4Contest does not fall back to the general answer.
 
+### Debug and contest history
+
+**Enable debug mode to file** is enabled by default and takes effect without restarting the application. The setting controls two separate files in the `.praktiKST` directory of the user profile:
+
+- `kst4contest-errors.log` includes additional `INFO` and `FINE` diagnostics while debug mode is enabled. Warnings, errors and exceptions are written regardless of this setting.
+- `Messagehistory.raw` records the complete ON4KST traffic of the current program session. It contains RX and TX traffic, including chat, private-message, user, status, control and keepalive frames.
+
+On Windows, the history is stored at `C:\Users\<YourName>\.praktiKST\Messagehistory.raw`; on Linux and macOS it is stored at `~/.praktiKST/Messagehistory.raw`.
+
+Each line contains exactly one event:
+
+```text
+UTC<TAB>RX|TX<TAB>RAW_FRAME
+```
+
+The UTC timestamp includes milliseconds. The third field is preserved unchanged except that the TCP line ending is not stored. Login frames remain recognisable for later analysis, but the password is replaced with `<REDACTED>`.
+
+When recording is initialised for a new program session, an existing non-empty `Messagehistory.raw` is archived as `Messagehistory-YYYYMMDD-HHMMSSZ.raw`. Reconnects and repeated enabling during the same program session do not create another archive. Disabling the setting stops recording immediately; enabling it again appends to the current file.
+
+The history is intended as a machine-readable basis for future replay and simulation tools. It contains the complete contest/session traffic and will normally include personal chat and station data. Inspect and handle the file accordingly before sharing it.
+
+The existing `client_settings_window_messagehandling.png` screenshot does not yet show the new checkbox and should be replaced during the next screenshot update.
+
 ### Protection against repeated replies
 
 Every automatically generated reply contains the fixed prefix:

@@ -109,6 +109,8 @@ The error log is stored at:
 
 Please inspect the file briefly before uploading it. An error log mainly contains technical information, but depending on the problem it may also include local file paths or other contextual data.
 
+When **Settings → Messagehandling → Enable debug mode to file** is enabled, the same directory also contains `Messagehistory.raw` and possibly archived `Messagehistory-*.raw` files. These files record the complete ON4KST session traffic in both directions. Login passwords are redacted, but chat and station data remains present. Share such a file only after reviewing it deliberately.
+
 Some file and directory names still use the technical name `praktiKST`. They refer to the same program.
 
 ---

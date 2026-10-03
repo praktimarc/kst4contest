@@ -1,6 +1,6 @@
 # KST4Contest Project Context
 
-Last reviewed: 2026-09-14
+Last reviewed: 2026-10-03
 
 This file is the durable technical project context for KST4Contest. It is not a user manual and not a replacement for the changelog. Current code, tests and authoritative external specifications remain the source of truth when this document is stale or ambiguous.
 
@@ -52,7 +52,7 @@ JavaFX ObservableList / UI state
 
 ## Configuration and Layout Persistence
 
-- The current `preferences.xml` configuration version is 7. Version 6 introduced optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
+- The current `preferences.xml` configuration version is 8. Version 8 adds the default-enabled `messageHandling_debugModeToFileEnabled` setting. Missing entries in older files retain the enabled default. Version 6 introduced optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
 - `GUIstationMapClusteringEnabled` is a layout preference below `guiOptions`. It defaults to `true`, is selectively autosaved and controls only screen-based clustering of nearby map markers. Missing or malformed values retain the enabled default for backward compatibility.
 - Stored widths take precedence. Without a usable entry, a managed column is sized once when meaningful table data first becomes available. Message and similar free-text columns use a flexible initial width instead of following the longest value.
 - Main-window and separate-monitor DXCluster/QSO tables use distinct layout IDs even though they share the underlying message stores.
@@ -131,6 +131,17 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - A `CK` initiated by the server remains a separate protocol case and receives the established empty CRLF response. It must not be confused with the client-side probe.
 - If no inbound frame arrives by about 210 seconds, the existing reconnect flow remains responsible for replacing the session.
 - Liveness diagnostics contain the session id, opcode and timing only. They must not include credentials, complete server frames or normal chat messages.
+
+### ON4KST replay history and diagnostic logging
+
+- `MessageHistoryRecorder` is the single non-JavaFX owner of raw ON4KST session-history file I/O. Reader and writer threads only report complete frames to it.
+- The current program session is stored at `~/.praktiKST/Messagehistory.raw` as one `UTC<TAB>RX|TX<TAB>RAW_FRAME` event per line. Timestamps use UTC with milliseconds; TCP CR/LF terminators are not part of the raw frame.
+- RX is recorded immediately after `BufferedReader.readLine()`, before liveness handling or internal filtering. TX is recorded only after the final frame has been written and flushed successfully.
+- A non-empty current file is archived once when recording is first initialised for a new program session. Reconnects do not rotate it. Disabling closes the writer; re-enabling in the same program session appends to the same current file.
+- `LOGINC`/`LOGIN` password fields are replaced by `<REDACTED>` through protocol-aware redaction. Other frames are not reconstructed or normalised for history output.
+- History I/O failures are warning-level diagnostics and must never terminate reader, writer or message-processing threads or deliberately disconnect ON4KST.
+- The default-enabled Messagehandling setting also controls additional application `FINE`/`INFO` records in `kst4contest-errors.log`. `WARNING`/`SEVERE` records and exceptions remain file-logged regardless of that setting. File-log timestamps use UTC with milliseconds.
+- The raw history is intended for future replay/simulation tooling and can contain personal chat and station data even though credentials are redacted.
 
 ## User Workflow / UI Invariants
 

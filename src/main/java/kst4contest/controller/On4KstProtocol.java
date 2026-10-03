@@ -42,6 +42,33 @@ final class On4KstProtocol {
                 + "|25|0|1|" + Math.max(0L, lastMessageTimestamp) + "|0|";
     }
 
+    /**
+     * Redacts credentials from a raw login frame while preserving its structure.
+     * All non-login frames are returned byte-for-character unchanged.
+     */
+    static String redactSecretsForRecording(String frame) {
+        if (frame == null || !("LOGINC".equals(opcode(frame))
+                || "LOGIN".equals(opcode(frame)))) {
+            return frame;
+        }
+
+        int opcodeSeparator = frame.indexOf('|');
+        if (opcodeSeparator < 0) {
+            return frame;
+        }
+        int callsignSeparator = frame.indexOf('|', opcodeSeparator + 1);
+        if (callsignSeparator < 0) {
+            return frame.substring(0, opcodeSeparator + 1) + "<REDACTED>";
+        }
+        int passwordSeparator = frame.indexOf('|', callsignSeparator + 1);
+        if (passwordSeparator < 0) {
+            return frame.substring(0, callsignSeparator + 1) + "<REDACTED>";
+        }
+        return frame.substring(0, callsignSeparator + 1)
+                + "<REDACTED>"
+                + frame.substring(passwordSeparator);
+    }
+
     /** Builds the settings-complete frame for the supplied chat category. */
     static String settingsDone(int category) {
         return "SDONE|" + category(category) + "|";

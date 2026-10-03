@@ -18,7 +18,9 @@ class ChatPreferencesStationMapClusteringTest {
 
     @Test
     void clusteringIsEnabledByDefault() {
-        assertTrue(new ChatPreferences().isGUIstationMapClusteringEnabled());
+        assertTrue(new ChatPreferences(
+                temporaryDirectory.resolve("unused-default.xml"))
+                .isGUIstationMapClusteringEnabled());
     }
 
     @Test
@@ -30,7 +32,7 @@ class ChatPreferencesStationMapClusteringTest {
         assertTrue(written.writePreferencesToXmlFile());
 
         String writtenXml = Files.readString(preferencesFile);
-        assertTrue(writtenXml.contains("<configVersion>7</configVersion>"));
+        assertTrue(writtenXml.contains("<configVersion>8</configVersion>"));
         assertTrue(writtenXml.contains("<GUIstationMapClusteringEnabled>false"
                 + "</GUIstationMapClusteringEnabled>"));
 
@@ -80,7 +82,7 @@ class ChatPreferencesStationMapClusteringTest {
         Files.writeString(preferencesFile, """
                 <?xml version="1.0" encoding="UTF-8"?>
                 <praktiKST>
-                    <configVersion>7</configVersion>
+                    <configVersion>8</configVersion>
                     <guiOptions>
                         <GUIstationMapClusteringEnabled>sometimes</GUIstationMapClusteringEnabled>
                     </guiOptions>
@@ -94,8 +96,6 @@ class ChatPreferencesStationMapClusteringTest {
     }
 
     private ChatPreferences preferencesAt(Path preferencesFile) {
-        ChatPreferences preferences = new ChatPreferences();
-        preferences.setStoreAndRestorePreferencesFileName(preferencesFile.toString());
-        return preferences;
+        return new ChatPreferences(preferencesFile);
     }
 }

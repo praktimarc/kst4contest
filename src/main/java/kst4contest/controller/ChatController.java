@@ -25,6 +25,7 @@ import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.*;
 import kst4contest.test.MockKstServer;
+import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.utils.PlayAudioUtils;
 import kst4contest.locatorUtils.Location;
 import kst4contest.view.Kst4ContestApplication;
@@ -114,6 +115,8 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	boolean connectedAndNOTLoggedIn;
 	boolean disconnected;
 	boolean disconnectionPerformedByUser = false;
+	private MessageHistoryRecorder messageHistoryRecorder =
+			MessageHistoryRecorder.disabled();
 
 	private final On4KstConnectionManager on4KstConnectionManager =
 			new On4KstConnectionManager(this);
@@ -2454,6 +2457,24 @@ private ObservableList<String>
 	 * reachability worker threads. Therefore the listener is always invoked on the
 	 * JavaFX application thread.</p>
 	 *
+	 * This overload requests the functional refresh without producing a periodic
+	 * diagnostic reason.
+	 */
+	public void fireUserListUpdate() {
+		if (statusListener == null) {
+			return;
+		}
+
+		if (Platform.isFxApplicationThread()) {
+			statusListener.onUserListUpdated();
+		} else {
+			Platform.runLater(statusListener::onUserListUpdated);
+		}
+	}
+
+	/**
+	 * Notifies the UI that station-list derived values have changed.
+	 *
 	 * @param reason short debug reason for the UI log
 	 */
 	public void fireUserListUpdate(String reason) {
@@ -2870,6 +2891,13 @@ private ObservableList<String>
 
         chatPreferences = new ChatPreferences();
         chatPreferences.readPreferencesFromXmlFile();
+		Path historyFile = Path.of(ApplicationFileUtils.getFilePath(
+				ApplicationConstants.APPLICATION_NAME,
+				MessageHistoryRecorder.CURRENT_FILE_NAME));
+		messageHistoryRecorder = new MessageHistoryRecorder(
+				historyFile.getParent(),
+				chatPreferences.isMessageHandling_debugModeToFileEnabled(),
+				java.time.Clock.systemUTC());
 //        this.statusListener = listener;
 		lstNotify_QSOSniffer_sniffedCallSignList =
 				chatPreferences
@@ -3106,6 +3134,15 @@ private ObservableList<String>
 
     public ChatPreferences getChatPreferences() {
 		return chatPreferences;
+	}
+
+	public MessageHistoryRecorder getMessageHistoryRecorder() {
+		return messageHistoryRecorder;
+	}
+
+	/** Applies the runtime debug preference to the raw session recorder. */
+	public void setMessageHistoryRecordingEnabled(boolean enabled) {
+		messageHistoryRecorder.setEnabled(enabled);
 	}
 
 	public void setChatPreferences(ChatPreferences chatPreferences) {

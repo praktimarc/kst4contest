@@ -711,6 +711,29 @@ Ist für die betreffende Kategorie keine QRG vorhanden, sendet KST4Contest keine
 
 Sind die allgemeine und die QRG-bezogene Antwort gleichzeitig aktiviert, hat die QRG-Antwort Vorrang. Eine erkannte QRG-Anfrage erzeugt daher nicht zusätzlich den allgemeinen Antworttext. Fehlt die benötigte QRG, fällt KST4Contest auch nicht auf die allgemeine Antwort zurück.
 
+### Debug- und Contest-History
+
+**Enable debug mode to file** ist standardmäßig aktiviert und wirkt ohne Neustart. Der Schalter steuert zwei getrennte Dateien im Verzeichnis `.praktiKST` des Benutzerprofils:
+
+- `kst4contest-errors.log` enthält bei aktiviertem Debug-Modus zusätzliche `INFO`- und `FINE`-Diagnosen. Warnungen, Fehler und Exceptions werden unabhängig vom Schalter immer geschrieben.
+- `Messagehistory.raw` zeichnet den vollständigen ON4KST-Verkehr der aktuellen Programmsitzung auf. Dazu gehören RX und TX, also neben Chat- und Privatnachrichten auch Benutzer-, Status-, Control- und Keepalive-Frames.
+
+Unter Windows liegt die History beispielsweise unter `C:\Users\<Benutzername>\.praktiKST\Messagehistory.raw`, unter Linux und macOS unter `~/.praktiKST/Messagehistory.raw`.
+
+Jede Zeile enthält genau ein Ereignis:
+
+```text
+UTC<TAB>RX|TX<TAB>RAW_FRAME
+```
+
+Der UTC-Zeitstempel enthält Millisekunden. Das dritte Feld bleibt bis auf die Entfernung des TCP-Zeilenabschlusses unverändert. Loginframes bleiben für eine spätere Analyse erkennbar, das Passwort wird jedoch durch `<REDACTED>` ersetzt.
+
+Beim ersten Aktivieren in einer Programmsitzung wird eine vorhandene, nichtleere `Messagehistory.raw` als `Messagehistory-YYYYMMDD-HHMMSSZ.raw` archiviert. Reconnects und erneutes Aktivieren innerhalb derselben Programmsitzung erzeugen kein weiteres Archiv. Beim Abschalten endet die Aufzeichnung sofort; erneutes Aktivieren hängt an die aktuelle Datei an.
+
+Die History ist als maschinenlesbare Grundlage für spätere Replay- und Simulationswerkzeuge gedacht. Sie enthält den vollständigen Contest-/Session-Verkehr und damit in der Regel personenbezogene Chat- und Stationsdaten. Vor einer Weitergabe muss die Datei entsprechend geprüft und behandelt werden.
+
+Das vorhandene Bild `client_settings_window_messagehandling.png` zeigt die neue Checkbox noch nicht und sollte bei der nächsten Screenshot-Aktualisierung ersetzt werden.
+
 ### Schutz vor wiederholten Antworten
 
 Jede automatisch erzeugte Nachricht trägt das feste Präfix:

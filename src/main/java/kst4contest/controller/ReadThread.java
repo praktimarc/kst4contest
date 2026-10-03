@@ -30,6 +30,7 @@ public class ReadThread extends Thread {
     private final LongPredicate sessionIsActive;
     private final Consumer<String> inboundActivity;
     private final Consumer<Throwable> connectionFailure;
+    private final MessageHistoryRecorder historyRecorder;
     private final BufferedReader reader;
 
     /**
@@ -41,7 +42,8 @@ public class ReadThread extends Thread {
     @Deprecated
     public ReadThread(Socket socket, ChatController client) throws IOException {
         this(0L, socket, client.getMessageRXBus(), ignored -> true,
-                ignored -> { }, ignored -> { });
+                ignored -> { }, ignored -> { },
+                client.getMessageHistoryRecorder());
     }
 
     /**
@@ -63,12 +65,29 @@ public class ReadThread extends Thread {
             Consumer<String> inboundActivity,
             Consumer<Throwable> connectionFailure
     ) throws IOException {
+        this(sessionId, socket, receiveQueue, sessionIsActive,
+                inboundActivity, connectionFailure,
+                MessageHistoryRecorder.disabled());
+    }
+
+    /** Creates a reader that reports every received frame to the recorder. */
+    public ReadThread(
+            long sessionId,
+            Socket socket,
+            LinkedBlockingQueue<ChatMessage> receiveQueue,
+            LongPredicate sessionIsActive,
+            Consumer<String> inboundActivity,
+            Consumer<Throwable> connectionFailure,
+            MessageHistoryRecorder historyRecorder
+    ) throws IOException {
         this.sessionId = sessionId;
         this.socket = socket;
         this.receiveQueue = receiveQueue;
         this.sessionIsActive = sessionIsActive;
         this.inboundActivity = inboundActivity;
         this.connectionFailure = connectionFailure;
+        this.historyRecorder = historyRecorder == null
+                ? MessageHistoryRecorder.disabled() : historyRecorder;
         this.reader = new BufferedReader(new InputStreamReader(
                 socket.getInputStream(), StandardCharsets.UTF_8));
     }
@@ -85,6 +104,8 @@ public class ReadThread extends Thread {
                 if (response == null) {
                     throw new EOFException("ON4KST closed the TCP connection");
                 }
+
+                historyRecorder.recordRx(response);
 
                 if (!sessionIsActive.test(sessionId)) {
                     break;

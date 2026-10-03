@@ -265,16 +265,21 @@ final class On4KstConnectionManager {
                     receiveQueue,
                     transmitQueue);
 
+            MessageHistoryRecorder historyRecorder =
+                    controller.getMessageHistoryRecorder();
+
             ReadThread readThread = new ReadThread(
                     token, socket, receiveQueue, this::isActiveSession,
                     line -> onInboundActivity(token, line),
-                    failure -> onConnectionFailure(token, failure));
+                    failure -> onConnectionFailure(token, failure),
+                    historyRecorder);
             WriteThread writeThread = new WriteThread(
                     token, socket, transmitQueue,
                     mainCategory,
                     this::isActiveSession,
                     failure -> onConnectionFailure(token, failure),
-                    controller::onOn4KstOutboundFrameRejected);
+                    controller::onOn4KstOutboundFrameRejected,
+                    historyRecorder);
             MessageBusManagementThread messageProcessor =
                     new MessageBusManagementThread(
                             controller, controller, token, receiveQueue,

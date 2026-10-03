@@ -20,6 +20,12 @@ debug.out
 SimpleLogFile.txt
 udpReaderBackup.txt
 
+# Runtime/debug logs
+Messagehistory.raw
+Messagehistory-*.raw
+kst4contest-errors.log
+kst4contest-errors.log.lck
+
 #tempfiles
 .idea/
 out/

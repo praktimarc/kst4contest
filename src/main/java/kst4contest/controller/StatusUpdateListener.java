@@ -14,9 +14,17 @@ public interface StatusUpdateListener {
 
 
     /**
-     * Called on change if the userlist to update the UI (sort the chatmembers list)
+     * Called when the user list needs a UI refresh without a diagnostic reason.
      */
-    void onUserListUpdated(String reason);
+    void onUserListUpdated();
+
+    /**
+     * Called on change if the userlist needs a UI update and the change has a
+     * useful diagnostic reason.
+     *
+     * @param reason short diagnostic reason for the refresh
+     */
+    void onUserListUpdated(final String reason);
     // new: userlist-update
 
     /**

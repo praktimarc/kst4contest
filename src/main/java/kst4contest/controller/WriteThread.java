@@ -31,6 +31,7 @@ public class WriteThread extends Thread {
 	private final LongPredicate sessionIsActive;
 	private final Consumer<Throwable> connectionFailure;
 	private final Consumer<String> rejectedFrame;
+	private final MessageHistoryRecorder historyRecorder;
 	private final BufferedWriter writer;
 	private final int defaultCategory;
 
@@ -45,7 +46,9 @@ public class WriteThread extends Thread {
 		this(0L, socket, client.getMessageTXBus(),
 				client.getChatPreferences().getLoginChatCategoryMain().getCategoryNumber(),
 				ignored -> true,
-				ignored -> { }, System.out::println);
+				ignored -> { },
+				message -> LOGGER.log(Level.WARNING, message),
+				client.getMessageHistoryRecorder());
 	}
 
 	/**
@@ -69,6 +72,22 @@ public class WriteThread extends Thread {
 			Consumer<Throwable> connectionFailure,
 			Consumer<String> rejectedFrame
 	) throws IOException {
+		this(sessionId, socket, transmitQueue, defaultCategory,
+				sessionIsActive, connectionFailure, rejectedFrame,
+				MessageHistoryRecorder.disabled());
+	}
+
+	/** Creates a writer that records each frame after a successful flush. */
+	public WriteThread(
+			long sessionId,
+			Socket socket,
+			LinkedBlockingQueue<ChatMessage> transmitQueue,
+			int defaultCategory,
+			LongPredicate sessionIsActive,
+			Consumer<Throwable> connectionFailure,
+			Consumer<String> rejectedFrame,
+			MessageHistoryRecorder historyRecorder
+	) throws IOException {
 		this.sessionId = sessionId;
 		this.socket = socket;
 		this.transmitQueue = transmitQueue;
@@ -76,6 +95,8 @@ public class WriteThread extends Thread {
 		this.sessionIsActive = sessionIsActive;
 		this.connectionFailure = connectionFailure;
 		this.rejectedFrame = rejectedFrame;
+		this.historyRecorder = historyRecorder == null
+				? MessageHistoryRecorder.disabled() : historyRecorder;
 		this.writer = new BufferedWriter(new OutputStreamWriter(
 				socket.getOutputStream(), StandardCharsets.UTF_8));
 	}
@@ -147,6 +168,7 @@ public class WriteThread extends Thread {
 		writer.write(frame);
 		writer.write("\r\n");
 		writer.flush();
+		historyRecorder.recordTx(frame);
 	}
 
 	private boolean isPoisonPill(ChatMessage message) {

@@ -55,7 +55,7 @@ public class ChatPreferences {
 	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
 	 */
 //	private static final int CONFIG_VERSION = 2;
-	public static final int CONFIG_VERSION = 7;
+	public static final int CONFIG_VERSION = 8;
 
 	// Prefer writing tag names that mirror variable names (human readable). Keep legacy tags for compatibility.
 	private static final String TAG_CONFIG_VERSION = "configVersion";
@@ -80,6 +80,19 @@ public class ChatPreferences {
 	 */
 	public ChatPreferences() {
 		ApplicationFileUtils.copyResourceIfRequired(ApplicationConstants.APPLICATION_NAME, PREFERENCE_RESOURCE, PREFERENCES_FILE);
+	}
+
+	/**
+	 * Creates preferences backed by an explicit file without touching the user
+	 * profile. This is useful for isolated imports, tools and tests.
+	 *
+	 * @param preferencesFile preferences XML path
+	 */
+	public ChatPreferences(Path preferencesFile) {
+		if (preferencesFile == null) {
+			throw new IllegalArgumentException("Preferences file must not be null");
+		}
+		storeAndRestorePreferencesFileName = preferencesFile.toString();
 
 //        lstNotify_QSOSniffer_sniffedCallSignList.add("DF0GEB");
 
@@ -329,6 +342,7 @@ public class ChatPreferences {
 	boolean messageHandling_autoAnswerEnabledSecondCat = false;
 
 	boolean messageHandling_autoAnswerToQRGRequestEnabled;
+	private volatile boolean messageHandling_debugModeToFileEnabled = true;
 
 	/*********************************************************************************
 	 *
@@ -377,6 +391,17 @@ public class ChatPreferences {
 
 	public boolean isMessageHandling_autoAnswerEnabledSecondCat() {
 		return messageHandling_autoAnswerEnabledSecondCat;
+	}
+
+	public boolean isMessageHandling_debugModeToFileEnabled() {
+		return messageHandling_debugModeToFileEnabled;
+	}
+
+	public void setMessageHandling_debugModeToFileEnabled(
+			boolean messageHandling_debugModeToFileEnabled
+	) {
+		this.messageHandling_debugModeToFileEnabled =
+				messageHandling_debugModeToFileEnabled;
 	}
 
 	public void setMessageHandling_autoAnswerEnabledSecondCat(boolean messageHandling_autoAnswerEnabledSecondCat) {
@@ -2015,6 +2040,12 @@ public class ChatPreferences {
 			autoAnswerToQrgRequestEnabled.setTextContent(isMessageHandling_autoAnswerToQRGRequestEnabled()+"");
 			messageHandling.appendChild(autoAnswerToQrgRequestEnabled);
 
+			Element debugModeToFileEnabled = doc.createElement(
+					"messageHandling_debugModeToFileEnabled");
+			debugModeToFileEnabled.setTextContent(
+					Boolean.toString(isMessageHandling_debugModeToFileEnabled()));
+			messageHandling.appendChild(debugModeToFileEnabled);
+
 			/****************************
 			 * GUI BEHAVIOUR
 			 ***************************/
@@ -2921,6 +2952,7 @@ public class ChatPreferences {
 			 * case messageHandling
 			 *
 			 ***********************************************/
+			messageHandling_debugModeToFileEnabled = true;
 			Element messageHandlingEl = getFirstElement(doc, "messageHandling");
 			if (messageHandlingEl != null) {
 				messageHandling_autoAnswerTextMainCat = getText(
@@ -2950,6 +2982,10 @@ public class ChatPreferences {
 						messageHandling_autoAnswerEnabledSecondCat,
 						"messageHandling_autoAnswerEnabledSecondCat",
 						"autoAnswerEnabledSecondCat");
+				messageHandling_debugModeToFileEnabled = getBoolean(
+						messageHandlingEl,
+						messageHandling_debugModeToFileEnabled,
+						"messageHandling_debugModeToFileEnabled");
 
 				/*
 				 * The user interface intentionally exposes one shared generic auto-answer

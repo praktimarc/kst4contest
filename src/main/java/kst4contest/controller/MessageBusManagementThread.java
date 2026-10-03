@@ -11,6 +11,8 @@ import java.util.Hashtable;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.ObservableList;
@@ -30,6 +32,8 @@ import java.util.function.LongPredicate;
  *
  */
 public class MessageBusManagementThread extends Thread {
+	private static final Logger LOGGER =
+			Logger.getLogger(MessageBusManagementThread.class.getName());
 
 	int index;
 
@@ -255,7 +259,7 @@ public class MessageBusManagementThread extends Thread {
 				stringAggregation += s + " ";
 			}
 
-			System.out.println("[MSGBUSMGT:] Processed qrg info: " + stringAggregation);
+			LOGGER.log(Level.FINE, "Processed QRG info: {0}", stringAggregation);
 
 //			System.out.println("Processed QRG Entry [" + this.client.getChatMemberTable().size() + "]: Call: "
 //					+ member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
@@ -442,7 +446,7 @@ public class MessageBusManagementThread extends Thread {
 					finalDetectedFrequency
 			);
 
-			System.out.println(
+			LOGGER.log(Level.FINE,
 					"[SmartParser] Detected for "
 							+ sender.getCallSign()
 							+ ": "
@@ -578,11 +582,11 @@ public class MessageBusManagementThread extends Thread {
 
 		if (lookForThis == null) {
 
-			System.out.println(
+			LOGGER.warning(
 					"[ChecklistForChatMemberIndexByCallsign] ERROR: null Value for Chatmember detected! Member cannot be in the list!");
 			return -1;
 		} else if (lookForThis.getCallSign() == null) {
-			System.out.println(
+			LOGGER.warning(
 					"[ChecklistForChatMemberIndexByCallsign] ERROR: null Value in Callsign detected! Member cannot be in the list!");
 			return -1;
 		}
@@ -613,7 +617,11 @@ public class MessageBusManagementThread extends Thread {
 			if (list.get(i).getCallSign().equals(lookForThis.getCallSign())) {
 				//TODO: New since 1.26! Check against category!
 
-				System.out.println("MSGBUSMGT, DEBUG: Checking Chatcategories of found list member " + list.get(i).getCallSign() + " / " + list.get(i).getChatCategory() +  " against " + lookForThis.getCallSign() + " / " + lookForThis.getChatCategory());
+				LOGGER.fine("Checking chat categories for list member "
+						+ list.get(i).getCallSign() + " / "
+						+ list.get(i).getChatCategory() + " against "
+						+ lookForThis.getCallSign() + " / "
+						+ lookForThis.getChatCategory());
 
 //				System.out
 //						.println("MSGBUSHELBER: Found " + chatMember.getCallSign() + " at " + list.indexOf(chatMember));
@@ -623,12 +631,14 @@ public class MessageBusManagementThread extends Thread {
 					return list.indexOf(list.get(i));
 				} //new 1.26
 				else {
-					System.out.println("MSGBUSMGT, DEBUG: Category does not match");
+					LOGGER.fine("Chat-member category does not match");
 
 				}
 
 //				System.out.println("--------------------------- chatcategory of list.get(i) = " + list.get(i).getChatCategory().getCategoryNumber());
-				System.out.println("--------------------------- chatcategory of lookforthisChatMember = " + lookForThis.getChatCategory().getCategoryNumber() );
+				LOGGER.log(Level.FINE,
+						"Requested chat-member category is {0}",
+						lookForThis.getChatCategory().getCategoryNumber());
 			}
 //				return list.indexOf(list.get(i)); //if no category found, return entry //TODO: ERROR detected here! Should work now, needs some proof
 //				return -1; //if category dont match, return: member not found
@@ -1010,11 +1020,11 @@ public class MessageBusManagementThread extends Thread {
 
 						newMember.setCallSign(splittedMessageLine[2]);
 
-						System.out.println("[MSGBUSMGT, Info:] User left Chat and will be removed from list ["
+						LOGGER.info("User left chat and will be removed from list ["
 								+ this.client.getActiveChatMemberCount() + "] :" + newMember.getCallSign());
 
 						if (!this.client.removeActiveChatMember(newMember)) {
-							System.out.println("[MSGBUSMGT, Info:] User sent left chat but was not active: "
+							LOGGER.info("User sent left-chat frame but was not active: "
 									+ newMember.getCallSign() + " / " + newMember.getChatCategory());
 						}
 
@@ -1242,7 +1252,8 @@ public class MessageBusManagementThread extends Thread {
 										}
 
 
-										System.out.println("message directed to me: " + newMessageArrived.getReceiver().getCallSign() + ".");
+										LOGGER.fine("Message directed to local callsign: "
+												+ newMessageArrived.getReceiver().getCallSign());
 
 									} else if (newMessageArrived.getSender().getCallSign().toUpperCase()
 											.equals(this.client.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
@@ -1320,24 +1331,27 @@ public class MessageBusManagementThread extends Thread {
 
 														}
 													} catch (Exception exception) {
-														System.out.println("[MSGBUSMGT, ERROR:] DXCluster messageserver error while processing spot for 0: " + newMessageArrived.getSender().getCallSign() + " // " + exception.getMessage());
+												LOGGER.log(Level.WARNING,
+														"DXCluster message-server error while processing spot for "
+																+ newMessageArrived.getSender().getCallSign(),
+														exception);
 //											exception.printStackTrace();
 													}
 												}
 
-												System.out.println(">>>>>>>>>> Anglewarning <<<<<<<<<< " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
+										LOGGER.fine("Angle warning " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
 														new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
 														" / sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())));
 
 											} else {
-												System.out.println("-notinangle- " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
+										LOGGER.fine("Not in angle " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
 														new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
 														" ; sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())));
 												newMessageArrived.getSender().setInAngleAndRange(false);
 											}
 										} else {
 											newMessageArrived.getSender().setInAngleAndRange(false);
-											System.out.println("[MSGBUSMGT, Info:] Skipping angle/range analysis for message with missing locator: "
+										LOGGER.info("Skipping angle/range analysis for message with missing locator: "
 													+ newMessageArrived.getSender().getCallSign() + " -> "
 													+ newMessageArrived.getReceiver().getCallSign());
 										}
@@ -1347,9 +1361,9 @@ public class MessageBusManagementThread extends Thread {
 //						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
 									}
 								} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-									System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing or message got before user entered chat message: "
-											+ referenceDeletedByUserLeftChatDuringMessageprocessing.getMessage());
-									referenceDeletedByUserLeftChatDuringMessageprocessing.printStackTrace();
+									LOGGER.log(Level.WARNING,
+											"Referenced user disappeared while processing a message",
+											referenceDeletedByUserLeftChatDuringMessageprocessing);
 								}
 
 								// sdtout to me message-List
@@ -1364,12 +1378,13 @@ public class MessageBusManagementThread extends Thread {
 
 							try {
 
-								System.out.println("[MSGBUSMGT:] processed message: " + newMessageArrived.getChatCategory().getCategoryNumber()
+								LOGGER.fine("Processed message: " + newMessageArrived.getChatCategory().getCategoryNumber()
 										+ " " + newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getMessageSenderName() + " -> "
 										+ newMessageArrived.getReceiver().getCallSign() + ": " + newMessageArrived.getMessageText());
 							} catch (Exception exceptionOccured) {
-								System.out.println("[MSGMgtBus: ERROR CHATCHED ON MAYBE NULL ISSUE]: " + exceptionOccured.getMessage());
-								exceptionOccured.printStackTrace();
+								LOGGER.log(Level.WARNING,
+										"Could not format processed-message diagnostic",
+										exceptionOccured);
 							}
 
 							// TODO: Next: get frequency infos out of name?
@@ -1401,11 +1416,11 @@ public class MessageBusManagementThread extends Thread {
 								}
 
 								if (foundThisInChatMemberList != null) {
-									System.out.println("[MSGBUSMGT:] Locator Change of [" + (splittedMessageLine[2] + "], old was: "
+									LOGGER.info("Locator change of [" + (splittedMessageLine[2] + "], old was: "
 											+ foundThisInChatMemberList.getQra() + " new is: " + splittedMessageLine[3]));
 									this.client.updateActiveChatMemberLocator(temp4, splittedMessageLine[3]);
 								} else {
-									System.out.println("[MSGBUSMGT:] ERROR! Locator Change of ["
+									LOGGER.warning("Locator change of ["
 											+ (splittedMessageLine[2] + "] is not possible, user is not in the Table!"));
 
 								}
@@ -1537,7 +1552,7 @@ public class MessageBusManagementThread extends Thread {
 												stateChangeMember.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
 
 												if (!this.client.updateActiveChatMemberState(stateChangeMember, stateChangeMember.getState())) {
-													System.out.println("[MSGBUSMGT, Info:] State change for inactive user: "
+											LOGGER.info("State change for inactive user: "
 															+ stateChangeMember.getCallSign() + " / " + stateChangeMember.getChatCategory());
 												}
 
@@ -1552,7 +1567,7 @@ public class MessageBusManagementThread extends Thread {
 												if (splittedMessageLine[0].contains(USERINFOUPDATEORUSERISBACK)) {
 
 													if (splittedMessageLine.length < 6) {
-														System.out.println("[MSGBUSMGT, warning:] Malformed UM3 message ignored: "
+												LOGGER.warning("Malformed UM3 message ignored: "
 																+ messageToProcess.getMessageText());
 													} else {
 														ChatMember stateChangeMember = new ChatMember();
@@ -1584,7 +1599,7 @@ public class MessageBusManagementThread extends Thread {
 															if (updatedActiveMember) {
 																this.client.getDbHandler().storeChatMember(stateChangeMember); // TODO: not clean, it should be an update
 															} else {
-																System.out.println("[MSGBUSMGT, Info:] UM3 ignored for inactive user: "
+														LOGGER.info("UM3 ignored for inactive user: "
 																		+ stateChangeMember.getCallSign() + " / " + stateChangeMember.getChatCategory());
 															}
 														}
@@ -1658,7 +1673,8 @@ public class MessageBusManagementThread extends Thread {
 //							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
 																	this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
 
-																	System.out.println("Historic message directed to me: " + newMessageArrived.getReceiver().getCallSign() + ".");
+														LOGGER.fine("Historic message directed to local callsign: "
+																+ newMessageArrived.getReceiver().getCallSign());
 
 																} else if (newMessageArrived.getSender().getCallSign().toUpperCase()
 																		.equals(this.client.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
@@ -1710,9 +1726,9 @@ public class MessageBusManagementThread extends Thread {
 //						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
 																}
 															} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-																System.out.println("MSGBS bgfx, <<<catched error>>>: referenced user left the chat during messageprocessing or message got before user entered chat message: "
-																		+ referenceDeletedByUserLeftChatDuringMessageprocessing.getMessage());
-																referenceDeletedByUserLeftChatDuringMessageprocessing.printStackTrace();
+													LOGGER.log(Level.WARNING,
+															"Referenced user disappeared while processing a historic message",
+															referenceDeletedByUserLeftChatDuringMessageprocessing);
 															}
 
 															// sdtout to me message-List
@@ -1721,12 +1737,13 @@ public class MessageBusManagementThread extends Thread {
 
 														try {
 
-															System.out.println("[MSGBUSMGT:] processed message: " + newMessageArrived.getChatCategory().getCategoryNumber()
+											LOGGER.fine("Processed historic message: " + newMessageArrived.getChatCategory().getCategoryNumber()
 																	+ " " + newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getMessageSenderName() + " -> "
 																	+ newMessageArrived.getReceiver().getCallSign() + ": " + newMessageArrived.getMessageText());
 														} catch (Exception exceptionOccured) {
-															System.out.println("[MSGMgtBus: ERROR CHATCHED ON MAYBE NULL ISSUE]: " + exceptionOccured.getMessage());
-															exceptionOccured.printStackTrace();
+											LOGGER.log(Level.WARNING,
+													"Could not format historic-message diagnostic",
+													exceptionOccured);
 														}
 
 														// --- Band/QRG recognition (fills ChatMember.knownActiveBands) ---
@@ -1742,8 +1759,8 @@ public class MessageBusManagementThread extends Thread {
 													 */
 														if (SRVR_USERLISTEND.equals(opcode)) {
 															if (splittedMessageLine.length < 2) {
-																System.out.println(
-																		"[MSGBUSMGT, Warning:] Ignoring malformed UE frame: "
+													LOGGER.warning(
+															"Ignoring malformed UE frame: "
 																				+ messageToProcess.getMessageText());
 																return;
 															}
@@ -1767,7 +1784,7 @@ public class MessageBusManagementThread extends Thread {
 
 															//-> LOGSTAT|114|Wrong password!|
 															if (splittedMessageLine[0].contains(SRVR_LOGSTAT) && splittedMessageLine.length <= 5) {
-																System.out.println("Passwort falsch!");
+													LOGGER.warning("ON4KST reported an invalid password");
 
 																if (splittedMessageLine[2].contains("password")) {
 																	splittedMessageLine[2] += " pse disc- and reconnect";
@@ -1815,9 +1832,8 @@ public class MessageBusManagementThread extends Thread {
 //						+ messageToProcess.getMessageText() + "\n");
 //				bufwrtrDBGMSGOut.flush();
 
-																System.out.print(new Utils4KST().time_generateCurrentMMDDhhmmTimeString()
-																		+ " [MSGBUSMGT:] Critical, detected unhandled Chatmessage -> "
-																		+ messageToProcess.getMessageText() + "\n");
+											LOGGER.warning("Detected unhandled ON4KST frame: "
+													+ messageToProcess.getMessageText());
 
 															}
 
@@ -1915,7 +1931,7 @@ public class MessageBusManagementThread extends Thread {
 		} else if (categoryNumber.equals(this.client.getChatCategorySecondChat().getCategoryNumber() + "")) {
 			return this.client.getChatCategorySecondChat();
 		} else {
-			System.out.println("Msgbusmgt: ERROR!!! -> category for this message does not exist!");
+			LOGGER.warning("Category for ON4KST message does not exist; using established main-category fallback");
 			return this.client.getChatCategoryMain(); //Chatcategory default decision
 		}
 
@@ -1955,7 +1971,7 @@ public class MessageBusManagementThread extends Thread {
 				|| incoming.getSender().getCallSign() == null
 				|| incoming.getSender().getCallSign().isBlank()) {
 
-			System.err.println(
+			LOGGER.warning(
 					"KST4Contest auto-answer skipped: "
 							+ "incoming message has no valid sender callsign."
 			);
@@ -1970,7 +1986,7 @@ public class MessageBusManagementThread extends Thread {
 			);
 
 			if (qrg == null || qrg.isBlank()) {
-				System.err.println(
+				LOGGER.warning(
 						"KST4Contest QRG auto-answer skipped for "
 								+ incoming.getSender().getCallSign()
 								+ ": no QRG is available for chat category "
@@ -1987,7 +2003,7 @@ public class MessageBusManagementThread extends Thread {
 					.getMessageHandling_autoAnswerTextMainCat();
 
 			if (payload == null || payload.isBlank()) {
-				System.err.println(
+				LOGGER.warning(
 						"KST4Contest generic auto-answer skipped for "
 								+ incoming.getSender().getCallSign()
 								+ ": the configured answer text is empty."
@@ -2013,7 +2029,7 @@ public class MessageBusManagementThread extends Thread {
 			return On4KstProtocol.messageText(messageText);
 
 		} catch (IllegalArgumentException invalidMessage) {
-			System.err.println(
+			LOGGER.warning(
 					"KST4Contest auto-answer skipped for "
 							+ incoming.getSender().getCallSign()
 							+ ": "
@@ -2166,7 +2182,7 @@ public class MessageBusManagementThread extends Thread {
 //							}
 
 					if (messageTextRaw.getMessageText() == null) {
-						System.out.println("[MSGBUSMGT:] ERROR! got NULL message! BYE!");
+						LOGGER.severe("Received ON4KST message with null payload");
 //							this.interrupt();
 //							break;
 					}
@@ -2184,35 +2200,38 @@ public class MessageBusManagementThread extends Thread {
 
 					if (!On4KstProtocol.isInternalDxqResponse(
 							messageTextRaw.getMessageText())) {
-						System.out.println(messageTextRaw.getMessageText() + " <- RXed"); // Stdout at
-						// Console#######################################################TODO:Wichtig
+						LOGGER.log(Level.FINE, "ON4KST RX: {0}",
+								messageTextRaw.getMessageText());
 					}
 
 					try {
 						processRXMessage23001(messageTextRaw);
 					} catch (IOException e) {
-						System.out.println("MsgBusMgt: process23001 went wrong / IO Error");
-						e.printStackTrace();
+					LOGGER.log(Level.WARNING,
+							"I/O error while processing ON4KST frame", e);
 					} catch (SQLException e) {
-						System.out.println("MsgBusMgt: process23001 went wrong / SQL Error");
-						e.printStackTrace();
+					LOGGER.log(Level.WARNING,
+							"SQL error while processing ON4KST frame", e);
 					} catch (RuntimeException e) {
-						System.out.println("MsgBusMgt: process23001 went wrong / Runtime Error while processing: "
-								+ messageTextRaw.getMessageText());
-						e.printStackTrace();
+					LOGGER.log(Level.WARNING,
+							"Runtime error while processing ON4KST opcode "
+									+ On4KstProtocol.opcode(
+											messageTextRaw.getMessageText()),
+							e);
 					}
 				}
 
 			} catch (InterruptedException e1) {
 				this.interrupt();
 
-				e1.printStackTrace();
+				LOGGER.log(Level.FINE,
+						"ON4KST message processor interrupted", e1);
 				break;// TODO Change at may24, avoid uncloadability. Check if this could lead to further errors on instable link!
 				//				client.getMessageRXBus().clear();
 			}
 
 		} // while true end
-		System.out.println("Msgbusmgt: interrupt");
+		LOGGER.fine("ON4KST message processor stopped");
 		this.interrupt();
 	}
 }

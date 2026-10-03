@@ -107,6 +107,8 @@ Die Fehler-Logdatei wird hier gespeichert:
 
 Vor dem Hochladen sollte die Datei kurz geprüft werden. Ein Fehlerprotokoll enthält überwiegend technische Informationen, kann abhängig vom Fehler aber beispielsweise lokale Dateipfade oder weitere Kontextdaten enthalten.
 
+Ist unter **Settings → Messagehandling → Enable debug mode to file** der Debug-Modus aktiviert, enthält das gleiche Verzeichnis zusätzlich `Messagehistory.raw` und gegebenenfalls archivierte `Messagehistory-*.raw`. Diese Dateien zeichnen den vollständigen ON4KST-Sessionverkehr mit RX und TX auf. Loginpasswörter werden redigiert, Chat- und Stationsdaten bleiben jedoch enthalten. Eine solche Datei deshalb nur nach bewusster Prüfung weitergeben.
+
 In Datei- und Verzeichnisnamen wird teilweise noch der technische Name `praktiKST` verwendet. Gemeint ist dasselbe Programm.
 
 ---
