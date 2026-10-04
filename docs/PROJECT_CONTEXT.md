@@ -70,7 +70,7 @@ A batch of changes belongs in one `SimpleRoster.mutate(...)`, not one call per e
 
 ## Operator Profiles and Per-Profile Persistence
 
-- One operator profile owns one `preferences.xml` and one worked-station database. Everything else under `~/.praktiKST/` stays global: CSS, audio files, DEM and terrain packages, the error log and the version-info feed.
+- One operator profile owns one `preferences.xml`, one worked-station database and, since release 1.50, its own pair of stylesheets. Everything else under `~/.praktiKST/` stays global: audio files, DEM and terrain packages, the error log and the version-info feed.
 - The **root profile** is the historic flat installation: `preferences.xml` and `praktiKST.db` directly below the application directory. It is never moved, and it always uses the common station database, because that database is the installation's own.
 - Additional profiles live under `profiles/<profileId>/`. `profileId` is a stable, file-system-safe slug assigned once; renaming a profile changes only its display name and never moves a directory.
 - The registry `profiles.xml` is created lazily. An installation that has only the flat layout gets no registry and no `profiles/` directory; the root profile is synthesised in memory. Startup with no or exactly one profile therefore asks nothing and writes nothing, and a downgrade to an older release is a no-op.
@@ -269,6 +269,49 @@ section records only the durable architecture and operational boundaries.
 - The combined GoAccess 1.8.1 report remains unchanged. A finer Country-level graphic under `/combined/` is deliberately deferred; no decision has been made between a later GoAccess upgrade and a custom report integration.
 
 ## Important Decisions and Workarounds
+
+- **The palette has three sources, and the later one wins role by role** (release 1.50): the
+  shipped stylesheet from the classpath, then the profile's own stylesheet file if present,
+  then the six role overrides stored in that profile's preferences. `resolvePalette` is a pure
+  function and reports the provenance of every role, which the colours tab shows per field --
+  with two sources able to decide the same colour, that is the only thing that keeps "why is
+  this colour what it is" answerable, and it is not optional.
+- **A role is a selector and a property, not a property alone.** Three of the six are stated
+  outside `.root` (text on `.label`, the separator on `.separator *.line`), and
+  `-fx-background-color` alone appears a dozen times in the evening sheet. `JavaFxStylesheet.read`
+  returns a complete palette with Modena fallbacks and is right for layer 1;
+  `declaredRoles` returns only what a sheet actually names and is the only thing correct for
+  layer 2. Measured: the shipped daylight sheet states no colour at all, the evening sheet five.
+- **The root profile's layer 2 always exists, and that is not a bug.** `copyResourceIfRequired`
+  writes `KST4ContestDefaultDay.css` and `…Evening.css` at every startup, and those are exactly
+  the paths `paletteRelativeFileName(rootProfile, …)` resolves to — reading them is what fixes
+  the long-standing defect that the copies were written and never read. Consequence to keep in
+  mind: on the default installation most roles report *from file*, not *shipped*, with the same
+  values. Anything keyed on provenance rather than on a colour's value will therefore misfire
+  there; `textAccent` did, and repainted the evening accent on upgrade.
+- **A file stating `-fx-base` and no `-fx-background` states the derived window surface too**,
+  because that is what JavaFX does with it. The settings tab keeps the two roles independent —
+  the spec separates them so an operator can set one without the other — but a hand-edited
+  sheet follows the stylesheet language, or `-fx-base: #303030` would leave every window the
+  shipped light grey.
+- **The contrast guard's pairs come from `Theme.kt`'s Material mapping, not from the role
+  names.** `background` and `surface` are both `windowBackground` with `labelTextFill` on them,
+  and `primary` is `textAccent`, not `accent`; `base` reaches the screen only through the menu
+  strip and the selection tint. Measuring text against `base` alone let an operator black out
+  every window and hear nothing.
+- **`Kst4ContestTheme` must read the palette from the `PaletteStore`'s state, never from
+  `remember`.** That read is what makes a colour change recompose every open window;
+  `remember(darkMode)` held the palette until someone toggled day/evening, so a change reached
+  nothing. `ThemeReadsPaletteStoreTest` pins it.
+- **The contrast guard is relative to the shipped sheet, not an absolute WCAG floor.** Measured:
+  the shipped sheets have three pairs under 4.5 themselves (daylight accent 2.86, evening accent
+  2.26, evening text-in-field about 2.9), so an absolute rule would warn on an untouched client
+  and teach the operator to ignore warnings. It reports a pair only when it is both under the
+  floor and worse than shipped, so the shipped state and any improvement never warn.
+- **The "reset to the shipped colours" button never takes the active palette.** It receives the
+  shipped palette as a required parameter and reads no composition local, so it has no path to
+  the resolved one. An operator who sets text and surface to the same black cannot see any
+  other control, this one included, unless it refuses their palette.
 
 - Preserve full callsign/category identity while applying base-call normalisation only to specifically defined features.
 - Keep canonical worker-thread domain state separate from the row lists the user interface draws from.

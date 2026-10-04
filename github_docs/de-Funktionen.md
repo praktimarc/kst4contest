@@ -324,6 +324,95 @@ Die grüne Altersskala der Privatnachrichten bleibt in beiden Darstellungen erha
 
 ---
 
+## Eigene Farben (ab v1.50)
+
+Der Reiter **Colours** im Einstellungsfenster setzt sechs Farben pro Entwurf und **pro
+Operator-Profil**: Fläche, Fensterfläche, Feldinneres, Text, Akzent und Trennlinie. Tag und
+Abend sind getrennt — eine Änderung am Abendentwurf lässt den Tagentwurf unberührt.
+
+Eine Farbe wird als sechsstellige Hexzahl mit führendem Rautezeichen eingetragen, etwa
+`#3C7A4B`, und gilt **sofort in allen offenen Fenstern**. Es gibt keinen „noch nicht
+gespeichert"-Zustand.
+
+**Sie überlebt den Neustart aber erst nach „Save settings".** Das ist derselbe Vertrag wie bei
+jeder anderen Einstellung — nur ist dies der einzige Reiter, dessen Wirkung man sofort in
+allen Fenstern sieht, und „es sah richtig aus, also ist es gespeichert" ist hier der
+naheliegende Fehlschluss. Der Reiter sagt es deshalb auch selbst.
+
+Was nicht als Farbe lesbar ist, wird abgelehnt und das Feld springt zurück; ein Hinweisfenster
+sagt, warum.
+
+### Die drei Wege zurück
+
+| Knopf | Wirkung |
+|---|---|
+| **Back to how it was** | die Palette, die beim Öffnen des Reiters galt — einschließlich einer damals schon vorhandenen Änderung |
+| **Discard my changes** | leert die eigenen Änderungen dieses Entwurfs; es gilt wieder die Datei oder die Auslieferung |
+| **Reset to the shipped colours** | setzt alle sechs Rollen auf die ausgelieferten Werte, auch wenn eine eigene Stilvorlage vorhanden ist |
+
+**Der Knopf „Reset to the shipped colours" ist immer in den ausgelieferten Farben gezeichnet,
+ganz gleich, was eingestellt ist.** Das ist Absicht: wer Text und Fläche auf dasselbe Schwarz
+stellt, sieht die übrigen Knöpfe nicht mehr — auch die nicht, mit denen er es zurücknehmen
+könnte. Dieser eine nimmt die kaputte Palette nicht an und bleibt deshalb lesbar. Dass er bei
+einer stark angepassten Palette fremd aussieht, macht ihn auffindbar.
+
+**Alle drei haben ein Tastenkürzel**, als zweite Absicherung für den Fall, dass gar nichts mehr
+zu lesen ist. Sie wirken, solange der Reiter offen ist, auch wenn der Schreibzeiger in einem
+der Farbfelder steht:
+
+| Taste | Rückweg |
+|---|---|
+| **Ctrl+Z** | Zurück zum Stand von vorher |
+| **Ctrl+D** | Meine Änderungen verwerfen |
+| **Ctrl+R** | Auf Auslieferung zurücksetzen |
+
+„Zurück zum Stand von vorher" stellt **beide** Entwürfe her, nicht nur den gerade
+sichtbaren — wer eine Farbe am Tag ändert, auf Abend umschaltet und dort noch eine ändert,
+nimmt mit diesem Knopf beides zurück.
+
+### Woher eine Farbe kommt
+
+Hinter jedem Feld steht, woher der geltende Wert stammt:
+
+| Angabe | Bedeutung |
+|---|---|
+| *shipped* | aus dem ausgelieferten Entwurf |
+| *from file* | aus der eigenen Stilvorlage im Profilverzeichnis |
+| *changed* | hier im Reiter gesetzt |
+
+Eine Einstellung im Reiter überstimmt immer die Datei, und die Datei überstimmt die
+Auslieferung — Rolle für Rolle.
+
+### Lesbarkeitshinweis
+
+Liegt ein Paar, das tatsächlich übereinanderliegt — Text auf Fläche, Text im Feld, Akzent auf
+Fläche — schlechter als im ausgelieferten Entwurf und unter dem WCAG-AA-Wert von 4,5, erscheint
+ein Hinweis mit beiden Verhältnissen. **Gespeichert wird trotzdem:** eine harte Kombination im
+Contest kann gewollt sein.
+
+### Die Stilvorlage von Hand bearbeiten
+
+Wer mehr als die sechs Rollen ändern will, lässt sich mit **Write this design's stylesheet into
+my profile** die ausgelieferte Vorlage ins Profilverzeichnis schreiben. Der Reiter nennt den
+Pfad. Für das Wurzelprofil ist das `~/.praktiKST/KST4ContestDefaultDay.css` beziehungsweise
+`…Evening.css`, für jedes weitere Profil `profiles/<Kennung>/` darunter.
+
+**Eine vorhandene Datei wird nie überschrieben** — der Knopf meldet dann nur, dass sie schon da
+ist. Änderungen an der Datei gelten nach einem Neustart. Eine unlesbare oder fehlerhafte Datei
+verhindert den Start nicht: die betroffene Rolle fällt auf die Auslieferung zurück.
+
+**Beim Wurzelprofil liegen diese beiden Dateien schon.** KST4Contest legt sie seit Jahren beim
+Start an; bis Version 1.50 hat sie nur niemand gelesen. Deshalb steht dort bei den meisten
+Rollen von Anfang an *from file* und nicht *shipped*, und der Knopf meldet, dass die Datei
+bereits da ist. Inhaltlich ist es die ausgelieferte Vorlage — es sieht also aus wie
+*shipped*, weil es dasselbe ist.
+
+Wer dort `-fx-base` ändert, bekommt auch die Fensterfläche mit: KST4Contest leitet sie daraus
+ab, genau wie JavaFX es getan hat. Wer beide getrennt haben will, nennt `-fx-background`
+ausdrücklich — oder setzt sie oben im Reiter, wo die beiden immer unabhängig bleiben.
+
+---
+
 ## Opposite Station Multi-Callsign Login-Tagging (ab v1.26)
 
 Unterstützung für Gegenstationen, die mit mehreren vollständigen sichtbaren Rufzeichenvarianten gleichzeitig im Chat aktiv sind (z. B. Expedition-Setups). Vollständiges Rufzeichen und Chat-Kategorie bleiben getrennte Teilnehmeridentitäten; Worked-, Band- und Prioritätsdaten werden über das Basisrufzeichen gemeinsam ausgewertet.

@@ -323,6 +323,93 @@ The green private-message age scale remains available in both designs. Text colo
 
 ---
 
+## Own Colours (from v1.50)
+
+The **Colours** tab in the settings window sets six colours per design and **per operator
+profile**: surface, window surface, field interior, text, accent and separator line. Daylight
+and evening are separate — a change to the evening design leaves the daylight one untouched.
+
+A colour is entered as six hexadecimal digits with a leading hash, for example `#3C7A4B`, and
+applies **immediately in every open window**. There is no "not yet applied" state.
+
+**It survives a restart only after Save settings.** That is the same contract as every other
+setting — but this is the only tab whose effect is visible at once in every window, and "it
+looked right, so it must be stored" is the easy wrong conclusion here. The tab says so itself
+for that reason.
+
+Anything that cannot be read as a colour is refused and the field snaps back; a notice window
+says why.
+
+### The three ways back
+
+| Button | What it does |
+|---|---|
+| **Back to how it was** | the palette in force when the tab was opened, including a change already present then |
+| **Discard my changes** | empties this design's own changes, so the file or the shipped design applies again |
+| **Reset to the shipped colours** | sets all six roles to the shipped values, even when an own stylesheet is present |
+
+**The "Reset to the shipped colours" button is always drawn in the shipped colours, whatever
+has been set.** This is deliberate: an operator who sets text and surface to the same black can
+no longer see any other button — including the ones that would undo it. This one does not take
+the broken palette and therefore stays readable. That it looks out of place under a heavily
+customised palette is what makes it findable.
+
+**All three have a keyboard shortcut**, as a second safety net for when nothing can be read at
+all. They work while the tab is open, including when the caret sits in one of the colour
+fields:
+
+| Key | Way back |
+|---|---|
+| **Ctrl+Z** | Back to how it was |
+| **Ctrl+D** | Discard my changes |
+| **Ctrl+R** | Reset to the shipped colours |
+
+"Back to how it was" restores **both** designs, not only the one on screen — change a colour
+in daylight, switch to evening, change one there, and this button undoes both.
+
+### Where a colour comes from
+
+Each field says where its value in force came from:
+
+| Label | Meaning |
+|---|---|
+| *shipped* | from the shipped design |
+| *from file* | from the own stylesheet in the profile directory |
+| *changed* | set here in the tab |
+
+A setting in the tab always overrides the file, and the file overrides the shipped design —
+role by role.
+
+### Readability notice
+
+When a pair that actually sits on top of each other — text on the surface, text inside a field,
+accent on the surface — reads worse than the shipped design makes it and below the WCAG AA
+value of 4.5, a notice appears with both ratios. **It is saved anyway:** a hard combination can
+be deliberate in a contest.
+
+### Editing the stylesheet by hand
+
+To change more than the six roles, **Write this design's stylesheet into my profile** writes
+the shipped template into the profile directory. The tab names the path. For the root profile
+that is `~/.praktiKST/KST4ContestDefaultDay.css` or `…Evening.css`; every other profile gets it
+under `profiles/<id>/`.
+
+**An existing file is never overwritten** — the button then only reports that it is already
+there. Changes to the file take effect after a restart. An unreadable or faulty file does not
+prevent startup: the role concerned falls back to the shipped design.
+
+**For the root profile these two files are already present.** KST4Contest has been writing
+them at startup for years; until release 1.50 nothing read them. So most roles there show
+*from file* rather than *shipped* from the outset, and the button reports that the file is
+already there. Its content is the shipped template — so it looks like *shipped* because it is
+the same thing.
+
+Changing `-fx-base` there also changes the window surface: KST4Contest derives it from the
+base, exactly as JavaFX did. To keep the two apart, name `-fx-background` explicitly — or set
+them in the tab above, where the two roles always stay independent.
+
+---
+
 ## Opposite Station Multi-Callsign Login Tagging (from v1.26)
 
 Support for remote stations which are active in the chat under several complete visible callsign variants at the same time (e.g. expedition setups). The complete callsign and chat category remain separate participant identities, while Worked, band and priority data are shared through the base callsign.
