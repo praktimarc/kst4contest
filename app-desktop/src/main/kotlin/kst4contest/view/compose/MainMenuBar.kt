@@ -162,7 +162,13 @@ private fun MenuTitle(menu: MenuSpec, rowState: MainMenuRowState) {
         Text(
             text = menu.title,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (open) palette.textAccent else palette.labelTextFill,
+            /*
+             * contrastingText and not textAccent: the accent is the background right behind
+             * this title, and once an operator can set the accent the two can be the same
+             * colour -- an invisible menu title. Black or white by brightness is readable by
+             * construction.
+             */
+            color = if (open) contrastingText(palette.accent) else palette.labelTextFill,
             modifier = Modifier
                 .background(
                     when {

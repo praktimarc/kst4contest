@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kst4contest.model.Band
 import kst4contest.view.ApplicationRuntimeLauncher
+import kst4contest.view.compose.PaletteStore
 import kst4contest.view.compose.ComposeWindowHost
 import kst4contest.view.compose.MainWindowState
 import kst4contest.view.map.MapCallsignRawSnapshotBuilder
@@ -32,6 +33,11 @@ object StationMapWindow {
         mainWindowState: MainWindowState,
         darkMode: Boolean,
         baseFontSizeSp: Float,
+        /**
+         * The palette of the active profile, handed to the theme. Null draws the shipped
+         * palette.
+         */
+        paletteStore: PaletteStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
@@ -41,6 +47,7 @@ object StationMapWindow {
             title = "Station Map",
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
+            paletteStore = paletteStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
@@ -347,7 +354,7 @@ object StationMapWindow {
     
     fun isShowing(): Boolean = host.isOpen
     
-    fun toggle(mainWindowState: MainWindowState) {
+    fun toggle(mainWindowState: MainWindowState, paletteStore: PaletteStore? = null) {
         if (isShowing()) {
             hide()
         } else {
@@ -355,6 +362,7 @@ object StationMapWindow {
                 mainWindowState = mainWindowState,
                 darkMode = mainWindowState.prefs.isGUI_darkModeActive,
                 baseFontSizeSp = 12f,
+                paletteStore = paletteStore,
                 widthDp = 1000f,
                 heightDp = 700f,
                 onResized = { w, h -> }

@@ -135,6 +135,11 @@ object SettingsWindow {
         notices: SettingsNotices,
         darkMode: Boolean,
         baseFontSizeSp: Float,
+        /**
+         * The palette of the active profile, handed to the theme. Null draws the shipped
+         * palette.
+         */
+        paletteStore: PaletteStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
@@ -144,6 +149,7 @@ object SettingsWindow {
             title = "Change Client Settings",
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
+            paletteStore = paletteStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,

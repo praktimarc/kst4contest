@@ -8,12 +8,16 @@ import androidx.compose.runtime.setValue
 import kst4contest.controller.ChatController
 import kst4contest.controller.ActiveOperatorProfile
 import kst4contest.controller.OperatorProfileManagementService
+import kst4contest.controller.OperatorProfilePaths
 import kst4contest.model.ChatMember
 import kst4contest.model.OperatorProfile
+import kst4contest.view.compose.OperatorProfilePaletteFiles
 import kst4contest.view.compose.tabs.AirscoutTab
 import kst4contest.view.compose.tabs.AirscoutTabState
 import kst4contest.view.compose.tabs.BeaconTab
 import kst4contest.view.compose.tabs.BeaconTabState
+import kst4contest.view.compose.tabs.ColoursTab
+import kst4contest.view.compose.tabs.ColoursTabState
 import kst4contest.view.compose.tabs.GuiOptionsTab
 import kst4contest.view.compose.tabs.GuiOptionsTabState
 import kst4contest.view.compose.tabs.LogSynchTab
@@ -105,6 +109,7 @@ fun buildSettingsTabs(
     controller: ChatController,
     host: SettingsHost,
     notices: SettingsNotices,
+    paletteStore: PaletteStore,
 ): List<SettingsTab> {
     val prefs = controller.chatPreferences
 
@@ -175,6 +180,14 @@ fun buildSettingsTabs(
     val reportRefusal: (String) -> Unit = notices::problem
 
     /*
+     * The profile whose stylesheet the colours tab offers to write. Resolved here rather than
+     * captured, because the settings window outlives nothing but is built once per profile.
+     */
+    fun activeProfileOrRoot(): OperatorProfile =
+        ActiveOperatorProfile.get()?.profile
+            ?: OperatorProfilePaths.buildRootProfile(prefs.stn_loginCallSign ?: "")
+
+    /*
      * Order and titles are those of the JavaFX TabPane, character for character. The
      * comment there is explicit that operators navigate these tabs by muscle memory,
      * so a tidier order or a shorter title would be a regression, not an improvement.
@@ -202,6 +215,27 @@ fun buildSettingsTabs(
          * the JavaFX tab gave for the same placement.
          */
         SettingsTab("Profiles", onSelected = profilesState::refresh) { ProfilesTab(profilesState) },
+        /*
+         * Appended after Profiles for the same reason Profiles was appended after GUI. The
+         * tab edits whichever design is in force, which is why it reads the flag through a
+         * lambda rather than taking its value here: the operator can switch day/evening from
+         * the main window's menu while this tab is open.
+         */
+        SettingsTab("Colours") {
+            /*
+             * Remembered rather than rebuilt: the tab recomposes on every colour change, and
+             * the design flag is read through a lambda precisely so the object itself does not
+             * have to be rebuilt to follow a day/evening switch.
+             */
+            val coloursState = remember(paletteStore) {
+                ColoursTabState(
+                    paletteStore,
+                    { prefs.isGUI_darkModeActive },
+                    OperatorProfilePaletteFiles.of(activeProfileOrRoot()),
+                )
+            }
+            ColoursTab(coloursState, reportRefusal, notices::info)
+        },
     )
 }
 

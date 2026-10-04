@@ -1,5 +1,6 @@
 package kst4contest.controller;
 
+import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatPreferences;
 import kst4contest.model.OperatorProfile;
 import kst4contest.model.OperatorProfileSelection;
@@ -86,6 +87,34 @@ public final class OperatorProfilePaths {
         }
 
         return profileRelativeDirectory(profile) + "/" + DBController.DATABASE_FILE;
+    }
+
+    /**
+     * Returns the stylesheet file name relative to the application directory.
+     *
+     * <p>The operator's own stylesheet for one design, which is the middle of the three
+     * palette layers. Shaped like the preferences and the worked database: the root profile
+     * keeps the historic flat name, every other profile gets it inside its own directory.</p>
+     *
+     * <p>The root profile's name is deliberately the one copyResourceIfRequired already
+     * writes at startup. That copy has never been read by anything; reading it is what gives
+     * the operator the hand-editing route the file has been promising all along.</p>
+     *
+     * @param profile profile to resolve
+     * @param darkMode true for the evening design, false for the daylight one
+     * @return relative stylesheet file name
+     */
+    public static String paletteRelativeFileName(final OperatorProfile profile, final boolean darkMode) {
+
+        final String fileName = darkMode
+                ? ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING
+                : ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT;
+
+        if (profile.isRootProfile()) {
+            return fileName;
+        }
+
+        return profileRelativeDirectory(profile) + "/" + fileName;
     }
 
     /**

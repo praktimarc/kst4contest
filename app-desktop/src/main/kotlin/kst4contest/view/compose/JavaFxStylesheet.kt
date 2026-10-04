@@ -1,6 +1,8 @@
 package kst4contest.view.compose
 
 import androidx.compose.ui.graphics.Color
+import kst4contest.ApplicationConstants
+import kst4contest.model.PaletteRole
 
 /**
  * The colours the Compose windows take from the JavaFX stylesheets.
@@ -51,6 +53,26 @@ data class JavaFxPalette(
  * defaults, so every lookup falls back to the matching Modena value.
  */
 object JavaFxStylesheet {
+
+    /*
+     * The classpath paths of the two shipped sheets, derived from the one place that owns
+     * their file names. They used to be spelled out in four places -- here, the theme, the
+     * store factory and the startup copy -- and two of those had to stay equal for the root
+     * profile's own stylesheet to be read at all: the copy is written under one name and read
+     * under the other. A rename on one side would silently restore the very defect this stage
+     * was commissioned to fix, with a green build.
+     */
+    val DAYLIGHT_RESOURCE = "/" + ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT
+    val EVENING_RESOURCE = "/" + ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING
+
+    /**
+     * The shipped palette of one design.
+     *
+     * @param darkMode true for the evening design, false for the daylight one
+     * @return the complete palette, Modena fallbacks included
+     */
+    fun shipped(darkMode: Boolean): JavaFxPalette =
+        read(if (darkMode) EVENING_RESOURCE else DAYLIGHT_RESOURCE)
 
     /** Modena's own `-fx-background: derive(-fx-base, 26.4%)`. */
     private const val MODENA_BACKGROUND_DERIVE = 26.4
@@ -114,6 +136,69 @@ object JavaFxStylesheet {
     }
 
     /**
+     * The roles a stylesheet source actually names.
+     *
+     * Deliberately not [read]: that one fills a missing role from the Modena defaults, which
+     * is right for the shipped sheets and wrong for a layer meant to override one role at a
+     * time. A sheet saying only `-fx-base` must declare exactly one role.
+     *
+     * Each role is looked up at its own selector, because three of the six are stated
+     * outside `.root` and one of those properties -- `-fx-background-color` -- appears a
+     * dozen times elsewhere in the evening sheet. `.root` stays the scope in which a `-fx-`
+     * reference or a `derive(...)` is resolved, exactly as [read] resolves them.
+     *
+     * A value this reader does not understand -- a gradient, say -- leaves the role
+     * undeclared, so it falls through to the layer below rather than becoming a guess.
+     */
+    fun declaredRoles(source: String): Map<PaletteRole, Color> {
+        val blocks = parseBlocks(source)
+        val root = blocks[".root"].orEmpty()
+
+        val stated = PaletteRole.values().mapNotNull { role ->
+            val value = blocks[role.selector()]?.get(role.cssProperty())
+                ?: return@mapNotNull null
+            val colour = colorOf(value, root) ?: return@mapNotNull null
+            role to colour
+        }.toMap()
+
+        /*
+         * A sheet that states `-fx-base` and no `-fx-background` has stated the window surface
+         * too, because that is what JavaFX does with it: Modena's `-fx-background` is
+         * `derive(-fx-base, 26.4%)`, and [read] applies the same fallback. Without this the
+         * most natural hand edit is nearly inert -- `-fx-base: #303030` would leave every
+         * window the shipped light grey, since the base itself reaches the screen only through
+         * the menu strip and the selection tint.
+         *
+         * Only here, in the file layer. The settings tab keeps the two roles independent,
+         * which is why the spec separates them at all: six fields are visible there, so an
+         * operator who wants both changed can say so.
+         *
+         * A consequence worth stating rather than discovering: the tab then reports the window
+         * surface as coming *from file* for a colour the file never spells out. That is the
+         * right answer. The provenance exists to answer "why is this colour what it is", not
+         * "which line names it", and the file's `-fx-base` is why.
+         */
+        val base = stated[PaletteRole.SURFACE]
+
+        if (base == null || stated.containsKey(PaletteRole.WINDOW_SURFACE)) {
+            return stated
+        }
+
+        return stated + (PaletteRole.WINDOW_SURFACE to derive(base, MODENA_BACKGROUND_DERIVE))
+    }
+
+    /**
+     * The roles a stylesheet file names, or none when it cannot be read.
+     *
+     * Never throws. A client that will not start because of a broken colour file is worse
+     * than a client in the wrong colours, and this file is one the operator edited by hand.
+     */
+    fun declaredRolesOfFile(file: java.io.File): Map<PaletteRole, Color> =
+        runCatching {
+            if (!file.isFile) emptyMap() else declaredRoles(file.readText())
+        }.getOrDefault(emptyMap())
+
+    /**
      * JavaFX `derive(colour, percent)`, reimplemented.
      *
      * No JavaFX call and no reflection: this is the algorithm itself. The brightness it
@@ -130,9 +215,12 @@ object JavaFxStylesheet {
      * reaches here: three of the four call sites pass the window background or
      * `-fx-base`, and the fourth is [parseColour]'s own `derive(...)` branch below,
      * which passes whatever a sheet names — and every `derive(...)` in both shipped
-     * sheets derives from `-fx-base` alone. A hand-edited sheet could break that, so
-     * Etappe 8 of the migration, which makes the sheets operator-editable, has to
-     * revisit it.
+     * sheets derives from `-fx-base` alone. A hand-edited sheet can break that: an
+     * operator who sets `-fx-base` to a saturated colour sends every `derive(...)` of it
+     * through the inaccurate part. Revisited when the colours became operator-editable and
+     * deliberately left alone — a drift of three steps per channel is not perceptible in a
+     * colour somebody chose themselves, and what the settings tab sets does not pass
+     * through here at all: the resolver substitutes finished colours.
      */
     fun derive(color: Color, percent: Double): Color {
         val baseBrightness = 0.3 * color.red + 0.59 * color.green + 0.11 * color.blue

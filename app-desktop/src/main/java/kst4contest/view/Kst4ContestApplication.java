@@ -159,11 +159,18 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 
 
-	public static final String STYLE_DEFAULTCSSDAY_FILE = "KST4ContestDefaultDay.css";
-	public static final String STYLE_DEFAULTCSSDAY_RESOURCE = "/KST4ContestDefaultDay.css";
+	/*
+	 * Derived and never spelled out: this is the file the root profile's own stylesheet layer
+	 * reads, under the name OperatorProfilePaths.paletteRelativeFileName builds from the same
+	 * constant. Two independent literals of this value would have to stay equal for that to
+	 * work, and a rename on one side would restore the "written but never read" defect
+	 * silently, with a green build.
+	 */
+	public static final String STYLE_DEFAULTCSSDAY_FILE = ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT;
+	public static final String STYLE_DEFAULTCSSDAY_RESOURCE = "/" + ApplicationConstants.STYLECSSFILE_DEFAULT_DAYLIGHT;
 
-	public static final String STYLE_DEFAULTCSSEVENING_FILE = "KST4ContestDefaultEvening.css";
-	public static final String STYLE_DEFAULTCSSEVENING_RESOURCE = "/KST4ContestDefaultEvening.css";
+	public static final String STYLE_DEFAULTCSSEVENING_FILE = ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING;
+	public static final String STYLE_DEFAULTCSSEVENING_RESOURCE = "/" + ApplicationConstants.STYLECSSFILE_DEFAULT_EVENING;
 
 	/** Hands worker-thread results over to the AWT event thread, where Compose draws. */
 	private final UiDispatcher uiDispatcher = new AwtUiDispatcher();
@@ -279,14 +286,14 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 	private void toggleStationMapWindow() {
 		if (composeMainWindowState != null) {
-			kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState);
+			kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState, paletteStore);
 		}
 	}
 
 	private void showSelectedCallsignOnMap() {
 		if (composeMainWindowState != null) {
 			if (!kst4contest.view.compose.map.StationMapWindow.INSTANCE.isShowing()) {
-				kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState);
+				kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState, paletteStore);
 			}
 		}
 	}
@@ -1365,7 +1372,8 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 				() -> chatcontroller.getScoreService().topCandidates().snapshot(),
 				candidate -> uiDispatcher.runOnUi(() -> selectTopCandidate(candidate)),
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
-				SETTINGS_WINDOW_FONT_SIZE_SP
+				SETTINGS_WINDOW_FONT_SIZE_SP,
+				paletteStore
 		);
 	}
 
@@ -2157,6 +2165,12 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		// Every profile starts with its own configured design; the menu quick switch only lasts for the session.
 		chatcontroller.getChatPreferences().setGUI_darkModeActive(
 				chatcontroller.getChatPreferences().isGUI_darkModeActiveByDefault());
+		/*
+		 * The palette, before any window is built: every Compose window reads it, and a window
+		 * built without it would draw the shipped colours until it was rebuilt.
+		 */
+		paletteStore = kst4contest.view.compose.PaletteStoreFactory.create(
+				chatcontroller.getChatPreferences(), activeOperatorProfile.getProfile());
 		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
 		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
 
@@ -2962,6 +2976,15 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 	/** Held so the feeds can be released; a discarded runtime that still feeds a window lives on. */
 	private MainWindowState composeMainWindowState;
+
+	/**
+	 * The palette of the active profile, handed to every Compose window.
+	 *
+	 * Built once per runtime start, which is also once per profile: a profile switch tears
+	 * the runtime down and starts it again on a fresh application object, so there is no
+	 * separate rebuild to do here.
+	 */
+	private kst4contest.view.compose.PaletteStore paletteStore;
 	private java.util.function.Consumer<java.util.List<ChatMember>> composeMemberListener;
 	private java.util.function.Consumer<java.util.List<ChatMessage>> composeChatListener;
 	private java.util.function.Consumer<java.util.List<ClusterMessage>> composeClusterListener;
@@ -3249,6 +3272,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 						"KST4Contest (Compose)", buildOperatorProfileTitleSuffixForCompose()),
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
+				paletteStore,
 				(float) size.getWidthDp(),
 				(float) size.getHeightDp(),
 				(width, height) -> {
@@ -3643,6 +3667,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 				qsoTable,
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
+				paletteStore,
 				(float) chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0],
 				(float) chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1],
 				(width, height) -> {
@@ -3676,6 +3701,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					updateState,
 					chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 					SETTINGS_WINDOW_FONT_SIZE_SP,
+					paletteStore,
 					(float) chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0],
 					(float) chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1],
 					address -> ExternalDocuments.open(address),
@@ -3702,10 +3728,11 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	private void openSettingsWindow() {
 
 		SettingsWindow.show(
-				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices),
+				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices, paletteStore),
 				settingsNotices,
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
+				paletteStore,
 				(float) chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0],
 				(float) chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1],
 				(width, height) -> {

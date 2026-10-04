@@ -46,6 +46,11 @@ object MonitorWindow {
         qsoTable: DataTableState<ChatMessage>,
         darkMode: Boolean,
         baseFontSizeSp: Float,
+        /**
+         * The palette of the active profile, handed to the theme. Null draws the shipped
+         * palette.
+         */
+        paletteStore: PaletteStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
@@ -54,6 +59,7 @@ object MonitorWindow {
             title = "Cluster & QSO of the other",
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
+            paletteStore = paletteStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,

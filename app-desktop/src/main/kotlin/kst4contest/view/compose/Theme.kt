@@ -29,10 +29,21 @@ fun Kst4ContestTheme(
     baseFontSizeSp: Float = 0f,
     content: @Composable () -> Unit,
 ) {
-    val palette = remember(darkMode) {
-        JavaFxStylesheet.read(
-            if (darkMode) EVENING_STYLESHEET else DAYLIGHT_STYLESHEET
-        )
+    val store = LocalPaletteStore.current
+
+    val palette = if (store != null) {
+        /*
+         * Read from the store's state, not remembered: that read is what makes a palette
+         * change recompose every open window. remember(darkMode) kept the palette until
+         * somebody toggled day/evening, which is why a colour change used to reach nothing.
+         */
+        store.resolved(darkMode).palette
+    } else {
+        /*
+         * No store yet. Not caution: the operator profile picker composes before a profile,
+         * and therefore before a store, exists.
+         */
+        remember(darkMode) { JavaFxStylesheet.shipped(darkMode) }
     }
 
     val fontSize = if (baseFontSizeSp > 0f) baseFontSizeSp else palette.fontSizePx
@@ -46,16 +57,13 @@ fun Kst4ContestTheme(
     }
 }
 
-/** The two sheets JavaFX loads, by the names `applyThemeStylesheet` passes on. */
-private const val DAYLIGHT_STYLESHEET = "/KST4ContestDefaultDay.css"
-private const val EVENING_STYLESHEET = "/KST4ContestDefaultEvening.css"
 
 /**
  * The palette in force, for the few places that need a colour Material has no slot
  * for — the button hover gradient and its pressed border.
  */
 val LocalJavaFxPalette = staticCompositionLocalOf {
-    JavaFxStylesheet.read(DAYLIGHT_STYLESHEET)
+    JavaFxStylesheet.shipped(darkMode = false)
 }
 
 /**
@@ -126,8 +134,12 @@ private fun blend(foreground: Color, background: Color, amount: Float): Color = 
  * Black or white, whichever reads on the given colour. Uses the same brightness
  * measure JavaFX does, so the decision matches what the rest of the application
  * would make.
+ *
+ * Internal rather than private because the menu row needs it too: once the operator can
+ * choose the accent, a menu title drawn in any fixed colour on an accent background can
+ * collapse into it.
  */
-private fun contrastingText(background: Color): Color =
+internal fun contrastingText(background: Color): Color =
     if (brightness(background) > 0.5f) Color.Black else Color.White
 
 /**

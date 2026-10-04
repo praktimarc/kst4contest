@@ -56,6 +56,11 @@ object UpdateWindow {
         state: UpdateWindowState,
         darkMode: Boolean,
         baseFontSizeSp: Float,
+        /**
+         * The palette of the active profile, handed to the theme. Null draws the shipped
+         * palette.
+         */
+        paletteStore: PaletteStore? = null,
         widthDp: Float,
         heightDp: Float,
         openReleasePage: Consumer<String>,
@@ -65,6 +70,7 @@ object UpdateWindow {
             title = "Update information",
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
+            paletteStore = paletteStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,

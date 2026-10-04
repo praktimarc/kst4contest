@@ -50,7 +50,13 @@ public class ChatPreferences {
 
 
 	/**
-	 * Bump this when you change the XML schema written by {@link #writePreferencesToXmlFile()}.
+	 * Bump this when a change to the XML schema needs a reader to act on the version.
+	 * <p>
+	 * Adding an element does not: reading must stay backwards compatible, every setting falls
+	 * back to its own default, and nothing in this application branches on the number -- the
+	 * only use is a best-effort warning when a file is newer than the application. Release
+	 * 1.50 added the two palette-override elements and deliberately left this at 7. A bump
+	 * that no reader acts on only invites the next person to bump it again.
 	 * <p>
 	 * Reading must stay backwards compatible: missing/unknown tags should fall back to defaults.
 	 */
@@ -381,6 +387,17 @@ public class ChatPreferences {
 	boolean guiOptions_defaultFilterPublicMsgs;
 	boolean guiOptions_showGrossFieldWorkedHintInBandColumns = true; // show "o" (grid square already worked on this band) in the band columns
 	boolean guiOptions_showFreshCallHintInBandColumns = true; // show "a" (band available, call not worked on any band yet) instead of always "B+" in the band columns
+
+	/**
+	 * The operator's colour overrides for the daylight design, encoded by PaletteOverrides.
+	 * Per profile, like every other preference: the file this is written to is the profile's
+	 * own. One string rather than six elements, because this file is written element by
+	 * element by hand and twelve more would be twelve write blocks and twelve read blocks.
+	 */
+	private String guiOptions_paletteOverridesDay = "";
+
+	/** The same for the evening design. Two designs, two independent sets. */
+	private String guiOptions_paletteOverridesEvening = "";
 
 	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
 	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
@@ -771,6 +788,44 @@ public class ChatPreferences {
 
 	public void setGuiOptions_showFreshCallHintInBandColumns(boolean guiOptions_showFreshCallHintInBandColumns) {
 		this.guiOptions_showFreshCallHintInBandColumns = guiOptions_showFreshCallHintInBandColumns;
+	}
+
+	/**
+	 * Returns the colour overrides of the daylight design.
+	 *
+	 * @return the encoded overrides, empty when the operator has changed nothing
+	 */
+	public String getGuiOptions_paletteOverridesDay() {
+		return guiOptions_paletteOverridesDay;
+	}
+
+	/**
+	 * Sets the colour overrides of the daylight design.
+	 *
+	 * @param guiOptions_paletteOverridesDay the encoded overrides; null becomes empty
+	 */
+	public void setGuiOptions_paletteOverridesDay(String guiOptions_paletteOverridesDay) {
+		this.guiOptions_paletteOverridesDay =
+				guiOptions_paletteOverridesDay == null ? "" : guiOptions_paletteOverridesDay;
+	}
+
+	/**
+	 * Returns the colour overrides of the evening design.
+	 *
+	 * @return the encoded overrides, empty when the operator has changed nothing
+	 */
+	public String getGuiOptions_paletteOverridesEvening() {
+		return guiOptions_paletteOverridesEvening;
+	}
+
+	/**
+	 * Sets the colour overrides of the evening design.
+	 *
+	 * @param guiOptions_paletteOverridesEvening the encoded overrides; null becomes empty
+	 */
+	public void setGuiOptions_paletteOverridesEvening(String guiOptions_paletteOverridesEvening) {
+		this.guiOptions_paletteOverridesEvening =
+				guiOptions_paletteOverridesEvening == null ? "" : guiOptions_paletteOverridesEvening;
 	}
 
 	public boolean isGuiOptions_defaultFilterPmToOther() {
@@ -2086,6 +2141,14 @@ public class ChatPreferences {
 			guiOptions_showFreshCallHintInBandColumns.setTextContent(this.isGuiOptions_showFreshCallHintInBandColumns()+"");
 			guiSaveableOptions.appendChild(guiOptions_showFreshCallHintInBandColumns);
 
+			Element guiOptions_paletteOverridesDay = doc.createElement("guiOptions_paletteOverridesDay");
+			guiOptions_paletteOverridesDay.setTextContent(this.getGuiOptions_paletteOverridesDay());
+			guiSaveableOptions.appendChild(guiOptions_paletteOverridesDay);
+
+			Element guiOptions_paletteOverridesEvening = doc.createElement("guiOptions_paletteOverridesEvening");
+			guiOptions_paletteOverridesEvening.setTextContent(this.getGuiOptions_paletteOverridesEvening());
+			guiSaveableOptions.appendChild(guiOptions_paletteOverridesEvening);
+
 			Element guiOptions_darkModeActive = doc.createElement("guiOptions_darkModeActive");
 			guiOptions_darkModeActive.setTextContent(this.GUI_darkModeActive + "");
 			guiSaveableOptions.appendChild(guiOptions_darkModeActive);
@@ -3159,6 +3222,10 @@ public class ChatPreferences {
 				this.setGuiOptions_defaultFilterPublicMsgs(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_defaultFilterPublicMsgs(), "guiOptions_defaultFilterPublicMsgs"));
 				this.setGuiOptions_showGrossFieldWorkedHintInBandColumns(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_showGrossFieldWorkedHintInBandColumns(), "guiOptions_showGrossFieldWorkedHintInBandColumns"));
 				this.setGuiOptions_showFreshCallHintInBandColumns(getBoolean(guiSaveableOptionsEl, this.isGuiOptions_showFreshCallHintInBandColumns(), "guiOptions_showFreshCallHintInBandColumns"));
+
+				// Added in release 1.50: the operator's own colours, one string per design.
+				this.setGuiOptions_paletteOverridesDay(getText(guiSaveableOptionsEl, this.getGuiOptions_paletteOverridesDay(), "guiOptions_paletteOverridesDay"));
+				this.setGuiOptions_paletteOverridesEvening(getText(guiSaveableOptionsEl, this.getGuiOptions_paletteOverridesEvening(), "guiOptions_paletteOverridesEvening"));
 
 				// Added in later versions: dark mode flags
 				this.GUI_darkModeActive = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActive, "guiOptions_darkModeActive");

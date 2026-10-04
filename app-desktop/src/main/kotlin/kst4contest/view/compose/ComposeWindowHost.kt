@@ -1,6 +1,7 @@
 package kst4contest.view.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
@@ -165,6 +166,11 @@ class ComposeWindowHost(private val threadName: String) {
          */
         alwaysOnTop: Boolean = false,
         /**
+         * The palette of the active profile. Null draws the shipped palette, which is right
+         * for a window that opens before a profile exists.
+         */
+        paletteStore: PaletteStore? = null,
+        /**
          * What a close request from outside should do — the title bar's X, and a tiling
          * window manager's close, which is the same WM_DELETE_WINDOW either way.
          *
@@ -246,11 +252,13 @@ class ComposeWindowHost(private val threadName: String) {
                             onDispose { frame = null }
                         }
 
-                        Kst4ContestTheme(
-                            darkMode = darkModeState.value,
-                            baseFontSizeSp = baseFontSizeSp,
-                        ) {
-                            content(::exitApplication)
+                        CompositionLocalProvider(LocalPaletteStore provides paletteStore) {
+                            Kst4ContestTheme(
+                                darkMode = darkModeState.value,
+                                baseFontSizeSp = baseFontSizeSp,
+                            ) {
+                                content(::exitApplication)
+                            }
                         }
                     }
                 }

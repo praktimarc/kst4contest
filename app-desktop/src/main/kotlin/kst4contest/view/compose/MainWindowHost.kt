@@ -53,6 +53,11 @@ object MainWindowHost {
         title: String,
         darkMode: Boolean,
         baseFontSizeSp: Float,
+        /**
+         * The palette of the active profile, handed to the theme. Null draws the shipped
+         * palette.
+         */
+        paletteStore: PaletteStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
@@ -93,6 +98,7 @@ object MainWindowHost {
             title = title,
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
+            paletteStore = paletteStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,

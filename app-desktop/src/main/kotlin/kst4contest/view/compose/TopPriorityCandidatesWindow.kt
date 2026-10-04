@@ -73,11 +73,17 @@ object TopPriorityCandidatesWindow {
         onPicked: Consumer<ScoreService.TopCandidate>,
         darkMode: Boolean,
         baseFontSizeSp: Float,
+        /**
+         * The palette of the active profile, handed to the theme. Null draws the shipped
+         * palette.
+         */
+        paletteStore: PaletteStore? = null,
     ) {
         host.show(
             title = "Top priority candidates",
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
+            paletteStore = paletteStore,
             widthDp = 360f,
             heightDp = 500f,
         ) { close ->

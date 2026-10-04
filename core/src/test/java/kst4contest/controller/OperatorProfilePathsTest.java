@@ -78,4 +78,32 @@ class OperatorProfilePathsTest {
         assertNotEquals(OperatorProfilePaths.ROOT_PROFILE_ID,
                 OperatorProfilePaths.toProfileId("default", Set.of()));
     }
+
+    @Test
+    void theRootProfileKeepsTheHistoricFlatStylesheetNames() {
+        OperatorProfile root = OperatorProfilePaths.buildRootProfile("Default");
+
+        assertEquals(
+                "KST4ContestDefaultDay.css",
+                OperatorProfilePaths.paletteRelativeFileName(root, false));
+        assertEquals(
+                "KST4ContestDefaultEvening.css",
+                OperatorProfilePaths.paletteRelativeFileName(root, true));
+    }
+
+    @Test
+    void anotherProfileGetsItsStylesheetInItsOwnDirectory() {
+        /*
+         * The same shape the preferences and the worked database already take. A different
+         * shape here would have one profile reading another profile's colours.
+         */
+        OperatorProfile other = new OperatorProfile("OP2", "DN9APW", false, false);
+
+        assertEquals(
+                "profiles/OP2/KST4ContestDefaultDay.css",
+                OperatorProfilePaths.paletteRelativeFileName(other, false));
+        assertEquals(
+                "profiles/OP2/KST4ContestDefaultEvening.css",
+                OperatorProfilePaths.paletteRelativeFileName(other, true));
+    }
 }
