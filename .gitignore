@@ -53,3 +53,9 @@ website/_site/
 
 # Apple notarization private keys - never commit these
 *.p8
+
+# Gradle
+.gradle/
+build/
+core/build/
+app-desktop/build/

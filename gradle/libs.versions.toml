@@ -1,0 +1,27 @@
+[versions]
+javafx = "21.0.5"
+javafxPlugin = "0.1.0"
+sqliteJdbc = "3.43.2.2"
+jlayer = "1.0.1"
+junit = "5.10.1"
+mockito = "5.7.0"
+mockitoCompile = "5.17.0"
+jetbrainsAnnotations = "24.0.1"
+spotbugsPlugin = "6.0.26"
+spotbugs = "4.9.8"
+pmd = "7.17.0"
+
+[libraries]
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
+jlayer = { module = "javazoom:jlayer", version.ref = "jlayer" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+mockito-core-compile = { module = "org.mockito:mockito-core", version.ref = "mockitoCompile" }
+jetbrains-annotations = { module = "org.jetbrains:annotations", version.ref = "jetbrainsAnnotations" }
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.ref = "mockito" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+
+[plugins]
+javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafxPlugin" }
+spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugsPlugin" }

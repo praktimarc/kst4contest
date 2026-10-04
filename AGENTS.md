@@ -8,14 +8,14 @@ KST4Contest is a Java/JavaFX desktop client for ON4KST chat with contest-oriente
 
 Primary repository areas:
 
-- `src/main/java/kst4contest/`
-- `src/test/` where present;
+- `core/src/main/java/kst4contest/` and `core/src/test/`
+- `app-desktop/src/main/java/kst4contest/` and `app-desktop/src/test/`
 - `github_docs/`
 - `website/`
 - `docs/`
 - `packaging/`
 - `.github/`
-- `pom.xml`
+- `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `gradle/`
 
 Inspect the current tree before assuming an exact class/path still exists.
 
@@ -43,13 +43,13 @@ If an answer is uncertain, do not interpolate it. Check current code/tests/docs/
 - Commit messages are concise English when a commit is explicitly requested.
 - User-facing DE/EN documentation follows `$praktimarc-writing-style`.
 
-## Java and JavaFX architecture
+## Java and user-interface architecture
 
 - Preserve or improve separation between network/parsing/service/controller/UI responsibilities.
 - Do not solve architecture problems by letting worker/model code directly manipulate JavaFX UI collections.
-- Active chat-member domain state is conceptually thread-safe state; JavaFX `ObservableList` data is a UI projection, not the canonical worker-thread store.
+- Active chat-member domain state is conceptually thread-safe state and lives in an `ObservableRoster` in `core`; the `ObservableList` a `TableView` is bound to is a mirror of it, not the store.
 - `MessageBusManagementThread` must not directly read or mutate the JavaFX `ObservableList` used by the UI.
-- Route UI-visible mutations through the controller and the JavaFX Application Thread (`Platform.runLater` or the project's equivalent helper).
+- Route UI-visible mutations through the controller and the `UiDispatcher` (`JavaFxUiDispatcher` hands them to the JavaFX Application Thread). Do not reach for `Platform.runLater` in `core`; it has no JavaFX dependency.
 - Prefer explicit DTOs over records when introducing transport/parser DTOs in this codebase unless the approved concept says otherwise.
 - Handle incomplete external/historical data defensively.
 - `qrb`, QTF and related external values can be absent. `null` means unavailable, not zero.
@@ -111,22 +111,22 @@ Never change CR/LF, XML framing, callsign normalization, frequency formatting or
 
 ## Build and verification
 
-Use the Maven wrapper.
+Use the Gradle wrapper.
 
 Windows:
 
 ```text
-.\mvnw.cmd ...
+.\gradlew.bat ...
 ```
 
-Read the current `pom.xml` before relying on version numbers.
+Read the current `gradle.properties` and `gradle/libs.versions.toml` before relying on version numbers.
 
 At the package creation snapshot the project uses Java 21 / JavaFX 21.x and JUnit 5/Mockito, with PMD and SpotBugs integrated.
 
-Important: Maven/Surefire configuration has historically allowed test failures to be ignored, and static-analysis findings may not fail the build. Therefore:
+Important: the build configuration has historically allowed test failures to be ignored, and static-analysis findings do not fail the build. Therefore:
 
-- inspect the Maven test summary;
-- inspect Surefire results when needed;
+- inspect the Gradle test summary;
+- inspect the test-results XML under `*/build/test-results/` when needed;
 - do not infer "all tests passed" from exit code 0;
 - report PMD/SpotBugs findings that are visible in the relevant build.
 

@@ -7,7 +7,7 @@ arch=('x86_64')
 url="https://github.com/praktimarc/kst4contest"
 license=('GPL-3.0-only')
 depends=('gst-plugins-base' 'gst-plugins-good')
-makedepends=('java-environment=21' 'maven')
+makedepends=('java-environment=21' 'gradle')
 provides=('kst4contest')
 conflicts=('kst4contest-bin' 'kst4contest-git')
 source=("${pkgname}-${pkgver}.tar.gz::https://github.com/praktimarc/kst4contest/archive/refs/tags/v${pkgver}.tar.gz")
@@ -19,17 +19,14 @@ build() {
     export JAVA_HOME=$(find /usr/lib/jvm -maxdepth 1 -name 'java-21-*' -type d | head -n 1)
     export PATH="${JAVA_HOME}/bin:${PATH}"
 
-    mvn -B -DskipTests package dependency:copy-dependencies \
-        -DincludeScope=runtime \
-        -DoutputDirectory=target/dist-libs
-
-    cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+    ./gradlew --offline -S :app-desktop:collectRuntime
 
     mkdir -p dist
-    # This PKGBUILD builds from a released source tarball, which may predate
-    # packaging/AddModules.java. Older tarballs carry the same list in pom.xml,
-    # which the build keeps in sync with module-info.java from v1.42.0 onwards.
-    if [ -f packaging/AddModules.java ]; then
+    # From the Gradle build onwards the list lives in gradle.properties. Older
+    # tarballs still carry it in pom.xml or derive it via packaging/AddModules.java.
+    if [ -f gradle.properties ]; then
+        ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
+    elif [ -f packaging/AddModules.java ]; then
         ADD_MODULES="$(java packaging/AddModules.java)"
     else
         ADD_MODULES="$(sed -n 's:.*<addmodule>\(.*\)</addmodule>.*:\1:p' pom.xml | paste -sd,)"
@@ -45,10 +42,9 @@ build() {
         --type app-image \
         --name KST4Contest \
         "${ICON_ARGS[@]}" \
-        --input target/dist-libs \
+        --input app-desktop/build/dist-libs \
         --main-jar app.jar \
-        --main-class kst4contest.view.Kst4ContestApplication \
-        --module-path target/dist-libs \
+        --main-class kst4contest.view.Main \
         --add-modules "$ADD_MODULES" \
         --dest dist
 }

@@ -10,12 +10,12 @@ KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/m
 
 ## Current Architecture
 
-- Java 21 / JavaFX desktop application built with Maven.
-- Main code is under `src/main/java/kst4contest/`.
+- Java 21 desktop application built with Gradle in the modules `core` (domain, free of user-interface technology) and `app-desktop` (the JavaFX user interface).
+- Domain, controller and network code is under `core/src/main/java/kst4contest/`, the user interface under `app-desktop/src/main/java/kst4contest/`. Package names are shared across both modules.
 - Responsibilities are separated across controller, service, logic, model, utility and view areas.
 - Network/parser/service/controller/UI boundaries should remain explicit.
 - Long-running network/message processing must tolerate malformed or incomplete external input without terminating processing threads.
-- JavaFX `ObservableList` state is a UI projection, not the canonical worker-thread domain store.
+- `ObservableRoster` state in `core` is the canonical store; the `ObservableList` a `TableView` is bound to is a mirror of it, not the store.
 
 ## Important Invariants
 
@@ -36,19 +36,26 @@ KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/m
 - Features that depend on frequency should use the current/actual QRG according to current implemented rules; do not silently revert to a fixed 144 MHz default.
 - Complete digit-only frequencies use their final three digits as the kHz part and are accepted only when the resulting MHz value lies within a supported `Band` range. The same full-frequency parser is used for station names and public or directed chat messages. Relative QRG rules and bare three-digit context handling remain separate.
 
-### JavaFX/threading
+### Threading
 
 Conceptually:
 
 ```text
-thread-safe canonical domain state
+thread-safe canonical domain state in core
+        |   kst4contest.observe: ObservableRoster / ObservableValue
         |
-        | projection on JavaFX Application Thread
+        | hand-off via UiDispatcher
         v
-JavaFX ObservableList / UI state
+mirror on the user-interface thread (FxRosterBinding -> ObservableList)
 ```
 
-`MessageBusManagementThread` must not directly iterate or mutate UI-bound JavaFX collections. UI-visible changes should cross the controller/UI boundary and run on the JavaFX Application Thread.
+`core` contains no user-interface technology. It observes through `kst4contest.observe` and hands UI-visible work over through `UiDispatcher`, whose JavaFX implementation is `JavaFxUiDispatcher` in `app-desktop`.
+
+`MessageBusManagementThread` must not directly iterate or mutate a UI-bound collection; it works on snapshots. UI-visible changes cross the controller/UI boundary through the dispatcher.
+
+A roster hands out immutable snapshots and has no incremental change protocol: listeners receive the whole new content. `FxRosterBinding` mirrors a roster into the `ObservableList` a `TableView` holds, and must be disposed when its owner goes away — `shutdownRuntime()` releases all of them, which is what keeps a discarded runtime from surviving an operator profile switch.
+
+A batch of changes belongs in one `SimpleRoster.mutate(...)`, not one call per element: with several thousand ON4KST users the difference is not cosmetic.
 
 ## Configuration and Layout Persistence
 
@@ -119,7 +126,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
 - UCXLog-compatible QSO packets and Win-Test `ADDQSO` packets are converted into one validated external-QSO state. Logger-specific numeric, metre and centimetre values and Win-Test band IDs are normalised once; the resolved band is then the sole source for per-band Worked and worked-grid state.
 - A missing or unknown logger band sets only the global Worked state. Worked-grid state requires both a recognised project band and a valid locator; no band or locator is inferred. Packets without a usable callsign are discarded without terminating the listener.
-- External logger threads do not read or mutate the JavaFX user-list projection. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the JavaFX Application Thread before evaluating a band-upgrade notice.
+- External logger threads do not read or mutate the user-list mirror. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the JavaFX Application Thread before evaluating a band-upgrade notice.
 - The established Win-Test handling for 24, 47 and 76 GHz remains unchanged. Their Worked flags are retained, while only frequencies represented by the project `Band` model can create worked-grid state.
 
 ### Win-Test log recovery
@@ -189,7 +196,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 
 ## Build / Verification
 
-- Use the repository Maven wrapper (`.\mvnw.cmd` on Windows).
+- Use the repository Gradle wrapper (`.\gradlew.bat` on Windows).
 - The project uses Java 21 / JavaFX 21.x at this context snapshot.
 - JUnit 5/Mockito, PMD and SpotBugs are part of the verification environment.
 - Build/test configuration has historically allowed some test/static-analysis failures not to fail the process exit code. Always read actual summaries/reports.

@@ -5,12 +5,15 @@ on:
     branches:
       - main
     paths:
-      - "src/**"
       - "packaging/icons/**"
       - "packaging/macos/**"
-      - "pom.xml"
-      - "mvnw"
-      - "mvnw.cmd"
+      - "core/**"
+      - "app-desktop/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "gradle/**"
+      - "gradlew"
+      - "gradlew.bat"
       - ".github/workflows/nightly-artifacts.yml"
   workflow_dispatch:
 
@@ -33,8 +36,7 @@ jobs:
       - name: Resolve nightly version info
         shell: pwsh
         run: |
-          $xml = [xml](Get-Content pom.xml)
-          $version = $xml.project.version
+          $version = (Select-String -Path gradle.properties -Pattern '^version=').Line.Split('=')[1]
           $shortSha = "${{ github.sha }}".Substring(0, 7)
           Add-Content -Path $env:GITHUB_ENV -Value "VERSION=$version"
           Add-Content -Path $env:GITHUB_ENV -Value "SHORT_SHA=$shortSha"
@@ -53,27 +55,26 @@ jobs:
       - name: Build JAR and copy runtime dependencies
         shell: pwsh
         run: |
-          .\mvnw.cmd -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
+          .\gradlew.bat -S :app-desktop:collectRuntime
           $jar = Get-ChildItem -Path target -Filter 'praktiKST-*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
           if (-not $jar) {
             throw "No project JAR produced"
           }
-          Copy-Item $jar.FullName target/dist-libs/app.jar
+          Copy-Item $jar.FullName app-desktop/build/dist-libs/app.jar
 
       - name: Build app-image with jpackage
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $addModules = & java packaging/AddModules.java
+          $addModules = (Select-String -Path gradle.properties -Pattern '^jpackageAddModules=').Line.Split('=')[1]
           if ($LASTEXITCODE -ne 0) { throw "Failed to resolve --add-modules from module-info.java" }
           jpackage `
             --type app-image `
             --name praktiKST `
             --icon packaging/icons/kst4contest.ico `
-            --input target/dist-libs `
+            --input app-desktop/build/dist-libs `
             --main-jar app.jar `
-            --main-class kst4contest.view.Kst4ContestApplication `
-            --module-path target/dist-libs `
+            --main-class kst4contest.view.Main `
             --add-modules $addModules `
             --dest dist
 
@@ -102,7 +103,7 @@ jobs:
 
       - name: Resolve nightly version info
         run: |
-          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          VERSION=$(grep -m1 '^version=' gradle.properties | cut -d= -f2)
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
@@ -112,31 +113,30 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build JAR and copy runtime dependencies
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+          ./gradlew -S :app-desktop:collectRuntime
 
       - name: Build app-image with jpackage
         run: |
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
+          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
           jpackage \
             --type app-image \
             --name KST4Contest \
             --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
+            --input app-desktop/build/dist-libs \
             --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
+            --main-class kst4contest.view.Main \
             --add-modules "$ADD_MODULES" \
             --dest dist
 
       - name: Create AppDir metadata
         run: |
+          mkdir -p target
           rm -rf target/KST4Contest.AppDir
           cp -a dist/KST4Contest target/KST4Contest.AppDir
 
@@ -163,6 +163,7 @@ jobs:
 
       - name: Build AppImage
         run: |
+          mkdir -p target
           wget -q -O target/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x target/appimagetool.AppImage
           APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/KST4Contest.AppDir "dist/${ASSET_BASENAME}-linux-x86_64.AppImage"
@@ -184,7 +185,7 @@ jobs:
 
       - name: Resolve nightly version info
         run: |
-          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          VERSION=$(grep -m1 '^version=' gradle.properties | cut -d= -f2)
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
@@ -199,26 +200,24 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fakeroot
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build JAR and copy runtime dependencies
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+          ./gradlew -S :app-desktop:collectRuntime
 
       - name: Build Debian package
         run: |
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
+          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
           jpackage \
             --type deb \
             --name KST4Contest \
             --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
+            --input app-desktop/build/dist-libs \
             --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
+            --main-class kst4contest.view.Main \
             --add-modules "$ADD_MODULES" \
             --linux-package-deps "libgstreamer1.0-0,libgstreamer-plugins-base1.0-0,gstreamer1.0-plugins-good" \
             --dest dist
@@ -245,7 +244,7 @@ jobs:
 
       - name: Resolve nightly version info
         run: |
-          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          VERSION=$(grep -m1 '^version=' gradle.properties | cut -d= -f2)
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "ASSET_BASENAME=KST4Contest-${VERSION}-${SHORT_SHA}" >> "$GITHUB_ENV"
 
@@ -260,26 +259,24 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends rpm
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build JAR and copy runtime dependencies
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+          ./gradlew -S :app-desktop:collectRuntime
 
       - name: Build Fedora package
         run: |
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
+          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
           jpackage \
             --type rpm \
             --name KST4Contest \
             --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
+            --input app-desktop/build/dist-libs \
             --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
+            --main-class kst4contest.view.Main \
             --add-modules "$ADD_MODULES" \
             --linux-package-deps "gstreamer1,gstreamer1-plugins-base,gstreamer1-plugins-good" \
             --dest dist
@@ -306,7 +303,7 @@ jobs:
 
       - name: Resolve nightly version info
         run: |
-          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          VERSION=$(grep -m1 '^version=' gradle.properties | cut -d= -f2)
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
@@ -323,31 +320,30 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends zstd
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build JAR and copy runtime dependencies
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+          ./gradlew -S :app-desktop:collectRuntime
 
       - name: Build app-image with jpackage
         run: |
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
+          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
           jpackage \
             --type app-image \
             --name KST4Contest \
             --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
+            --input app-desktop/build/dist-libs \
             --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
+            --main-class kst4contest.view.Main \
             --add-modules "$ADD_MODULES" \
             --dest dist
 
       - name: Build Arch Linux package artifact
         run: |
+          mkdir -p target
           ARCH=$(uname -m)
           PKGVER=$(printf '%s' "${VERSION}-${SHORT_SHA}" | sed 's/[^[:alnum:].+_]/_/g')
           PKGROOT="target/archpkg"
@@ -427,7 +423,7 @@ jobs:
 
       - name: Resolve nightly version info
         run: |
-          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          VERSION=$(grep -m1 '^version=' gradle.properties | cut -d= -f2)
           SHORT_SHA="${GITHUB_SHA::7}"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "SHORT_SHA=$SHORT_SHA" >> "$GITHUB_ENV"
@@ -439,8 +435,8 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Install Flatpak tooling
         run: |
@@ -451,23 +447,22 @@ jobs:
 
       - name: Build app-image with jpackage
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+          ./gradlew -S :app-desktop:collectRuntime
           mkdir -p target/flatpak-src
-          ADD_MODULES="$(java packaging/AddModules.java)"
+          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
           jpackage \
             --type app-image \
             --name KST4Contest \
             --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
+            --input app-desktop/build/dist-libs \
             --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
+            --main-class kst4contest.view.Main \
             --add-modules "$ADD_MODULES" \
             --dest target/flatpak-src
 
       - name: Create Flatpak manifest
         run: |
+          mkdir -p target
           mkdir -p dist
           cat > target/de.x08.KST4Contest.yml << 'EOF'
           app-id: de.x08.KST4Contest
@@ -515,6 +510,7 @@ jobs:
 
       - name: Build Flatpak repo (nightly)
         run: |
+          mkdir -p target
           flatpak-builder --force-clean target/flatpak-build target/de.x08.KST4Contest.yml
           flatpak build-export --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo target/flatpak-build nightly
           flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo
@@ -622,7 +618,7 @@ jobs:
 
       - name: Resolve nightly version info
         run: |
-          VERSION=$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+          VERSION=$(grep -m1 '^version=' gradle.properties | cut -d= -f2)
           SHORT_SHA="${GITHUB_SHA::7}"
           ARCH=$(uname -m)
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
@@ -636,8 +632,8 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Import signing certificate
         env:

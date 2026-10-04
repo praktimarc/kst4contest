@@ -50,11 +50,8 @@ elif [ -n "${NOTARY_PROFILE:-}" ]; then
 fi
 
 echo "==> Building JAR and collecting runtime dependencies"
-chmod +x mvnw
-./mvnw -B -DskipTests package \
-    dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-JAR="$(ls -t target/praktiKST-*.jar | head -n 1)"
-cp "$JAR" target/dist-libs/app.jar
+chmod +x gradlew
+./gradlew -S :app-desktop:collectRuntime
 
 # jpackage only accepts a numeric major[.minor[.patch]] as the macOS bundle
 # version, so a Maven qualifier like "-nightly" has to be trimmed off.
@@ -67,17 +64,16 @@ echo "==> Version: $POM_VERSION -> bundle version $APP_VERSION"
 echo "==> Step 1/4: jpackage app-image (unsigned)"
 rm -rf dist
 mkdir -p dist
-ADD_MODULES="$(java packaging/AddModules.java)"
+ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
 
 MACOSX_DEPLOYMENT_TARGET="13.0" jpackage \
     --type app-image \
     --name KST4Contest \
     --app-version "$APP_VERSION" \
     --icon packaging/icons/kst4contest.icns \
-    --input target/dist-libs \
+    --input app-desktop/build/dist-libs \
     --main-jar app.jar \
-    --main-class kst4contest.view.Kst4ContestApplication \
-    --module-path target/dist-libs \
+    --main-class kst4contest.view.Main \
     --add-modules "$ADD_MODULES" \
     --mac-package-identifier "$BUNDLE_ID" \
     --mac-package-name KST4Contest \
