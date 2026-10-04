@@ -1,20 +1,15 @@
 package kst4contest.view;
 
-import javafx.scene.control.MenuItem;
 import kst4contest.view.compose.MainMenuActions;
 
-import java.util.function.Supplier;
-
 /**
- * The Compose menu bar's actions, delegated to the JavaFX menu items they mirror.
+ * The Compose menu bar's actions, delegated to methods on {@link Kst4ContestApplication}.
  *
- * <p>Firing the very same {@link MenuItem} is deliberate. The two bars run side by side while
- * the operator compares the windows, and a second implementation of seventeen handlers would
- * be a second thing to compare — differences between the bars would be indistinguishable from
- * differences between the windows.</p>
- *
- * <p>When the JavaFX window goes, those handlers move into methods of their own and this class
- * calls those instead. Until then it is a bridge, not a design.</p>
+ * <p>These used to fire the {@code MenuItem}s of the old JavaFX menu bar,
+ * which ran side by side with the Compose bar so the two could be compared. The JavaFX bar is
+ * gone (part 3), so the handlers now live in {@code menuAction…} methods of the application and
+ * this class calls those directly. It stays a thin bridge: no behaviour of its own, one call per
+ * menu entry.</p>
  */
 public final class ComposeMenuActions implements MainMenuActions {
 
@@ -26,12 +21,12 @@ public final class ComposeMenuActions implements MainMenuActions {
 
     @Override
     public void connect() {
-        fire(() -> application.menuItemFileConnect);
+        application.runOnUi(application::menuActionConnect);
     }
 
     @Override
     public void disconnect() {
-        fire(() -> application.menuItemFileDisconnect);
+        application.runOnUi(application::menuActionDisconnect);
     }
 
     @Override
@@ -41,96 +36,80 @@ public final class ComposeMenuActions implements MainMenuActions {
 
     @Override
     public void exitApplication() {
-        fire(() -> application.menuItemFileExit);
+        application.runOnUi(application::menuActionExit);
     }
 
     @Override
     public void setQrgAsNameInChat() {
-        fire(() -> application.menuItemOptionsSetFrequencyAsName);
+        application.runOnUi(application::menuActionSetQrgAsNameInChat);
     }
 
     @Override
     public void toggleAwayState() {
-        fire(() -> application.menuItemOptionsAwayBack);
+        application.runOnUi(application::menuActionToggleAwayState);
     }
 
     @Override
     public void toggleSettingsWindow() {
-        fire(() -> application.menuItemOptionsShow);
+        application.runOnUi(application::menuActionToggleSettingsWindow);
     }
 
     @Override
     public void toggleMonitorWindow() {
-        fire(() -> application.menuItemWindowCluster);
+        application.runOnUi(application::menuActionToggleMonitorWindow);
     }
 
     @Override
     public void toggleStationMap() {
-        fire(() -> application.menuItemWindowStationMap);
+        application.runOnUi(application::menuActionToggleStationMap);
     }
 
     @Override
     public void useDarkDesign() {
-        fire(() -> application.menuItemWindowDarkDesign);
+        application.runOnUi(application::menuActionUseDarkDesign);
     }
 
     @Override
     public void useDefaultDesign() {
-        fire(() -> application.menuItemWindowDefaultDesign);
+        application.runOnUi(application::menuActionUseDefaultDesign);
     }
 
     @Override
     public void openDonationPage() {
-        fire(() -> application.menuItemInfoDonate);
+        application.runOnUi(application::menuActionOpenDonationPage);
     }
 
     @Override
     public void openHomepage() {
-        fire(() -> application.menuItemInfoHomepage);
+        application.runOnUi(application::menuActionOpenHomepage);
     }
 
     @Override
     public void openNewsgroup() {
-        fire(() -> application.menuItemInfoNewsgroup);
+        application.runOnUi(application::menuActionOpenNewsgroup);
     }
 
     @Override
     public void openChangelog() {
         /*
-         * The JavaFX item and its handler are both commented out, so there is nothing to
-         * fire. The Compose menu no longer offers this either; the method stays because the
-         * interface is shared and an empty body is honest about there being no such feature.
+         * The JavaFX item and its handler were both commented out, so there is nothing to do.
+         * The method stays because the interface is shared and an empty body is honest about
+         * there being no such feature.
          */
     }
 
     @Override
     public void openOv3tDonationPage() {
-        fire(() -> application.menuItemInfoDonateOv3t);
+        application.runOnUi(application::menuActionOpenOv3tDonationPage);
     }
 
     @Override
     public void contactAuthor() {
-        fire(() -> application.menuItemInfoContact);
+        application.runOnUi(application::menuActionContactAuthor);
     }
 
     @Override
     public void showAbout() {
-        fire(() -> application.menuItemInfoAbout);
-    }
-
-    /**
-     * Fires a menu item on the JavaFX thread.
-     *
-     * <p>The item is looked up when the action runs rather than when this class is built,
-     * because initMenuBar creates them after the runtime exists. A missing item is ignored:
-     * a menu entry that cannot act is better than a crash mid contest.</p>
-     */
-    private void fire(final Supplier<MenuItem> item) {
-        application.runOnUi(() -> {
-            MenuItem menuItem = item.get();
-            if (menuItem != null) {
-                menuItem.fire();
-            }
-        });
+        application.runOnUi(application::menuActionShowAbout);
     }
 }

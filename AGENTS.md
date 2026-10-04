@@ -4,7 +4,7 @@ These project instructions extend Marc's global Codex working agreements.
 
 ## Project identity
 
-KST4Contest is a Java/JavaFX desktop client for ON4KST chat with contest-oriented workflows and integrations including logging software, AirScout, rotor control, DXCluster and local persistence.
+KST4Contest is a Java/Kotlin desktop client for ON4KST chat, with a Compose Multiplatform user interface with contest-oriented workflows and integrations including logging software, AirScout, rotor control, DXCluster and local persistence.
 
 Primary repository areas:
 
@@ -46,10 +46,10 @@ If an answer is uncertain, do not interpolate it. Check current code/tests/docs/
 ## Java and user-interface architecture
 
 - Preserve or improve separation between network/parsing/service/controller/UI responsibilities.
-- Do not solve architecture problems by letting worker/model code directly manipulate JavaFX UI collections.
+- Do not solve architecture problems by letting worker/model code directly manipulate user-interface collections.
 - Active chat-member domain state is conceptually thread-safe state and lives in an `ObservableRoster` in `core`; the `ObservableList` a `TableView` is bound to is a mirror of it, not the store.
-- `MessageBusManagementThread` must not directly read or mutate the JavaFX `ObservableList` used by the UI.
-- Route UI-visible mutations through the controller and the `UiDispatcher` (`JavaFxUiDispatcher` hands them to the JavaFX Application Thread). Do not reach for `Platform.runLater` in `core`; it has no JavaFX dependency.
+- `MessageBusManagementThread` must not directly read or mutate the row lists the user interface draws from; it works on snapshots.
+- Route UI-visible mutations through the controller and the `UiDispatcher` (`AwtUiDispatcher` hands them to the AWT event dispatch thread, where Compose draws). Do not reach for a toolkit thread call such as `Platform.runLater` or `EventQueue.invokeLater` in `core`; it has no toolkit dependency.
 - Prefer explicit DTOs over records when introducing transport/parser DTOs in this codebase unless the approved concept says otherwise.
 - Handle incomplete external/historical data defensively.
 - `qrb`, QTF and related external values can be absent. `null` means unavailable, not zero.
@@ -96,9 +96,10 @@ Never change CR/LF, XML framing, callsign normalization, frequency formatting or
 - If no send category is selected, preserve the established Main-category fallback unless explicitly changed.
 - Null/unknown data must render as unavailable/empty according to current UI conventions, not as fake zero values.
 
-## WebView / map compatibility
+## Map
 
-- The Leaflet WebView workaround that disables problematic CSS 3D transforms before Leaflet loads is a known Java 21 stability measure. Do not remove or reorder it without reproducing and understanding the original rendering/flicker problem.
+- The station map is a Compose canvas. It fetches its tiles directly; the former JavaFX WebView, the bundled Leaflet resources, the CSS-3D-transform workaround and the `TileProxyServer` that worked around the WebView's TLS behaviour in AppImage and Flatpak packaging are all gone.
+- Map reset clears the selected target without changing the zoom. Offline DEM, terrain packages and the profile cache must keep working unchanged.
 
 ## Autoanswer / beacon safety
 
@@ -121,7 +122,7 @@ Windows:
 
 Read the current `gradle.properties` and `gradle/libs.versions.toml` before relying on version numbers.
 
-At the package creation snapshot the project uses Java 21 / JavaFX 21.x and JUnit 5/Mockito, with PMD and SpotBugs integrated.
+At this context snapshot the project uses Java 21, Kotlin 2.2 and Compose Multiplatform 1.8.x, with JUnit 5/Mockito, PMD and SpotBugs integrated. JavaFX is gone; there is no `org.openjfx` dependency left.
 
 Important: the build configuration has historically allowed test failures to be ignored, and static-analysis findings do not fail the build. Therefore:
 

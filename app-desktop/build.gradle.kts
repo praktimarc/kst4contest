@@ -1,14 +1,8 @@
 plugins {
     java
-    alias(libs.plugins.javafx)
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeMultiplatform)
-}
-
-javafx {
-    version = libs.versions.javafx.get()
-    modules = listOf("javafx.controls", "javafx.fxml", "javafx.web", "javafx.media")
 }
 
 kotlin {
@@ -16,8 +10,7 @@ kotlin {
 }
 
 dependencies {
-    implementation("org.openjfx:javafx-swing:${libs.versions.javafx.get()}")
-    // Mirrors the compile-scope entries in pom.xml: 11 test classes live under
+    // Mirrors the compile-scope entries in pom.xml: a few test classes still live under
     // src/main/java and need JUnit and Mockito on the main compile classpath.
     implementation(libs.junit.jupiter.api)
     implementation(libs.mockito.core.compile)
@@ -36,8 +29,9 @@ dependencies {
 
 compose.desktop {
     application {
-        // Main and not Kst4ContestApplication: an Application subclass cannot be
-        // started from the classpath, which is where JavaFX lives since Etappe 1.
+        // Main forwards to Kst4ContestApplication.main. It was a workaround for
+        // launching a JavaFX Application subclass from the classpath; it stays because
+        // the packaged launchers and the AUR/Flatpak wrappers name this class.
         mainClass = "kst4contest.view.Main"
 
         nativeDistributions {
@@ -86,15 +80,15 @@ compose.desktop {
             packageVersion = providers.gradleProperty("composePackageVersion").get()
 
             /*
-             * Kept from the former module-info.java, minus the javafx.* modules.
-             * jdk.jsobject carries netscape.javascript for the map bridge, and
-             * jdk.unsupported carries sun.misc.Unsafe, without which the JavaFX
-             * Marlin renderer fails to start. Neither is inferred: JavaFX comes
-             * from the classpath, so nothing declares them.
+             * Kept from the former module-info.java. jdk.jsobject went with the map
+             * bridge: it carried netscape.javascript, and nothing imports that any
+             * more. jdk.unsupported stays — its justification used to be the JavaFX
+             * Marlin renderer, but sun.misc.Unsafe is reached by other dependencies
+             * too, and dropping it is a separate decision from removing JavaFX.
              */
             modules(
                 "java.desktop", "java.net.http", "java.sql",
-                "jdk.crypto.ec", "jdk.jsobject", "jdk.net",
+                "jdk.crypto.ec", "jdk.net",
                 "jdk.xml.dom", "jdk.unsupported",
             )
 

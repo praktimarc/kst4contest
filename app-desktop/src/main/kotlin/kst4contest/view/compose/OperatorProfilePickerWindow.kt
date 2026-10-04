@@ -24,13 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPosition
-import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.awt.ComposeDialog
 import kst4contest.model.OperatorProfile
+import java.awt.Dialog
+import java.awt.Dimension
+import java.awt.EventQueue
 import java.util.Optional
-import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicReference
+import javax.swing.WindowConstants
 
 /**
  * The text the JavaFX dialog showed below a profile name. Kept as a function so
@@ -83,54 +84,70 @@ object OperatorProfilePickerWindow {
      */
     private const val DIALOG_FONT_SIZE_SP = 12f
 
+    private val DIALOG_SIZE = Dimension(380, 300)
+
+    /**
+     * Opens the picker and blocks until the operator decides.
+     *
+     * A modal [ComposeDialog] and NOT the former dedicated thread plus `CountDownLatch`.
+     * That construction deadlocked once the UiDispatcher moved to the AWT event thread:
+     * `ComposeMenuActions.switchOperatorProfile` delivers the File menu's profile switch
+     * there, and skiko's SwingDispatcher posts *every* continuation of `application { }`
+     * — composition, the button callbacks, even the return that would release the latch —
+     * to that same thread, with no `isDispatchNeeded` shortcut. A latch does not pump
+     * events, so the window never appeared and the client froze with no timeout anywhere
+     * in the path. A modal AWT dialog runs a nested event pump instead: it blocks its
+     * caller *and* keeps drawing, which is what `Stage.showAndWait()` did.
+     *
+     * Works from any thread. The startup path calls this from `main` before any window
+     * exists; the File menu calls it from the event thread. Either way the dialog itself is
+     * built and shown ON the event thread — see [openOnEventThread].
+     */
     @JvmStatic
     fun showAndSelect(
         selectableProfiles: List<OperatorProfile>,
         preselectedProfileId: String?,
     ): Optional<OperatorProfile> {
         val state = OperatorProfilePickerState(selectableProfiles, preselectedProfileId)
-        var chosen: OperatorProfile? = null
-        val closed = CountDownLatch(1)
+        val chosen = AtomicReference<OperatorProfile?>(null)
 
+        openOnEventThread { openPicker(state, chosen) }
+
+        return Optional.ofNullable(chosen.get())
+    }
+
+    private fun openPicker(
+        state: OperatorProfilePickerState,
+        chosen: AtomicReference<OperatorProfile?>,
+    ) {
+        val dialog = ComposeDialog(owner = null, modalityType = Dialog.ModalityType.APPLICATION_MODAL)
+        dialog.title = "Select operator profile"
+        dialog.size = DIALOG_SIZE
+        dialog.setLocationRelativeTo(null)
+        /* Disposed and not hidden: a hidden dialog keeps its window and Skia layer alive. */
+        dialog.defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
         /*
-         * application { } blocks until every Compose window closes, so it must not
-         * run on the JavaFX application thread. A dedicated thread plus a latch
-         * reproduces the blocking behaviour of Stage.showAndWait() that the callers
-         * expect. Measured in the coexistence probe: the JavaFX thread keeps
-         * running while this window is open.
+         * Raised above everything else. At startup there is nothing to hide behind, but
+         * the File menu opens this over the main window, which is not its owner.
          */
-        Thread({
-            /*
-             * exitProcessOnExit = false is essential, not a preference: the default
-             * true makes application { } call exitProcess when the last Compose
-             * window closes. This dialog runs before the main window opens, so the
-             * default would end the application the moment the operator picks a
-             * profile.
-             */
-            application(exitProcessOnExit = false) {
-                Window(
-                    onCloseRequest = {
-                        chosen = null
-                        exitApplication()
-                    },
-                    state = rememberWindowState(width = 380.dp, height = 300.dp,
-                        position = WindowPosition(Alignment.Center)),
-                    title = "Select operator profile",
-                ) {
-                    Kst4ContestTheme(darkMode = false, baseFontSizeSp = DIALOG_FONT_SIZE_SP) {
-                        PickerContent(
-                            state = state,
-                            onStart = { chosen = state.selected; exitApplication() },
-                            onQuit = { chosen = null; exitApplication() },
-                        )
-                    }
-                }
-            }
-            closed.countDown()
-        }, "operator-profile-picker").start()
+        dialog.isAlwaysOnTop = true
 
-        closed.await()
-        return Optional.ofNullable(chosen)
+        dialog.setContent {
+            Kst4ContestTheme(darkMode = false, baseFontSizeSp = DIALOG_FONT_SIZE_SP) {
+                PickerContent(
+                    state = state,
+                    onStart = { chosen.set(state.selected); dialog.dispose() },
+                    /*
+                     * Quit and the window X agree: no choice. Every caller reads an empty
+                     * Optional as "the operator does not want to continue", which at
+                     * startup ends the process.
+                     */
+                    onQuit = { chosen.set(null); dialog.dispose() },
+                )
+            }
+        }
+
+        dialog.isVisible = true
     }
 }
 

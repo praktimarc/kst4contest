@@ -6,11 +6,11 @@ This file is the durable technical project context for KST4Contest. It is not a 
 
 ## Purpose
 
-KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/microwave contest workflows. It combines chat handling with contest-oriented station prioritisation, sked/timeline workflows and integrations with logging, aircraft-scatter, rotor and DX-cluster tooling.
+KST4Contest is a Java/Kotlin desktop client for ON4KST chat, with a Compose Multiplatform user interface, focused on VHF/UHF/microwave contest workflows. It combines chat handling with contest-oriented station prioritisation, sked/timeline workflows and integrations with logging, aircraft-scatter, rotor and DX-cluster tooling.
 
 ## Current Architecture
 
-- Java 21 desktop application built with Gradle in the modules `core` (domain, free of user-interface technology) and `app-desktop` (the JavaFX user interface).
+- Java 21 desktop application built with Gradle in the modules `core` (domain, free of user-interface technology) and `app-desktop` (the Compose Multiplatform user interface).
 - Domain, controller and network code is under `core/src/main/java/kst4contest/`, the user interface under `app-desktop/src/main/java/kst4contest/`. Package names are shared across both modules.
 - Responsibilities are separated across controller, service, logic, model, utility and view areas.
 - Network/parser/service/controller/UI boundaries should remain explicit.
@@ -49,7 +49,7 @@ thread-safe canonical domain state in core
 mirror on the user-interface thread (FxRosterBinding -> ObservableList)
 ```
 
-`core` contains no user-interface technology. It observes through `kst4contest.observe` and hands UI-visible work over through `UiDispatcher`, whose JavaFX implementation is `JavaFxUiDispatcher` in `app-desktop`.
+`core` contains no user-interface technology. It observes through `kst4contest.observe` and hands UI-visible work over through `UiDispatcher`, whose implementation is `AwtUiDispatcher` in `app-desktop`. It delivers to the AWT event dispatch thread, which is the thread Compose composes on. The former `JavaFxUiDispatcher` was deleted with the JavaFX lifecycle.
 
 `MessageBusManagementThread` must not directly iterate or mutate a UI-bound collection; it works on snapshots. UI-visible changes cross the controller/UI boundary through the dispatcher.
 
@@ -84,8 +84,8 @@ A batch of changes belongs in one `SimpleRoster.mutate(...)`, not one call per e
 ### Runtime profile switching
 
 - A switch tears the current runtime down through `Kst4ContestApplication.shutdownRuntime()` and builds a **new** `Kst4ContestApplication` instance. Reusing the instance is not possible: many controls are inline-initialised instance fields, so a second `start()` would re-parent mounted nodes and register every listener twice. The approach is only sound because the class holds no mutable static state.
-- `Platform.setImplicitExit(false)` is required, because closing every window during a switch would otherwise end the process. All exits therefore run through `ApplicationRuntimeLauncher.exitApplication()`, including the main window's close handler; JavaFX calls `stop()` only on the instance it launched itself.
-- `shutdownRuntime()` is idempotent and must release everything that outlives a disconnect: the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler, the map tile proxy, the station map bridge listeners and its coalescing animation, both view timers and every owned stage. Several of these were real leaks before; they only became visible once a second runtime could exist.
+- All exits run through `ApplicationRuntimeLauncher.exitApplication()`, including the main window's close request: a profile switch closes every window of the old runtime before the new one exists, so a window close must never be what ends the process. The former `Platform.setImplicitExit(false)` and `Application.stop()` are gone with JavaFX; a shutdown hook on `shutdownRuntime()` covers a SIGTERM instead, and the guard is atomic because the hook runs on its own thread.
+- `shutdownRuntime()` is idempotent and must release everything that outlives a disconnect: the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler, the station-list coalescing trigger, both view timers and every Compose window. Several of these were real leaks before; they only became visible once a second runtime could exist.
 - `ApplicationConstants.sessionRuntimeUniqueId` must not be regenerated during a switch, so UDP readers started earlier still recognise their own poison pill.
 - The layout autosave is flushed and then cancelled before a switch, so a pending debounced write cannot land after the profile changed.
 
@@ -126,7 +126,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
 - UCXLog-compatible QSO packets and Win-Test `ADDQSO` packets are converted into one validated external-QSO state. Logger-specific numeric, metre and centimetre values and Win-Test band IDs are normalised once; the resolved band is then the sole source for per-band Worked and worked-grid state.
 - A missing or unknown logger band sets only the global Worked state. Worked-grid state requires both a recognised project band and a valid locator; no band or locator is inferred. Packets without a usable callsign are discarded without terminating the listener.
-- External logger threads do not read or mutate the user-list mirror. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the JavaFX Application Thread before evaluating a band-upgrade notice.
+- External logger threads do not read or mutate the user-list mirror. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the user-interface thread, through `UiDispatcher`, before evaluating a band-upgrade notice.
 - The established Win-Test handling for 24, 47 and 76 GHz remains unchanged. Their Worked flags are retained, while only frequencies represented by the project `Band` model can create worked-grid state.
 
 ### Win-Test log recovery
@@ -197,7 +197,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 ## Build / Verification
 
 - Use the repository Gradle wrapper (`.\gradlew.bat` on Windows).
-- The project uses Java 21 / JavaFX 21.x at this context snapshot.
+- The project uses Java 21, Kotlin 2.2 and Compose Multiplatform 1.8.x at this context snapshot. JavaFX has been removed; no `org.openjfx` dependency remains.
 - JUnit 5/Mockito, PMD and SpotBugs are part of the verification environment.
 - Build/test configuration has historically allowed some test/static-analysis failures not to fail the process exit code. Always read actual summaries/reports.
 
@@ -271,8 +271,8 @@ section records only the durable architecture and operational boundaries.
 ## Important Decisions and Workarounds
 
 - Preserve full callsign/category identity while applying base-call normalisation only to specifically defined features.
-- Keep canonical worker-thread domain state separate from JavaFX UI projections.
-- Preserve the established JavaFX WebView/Leaflet workaround that avoids problematic CSS 3D transforms unless the original rendering/flicker issue has been reproduced and the replacement is validated.
+- Keep canonical worker-thread domain state separate from the row lists the user interface draws from.
+- The station map is a Compose canvas that fetches its own tiles. The JavaFX WebView, the bundled Leaflet resources, the CSS-3D-transform workaround and the `TileProxyServer` were removed with JavaFX; offline DEM, terrain packages and the profile cache are unaffected and must stay that way.
 - Deliberate test data, comments and Easter eggs are preserved unless explicitly changed.
 
 ## Planned Technical Direction

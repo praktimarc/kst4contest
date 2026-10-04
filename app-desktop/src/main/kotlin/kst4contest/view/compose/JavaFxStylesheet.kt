@@ -114,19 +114,25 @@ object JavaFxStylesheet {
     }
 
     /**
-     * JavaFX `derive(colour, percent)`.
+     * JavaFX `derive(colour, percent)`, reimplemented.
      *
-     * Delegates to `com.sun.javafx.util.Utils.deriveColor`, which is what the CSS
-     * function itself calls. JavaFX is in this process and on the classpath, so the
-     * two windows cannot disagree about a derived colour — and a reimplementation
-     * could, as an earlier attempt here proved: the brightness JavaFX derives from is
-     * not the HSB value but 0.3R + 0.59G + 0.11B, and the rest of the curve is not
-     * obvious either.
+     * No JavaFX call and no reflection: this is the algorithm itself. The brightness it
+     * derives from is not the HSB value but `0.3R + 0.59G + 0.11B`, and the positive
+     * branch follows a staircase rather than a formula, which is why an earlier
+     * approximation here was measurably wrong.
      *
-     * Reflection rather than a direct call, because the package is internal and not
-     * something this module should compile against. If it is ever gone, the fallback
-     * moves the colour toward white or black by the given fraction, which is close
-     * enough that a window still opens with readable colours.
+     * Correctness is not argued, it is pinned: `JavaFxStylesheetTest` checks this against
+     * values the real JavaFX colour-derivation routine produced, frozen into
+     * `javafx-derive-reference.txt` so the check survives JavaFX being removed. That
+     * file's header names the exact class the values came from.
+     * Every grey and both stylesheet bases match. One saturated blue drifts by up to
+     * three steps per channel. That is tolerable only because no saturated colour
+     * reaches here: three of the four call sites pass the window background or
+     * `-fx-base`, and the fourth is [parseColour]'s own `derive(...)` branch below,
+     * which passes whatever a sheet names — and every `derive(...)` in both shipped
+     * sheets derives from `-fx-base` alone. A hand-edited sheet could break that, so
+     * Etappe 8 of the migration, which makes the sheets operator-editable, has to
+     * revisit it.
      */
     fun derive(color: Color, percent: Double): Color {
         val baseBrightness = 0.3 * color.red + 0.59 * color.green + 0.11 * color.blue

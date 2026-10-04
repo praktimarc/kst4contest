@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import kst4contest.observe.SimpleValue;
-import javafx.collections.FXCollections;
 import kst4contest.controller.MessageVariableResolver;
 import kst4contest.model.AirPlane;
 import kst4contest.model.AirPlaneReflectionInfo;
@@ -66,7 +65,7 @@ class MessageVariableResolverTest {
         secondAirPlane.setArrivingDurationMinutes(9);
 
         AirPlaneReflectionInfo reflectionInfo = new AirPlaneReflectionInfo();
-        reflectionInfo.setRisingAirplanes(FXCollections.observableArrayList(firstAirPlane, secondAirPlane));
+        reflectionInfo.setRisingAirplanes(java.util.List.of(firstAirPlane, secondAirPlane));
         selectedStation.setAirPlaneReflectInfo(reflectionInfo);
 
         assertEquals(

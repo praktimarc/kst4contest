@@ -74,7 +74,7 @@ Windows:
 ## Repository structure
 
 - `core/` – domain, controller and network code, free of user-interface technology
-- `app-desktop/` – the JavaFX user interface and the packaging tasks
+- `app-desktop/` – the Compose Multiplatform user interface and the packaging tasks
 - `github_docs/` – German and English manual sources
 - `website/` – project website sources
 - `packaging/` – platform-specific packaging files

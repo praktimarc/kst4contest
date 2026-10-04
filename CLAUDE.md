@@ -28,6 +28,10 @@ sind über beide Module hinweg dieselben.
 ## Laufende Arbeit
 
 Spezifikationen liegen unter `docs/superpowers/specs/`, Umsetzungspläne unter
-`docs/superpowers/plans/`. Der aktuelle Umbau ist die Ablösung von JavaFX durch
-Compose Multiplatform in neun Etappen; Etappe 1 (Gradle, zwei Module, JPMS raus)
-ist abgeschlossen.
+`docs/superpowers/plans/`. Die Ablösung von JavaFX durch Compose Multiplatform ist
+**abgeschlossen**: unter `src/main` steht kein `javafx.` mehr, und `org.openjfx` ist
+aus `app-desktop/build.gradle.kts` und `gradle/libs.versions.toml` entfernt. Die
+Begründungen und die harten Lehren stehen in
+`docs/superpowers/notes/2026-10-01-javafx-lebendbefund.md`; die wichtigste: ein
+blockierendes Warten auf dem AWT-Ereignisfaden verklemmt die Oberfläche, und der grüne
+Build sagt über Fadenzugehörigkeit nichts.

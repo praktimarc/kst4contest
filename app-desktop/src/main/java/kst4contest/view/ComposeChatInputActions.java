@@ -28,11 +28,12 @@ public final class ComposeChatInputActions implements ChatInputActions {
 
     @Override
     public ChatMember tableSelection() {
-        if (application.tbl_chatMember == null
-                || application.tbl_chatMember.getSelectionModel() == null) {
-            return null;
-        }
-        return application.tbl_chatMember.getSelectionModel().getSelectedItem();
+        /*
+         * The JavaFX station table is gone. Kept rather than dropped from the interface
+         * because ChatInputState's three-step lookup is the documented selection order, and
+         * a Compose station selection may fill this in again.
+         */
+        return null;
     }
 
     @Override

@@ -1,6 +1,4 @@
 [versions]
-javafx = "21.0.5"
-javafxPlugin = "0.1.0"
 sqliteJdbc = "3.43.2.2"
 jlayer = "1.0.1"
 junit = "5.10.1"
@@ -25,7 +23,6 @@ mockito-junit-jupiter = { module = "org.mockito:mockito-junit-jupiter", version.
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
 [plugins]
-javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafxPlugin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }

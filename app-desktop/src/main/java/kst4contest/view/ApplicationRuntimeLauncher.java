@@ -5,9 +5,6 @@ import kst4contest.controller.OperatorProfilePaths;
 import kst4contest.controller.OperatorProfileStore;
 import kst4contest.model.OperatorProfile;
 
-import javafx.application.Platform;
-import javafx.stage.Stage;
-
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -52,8 +49,8 @@ public final class ApplicationRuntimeLauncher {
     /**
      * Shuts the application down.
      *
-     * <p>JavaFX only calls {@code stop()} on the instance it launched itself, so an exit
-     * after a profile switch has to release the resources explicitly.</p>
+     * <p>Releases the live runtime's resources explicitly: after a profile switch that is
+     * no longer the instance the process started with.</p>
      */
     public static void exitApplication() {
 
@@ -61,7 +58,6 @@ public final class ApplicationRuntimeLauncher {
             currentRuntime.shutdownRuntime();
         }
 
-        Platform.exit();
         System.exit(0);
     }
 
@@ -88,14 +84,13 @@ public final class ApplicationRuntimeLauncher {
         Kst4ContestApplication nextRuntime = new Kst4ContestApplication();
 
         try {
-            nextRuntime.start(new Stage());
+            nextRuntime.startRuntime();
         } catch (Exception e) {
             // The previous runtime is already gone, so there is nothing left to return to.
             LOGGER.log(Level.SEVERE, "Could not start the selected operator profile", e);
             Kst4ContestApplication.alertWindowEvent(
                     "The operator profile could not be started: " + e.getMessage()
                             + "\n\nKST4Contest has to be closed.");
-            Platform.exit();
             System.exit(1);
             return false;
         }

@@ -56,6 +56,13 @@ object MainWindowHost {
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
+        /**
+         * Runs the application's quit flow. This is the main window: its X — and a tiling
+         * window manager's close, the same request — has to ask whether to disconnect and
+         * then end the process, the way the File menu's Exit does. Closing it must not
+         * leave the client running with the chat connected and nothing to see it in.
+         */
+        onCloseRequest: () -> Unit,
         skedBands: () -> List<Band>,
         openInBrowser: Consumer<String>,
         onShowOnMap: () -> Unit,
@@ -89,6 +96,7 @@ object MainWindowHost {
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
+            onCloseRequest = onCloseRequest,
         ) { _ ->
             val s = currentState ?: return@show
             val a = currentActions ?: return@show

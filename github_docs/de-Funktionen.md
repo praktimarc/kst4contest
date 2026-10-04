@@ -993,11 +993,11 @@ Sofern die gespeicherten Werte gültig sind, verwendet KST4Contest zunächst die
 - 1.234 Pixel Breite und
 - 768 Pixel Höhe.
 
-Als verfügbare Fläche verwendet KST4Contest nicht die vollständige Bildschirmauflösung, sondern den von JavaFX gemeldeten sichtbaren Bereich des primären Bildschirms. Taskleiste, Dock und vergleichbare Bereiche des Betriebssystems sind darin bereits ausgenommen.
+Als verfügbare Fläche verwendet KST4Contest nicht die vollständige Bildschirmauflösung, sondern den vom Betriebssystem gemeldeten nutzbaren Bereich des primären Bildschirms. Taskleiste, Dock und vergleichbare Bereiche des Betriebssystems sind darin bereits ausgenommen.
 
 Von dieser Fläche wird zusätzlich ein Sicherheitsabstand von 40 Pixeln abgezogen. Überschreitet die gespeicherte Breite oder Höhe den verbleibenden Platz, wird nur der betreffende Wert verkleinert.
 
-Nachdem die Oberfläche mit dieser Scene-Größe aufgebaut wurde, prüft KST4Contest zusätzlich das tatsächliche native Fenster einschließlich seiner vom Betriebssystem erzeugten Rahmen und Titelleiste. Das Fenster wird bei Bedarf noch einmal verkleinert oder in den sichtbaren Bereich verschoben.
+Das Fenster wird dann in dieser Größe geöffnet. Ein Fenstermanager kann sie überschreiben — ein Tiling-Fenstermanager tut das immer —, und KST4Contest speichert die Größe, die das Fenster tatsächlich erhält.
 
 Damit werden zwei unterschiedliche Fälle abgefangen:
 

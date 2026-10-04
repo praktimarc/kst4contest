@@ -913,7 +913,7 @@ The **Mechanisms** indication lists propagation mechanisms which may be consiste
 
 Aircraft Scatter information is not currently coupled to the terrain-profile calculation. AirScout data and the path analysis may both describe the same remote station, but they remain separate assessments.
 
-OpenStreetMap tiles and the active elevation provider require an Internet connection. Leaflet and the map application itself are bundled locally, and tile requests pass through a local proxy, but this proxy is not a permanent offline map store.
+OpenStreetMap tiles and the active elevation provider require an Internet connection. Tiles are fetched directly and cached only for the running session, so this is not a permanent offline map store. Offline elevation data (DEM) is a separate matter and does work without a connection.
 
 In plain terms: the analysis helps to identify plausible paths, obvious obstructions and incorrect assumptions. It does not replace propagation experience or a real signal.
 
@@ -974,11 +974,11 @@ If the stored values are valid, KST4Contest initially uses the last saved height
 - 1,234 pixels wide and
 - 768 pixels high.
 
-KST4Contest does not use the complete screen resolution as the available area. It uses the visual bounds reported by JavaFX for the primary screen. Taskbars, docks and similar operating-system areas are already excluded from these bounds.
+KST4Contest does not use the complete screen resolution as the available area. It uses the usable bounds the operating system reports for the primary screen. Taskbars, docks and similar operating-system areas are already excluded from these bounds.
 
 An additional safety margin of 40 pixels is subtracted. If the stored width or height exceeds the remaining space, only the affected value is reduced.
 
-After the user interface has been built with this content size, KST4Contest checks the complete native operating-system window, including its title bar and borders. The window is reduced or moved into the visible area again if necessary.
+The window is then opened at that size. A window manager may override it — a tiling window manager always does — and the size KST4Contest stores is the one the window actually ends up with.
 
 This catches two different cases:
 
