@@ -20,6 +20,21 @@ dependencies {
     implementation(compose.material3)
     implementation(libs.sqlite.jdbc)
     implementation(libs.jlayer)
+    /*
+     * The Compose UI test harness, used through runComposeUiTest { } from ordinary Jupiter
+     * tests. Deliberately NOT ui-test-junit4: that one brings the vintage engine, and two
+     * engines on one classpath is how half a suite silently stops being run. Checked after
+     * adding this: the only engine resolved is junit-jupiter-engine. JUnit 4 classes are on
+     * the test classpath, but they were before this too — something else pulls them
+     * transitively — and with no vintage engine nothing executes them.
+     *
+     * The accessor is marked experimental by the Compose Gradle plugin, so the opt-in sits
+     * here — one place, for one dependency. What it buys is the only mechanism that can
+     * answer "did the value reach the screen": the state-level tests and the two settings
+     * coverage nets check that a setter is called, which is a different question.
+     */
+    @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
+    testImplementation(compose.uiTest)
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.junit.jupiter)

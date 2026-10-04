@@ -154,7 +154,7 @@ object SettingsWindow {
 }
 
 @Composable
-private fun SettingsContent(
+internal fun SettingsContent(
     tabs: List<SettingsTab>,
     notices: SettingsNotices,
     buttons: @Composable (close: () -> Unit) -> Unit,
@@ -241,7 +241,7 @@ private fun SettingsContent(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SettingsTabStrip(
+internal fun SettingsTabStrip(
     tabs: List<SettingsTab>,
     selectedIndex: Int,
     onSelect: (Int) -> Unit,

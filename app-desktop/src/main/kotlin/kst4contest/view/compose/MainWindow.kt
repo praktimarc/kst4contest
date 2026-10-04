@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.window.FrameWindowScope
@@ -49,14 +50,24 @@ fun FrameWindowScope.MainWindow(
     onShowMorePriorities: () -> Unit,
     onCandidateClicked: (TimelineCandidate) -> Unit,
 ) {
-    Kst4ContestMenuBar(
-        state = state.menu,
-        actions = actions,
-        settingsWindowOpen = state.surroundings.settingsWindowOpen,
-        monitorWindowOpen = state.surroundings.monitorWindowOpen,
-        connectionState = state.surroundings.connectionState,
-        connectionDetail = state.surroundings.connectionDetail,
-    )
+    /*
+     * macOS gets the system menu bar at the top of the screen, which is where that platform
+     * expects it and which Swing draws natively. Everywhere else Compose's MenuBar meant an
+     * unthemed Metal menu above a themed window, so the bar is drawn in the window instead —
+     * see Kst4ContestMenuRow.
+     */
+    if (PlatformUtils.isMacOs()) {
+        Kst4ContestMenuBar(
+            state = state.menu,
+            actions = actions,
+            settingsWindowOpen = state.surroundings.settingsWindowOpen,
+            monitorWindowOpen = state.surroundings.monitorWindowOpen,
+            connectionState = state.surroundings.connectionState,
+            connectionDetail = state.surroundings.connectionDetail,
+        )
+    }
+
+    val menuRow = remember { MainMenuRowState() }
 
     /*
      * The window-wide keys, where JavaFX had them: on the scene. Enter sends and Escape
@@ -68,17 +79,38 @@ fun FrameWindowScope.MainWindow(
         Modifier
             .fillMaxSize()
             .onPreviewKeyEvent { event ->
-                WindowShortcuts.handle(
-                    event = event,
-                    send = state.chatInput::send,
-                    clear = state.chatInput::clear,
-                    insertSnippet = { index ->
-                        state.chatInput.insertSnippet(state.snippets.entries, index)
-                    },
-                )
+                /*
+                 * Not while a menu is down. This is a PREVIEW handler, so it runs before the
+                 * dropdown sees the key — without the guard, Escape to dismiss a menu would
+                 * first clear the operator's half-typed message.
+                 */
+                if (menuRow.anyOpen) {
+                    false
+                } else {
+                    WindowShortcuts.handle(
+                        event = event,
+                        send = state.chatInput::send,
+                        clear = state.chatInput::clear,
+                        insertSnippet = { index ->
+                            state.chatInput.insertSnippet(state.snippets.entries, index)
+                        },
+                    )
+                }
             },
     ) {
         Column(Modifier.fillMaxSize()) {
+            if (!PlatformUtils.isMacOs()) {
+                Kst4ContestMenuRow(
+                    state = state.menu,
+                    actions = actions,
+                    settingsWindowOpen = state.surroundings.settingsWindowOpen,
+                    monitorWindowOpen = state.surroundings.monitorWindowOpen,
+                    rowState = menuRow,
+                )
+
+                HorizontalDivider(thickness = Density.HAIRLINE)
+            }
+
             StatusBar(
                 connectionState = state.surroundings.connectionState,
                 connectionDetail = state.surroundings.connectionDetail,

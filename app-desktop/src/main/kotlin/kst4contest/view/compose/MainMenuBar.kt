@@ -1,10 +1,30 @@
 package kst4contest.view.compose
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import kst4contest.controller.On4KstConnectionState
-import kst4contest.utils.PlatformUtils
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
+import kst4contest.controller.On4KstConnectionState
+import kst4contest.utils.PlatformUtils
 
 /**
  * What the menu bar does when something is picked.
@@ -37,16 +57,15 @@ interface MainMenuActions {
 }
 
 /**
- * The menu bar, declared once and called by every window.
+ * The menu bar in the system's own bar — macOS only.
  *
- * Compose has no shared bar across windows: `MenuBar` lives in the scope of a `Window`
- * and macOS shows it in the system menu bar while that window is active. The JavaFX
- * side arranged the same thing the other way round — `installSharedSystemMenuBar`
- * mirrored the main window's menus into an invisible bar in every other window — and
- * this is the Compose shape of it: one function each window can call.
+ * Compose's `MenuBar` is a `javax.swing.JMenuBar` set on the window, so Swing draws it and
+ * no Compose theme reaches it. On macOS that is what one wants: the bar belongs at the top
+ * of the screen, drawn by the system. Everywhere else it meant an unthemed Metal menu
+ * sitting above a themed window, which is why [Kst4ContestMenuRow] exists.
  *
- * The labels of the two window toggles are asked for at the moment the bar is built,
- * because a Compose window can be closed from its own frame without telling the menu.
+ * Both renderers read [mainMenuModel]. Declaring the menus twice is how one of them quietly
+ * loses an item the other gained.
  */
 @Composable
 fun FrameWindowScope.Kst4ContestMenuBar(
@@ -56,73 +75,29 @@ fun FrameWindowScope.Kst4ContestMenuBar(
     monitorWindowOpen: Boolean,
     /**
      * The connection state, for the read-only macOS menu. On macOS the status bar hides its
-     * badge because JavaFX moved the indicator into the system menu bar, so without this
-     * menu a macOS operator would have no connection indicator at all.
+     * badge because the indicator lives in the system menu bar, so without this menu a
+     * macOS operator would have no connection indicator at all.
      */
     connectionState: On4KstConnectionState? = null,
     connectionDetail: String? = null,
 ) {
     MenuBar {
-        Menu("File") {
-            Item(state.connectLabel, enabled = state.canConnect, onClick = actions::connect)
-            Item("Disconnect", enabled = state.canDisconnect, onClick = actions::disconnect)
-            Item("Switch operator profile...", onClick = actions::switchOperatorProfile)
-            Item("Exit + disconnect", onClick = actions::exitApplication)
-        }
-
-        Menu("Options") {
-            Item(
-                "Set QRG as name in Chat (main category)",
-                enabled = state.canUseChatActions,
-                onClick = actions::setQrgAsNameInChat,
-            )
-            /*
-             * This label is the only place the AFK state is visible anywhere in the
-             * application, so it follows the state rather than being flipped inside the
-             * click handler as JavaFX did.
-             */
-            Item(
-                state.awayMenuLabel,
-                enabled = state.canUseChatActions,
-                onClick = actions::toggleAwayState,
-            )
-            Item(
-                if (settingsWindowOpen) "hide options" else "Show options",
-                onClick = actions::toggleSettingsWindow,
-            )
-        }
-
-        Menu("Windows") {
-            Item(
-                if (monitorWindowOpen) "Hide cluster / stranger QSOs"
-                else "Show cluster / stranger QSOs",
-                onClick = actions::toggleMonitorWindow,
-            )
-            Item(
-                if (settingsWindowOpen) "hide options" else "show options",
-                onClick = actions::toggleSettingsWindow,
-            )
-            Separator()
-            Item("Show / hide station map", onClick = actions::toggleStationMap)
-            Separator()
-            Item("Use dark mode design", onClick = actions::useDarkDesign)
-            Item("Use default mode design", onClick = actions::useDefaultDesign)
-        }
-
-        Menu("Info") {
-            Item("Donate for kst4Contest development via PayPal", onClick = actions::openDonationPage)
-            Item("Donate for OV3T´s plane feed service", onClick = actions::openOv3tDonationPage)
-            Item("Visit DARC X08-Homepage", onClick = actions::openHomepage)
-            Item("Join kst4Contest newsgroup", onClick = actions::openNewsgroup)
-            Item("Contact the author using default mail app", onClick = actions::contactAuthor)
-            Separator()
-            Item("About...", onClick = actions::showAbout)
+        mainMenuModel(state, actions, settingsWindowOpen, monitorWindowOpen).forEach { menu ->
+            Menu(menu.title) {
+                menu.entries.forEach { entry ->
+                    when (entry) {
+                        is MenuEntry.Item ->
+                            Item(entry.label, enabled = entry.enabled, onClick = entry.onClick)
+                        MenuEntry.Separator -> Separator()
+                    }
+                }
+            }
         }
 
         /*
          * The connection indicator, for macOS only: the system menu bar is where it lives
          * there, because the status bar's badge is hidden on that platform. Read-only — the
-         * single item is disabled, exactly as menuItemConnectionStateDetailMacOs is.
+         * single item is disabled, exactly as menuItemConnectionStateDetailMacOs was.
          */
         if (PlatformUtils.isMacOs()) {
             Menu(ConnectionIndicator.macOsMenuTitle(connectionState)) {
@@ -135,3 +110,103 @@ fun FrameWindowScope.Kst4ContestMenuBar(
         }
     }
 }
+
+/**
+ * The menu bar drawn inside the window, by Compose.
+ *
+ * Used everywhere except macOS. It exists because Compose's `MenuBar` hands the job to
+ * Swing, which knows nothing of the stylesheet palette: under Linux that produced the
+ * default cross-platform Metal menu above a themed window. This row reads the same palette
+ * as every other control, so a design switch reaches it.
+ *
+ * A menu title is shaped like a tab — flat, highlighted while active — so it takes the tab
+ * measurements rather than the button ones, and it highlights with the accent colour, which
+ * is what a JavaFX menu did.
+ *
+ * @param rowState which menu is down. Owned by the caller because `MainWindow` has to ask
+ *        [MainMenuRowState.anyOpen] before letting the window-wide keys run.
+ */
+@Composable
+fun Kst4ContestMenuRow(
+    state: MainMenuState,
+    actions: MainMenuActions,
+    settingsWindowOpen: Boolean,
+    monitorWindowOpen: Boolean,
+    rowState: MainMenuRowState,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalJavaFxPalette.current
+    val menus = mainMenuModel(state, actions, settingsWindowOpen, monitorWindowOpen)
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(palette.base)
+            .heightIn(min = Density.TAB_MIN_HEIGHT),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        menus.forEach { menu ->
+            MenuTitle(menu = menu, rowState = rowState)
+        }
+    }
+}
+
+@Composable
+private fun MenuTitle(menu: MenuSpec, rowState: MainMenuRowState) {
+    val palette = LocalJavaFxPalette.current
+    val interactions = remember { MutableInteractionSource() }
+    val hovered by interactions.collectIsHoveredAsState()
+    val open = rowState.openMenu == menu.title
+
+    Box {
+        Text(
+            text = menu.title,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (open) palette.textAccent else palette.labelTextFill,
+            modifier = Modifier
+                .background(
+                    when {
+                        open -> palette.accent
+                        /*
+                         * Hover is a hint, not a selection: the accent at full strength on
+                         * mere pointer travel makes the bar flicker as the operator crosses
+                         * it on the way to the chat field.
+                         */
+                        hovered -> palette.accent.copy(alpha = HOVER_ALPHA)
+                        else -> Color.Transparent
+                    }
+                )
+                .hoverable(interactions)
+                .clickable { rowState.toggle(menu.title) }
+                .padding(
+                    horizontal = Density.TAB_HORIZONTAL_PADDING,
+                    vertical = MENU_TITLE_VERTICAL_PADDING,
+                ),
+        )
+
+        DropdownMenu(expanded = open, onDismissRequest = rowState::close) {
+            menu.entries.forEach { entry ->
+                when (entry) {
+                    is MenuEntry.Item -> DropdownMenuItem(
+                        text = {
+                            Text(entry.label, style = MaterialTheme.typography.bodyMedium)
+                        },
+                        enabled = entry.enabled,
+                        onClick = { rowState.pick(entry.onClick) },
+                    )
+
+                    MenuEntry.Separator ->
+                        HorizontalDivider(
+                            thickness = Density.HAIRLINE,
+                            color = palette.separatorLine,
+                        )
+                }
+            }
+        }
+    }
+}
+
+/** Enough tint to show the pointer is over a title, not enough to read as a selection. */
+private const val HOVER_ALPHA = 0.35f
+
+private val MENU_TITLE_VERTICAL_PADDING = androidx.compose.ui.unit.Dp(4f)

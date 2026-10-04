@@ -24,6 +24,31 @@ import java.util.concurrent.TimeUnit
  */
 class ComposeWindowHostCloseTest {
 
+    /**
+     * Waits until the window with this title is actually showing.
+     *
+     * `ComposeWindowHost.isOpen` turns true the moment the window thread enters
+     * `application { }`, which is well before the window is realised — so a fixed sleep
+     * after it is a guess, and this test failed on that guess once the machine was busy.
+     * Frames are read on the event thread, which owns them.
+     */
+    private fun awaitShowingFrame(title: String): java.awt.Frame {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(20)
+
+        while (System.nanoTime() < deadline) {
+            var found: java.awt.Frame? = null
+            EventQueue.invokeAndWait {
+                found = java.awt.Window.getWindows()
+                    .filterIsInstance<java.awt.Frame>()
+                    .firstOrNull { it.isShowing && it.title == title }
+            }
+            found?.let { return it }
+            Thread.sleep(50)
+        }
+
+        throw AssertionError("the window titled '$title' never became visible")
+    }
+
     private fun openHost(name: String): ComposeWindowHost {
         val host = ComposeWindowHost(name)
         host.show(
@@ -34,14 +59,8 @@ class ComposeWindowHostCloseTest {
             heightDp = 120f,
         ) { Text("close test") }
 
-        // Wait for the window to really exist, so the close has something to close.
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15)
-        while (!host.isOpen && System.nanoTime() < deadline) {
-            Thread.sleep(25)
-        }
-        assertTrue(host.isOpen, "the window never opened, so the close proves nothing")
-        /* Let the first frame land; closing mid-composition is a different test. */
-        Thread.sleep(600)
+        // Wait for the window to really be on screen, so the close has something to close.
+        awaitShowingFrame("close test")
         return host
     }
 
@@ -90,30 +109,19 @@ class ComposeWindowHostCloseTest {
             onCloseRequest = { asked.countDown() },
         ) { Text("close request test") }
 
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15)
-        while (!host.isOpen && System.nanoTime() < deadline) {
-            Thread.sleep(25)
-        }
-        assertTrue(host.isOpen, "the window never opened")
-        Thread.sleep(600)
+        /*
+         * Matched by title rather than by type: the suite runs in one JVM and other tests'
+         * Compose windows can still be showing, so a type filter sent the event to the
+         * wrong window and this latch waited for ever.
+         */
+        val mine = awaitShowingFrame("close request test")
 
         try {
-            /*
-             * What the window manager sends: a close request on the window itself. Matched
-             * by title rather than by type — the suite runs in one JVM and other tests'
-             * Compose windows can still be showing, so a type filter sent the event to the
-             * wrong window and this latch waited for ever.
-             */
+            // What the window manager sends: a close request on the window itself.
             EventQueue.invokeAndWait {
-                val mine = java.awt.Window.getWindows()
-                    .filterIsInstance<java.awt.Frame>()
-                    .filter { it.isShowing && it.title == "close request test" }
-                assertTrue(mine.isNotEmpty(), "this test's own window was not found")
-                mine.forEach {
-                    it.dispatchEvent(
-                        java.awt.event.WindowEvent(it, java.awt.event.WindowEvent.WINDOW_CLOSING)
-                    )
-                }
+                mine.dispatchEvent(
+                    java.awt.event.WindowEvent(mine, java.awt.event.WindowEvent.WINDOW_CLOSING)
+                )
             }
 
             assertTrue(

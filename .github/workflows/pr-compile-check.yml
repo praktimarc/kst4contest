@@ -27,5 +27,96 @@ jobs:
       - name: Ensure gradlew is executable
         run: chmod +x gradlew
 
+      # classes + testClasses rather than compileJava + compileTestJava. The old pair did
+      # cover Kotlin -- checked with a deliberately broken Kotlin test file, and also in
+      # --dry-run: the Kotlin plugin makes compileTestJava depend on compileTestKotlin,
+      # because Java has to see the Kotlin output. But that is the plugin's wiring and not
+      # this job's statement of intent, and it covered no resources. These two aggregates
+      # say "compile everything in both modules" and do not depend on knowing that.
       - name: Compile
-        run: ./gradlew -S compileJava compileTestJava
+        run: ./gradlew -S classes testClasses
+
+  test:
+    name: Test (Java 21, headless)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
+
+      # Skiko's native library links against libGL, so it has to be loadable even though
+      # nothing here renders through it: the drawing tests use Skia's software backend and
+      # runComposeUiTest never opens a window. Without this the whole Compose half of the
+      # suite dies with "libskiko-linux-x64.so: libGL.so.1: cannot open shared object
+      # file" -- which reads like a missing display and is not one. Found by running this
+      # job under act, where the container has no libGL; GitHub's own runner image happens
+      # to ship it, so the step is what makes the job reproducible off GitHub.
+      - name: Install the OpenGL client library skiko links against
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1
+
+      # No Xvfb, deliberately. Everything that pins behaviour runs without a display:
+      # runComposeUiTest reaches the semantics tree headless (measured before this job was
+      # written), and the ImageComposeScene drawing tests render in software. The handful
+      # of tests that open a real window guard themselves with assumeFalse(isHeadless) and
+      # skip here; the summary below prints the skip count, so that is visible rather than
+      # assumed.
+      #
+      # Software GL under Xvfb was considered and rejected: a missing Skia GL context is
+      # the hardest failure in this codebase to read, and importing that class of flake
+      # into CI would cost more than the few window tests are worth here.
+      - name: Test
+        run: ./gradlew -S test
+
+      - name: Summarise the test results
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(*/build/test-results/test/TEST-*.xml)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No test result XML was produced -- the test task did not run." >&2
+            exit 1
+          fi
+          # Counted from the XML and not from Gradle's console output: this project's own
+          # rule is never to infer "all tests passed" from an exit code.
+          summary=$(grep -h "<testsuite " "${files[@]}" \
+            | sed 's/.*tests="\([0-9]*\)".*skipped="\([0-9]*\)".*failures="\([0-9]*\)".*errors="\([0-9]*\)".*/\1 \2 \3 \4/' \
+            | awk '{t+=$1; s+=$2; f+=$3; e+=$4} END {print t" "s" "f" "e}')
+          read -r total skipped failures errors <<< "$summary"
+          echo "tests=$total skipped=$skipped failures=$failures errors=$errors"
+          {
+            echo "### Tests"
+            echo ""
+            echo "| total | skipped | failures | errors |"
+            echo "|---|---|---|---|"
+            echo "| $total | $skipped | $failures | $errors |"
+            echo ""
+            echo "Skipped are the tests that need a display, plus the deliberately"
+            echo "disabled reference-data generator. This job runs headless on purpose."
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$failures" != "0" ] || [ "$errors" != "0" ]; then
+            echo "The result XML reports failures or errors." >&2
+            exit 1
+          fi
+
+      - name: Keep the test reports on a failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            */build/test-results/test/
+            */build/reports/tests/test/
+          if-no-files-found: ignore
+          retention-days: 7
