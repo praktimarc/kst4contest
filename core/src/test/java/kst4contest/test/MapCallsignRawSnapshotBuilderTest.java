@@ -149,4 +149,43 @@ class MapCallsignRawSnapshotBuilderTest {
         chatMember.setActivityTimeLastInEpoch(activityEpoch);
         return chatMember;
     }
+
+    /**
+     * An absent QRB is not a QRB of zero.
+     *
+     * ChatMember.getQrb() and getQTFdirection() are nullable Doubles, and the builder
+     * used to coerce a null to 0.0 before the snapshot existed. Zero is a legitimate
+     * reading — a station at the operator's own locator is 0 km away — so the coercion
+     * destroyed the difference between "right here" and "not known", and the map's
+     * status line read "0 km / 0°" for every station whenever the operator had no home
+     * locator configured. AGENTS.md: null means unavailable, not zero.
+     */
+    @Test
+    void anAbsentDistanceOrBearingStaysAbsentRatherThanBecomingZero() {
+        ChatMember station = buildStation("DL1ABC", "Hans", "JO50JP", 1_000L);
+
+        MapCallsignRawSnapshot snapshot =
+                new MapCallsignRawSnapshotBuilder()
+                        .buildSnapshots(List.of(station), null, EnumSet.noneOf(Band.class))
+                        .get(0);
+
+        assertTrue(Double.isNaN(snapshot.qrbKm()), "an unknown QRB must not read as 0 km");
+        assertTrue(Double.isNaN(snapshot.qtfDeg()), "an unknown QTF must not read as 0 degrees");
+    }
+
+    /** A station at the operator's own locator really is zero away, and must say so. */
+    @Test
+    void aGenuineZeroDistanceIsKept() {
+        ChatMember station = buildStation("DL1ABC", "Hans", "JO50JP", 1_000L);
+        station.setQrb(0.0);
+        station.setQTFdirection(0.0);
+
+        MapCallsignRawSnapshot snapshot =
+                new MapCallsignRawSnapshotBuilder()
+                        .buildSnapshots(List.of(station), null, EnumSet.noneOf(Band.class))
+                        .get(0);
+
+        assertEquals(0.0, snapshot.qrbKm());
+        assertEquals(0.0, snapshot.qtfDeg());
+    }
 }

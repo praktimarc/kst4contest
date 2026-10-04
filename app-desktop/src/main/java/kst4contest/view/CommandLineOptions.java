@@ -22,11 +22,29 @@ public class CommandLineOptions {
      */
     public static final String PROFILE_SYSTEM_PROPERTY = "kst4contest.profile";
 
+    /**
+     * Opens the Compose main window beside the JavaFX one.
+     *
+     * <p>Off unless asked for. The two are meant to run side by side while the operator
+     * compares them against a live session; until that comparison is done, an ordinary start
+     * must behave exactly as it did.</p>
+     */
+    public static final String COMPOSE_MAIN_WINDOW_ARGUMENT = "--compose-main-window";
+
     private static volatile CommandLineOptions rememberedOptions = new CommandLineOptions(null);
 
     private final String requestedProfileName;
 
+    private final boolean composeMainWindowRequested;
+
     public CommandLineOptions(final String requestedProfileName) {
+        this(requestedProfileName, false);
+    }
+
+    public CommandLineOptions(
+            final String requestedProfileName,
+            final boolean composeMainWindowRequested) {
+        this.composeMainWindowRequested = composeMainWindowRequested;
         this.requestedProfileName = requestedProfileName;
     }
 
@@ -42,6 +60,7 @@ public class CommandLineOptions {
     public static CommandLineOptions parse(final List<String> rawArguments) {
 
         String requestedProfileName = null;
+        boolean composeMainWindow = false;
 
         if (rawArguments != null) {
             for (int argumentIndex = 0; argumentIndex < rawArguments.size(); argumentIndex++) {
@@ -51,7 +70,9 @@ public class CommandLineOptions {
                     continue;
                 }
 
-                if (currentArgument.startsWith(PROFILE_ARGUMENT + "=")) {
+                if (COMPOSE_MAIN_WINDOW_ARGUMENT.equals(currentArgument)) {
+                    composeMainWindow = true;
+                } else if (currentArgument.startsWith(PROFILE_ARGUMENT + "=")) {
                     requestedProfileName = currentArgument.substring(PROFILE_ARGUMENT.length() + 1);
                 } else if (PROFILE_ARGUMENT.equals(currentArgument)
                         && argumentIndex + 1 < rawArguments.size()) {
@@ -70,7 +91,8 @@ public class CommandLineOptions {
         }
 
         return new CommandLineOptions(
-                requestedProfileName == null ? null : requestedProfileName.trim());
+                requestedProfileName == null ? null : requestedProfileName.trim(),
+                composeMainWindow);
     }
 
     /**
@@ -96,6 +118,15 @@ public class CommandLineOptions {
      *
      * @return the requested profile name, or null when none was given
      */
+    /**
+     * Whether the Compose main window should be opened beside the JavaFX one.
+     *
+     * @return {@code true} only when --compose-main-window was passed
+     */
+    public boolean isComposeMainWindowRequested() {
+        return composeMainWindowRequested;
+    }
+
     public String getRequestedProfileName() {
         return requestedProfileName;
     }

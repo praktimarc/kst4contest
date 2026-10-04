@@ -7,6 +7,8 @@ junit = "5.10.1"
 mockito = "5.7.0"
 mockitoCompile = "5.17.0"
 jetbrainsAnnotations = "24.0.1"
+kotlin = "2.2.0"
+composeMultiplatform = "1.8.2"
 spotbugsPlugin = "6.0.26"
 spotbugs = "4.9.8"
 pmd = "7.17.0"
@@ -24,4 +26,7 @@ junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher
 
 [plugins]
 javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafxPlugin" }
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 spotbugs = { id = "com.github.spotbugs", version.ref = "spotbugsPlugin" }

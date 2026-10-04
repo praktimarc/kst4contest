@@ -1076,9 +1076,7 @@ public final class StationMapView {
             }
 
             text.append(" | ")
-                    .append(String.format(
-                            Locale.US,
-                            "%.0f km / %.0f°",
+                    .append(StationMapStatusText.distanceAndBearingText(
                             selectedSnapshot.qrbKm(),
                             selectedSnapshot.qtfDeg()
                     ));

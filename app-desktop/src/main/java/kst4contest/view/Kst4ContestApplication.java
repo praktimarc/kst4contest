@@ -1,5 +1,36 @@
 package kst4contest.view;
-import kst4contest.utils.VersionUtils;
+import kst4contest.view.compose.SettingsHost;
+import kst4contest.view.compose.SettingsNotices;
+import kst4contest.view.compose.SettingsTabsKt;
+import kst4contest.view.compose.UpdateWindow;
+import kst4contest.view.compose.UpdateWindowState;
+import kst4contest.view.compose.ColumnWidthStore;
+import kst4contest.view.compose.DataTableState;
+import kst4contest.view.compose.MonitorColumns;
+import kst4contest.view.compose.MonitorWindow;
+import kst4contest.view.compose.RowKeys;
+import kst4contest.view.compose.BlinkingNotice;
+import kst4contest.view.compose.ThreadStatusButtons;
+import kst4contest.view.compose.StationColumns;
+import kst4contest.view.compose.StationFilterState;
+import kst4contest.view.compose.DirectedMessageColumns;
+import kst4contest.view.compose.PublicMessageColumns;
+import kst4contest.view.compose.SelectedMessageFilter;
+import kst4contest.view.compose.SelectedStationMessageColumns;
+import kst4contest.view.compose.SelectedStationState;
+import kst4contest.view.compose.TopPriorityState;
+import kst4contest.view.compose.TimelineState;
+import kst4contest.view.compose.ChatInputState;
+import kst4contest.view.compose.MainMenuState;
+import kst4contest.view.compose.MainWindowState;
+import kst4contest.view.compose.MainWindowSurroundings;
+import kst4contest.view.compose.MainWindowHost;
+import kst4contest.view.compose.MainWindowFrame;
+import kst4contest.view.compose.MainWindowSize;
+import kst4contest.view.compose.SplitterState;
+import kst4contest.view.compose.SettingsWindow;
+import kst4contest.controller.ScoreService;
+import kst4contest.view.compose.SettingsWindow;
 import kst4contest.controller.On4KstConnectionState;
 
 import javafx.scene.image.Image;
@@ -33,6 +64,7 @@ import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
 import kst4contest.ApplicationConstants;
+import kst4contest.view.compose.OperatorProfilePickerWindow;
 import kst4contest.observe.MutableValue;
 import kst4contest.observe.ObservableRoster;
 import kst4contest.observe.SimpleValue;
@@ -60,6 +92,7 @@ import javafx.scene.control.TableView.TableViewSelectionModel;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
+import javafx.stage.Window;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
@@ -74,19 +107,18 @@ import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.utils.ApplicationFileLogging;
 import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.utils.PlatformUtils;
-import kst4contest.view.map.StationMapBridge;
 import kst4contest.controller.ActiveOperatorProfile;
 import kst4contest.controller.OperatorProfileStore;
 import kst4contest.controller.OperatorProfileManagementService;
 import kst4contest.controller.OperatorProfilePaths;
 import kst4contest.model.OperatorProfile;
 import kst4contest.model.OperatorProfileSelection;
-import kst4contest.view.map.StationMapView;
 import kst4contest.view.map.OfflineDemImportService;
 import kst4contest.controller.WorkedGrossFieldCache;
 
 
-public class Kst4ContestApplication extends Application implements StatusUpdateListener  {
+public class Kst4ContestApplication extends Application implements StatusUpdateListener, SettingsHost  {
+	
 //	private static final Kst4ContestApplication dbcontroller = new DBController();
 	// Null means Auto: use the lowest session band, or category fallback.
 
@@ -129,9 +161,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 	private Band selectedReachabilityBandOverride = null;
 
-	private StationMapView stationMapView; //view class for the avl stn map
-	private StationMapBridge stationMapBridge; //bridge for mapping actions between map and view
-	private LayoutAutosave layoutAutosave;
+			private LayoutAutosave layoutAutosave;
 
 	private final Button btnConnectionStateIndicator = new Button("LINK");
 	private final Tooltip tipConnectionStateIndicator = new Tooltip();
@@ -189,6 +219,36 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	String chatState;
 	/** Hands worker-thread results over to the JavaFX application thread. */
 	private final UiDispatcher uiDispatcher = new JavaFxUiDispatcher();
+
+	/**
+	 * Runs work on the JavaFX thread. Package-private so the Compose bridge classes can hand
+	 * their work to the same dispatcher rather than bringing a second one.
+	 */
+	void runOnUi(final Runnable work) {
+		uiDispatcher.runOnUi(work);
+	}
+
+	/**
+	 * The profile switch, reachable from the Compose menu.
+	 *
+	 * <p>A thin forwarder rather than a promotion of the private method: the switch is about
+	 * to change its nature in task 14, and a second public entry point would be a second
+	 * thing to change then.</p>
+	 */
+	void showOperatorProfileSwitchDialogFromCompose() {
+		showOperatorProfileSwitchDialog();
+	}
+
+	/** Forwarders so the Compose send line runs the very same checks the send button does. */
+	boolean isMessageAddressedToOwnCallsignFromCompose(final String messageText) {
+		return isMessageAddressedToOwnCallsign(messageText);
+	}
+
+	ChatCategory resolveOutgoingChatCategoryFromCompose(
+			final String outgoingText,
+			final ChatMember selectedMember) {
+		return resolveOutgoingChatCategory(outgoingText, selectedMember);
+	}
 
 	/**
 	 * Follows the own QRG in the text field. Replaces the former
@@ -254,6 +314,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		chatcontroller.setSelectedCallSignInfoFilter(filter);
 		if (selectedCallSignInfoMessageBinding != null) {
 			selectedCallSignInfoMessageBinding.refresh();
+			Platform.runLater(() -> {
+				if (composeMainWindowState != null) {
+					uiDispatcher.runOnUi(() -> composeMainWindowState.getSelectedStationMessages().replaceRows(
+							new java.util.ArrayList<>(selectedCallSignInfoMessageBinding.list())
+					));
+				}
+			});
 		}
 	}
 
@@ -307,6 +374,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	}
 
 	ChatController chatcontroller;
+	public ChatController getChatController() { return chatcontroller; }
 	MessageVariableResolver messageVariableResolver;
 
 
@@ -322,44 +390,25 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	ToggleButton[] btnQtfButtonsAvl = new ToggleButton[8];
 
 	private void ensureStationMapSupportInitialized() {
-		if (stationMapView != null && stationMapBridge != null) {
-			return;
-		}
-
-		stationMapView = new StationMapView(
-				chatcontroller.getChatPreferences(),
-				this::requestLayoutSave
-		);
-		installSharedSystemMenuBar(stationMapView.getScene());
-		stationMapBridge = new StationMapBridge(
-				chatcontroller,
-				tbl_chatMember,
-				stationMapView,
-				this::focusChatMemberAndPrepareCq,
-				() -> selectedReachabilityBandOverride
-		);
-		stationMapBridge.install();
+		// Nothing to initialize for Compose map here
 	}
 
 	private void toggleStationMapWindow() {
-		ensureStationMapSupportInitialized();
-		stationMapBridge.toggleWindow();
+		if (composeMainWindowState != null) {
+			kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState);
+		}
 	}
 
 	private void showSelectedCallsignOnMap() {
-		ensureStationMapSupportInitialized();
-
-		if (selectedCallSignInfoStageChatMember != null) {
-			chatcontroller.getScoreService().setSelectedChatMember(selectedCallSignInfoStageChatMember);
+		if (composeMainWindowState != null) {
+			if (!kst4contest.view.compose.map.StationMapWindow.INSTANCE.isShowing()) {
+				kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState);
+			}
 		}
-
-		stationMapBridge.focusSelectedCallsign();
 	}
 
 	private void refreshStationMapIfVisible() {
-		if (stationMapBridge != null && stationMapView != null && stationMapView.isShowing()) {
-			stationMapBridge.requestImmediateRefresh();
-		}
+		// Compose map state is reactive to main window state
 	}
 
 	/**
@@ -492,6 +541,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 
         button.setText(sourceName + ": " + threadStateMessage.getRunningInformationTextDescription());
+
+		if (composeMainWindowState != null) {
+			composeMainWindowState.getThreadButtons().update(sourceName, threadStateMessage);
+		}
 
         button.getTooltip().setText(threadStateMessage.getRunningInformation());
         button.getStyleClass().removeIf(cls -> cls.startsWith("btn-showstate"));
@@ -3347,6 +3400,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		selectedCallSignInfoMessageBinding = derivedBinding(
 				chatcontroller::selectedCallSignInfoMessages,
 				chatcontroller.getLst_globalChatMessageList());
+		selectedCallSignInfoMessageBinding.list().addListener((javafx.collections.ListChangeListener<ChatMessage>) c -> {
+			if (composeMainWindowState != null) {
+				uiDispatcher.runOnUi(() -> composeMainWindowState.getSelectedStationMessages().replaceRows(
+						new java.util.ArrayList<>(selectedCallSignInfoMessageBinding.list())
+				));
+			}
+		});
 		tbl_furtherInfoAbtCallsignMSGTable.setItems(selectedCallSignInfoMessageBinding.list());
 		applyTruncatedTextCells(
 				timeCol, callSignTRCVCol, callSignRCVRCol, qrgTXerCol,
@@ -4834,6 +4894,30 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		List<TimelineView.CandidateEvent> candidates = buildTimelinePriorityCandidateEvents();
 
 		timelineView.updateVisuals(skedsSnapshot, candidates);
+
+		if (composeMainWindowState != null) {
+			List<kst4contest.view.compose.TimelineCandidate> composeCandidates = new ArrayList<>();
+			for (TimelineView.CandidateEvent c : candidates) {
+				composeCandidates.add(new kst4contest.view.compose.TimelineCandidate(
+						c.getCallSignRaw(),
+						c.getDisplayCallSign(),
+						c.getPreferredChatCategory(),
+						c.getTimeUntilMs(),
+						c.getMinuteBucket(),
+						c.getLaneIndex(),
+						c.getTargetAzimuth(),
+						c.getScore(),
+						c.getOpportunityPotentialPercent(),
+						c.getTooltipText()
+				));
+			}
+			uiDispatcher.runOnUi(() -> {
+				composeMainWindowState.getTimeline().replaceSkeds(skedsSnapshot);
+				composeMainWindowState.getTimeline().replaceCandidates(composeCandidates);
+				composeMainWindowState.getTimeline().setAntennaAzimuth(chatcontroller.getChatPreferences().getActualQTF().get());
+				composeMainWindowState.getTimeline().setBeamWidth(chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg());
+			});
+		}
 	}
 
 	/**
@@ -5689,7 +5773,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //				chatcontroller.setDisconnected(false);
 
 			} catch (InterruptedException | IOException e) {
-				e.printStackTrace();
+				LOGGER.log(java.util.logging.Level.SEVERE, "Exception", e);
 				Alert alert = new Alert(Alert.AlertType.ERROR);
 				alert.setTitle("Connection failed");
 				alert.setContentText("Could not connect: " + e.getMessage());
@@ -5717,8 +5801,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		MenuItem menuItemFileSwitchProfile = new MenuItem("Switch operator profile...");
 		menuItemFileSwitchProfile.setOnAction(event -> showOperatorProfileSwitchDialog());
 
-		MenuItem m10 = new MenuItem("Exit + disconnect");
-		m10.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemFileExit = new MenuItem("Exit + disconnect");
+		menuItemFileExit.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 				closeWindowEvent(null);
 			}
@@ -5728,7 +5812,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		fileMenu.getItems().add(menuItemFileConnect);
 		fileMenu.getItems().add(menuItemFileDisconnect);
 		fileMenu.getItems().add(menuItemFileSwitchProfile);
-		fileMenu.getItems().add(m10);
+		fileMenu.getItems().add(menuItemFileExit);
 
 		Menu optionsMenu = new Menu("Options");
 		menuItemOptionsSetFrequencyAsName = new MenuItem("Set QRG as name in Chat (main category)");
@@ -5749,7 +5833,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		menuItemOptionsAwayBack = new MenuItem("Show me as away in chat");
 
 
-		MenuItem options10 = new MenuItem("Show options");
+		menuItemOptionsShow = new MenuItem("Show options");
 
 		menuItemOptionsAwayBack.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
@@ -5774,17 +5858,13 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			}
 		});
-		options10.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemOptionsShow.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
-				if (settingsStage.isShowing()) {
-					settingsStage.hide();
-				} else {
-					settingsStage.show();
-				}
+				openSettingsWindow();
 			}
 		});
 
-		optionsMenu.getItems().addAll(menuItemOptionsSetFrequencyAsName, menuItemOptionsAwayBack, options10);
+		optionsMenu.getItems().addAll(menuItemOptionsSetFrequencyAsName, menuItemOptionsAwayBack, menuItemOptionsShow);
 
 		Menu macroMenu = new Menu("Macros");
 
@@ -5798,34 +5878,36 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		macroMenu.getItems().addAll(macro1, macro10, macro20, macro30, macro40, macro50);
 
 		Menu windowMenu = new Menu("Windows");
-		MenuItem window1 = new MenuItem("Hide cluster / stranger QSOs");
-		window1.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemWindowCluster = new MenuItem("Hide cluster / stranger QSOs");
+		menuItemWindowCluster.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
-				if (clusterAndQSOMonStage.isShowing()) {
-					clusterAndQSOMonStage.hide();
-					window1.setText("Show cluster / stranger QSOs");
+				if (MonitorWindow.isOpen()) {
+					MonitorWindow.close();
+					releaseMonitorListeners();
 				} else {
-					clusterAndQSOMonStage.show();
-					window1.setText("Hide cluster / stranger QSOs");
+					openMonitorWindow();
 				}
 			}
 		});
 
-		MenuItem window20 = new MenuItem("hide options");
-		window20.setOnAction(new EventHandler<ActionEvent>() {
+		/*
+		 * Opens instead of toggling, and keeps one label: the settings window is a
+		 * Compose window which the operator can also close from its own frame, so a
+		 * label that tracked the state here would go stale without being told.
+		 */
+		menuItemWindowHideOptions = new MenuItem("hide options");
+		menuItemWindowHideOptions.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
-				if (settingsStage.isShowing()) {
-					window20.setText("show options");
-					settingsStage.hide();
+				if (SettingsWindow.isOpen()) {
+					SettingsWindow.close();
 				} else {
-					settingsStage.show();
-					window20.setText("hide options");
+					openSettingsWindow();
 				}
 			}
 		});
 
-		MenuItem window30 = new MenuItem("Use dark mode design");
-		window30.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemWindowDarkDesign = new MenuItem("Use dark mode design");
+		menuItemWindowDarkDesign.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				// quick switch for this session only, the startup design is set per profile in the GUI options
@@ -5833,8 +5915,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		MenuItem window40 = new MenuItem("Use default mode design");
-		window40.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemWindowDefaultDesign = new MenuItem("Use default mode design");
+		menuItemWindowDefaultDesign.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				// quick switch for this session only, the startup design is set per profile in the GUI options
@@ -5843,43 +5925,56 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		});
 
 
-		MenuItem window50 = new MenuItem("Show / hide station map");
-		window50.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemWindowStationMap = new MenuItem("Show / hide station map");
+		menuItemWindowStationMap.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 				toggleStationMapWindow();
 			}
 		});
 
-//		windowMenu.getItems().addAll(window1, window20, window30, window40, window50);
+//		windowMenu.getItems().addAll(menuItemWindowCluster, menuItemWindowHideOptions, menuItemWindowDarkDesign, menuItemWindowDefaultDesign, menuItemWindowStationMap);
+
+		/*
+		 * The labels are refreshed when the menu opens, not tracked as the windows come
+		 * and go. These are Compose windows and the operator can close one from its own
+		 * frame without telling the menu; asking at the moment the menu is read is the
+		 * only answer that cannot go stale.
+		 */
+		windowMenu.setOnShowing(event -> {
+			menuItemWindowCluster.setText(MonitorWindow.isOpen()
+					? "Hide cluster / stranger QSOs"
+					: "Show cluster / stranger QSOs");
+			menuItemWindowHideOptions.setText(SettingsWindow.isOpen() ? "hide options" : "show options");
+		});
 
 		windowMenu.getItems().addAll(
-				window1,
-				window20,
+				menuItemWindowCluster,
+				menuItemWindowHideOptions,
 				new SeparatorMenuItem(),
-				window50,
+				menuItemWindowStationMap,
 				new SeparatorMenuItem(),
-				window30,
-				window40
+				menuItemWindowDarkDesign,
+				menuItemWindowDefaultDesign
 		);
 
 		Menu helpMenu = new Menu("Info");
 
 		MenuItem help1 = new MenuItem("No help here.");
-		MenuItem help2 = new MenuItem("Donate for kst4Contest development via PayPal");
+		menuItemInfoDonate = new MenuItem("Donate for kst4Contest development via PayPal");
 		MenuItem help3 = new MenuItem("_______________________");
 		help3.setDisable(true);
-		MenuItem help4 = new MenuItem("Visit DARC X08-Homepage");
+		menuItemInfoHomepage = new MenuItem("Visit DARC X08-Homepage");
 		MenuItem menuItmDonateON4KST = new MenuItem("Donate for ON4KST Chatservers with PayPal to on4kst@skynet.be");
-		MenuItem menuItmDonateOV3T = new MenuItem("Donate for OV3T´s plane feed service");
+		menuItemInfoDonateOv3t = new MenuItem("Donate for OV3T´s plane feed service");
 //		help5.setDisable(true);
-		MenuItem help6 = new MenuItem("Contact the author using default mail app");
-		MenuItem help8 = new MenuItem("Join kst4Contest newsgroup");
+		menuItemInfoContact = new MenuItem("Contact the author using default mail app");
+		menuItemInfoNewsgroup = new MenuItem("Join kst4Contest newsgroup");
 //		MenuItem help9 = new MenuItem("Download the changelog / roadmap");
 
 		// Changelog
 		// https://e.pcloud.link/publink/show?code=XZwAoWZIap9DYqDlhhwncqAxLbU6STOh2PV
 
-		help2.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemInfoDonate.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				getHostServices().showDocument("https://ko-fi.com/praktimarc");
@@ -5887,7 +5982,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		help4.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemInfoHomepage.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				getHostServices().showDocument("http://www.x08.de");
@@ -5895,7 +5990,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		help6.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemInfoContact.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				getHostServices().showDocument("mailto:praktimarc+kst4contest@gmail.com");
@@ -5903,7 +5998,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		help8.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemInfoNewsgroup.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				getHostServices().showDocument("https://groups.google.com/g/kst4contest/about");
@@ -5920,7 +6015,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //			}
 //		});
 
-		menuItmDonateOV3T.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemInfoDonateOv3t.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				getHostServices().showDocument("https://www.paypal.me/ov3t");
@@ -5938,8 +6033,8 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 //			}
 //		});
 
-		MenuItem help10 = new MenuItem("About...");
-		help10.setOnAction(new EventHandler<ActionEvent>() {
+		menuItemInfoAbout = new MenuItem("About...");
+		menuItemInfoAbout.setOnAction(new EventHandler<ActionEvent>() {
 			public void handle(ActionEvent event) {
 
 				Alert a = new Alert(AlertType.INFORMATION);
@@ -5952,7 +6047,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		});
 
-		helpMenu.getItems().addAll(help2, help3, help4, menuItmDonateOV3T, menuItmDonateON4KST, help6, help8, help10);
+		helpMenu.getItems().addAll(menuItemInfoDonate, help3, menuItemInfoHomepage, menuItemInfoDonateOv3t, menuItmDonateON4KST, menuItemInfoContact, menuItemInfoNewsgroup, menuItemInfoAbout);
 
 		MenuBar menubar = new MenuBar();
 		menubar.getMenus().addAll(fileMenu, optionsMenu, windowMenu, helpMenu); // macromenu deleted
@@ -6023,9 +6118,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			applyThemeStylesheet(scene, darkMode);
 		}
 
-		if (stationMapBridge != null) {
-			stationMapBridge.applyThemeFromPreferences();
-		}
+		// The Compose settings window is not a Scene, so it is told separately.
+		MainWindowHost.applyDarkMode(darkMode);
+		SettingsWindow.applyDarkMode(darkMode);
+		UpdateWindow.applyDarkMode(darkMode);
+		MonitorWindow.applyDarkMode(darkMode);
+		kst4contest.view.compose.map.StationMapWindow.applyDarkMode(darkMode);
+
+
 	}
 
 	private static void applyThemeStylesheet(Scene scene, boolean darkMode) {
@@ -6113,10 +6213,25 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 				? On4KstConnectionState.DISCONNECTED : state;
 		String stateDetail = detail == null || detail.isBlank()
 				? effectiveState.name() : detail;
+				
+		if (composeMainWindowState != null) {
+			composeMainWindowState.getSurroundings().setConnectionState(effectiveState);
+			composeMainWindowState.getSurroundings().setConnectionDetail(stateDetail);
+		}
+
 		logConnectionIndicatorTransition(effectiveState, stateDetail);
 
 		tipConnectionStateIndicator.setText(
 				"ON4KST link: " + effectiveState.name() + "\n" + stateDetail);
+
+		/*
+		 * The Compose window's badge and menu follow the same update, so the two windows can
+		 * never disagree about the link while they sit side by side.
+		 */
+		if (composeMainWindowState != null) {
+			composeMainWindowState.getSurroundings().setConnectionState(effectiveState);
+			composeMainWindowState.getSurroundings().setConnectionDetail(stateDetail);
+		}
 		btnConnectionStateIndicator.setAccessibleHelp(stateDetail);
 		menuConnectionStateMacOs.setText(macOsConnectionStateMenuTitle(effectiveState));
 		menuItemConnectionStateDetailMacOs.setText(stateDetail);
@@ -6207,6 +6322,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		btnSkedWarnIndicator.setVisible(true);
 		btnSkedWarnIndicator.setOpacity(1.0);
 
+		if (composeMainWindowState != null) {
+			uiDispatcher.runOnUi(() -> composeMainWindowState.getSkedNotice().show(text, text));
+		}
+
 		if (skedWarnBlinkTimeline != null) {
 			skedWarnBlinkTimeline.stop();
 		}
@@ -6224,6 +6343,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private void hideSkedWarnIndicator() {
 		btnSkedWarnIndicator.setOpacity(1.0);
 		btnSkedWarnIndicator.setVisible(false);
+
+		if (composeMainWindowState != null) {
+			uiDispatcher.runOnUi(() -> composeMainWindowState.getSkedNotice().hide());
+		}
 	}
 
 
@@ -6286,6 +6409,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		btnBandUpgradeIndicator.setVisible(true);
 		btnBandUpgradeIndicator.setOpacity(1.0);
 
+		if (composeMainWindowState != null) {
+			uiDispatcher.runOnUi(() -> composeMainWindowState.getBandUpgradeNotice().show(buttonText, tooltipText));
+		}
+
 		if (bandUpgradeBlinkTimeline != null) {
 			bandUpgradeBlinkTimeline.stop();
 		}
@@ -6303,6 +6430,10 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	private void hideBandUpgradeIndicator() {
 		btnBandUpgradeIndicator.setOpacity(1.0);
 		btnBandUpgradeIndicator.setVisible(false);
+
+		if (composeMainWindowState != null) {
+			uiDispatcher.runOnUi(() -> composeMainWindowState.getBandUpgradeNotice().hide());
+		}
 	}
 
 /**
@@ -6317,14 +6448,32 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 //	SimpleStringProperty messageBusOfChatCtrl = messageBus;
 	Scene scn_ChatwindowMainScene;
-	Scene clusterAndQSOMonScene;
-	Scene settingsScene;
 
 	MenuItem menuItemFileConnect;
 	MenuItem menuItemFileDisconnect;
 	MenuItem menuItemOptionsAwayBack;
 
 	MenuItem menuItemOptionsSetFrequencyAsName;
+
+	/*
+	 * Held so the Compose menu bar can fire them. Firing the very same MenuItem is what
+	 * guarantees the two bars do literally the same thing while they run side by side —
+	 * a second implementation would be a second thing to compare. When the JavaFX window
+	 * goes, these handlers move into methods and the fields go with the window.
+	 */
+	MenuItem menuItemFileExit;
+	MenuItem menuItemOptionsShow;
+	MenuItem menuItemWindowCluster;
+	MenuItem menuItemWindowHideOptions;
+	MenuItem menuItemWindowDarkDesign;
+	MenuItem menuItemWindowDefaultDesign;
+	MenuItem menuItemWindowStationMap;
+	MenuItem menuItemInfoDonate;
+	MenuItem menuItemInfoDonateOv3t;
+	MenuItem menuItemInfoHomepage;
+	MenuItem menuItemInfoNewsgroup;
+	MenuItem menuItemInfoContact;
+	MenuItem menuItemInfoAbout;
 	TextField txt_chatMessageUserInput = new TextField();
 	Button sendButton;
 	TextField txt_ownqrgMainCategory = new TextField();
@@ -6369,7 +6518,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 */
 	private boolean programmaticChatMemberSelectionChange = false;
 
-	Button btnOptionspnlConnect;
 	ContextMenu chatMessageContextMenu; // public due need to update it on modify
 	ContextMenu chatMemberContextMenu;// public due need to update it on modify
 //	FlowPane chatMemberTableFilterQTFAndQRBHbox;
@@ -6391,18 +6539,14 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 */
 	private Stage ownPrimaryStage;
 
-	Stage clusterAndQSOMonStage;
 //	Stage stage_selectedCallSignInfoStage;
 	ChatMember selectedCallSignInfoStageChatMember;
 	BorderPane selectedCallSignInfoBorderPane;
 
-	Stage stage_updateStage;
-	Stage settingsStage;
 
     Stage notify_setSnifferEntitiesStage;
 
 
-	ChoiceBox<ChatCategory> stn_choiceBxChatChategorySecond;
 
 
 
@@ -6543,7 +6687,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		OperatorProfileSelection resolvedProfile = bootstrap.resolveAtStartup(
 				new OperatorProfileStore(),
 				CommandLineOptions.remembered(),
-				OperatorProfilePickerDialog::showAndSelect);
+				OperatorProfilePickerWindow::showAndSelect);
 
 		if (bootstrap.getStartupWarning() != null) {
 			Alert startupWarning = new Alert(AlertType.WARNING);
@@ -6609,7 +6753,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		String activeProfileId = activeProfile == null ? null : activeProfile.getProfile().getProfileId();
 
 		Optional<OperatorProfile> chosenProfile =
-				OperatorProfilePickerDialog.showAndSelect(selectableProfiles, activeProfileId);
+				OperatorProfilePickerWindow.showAndSelect(selectableProfiles, activeProfileId);
 
 		if (chosenProfile.isEmpty()) {
 			return;
@@ -6659,6 +6803,18 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		ButtonType switchButton = new ButtonType("Switch profile", ButtonBar.ButtonData.OK_DONE);
 		ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
 		confirmation.getButtonTypes().setAll(switchButton, cancelButton);
+
+		/*
+		 * Raised above everything else on purpose. The request comes from the Compose
+		 * settings window, which is not a JavaFX window and therefore not this dialog's
+		 * owner; without this the confirmation opens behind it and the switch looks as
+		 * if nothing happened at all.
+		 */
+		Window confirmationWindow = confirmation.getDialogPane().getScene().getWindow();
+		if (confirmationWindow instanceof Stage confirmationStage) {
+			confirmationStage.setAlwaysOnTop(true);
+			confirmationStage.toFront();
+		}
 
 		return confirmation.showAndWait().orElse(cancelButton) == switchButton;
 	}
@@ -6710,10 +6866,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		stopAnimation(bandUpgradeBlinkTimeline);
 		bandUpgradeBlinkTimeline = null;
 
-		if (stationMapBridge != null) {
-			stationMapBridge.uninstall();
-			stationMapBridge = null;
-		}
+
 
 		/*
 		 * Every mirror holds a listener inside a core roster. Without releasing them
@@ -6724,10 +6877,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		chatMemberListBinding = null;
 		selectedCallSignInfoMessageBinding = null;
 
-		if (stationMapView != null) {
-			stationMapView.dispose();
-			stationMapView = null;
-		}
+		kst4contest.view.compose.map.StationMapWindow.INSTANCE.hide();
 
 		closeOwnedStages();
 
@@ -6775,8 +6925,21 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 */
 	private void closeOwnedStages() {
 
+		/*
+		 * The settings window is a Compose window, not a Stage, so it has to be closed
+		 * by name. It carries the Connect button, so a copy left over from the previous
+		 * profile would block the new one from opening its own.
+		 */
+		SettingsWindow.close();
+		UpdateWindow.close();
+		MonitorWindow.close();
+		releaseMonitorListeners();
+		// Etappe 5c: Compose Fenster bleibt beim Profilwechsel offen
+		// MainWindowHost.close();
+		releaseComposeMainWindow();
+
 		for (Stage ownedStage : new Stage[] {
-				settingsStage, clusterAndQSOMonStage, stage_updateStage, ownPrimaryStage }) {
+				ownPrimaryStage }) {
 
 			if (ownedStage != null) {
 				try {
@@ -6787,9 +6950,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			}
 		}
 
-		settingsStage = null;
-		clusterAndQSOMonStage = null;
-		stage_updateStage = null;
 		ownPrimaryStage = null;
 	}
 
@@ -8838,9 +8998,7 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 					 * band. ReachabilityService deduplicates the identical calculation key, so this
 					 * attaches the map callback without causing a second terrain API request.
 					 */
-					if (stationMapBridge != null) {
-						stationMapBridge.requestSelectedPathAnalysisRefresh();
-					}
+
 				}
 			});
 
@@ -9350,19 +9508,20 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 			}
 
-			primaryStage.setScene(scn_ChatwindowMainScene);
+			// Etappe 5c: JavaFX Hauptfenster wird nicht mehr angezeigt
+			// primaryStage.setScene(scn_ChatwindowMainScene);
 
 			/*
 			 * Safety net after the Scene has been attached to the Stage.
 			 * Some platforms add native window decoration after setScene(...), so this
 			 * second check prevents the Stage from extending beyond the visible screen.
 			 */
-			ensureStageFitsPrimaryScreen(primaryStage);
+			// ensureStageFitsPrimaryScreen(primaryStage);
 
-			primaryStage.show();
+			// primaryStage.show();
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			LOGGER.log(java.util.logging.Level.SEVERE, "Exception", e);
 		}
 
 		/**
@@ -9378,3239 +9537,36 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 		/**
 		 * Window Cluster & qso of the other
+		 *
+		 * Compose now; see openMonitorWindow and kst4contest.view.compose.MonitorWindow.
 		 */
-		clusterAndQSOMonStage = new Stage();
-		GuiUtils.applyApplicationIcon(clusterAndQSOMonStage);
+		openMonitorWindow();
 
-//		clusterAndQSOMonStage.initStyle(StageStyle.UTILITY);
-		clusterAndQSOMonStage.setTitle("Cluster & QSO of the other");
-		SplitPane pnl_directedMSGWin = new SplitPane();
-		pnl_directedMSGWin.setOrientation(Orientation.VERTICAL);
-		pnl_directedMSGWin.setDividerPositions(chatcontroller.getChatPreferences().getGUIpnl_directedMSGWin_dividerpositionDefault());
-		pnl_directedMSGWin.getItems().addAll(
-				initDXClusterTable("dx-cluster-monitor"),
-				initChatToOtherMSGTable("qso-other-monitor")
-		);
-
-
-		/**
-		 * here will follow the Splitpane divider listener to save the user made UI changes, should been made at the very end of all splitpane operations
+		/*
+		 * The Compose main window, beside this one, only on --compose-main-window. It is here
+		 * rather than earlier because it reads the tables and the preferences this method has
+		 * just finished building.
 		 */
-
-		for (SplitPane.Divider divider : pnl_directedMSGWin.getDividers()) {
-			divider.positionProperty().addListener(new ChangeListener<Number>() {
-				@Override
-				public void changed(ObservableValue<? extends Number> observableValue, Number oldDividerPos, Number newDividerPosition) {
-					System.out.println("<<<<<<<<<<<<<<<<<<<|||||||||||||||||||| devider " + pnl_directedMSGWin.getDividers().indexOf(divider)  + " position change, new position: " + newDividerPosition + " // size dev: " +  pnl_directedMSGWin.getDividers().size());
-					chatcontroller.getChatPreferences().getGUIpnl_directedMSGWin_dividerpositionDefault()[pnl_directedMSGWin.getDividers().indexOf(divider)] = newDividerPosition.doubleValue();
-					requestLayoutSave();
-				}
-			});
-
-		}
-
-
-		clusterAndQSOMonScene = new Scene(pnl_directedMSGWin, chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1]);
-		registerThemedScene(clusterAndQSOMonScene);
-
-		clusterAndQSOMonScene.heightProperty().addListener(new ChangeListener<Number>() {
-			@Override
-			public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newHeightValue) {
-				chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1] = newHeightValue.doubleValue();
-				requestLayoutSave();
-			}
-		});
-
-		clusterAndQSOMonScene.widthProperty().addListener(new ChangeListener<Number>() {
-			@Override
-			public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newWidthValue) {
-				chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0] = newWidthValue.doubleValue();
-				requestLayoutSave();
-			}
-		});
-
-		installSharedSystemMenuBar(clusterAndQSOMonScene);
-		clusterAndQSOMonStage.setScene(clusterAndQSOMonScene);
-		clusterAndQSOMonStage.show();
-
-		/**
-		 * end Window Cluster & qso of the other
-		 */
-
+		openComposeMainWindowIfRequested();
 
 		/**
 		 * Window updates
+		 *
+		 * Compose now; see openUpdateWindowIfAvailable and
+		 * kst4contest.view.compose.UpdateWindow.
 		 */
-		stage_updateStage = new Stage();
-		GuiUtils.applyApplicationIcon(stage_updateStage);
-
-		stage_updateStage.setTitle("Update information");
-
-		try {
-
-		stage_updateStage.setAlwaysOnTop(true);
-
-		Label lblUpdateInfo = new Label("Update available!");
-		Label lblUpdateInfo2 = new Label("Installed version:");
-		Label lblUpdateInfo3 = new Label("Latest stable version:");
-		Label lblUpdateInfoChanges = new Label("Main changes:");
-		Label lblUpdateInfoAdminMessage = new Label("Additional information:");
-		Label lblUpdateInfoDownload = new Label("Download:");
-
-
-		TreeView treeView = new TreeView();
-
-		GridPane upd_gridPaneUpd = new GridPane();
-
-		upd_gridPaneUpd.setPadding(new Insets(10, 10, 10, 10));
-		upd_gridPaneUpd.setVgap(5);
-		upd_gridPaneUpd.setHgap(5);
-
-
-		VBox vbxUpdateWindow = new VBox();
-		vbxUpdateWindow.setSpacing(30);
-
-
-		vbxUpdateWindow.getChildren().add(upd_gridPaneUpd);
-		upd_gridPaneUpd.add(lblUpdateInfo, 0,0,1,1);
-		upd_gridPaneUpd.add(lblUpdateInfo2, 0,1,1,1);
-		upd_gridPaneUpd.add(new Label("KST4Contest " + ApplicationConstants.APPLICATION_CURRENT_VERSION), 1,1,1,1);
-		upd_gridPaneUpd.add(lblUpdateInfo3, 0,2,1,1);
-		upd_gridPaneUpd.add(new Label("KST4Contest " + chatcontroller.getUpdateInformation().getLatestVersionForDisplay()), 1,2,1,1);
-		upd_gridPaneUpd.add(lblUpdateInfoChanges, 0,3,1,1);
-		upd_gridPaneUpd.add(new Label(chatcontroller.getUpdateInformation().getMajorChanges()), 1,3,1,1);
-		upd_gridPaneUpd.add(lblUpdateInfoAdminMessage, 0,4,1,1);
-		upd_gridPaneUpd.add(new Label(chatcontroller.getUpdateInformation().getAdminMessage()), 1,4,1,1);
-		upd_gridPaneUpd.add(lblUpdateInfoDownload, 0,5,1,1);
-
-		Hyperlink link = new Hyperlink("Open release page");
-		link.setOnAction(e -> {
-			getHostServices().showDocument(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
-//			System.out.println("The Hyperlink was clicked!");
-		});
-
-//		TextField upd_txtfldUpdateDownloadLink = new TextField(chatcontroller.getUpdateInformation().getLatestVersionPathOnWebserver());
-//		upd_txtfldUpdateDownloadLink.setEditable(false);
-
-		upd_gridPaneUpd.add(link, 1,5,1,1);
-
-
-
-//		vbxUpdateWindow.getChildren().addAll(lblUpdateInfo, lblUpdateInfo2, lblUpdateInfo3, lblUpdateInfoChanges, lblUpdateInfoAdminMessage, lblUpdateInfoDownload);
-		vbxUpdateWindow.getChildren().add(treeView);
-
-		TreeItem rootItem = new TreeItem(ApplicationConstants.APPLICATION_NAME);
-		TreeItem changeLog = new TreeItem<>("ChangeLog");
-
-		ArrayList<String[]> changeLogArrayWith7Fiels = chatcontroller.getUpdateInformation().getChangeLog();
-
-		for (String[] aSubversionArray : changeLogArrayWith7Fiels) {
-			TreeItem aSubversionEntry = new TreeItem(aSubversionArray[0]);
-
-			for (int i = 1; i < aSubversionArray.length; i++) {
-				aSubversionEntry.getChildren().add(new TreeItem<>(aSubversionArray[i]));
-			}
-
-			changeLog.getChildren().add(aSubversionEntry);
-		}
-
-		rootItem.getChildren().add(changeLog);
-
-		TreeItem knownBugs = new TreeItem<>("Known bugs");
-
-		ArrayList<String[]> BugArrayWith2Fiels = chatcontroller.getUpdateInformation().getBugList();
-
-		for (String[] aBugArray : BugArrayWith2Fiels) {
-			TreeItem aBugEntry = new TreeItem(aBugArray[0]);
-
-			for (int i = 1; i < aBugArray.length; i++) {
-				aBugEntry.getChildren().add(new TreeItem<>(aBugArray[i]));
-			}
-
-			knownBugs.getChildren().add(aBugEntry);
-		}
-
-		rootItem.getChildren().add(knownBugs);
-
-
-
-		treeView.setRoot(rootItem);
-		treeView.setShowRoot(false);
-
-		System.out.println("SRVR Version: " + chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() + " // installed version " + ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
-
-		stage_updateStage.setScene(new Scene(vbxUpdateWindow, chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1]));
-		registerThemedScene(stage_updateStage.getScene());
-		installSharedSystemMenuBar(stage_updateStage.getScene());
-		stage_updateStage.getScene().widthProperty().addListener((observable, oldValue, newValue) -> {
-			chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0] = newValue.doubleValue();
-			requestLayoutSave();
-		});
-		stage_updateStage.getScene().heightProperty().addListener((observable, oldValue, newValue) -> {
-			chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1] = newValue.doubleValue();
-			requestLayoutSave();
-		});
-
-
-//		if (chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer() > ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER) {
-
-		boolean updateAvailable;
-
-		if (chatcontroller.getUpdateInformation().hasSemanticVersion()) {
-			updateAvailable = VersionUtils.compareStableVersions(
-					chatcontroller.getUpdateInformation().getLatestSemanticVersionOnServer(),
-					ApplicationConstants.APPLICATION_CURRENT_VERSION
-			) > 0;
-		} else {
-			updateAvailable =
-					chatcontroller.getUpdateInformation().getLatestVersionNumberOnServer()
-							> ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER;
-		}
-
-		if (updateAvailable) {
-			stage_updateStage.show();
-		} else {
-
-//			stage_updateStage.show(); only for debugging check
-
-			//nothing to do
-		}
-		} catch (Exception excOnUpdateFileProcessing) {
-			System.out.println("[KST4ContestApp, ERROR]: Problem on Updateservice! " + excOnUpdateFileProcessing.getMessage());
-			excOnUpdateFileProcessing.printStackTrace();
-		}
-		/**
-		 * end Window Update
-		 */
-
+		openUpdateWindowIfAvailable();
 
 		/*****************************************************************************
-		 * 
-		 * Settings Scene
+		 *
+		 * Settings window
+		 *
+		 * Compose now; see openSettingsWindow and kst4contest.view.compose. It is opened
+		 * here because it carries the Connect button and is therefore the way into the
+		 * chat, which is what the JavaFX window was shown for at startup too.
 		 *
 		 ****************************************************************************/
-		settingsStage = new Stage();
-		GuiUtils.applyApplicationIcon(settingsStage);
-
-		settingsStage.setTitle("Change Client Settings");
-
-		BorderPane optionsPanel = new BorderPane();
-
-		TabPane tabPaneOptions = new TabPane();
-
-		/*************************************************************************************
-		 * 
-		 * Stations settings Tab in settings scene
-		 * 
-		 *************************************************************************************/
-
-		GridPane grdPnlStation = new GridPane();
-		grdPnlStation.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlStation.setVgap(5);
-		grdPnlStation.setHgap(5);
-
-
-
-		Label lblCallSign = new Label("Login-Callsign:");
-//        TextField txtFldCallSign = new TextField("dm5m");
-		TextField txtFldCallSign = new TextField(this.chatcontroller.getChatPreferences().getStn_loginCallSign());
-		txtFldCallSign.setFocusTraversable(false);
-
-		txtFldCallSign.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-				txtFldCallSign.setText(txtFldCallSign.getText().toUpperCase());
-				System.out.println("[Main.java, Info]: Setted the Login Callsign: " + txtFldCallSign.getText().toUpperCase());
-				chatcontroller.getChatPreferences().setStn_loginCallSign(txtFldCallSign.getText().toUpperCase());
-			}
-		});
-
-		Label lblPassword = new Label("Login-Password:");
-		PasswordField txtFldPassword = new PasswordField();
-		txtFldPassword.setText(this.chatcontroller.getChatPreferences().getStn_loginPassword());
-		txtFldPassword.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				System.out.println("[Main.java, Info]: Setted the Login password... ");
-				chatcontroller.getChatPreferences().setStn_loginPassword(txtFldPassword.getText());
-			}
-		});
-
-		Label lblNameMainCat = new Label("Name in Chat:");
-		TextField txtFldNameInChatMainCat = new TextField(this.chatcontroller.getChatPreferences().getStn_loginNameMainCat());
-		txtFldNameInChatMainCat.setFocusTraversable(false);
-
-		txtFldNameInChatMainCat.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				System.out.println("[Main.java, Info]: Setted the Login name (main chat): " + txtFldNameInChatMainCat.getText());
-				chatcontroller.getChatPreferences().setStn_loginNameMainCat(txtFldNameInChatMainCat.getText());
-			}
-		});
-
-		boolean isSecondChatEnabled = this.chatcontroller.getChatPreferences().isLoginToSecondChatEnabled();
-		Label lblNameSecondCat = new Label("Name in Chat 2:");
-		lblNameSecondCat.setVisible(isSecondChatEnabled);
-		lblNameSecondCat.setDisable(!isSecondChatEnabled);
-		TextField txtFldNameInChatSecondCat = new TextField(this.chatcontroller.getChatPreferences().getStn_loginNameSecondCat());
-		txtFldNameInChatSecondCat.setFocusTraversable(false);
-		txtFldNameInChatSecondCat.setVisible(isSecondChatEnabled);
-		txtFldNameInChatSecondCat.setDisable(!isSecondChatEnabled);
-
-		txtFldNameInChatSecondCat.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				System.out.println("[Main.java, Info]: Setted the Login name at second channel: " + txtFldNameInChatSecondCat.getText());
-				chatcontroller.getChatPreferences().setStn_loginNameSecondCat(txtFldNameInChatSecondCat.getText());
-			}
-		});
-
-		Label lblLocator = new Label("Locator in Chat:");
-		TextField txtFldLocator = new TextField(this.chatcontroller.getChatPreferences().getStn_loginLocatorMainCat());
-		txtFldLocator.setFocusTraversable(false);
-
-		txtFldLocator.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				System.out.println("[Main.java, Info]: Setted the Login locator: " + txtFldLocator.getText());
-				chatcontroller.getChatPreferences().setStn_loginLocatorMainCat(txtFldLocator.getText());
-			}
-		});
-
-		Label lblChatCategory = new Label("Chatcategory:");
-		ChoiceBox<ChatCategory> choiceBxChatChategory = new ChoiceBox<ChatCategory>();
-		ChatCategory chatCategoryChoice = new ChatCategory(0);
-		choiceBxChatChategory.setValue(this.chatcontroller.getChatPreferences().getLoginChatCategoryMain());
-
-		for (int i = 0; i < chatCategoryChoice.getPossibleCategoryNumbers().length; i++) {
-			ChatCategory temp = new ChatCategory(i + 1);
-			choiceBxChatChategory.getItems().add(temp);
-		}
-
-		stn_choiceBxChatChategorySecond = new ChoiceBox<ChatCategory>();
-		ChatCategory chatCategoryChoiceSecond = new ChatCategory(0);
-		stn_choiceBxChatChategorySecond.setValue(this.chatcontroller.getChatPreferences().getLoginChatCategorySecond());
-
-		for (int i = 0; i < chatCategoryChoiceSecond.getPossibleCategoryNumbers().length; i++) {
-			ChatCategory temp = new ChatCategory(i + 1);
-
-			if (temp.getCategoryNumber() != choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber()) {
-				stn_choiceBxChatChategorySecond.getItems().add(temp); //TODO: first selected have to be removed
-			}
-
-
-		}
-
-		stn_choiceBxChatChategorySecond.getSelectionModel().selectedItemProperty()
-				.addListener((ChangeListener) (ov, old, newval) -> {
-					ChatCategory idx = (ChatCategory) newval;
-					System.out.println("Changed second Choice: "
-							+ stn_choiceBxChatChategorySecond.getSelectionModel().selectedItemProperty().toString());
-
-					try {
-
-						ChatCategory secondChatCat = new ChatCategory(idx.getCategoryNumber());//TODO: Double hosting of this values does not make any sense!!!!! refactor!
-
-						this.chatcontroller.getChatPreferences()
-								.setLoginChatCategorySecond(secondChatCat);//TODO: Double hosting of this values does not make any sense!!!!! refactor!
-						this.chatcontroller.setChatCategorySecondChat(secondChatCat);//TODO: Double hosting of this values does not make any sense!!!!! refactor!
-
-//						System.out.println("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa chatcat created:" + this.chatcontroller.getChatPreferences().getLoginChatCategorySecond());
-
-						btnOptionspnlConnect.setText(btnOptionspnlConnect.getText() + " and " + stn_choiceBxChatChategorySecond.getSelectionModel()
-								.selectedItemProperty().get().getChatCategoryName(
-										stn_choiceBxChatChategorySecond.getSelectionModel().getSelectedItem().getCategoryNumber()));
-
-					} catch (NullPointerException e) {
-						this.chatcontroller.getChatPreferences()
-								.setLoginChatCategorySecond(null); //no second chat
-					}
-
-				});
-
-		choiceBxChatChategory.getSelectionModel().selectedItemProperty()
-				.addListener((ChangeListener) (ov, old, newval) -> {
-					ChatCategory idx = (ChatCategory) newval;
-					System.out.println("Changed Choice: "
-							+ choiceBxChatChategory.getSelectionModel().selectedItemProperty().toString());
-
-					ChatCategory firstChatCat = new ChatCategory(idx.getCategoryNumber());//TODO: Double hosting of this values does not make any sense!!!!! refactor!
-
-					this.chatcontroller.getChatPreferences()
-							.setLoginChatCategoryMain(firstChatCat);//TODO: Double hosting of this values does not make any sense!!!!! refactor!
-					this.chatcontroller.setChatCategoryMain(firstChatCat);//TODO: Double hosting of this values does not make any sense!!!!! refactor!
-
-					btnOptionspnlConnect.setText("Connect to " + choiceBxChatChategory.getSelectionModel()
-							.selectedItemProperty().get().getChatCategoryName(
-									choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber()));
-
-					stn_choiceBxChatChategorySecond.getSelectionModel().clearSelection();
-					//now reinit possible values of second category
-
-					for (int i = 0; i < stn_choiceBxChatChategorySecond.getItems().size(); i++) {
-						if (!(stn_choiceBxChatChategorySecond.getItems().get(i).getCategoryNumber() +"").equals(choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber())) {
-//							asdasdasdasd // here weiter
-							System.out.println("laberraba TODO: here is something to do");
-						}
-					}
-
-					stn_choiceBxChatChategorySecond.getItems().clear();
-					for (int i = 0; i < chatCategoryChoiceSecond.getPossibleCategoryNumbers().length; i++) {
-						ChatCategory temp = new ChatCategory(i + 1);
-
-						if (temp.getCategoryNumber() != choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber()) {
-							stn_choiceBxChatChategorySecond.getItems().add(temp); //TODO: first selected have to be removed
-						}
-
-
-					}
-
-//        	this.chatcontroller.getChatPreferences().setLoginChatCategory(idx);
-				});
-
-
-
-		CheckBox station_chkBxEnableSecondChat = new CheckBox("2nd Chat: ");
-		boolean isSecondChatEnabledForCheckbox = chatcontroller.getChatPreferences().isLoginToSecondChatEnabled();
-		station_chkBxEnableSecondChat.setSelected(isSecondChatEnabledForCheckbox);
-
-
-
-		stn_choiceBxChatChategorySecond.setDisable(!isSecondChatEnabledForCheckbox);
-		station_chkBxEnableSecondChat.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                stn_choiceBxChatChategorySecond.setDisable(!newValue);
-				txtFldNameInChatSecondCat.setDisable(!newValue);
-				lblNameSecondCat.setDisable(!newValue);
-				txtFldNameInChatSecondCat.setVisible(newValue);
-				lblNameSecondCat.setVisible(newValue);
-
-				chatcontroller.getChatPreferences().setLoginToSecondChatEnabled(newValue);
-
-				if (!newValue) {
-					btnOptionspnlConnect.setText("Connect to " + choiceBxChatChategory.getSelectionModel()
-							.selectedItemProperty().get().getChatCategoryName(
-									choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber()));
-					chatcontroller.getChatPreferences().setLoginToSecondChatEnabled(false);
-				} else {
-					btnOptionspnlConnect.setText("Connect to " + choiceBxChatChategory.getSelectionModel()
-							.selectedItemProperty().get().getChatCategoryName(
-									choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber()) + " & " +
-							stn_choiceBxChatChategorySecond.getSelectionModel()
-									.selectedItemProperty().get().getChatCategoryName(
-											stn_choiceBxChatChategorySecond.getSelectionModel().getSelectedItem().getCategoryNumber()));
-					chatcontroller.getChatPreferences().setLoginToSecondChatEnabled(true);
-
-				}
-			}
-		});
-
-
-
-		TextField txtFldstn_antennaBeamWidthDeg = new TextField(this.chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + "");
-		txtFldstn_antennaBeamWidthDeg.setFocusTraversable(false);
-		txtFldstn_antennaBeamWidthDeg.setTooltip(new Tooltip(
-				"Your antenna beamwidth in degrees.\n\n"
-						+ "KST4Contest also uses this value as an assumed beamwidth "
-						+ "for other stations when it derives directional opportunities "
-						+ "from directed chat messages."));
-
-		txtFldstn_antennaBeamWidthDeg.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				if (newString.equals("")) {
-					txtFldstn_antennaBeamWidthDeg.setText("0");
-				}
-
-				if (!newString.matches("\\d*")) {
-					txtFldstn_antennaBeamWidthDeg.setText(newString.replaceAll("[^\\d]", ""));
-				}
-
-				System.out.println("[Main.java, Info]: Setted the beam: " + txtFldstn_antennaBeamWidthDeg.getText());
-				chatcontroller.getChatPreferences().setStn_antennaBeamWidthDeg(Double.parseDouble(txtFldstn_antennaBeamWidthDeg.getText()));
-				refreshStationMapIfVisible(); //updates the mapview
-
-			}
-		});
-
-		TextField txtFldstn_pathAnalysisOwnTxPowerWatts = createDoublePreferenceTextField(
-				this.chatcontroller.getChatPreferences().getStn_pathAnalysisOwnTxPowerWatts(),
-				"Own TX power in watts used for path link-budget estimates.",
-				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisOwnTxPowerWatts(value)
-		);
-
-		TextField txtFldstn_pathAnalysisOwnAntennaGainDbi = createDoublePreferenceTextField(
-				this.chatcontroller.getChatPreferences().getStn_pathAnalysisOwnAntennaGainDbi(),
-				"Own antenna gain in dBi used for path link-budget estimates. 12 dBd = 14.15 dBi.",
-				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisOwnAntennaGainDbi(value)
-		);
-
-		TextField txtFldstn_pathAnalysisDefaultTargetTxPowerWatts = createDoublePreferenceTextField(
-				this.chatcontroller.getChatPreferences().getStn_pathAnalysisDefaultTargetTxPowerWatts(),
-				"Assumed default DX station TX power in watts. Used when no station-specific data exists.",
-				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisDefaultTargetTxPowerWatts(value)
-		);
-
-		TextField txtFldstn_pathAnalysisDefaultTargetAntennaGainDbi = createDoublePreferenceTextField(
-				this.chatcontroller.getChatPreferences().getStn_pathAnalysisDefaultTargetAntennaGainDbi(),
-				"Assumed default DX antenna gain in dBi. 8-10 dBi is realistic for many 2m contest stations.",
-				value -> this.chatcontroller.getChatPreferences().setStn_pathAnalysisDefaultTargetAntennaGainDbi(value)
-		);
-
-
-		TextField txtFldstn_maxQRBDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_maxQRBDefault() + "");
-		txtFldstn_maxQRBDefault.setFocusTraversable(false);
-
-		txtFldstn_maxQRBDefault.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				if (newString.equals("")) {
-					txtFldstn_maxQRBDefault.setText("0");
-				}
-
-				if (!newString.matches("\\d*")) {
-					txtFldstn_maxQRBDefault.setText(newString.replaceAll("[^\\d]", ""));
-				}
-
-				System.out.println("[Main.java, Info]: Setted the QRB: " + txtFldstn_maxQRBDefault.getText());
-				chatcontroller.getChatPreferences().setStn_maxQRBDefault(Double.parseDouble(txtFldstn_maxQRBDefault.getText()));
-				refreshStationMapIfVisible();
-			}
-		});
-
-		TextField txtFldstn_qtfDefault = new TextField(this.chatcontroller.getChatPreferences().getStn_qtfDefault() + "");
-		txtFldstn_qtfDefault.setFocusTraversable(false);
-
-		txtFldstn_qtfDefault.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				if (newString.equals("")) {
-					txtFldstn_qtfDefault.setText("0");
-				}
-
-				if (!newString.matches("\\d*")) {
-					txtFldstn_qtfDefault.setText(newString.replaceAll("[^\\d]", ""));
-				}
-
-				System.out.println("[Main.java, Info]: Setted the QTF: " + txtFldstn_qtfDefault.getText());
-				chatcontroller.getChatPreferences().setStn_qtfDefault(Double.parseDouble(txtFldstn_qtfDefault.getText()));
-//				chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
-//				chatMemberTableFilterQTFHBox.getChildren().addAll(chatMemberTableFilterQtfTF, new Label("deg, " + chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg() + " beamwidth"), qtfNorth, qtfNorthEast, qtfEast, qtfSouthEast, qtfSouth, qtfSouthWest, qtfWest, qtfNorthWest);
-			}
-
-		});
-
-
-		TextField txtFldstn_pathAnalysisOwnAntennaHeightMeters =
-				new TextField(this.chatcontroller.getChatPreferences().getStn_pathAnalysisOwnAntennaHeightMeters() + "");
-		txtFldstn_pathAnalysisOwnAntennaHeightMeters.setFocusTraversable(false);
-		txtFldstn_pathAnalysisOwnAntennaHeightMeters.setTooltip(new Tooltip(
-				"Own antenna height above local ground in meters.\nThis value is used for path analysis."
-		));
-		txtFldstn_pathAnalysisOwnAntennaHeightMeters.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-
-				if (newString.equals("")) {
-					txtFldstn_pathAnalysisOwnAntennaHeightMeters.setText("0");
-				}
-
-				if (!newString.matches("\\d*(\\.\\d*)?")) {
-					txtFldstn_pathAnalysisOwnAntennaHeightMeters.setText(newString.replaceAll("[^\\d.]", ""));
-					return;
-				}
-
-				try {
-					double value = Double.parseDouble(txtFldstn_pathAnalysisOwnAntennaHeightMeters.getText());
-					chatcontroller.getChatPreferences().setStn_pathAnalysisOwnAntennaHeightMeters(value);
-					refreshStationMapIfVisible();
-				} catch (NumberFormatException ignored) {
-				}
-			}
-		});
-
-		TextField txtFldstn_pathAnalysisDemRootDirectory =
-				new TextField(this.chatcontroller.getChatPreferences().getStn_pathAnalysisDemRootDirectory());
-		txtFldstn_pathAnalysisDemRootDirectory.setDisable(true);
-		txtFldstn_pathAnalysisDemRootDirectory.setFocusTraversable(false);
-		txtFldstn_pathAnalysisDemRootDirectory.setTooltip(new Tooltip(
-				"Root directory that contains locally extracted Copernicus GLO-30 DEM tiles.\n" +
-						"The program scans this directory recursively for *_DEM.tif tiles."
-		));
-		txtFldstn_pathAnalysisDemRootDirectory.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observableValue, Boolean oldValue, Boolean newValue) {
-				if (!newValue) {
-					chatcontroller.getChatPreferences().setStn_pathAnalysisDemRootDirectory(
-							txtFldstn_pathAnalysisDemRootDirectory.getText()
-					);
-					refreshStationMapIfVisible();
-				}
-			}
-		});
-
-		OfflineDemImportService offlineDemImportService = new OfflineDemImportService();
-
-		Button btnUseDefaultDemDirectory = new Button("Default");
-		btnUseDefaultDemDirectory.setDisable(true);
-		btnUseDefaultDemDirectory.setFocusTraversable(false);
-		btnUseDefaultDemDirectory.setTooltip(new Tooltip(
-				"Creates and uses the default local Copernicus DEM directory below .praktiKST.\n" +
-						"This does not download tiles yet, it only prepares the folder."
-		));
-		btnUseDefaultDemDirectory.setOnAction(event -> {
-			OfflineDemImportService.ImportResult importResult =
-					offlineDemImportService.ensureDefaultCopernicusRootDirectory();
-
-			if (importResult.targetRootDirectory() != null) {
-				txtFldstn_pathAnalysisDemRootDirectory.setText(
-						importResult.targetRootDirectory().toAbsolutePath().toString()
-				);
-				chatcontroller.getChatPreferences().setStn_pathAnalysisDemRootDirectory(
-						txtFldstn_pathAnalysisDemRootDirectory.getText()
-				);
-				refreshStationMapIfVisible();
-			}
-
-			Alert alert = new Alert(importResult.success() ? AlertType.INFORMATION : AlertType.WARNING);
-			alert.setTitle("DEM directory");
-			alert.setHeaderText(importResult.success()
-					? "Local Copernicus DEM directory is ready"
-					: "DEM directory could not be prepared");
-			alert.setContentText(importResult.message());
-			alert.show();
-		});
-
-		Button btnImportDemTiles = new Button("Import tiles...");
-		btnImportDemTiles.setDisable(true);
-		btnImportDemTiles.setFocusTraversable(false);
-		btnImportDemTiles.setTooltip(new Tooltip(
-				"Copies manually selected Copernicus *_DEM.tif files into the configured DEM root directory.\n" +
-						"If no DEM root directory is configured yet, the default .praktiKST/dem/copernicus_glo30 directory is used."
-		));
-		btnImportDemTiles.setOnAction(event -> {
-			FileChooser fileChooser = new FileChooser();
-			fileChooser.setTitle("Import Copernicus GLO-30 DEM tiles");
-			fileChooser.getExtensionFilters().add(
-					new FileChooser.ExtensionFilter("GeoTIFF DEM tiles", "*.tif", "*.tiff")
-			);
-
-			File initialDirectory = resolveInitialDirectoryForDemImport(
-					txtFldstn_pathAnalysisDemRootDirectory.getText()
-			);
-			if (initialDirectory != null) {
-				fileChooser.setInitialDirectory(initialDirectory);
-			}
-
-			List<File> selectedFiles = fileChooser.showOpenMultipleDialog(primaryStage);
-			if (selectedFiles == null || selectedFiles.isEmpty()) {
-				return;
-			}
-
-			OfflineDemImportService.ImportResult importResult =
-					offlineDemImportService.importTiles(
-							selectedFiles,
-							txtFldstn_pathAnalysisDemRootDirectory.getText()
-					);
-
-			if (importResult.targetRootDirectory() != null) {
-				txtFldstn_pathAnalysisDemRootDirectory.setText(
-						importResult.targetRootDirectory().toAbsolutePath().toString()
-				);
-				chatcontroller.getChatPreferences().setStn_pathAnalysisDemRootDirectory(
-						txtFldstn_pathAnalysisDemRootDirectory.getText()
-				);
-				refreshStationMapIfVisible();
-			}
-
-			Alert alert = new Alert(
-					importResult.success() && importResult.importedFileCount() > 0
-							? AlertType.INFORMATION
-							: AlertType.WARNING
-			);
-			alert.setTitle("DEM tile import");
-			alert.setHeaderText(
-					importResult.success() && importResult.importedFileCount() > 0
-							? "DEM tiles imported"
-							: "No DEM tiles were imported"
-			);
-			alert.setContentText(importResult.message());
-			alert.show();
-		});
-
-		HBox hbxDemDirectoryActions = new HBox(8.0, btnUseDefaultDemDirectory, btnImportDemTiles);
-
-		Label lbl_station_pstRotatorEnabled =
-				new Label("Enable PSTRotator (auto QTF):");
-
-		TextField txtFld_station_pstRotatorHost = new TextField(
-				chatcontroller.getChatPreferences().getStn_pstRotatorHost()
-		);
-		txtFld_station_pstRotatorHost.setFocusTraversable(false);
-
-		TextField txtFld_station_pstRotatorPort = new TextField(
-				Integer.toString(
-						chatcontroller.getChatPreferences().getStn_pstRotatorPort()
-				)
-		);
-		txtFld_station_pstRotatorPort.setFocusTraversable(false);
-
-		CheckBox chkBx_station_pstRotatorEnabled = new CheckBox();
-		chkBx_station_pstRotatorEnabled.setSelected(
-				chatcontroller.getChatPreferences().isStn_pstRotatorEnabled()
-		);
-		chkBx_station_pstRotatorEnabled.setTooltip(new Tooltip(
-				"When enabled, KST4Contest reads the antenna direction from PSTRotator.\n"
-						+ "The connection settings take effect on the next chat connection."
-		));
-
-		Runnable updatePstRotatorFields = () -> {
-			boolean disabled = !chkBx_station_pstRotatorEnabled.isSelected();
-			txtFld_station_pstRotatorHost.setDisable(disabled);
-			txtFld_station_pstRotatorPort.setDisable(disabled);
-		};
-
-		updatePstRotatorFields.run();
-
-		chkBx_station_pstRotatorEnabled.selectedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					chatcontroller.getChatPreferences().setStn_pstRotatorEnabled(newValue);
-					updatePstRotatorFields.run();
-
-					if (newValue) {
-						attachQtfFollower();
-						txt_myQTF.setTooltip(
-								new Tooltip("Current QTF reported by PSTRotator")
-						);
-						txt_myQTF.setFocusTraversable(false);
-					} else {
-						detachQtfFollower();
-						txt_myQTF.setText(
-								Double.toString(
-										chatcontroller.getChatPreferences().getActualQTF().get()
-								)
-						);
-						txt_myQTF.setTooltip(
-								new Tooltip("Enter the current antenna direction manually")
-						);
-						txt_myQTF.setFocusTraversable(true);
-					}
-				}
-		);
-
-		txtFld_station_pstRotatorHost.focusedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					if (!newValue) {
-						chatcontroller.getChatPreferences().setStn_pstRotatorHost(
-								txtFld_station_pstRotatorHost.getText()
-						);
-						txtFld_station_pstRotatorHost.setText(
-								chatcontroller.getChatPreferences().getStn_pstRotatorHost()
-						);
-					}
-				}
-		);
-
-		txtFld_station_pstRotatorPort.focusedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					if (newValue) {
-						return;
-					}
-
-					try {
-						int configuredPort = Integer.parseInt(
-								txtFld_station_pstRotatorPort.getText().trim()
-						);
-
-						if (configuredPort < 1 || configuredPort > 65534) {
-							throw new NumberFormatException();
-						}
-
-						chatcontroller.getChatPreferences().setStn_pstRotatorPort(
-								configuredPort
-						);
-					} catch (NumberFormatException exception) {
-						showUserInputErrorWindow(
-								"\"" + txtFld_station_pstRotatorPort.getText()
-										+ "\" is not a valid UDP port. Enter a value between 1 and 65534. PSTRotator reports its position on the following UDP port."
-						);
-					}
-
-					txtFld_station_pstRotatorPort.setText(
-							Integer.toString(
-									chatcontroller.getChatPreferences().getStn_pstRotatorPort()
-							)
-					);
-				}
-		);
-
-
-		grdPnlStation.add(lblCallSign, 0, 0);
-		grdPnlStation.add(txtFldCallSign, 1, 0);
-		grdPnlStation.add(lblPassword, 0, 1);
-		grdPnlStation.add(txtFldPassword, 1, 1);
-		grdPnlStation.add(lblNameMainCat, 0, 2); grdPnlStation.add(lblNameSecondCat, 2, 2);
-		grdPnlStation.add(txtFldNameInChatMainCat, 1, 2); grdPnlStation.add(txtFldNameInChatSecondCat, 3, 2);
-		grdPnlStation.add(lblLocator, 0, 3);
-		grdPnlStation.add(txtFldLocator, 1, 3); grdPnlStation.add(station_chkBxEnableSecondChat, 2, 4);
-		grdPnlStation.add(lblChatCategory, 0, 4); grdPnlStation.add(stn_choiceBxChatChategorySecond, 3, 4);
-		grdPnlStation.add(choiceBxChatChategory, 1, 4);
-		grdPnlStation.add(new Label("Antenna beamwidth:"), 0, 5);
-		grdPnlStation.add(txtFldstn_antennaBeamWidthDeg, 1, 5);
-
-		grdPnlStation.add(new Label("Own antenna height AGL:"), 0, 8);
-		grdPnlStation.add(txtFldstn_pathAnalysisOwnAntennaHeightMeters, 1, 8);
-
-		grdPnlStation.add(new Label("DEM root directory:"), 0, 9);
-		grdPnlStation.add(txtFldstn_pathAnalysisDemRootDirectory, 1, 9);
-		grdPnlStation.add(hbxDemDirectoryActions, 2, 9, 2, 1);
-
-		grdPnlStation.add(new Label("Default maximum QRB:"), 0, 10);
-		grdPnlStation.add(txtFldstn_maxQRBDefault, 1, 10);
-
-		grdPnlStation.add(new Label("Default filter QTF:"), 0, 11);
-		grdPnlStation.add(txtFldstn_qtfDefault, 1, 11);
-
-		grdPnlStation.add(new Label("Own TX power W:"), 2, 5);
-		grdPnlStation.add(txtFldstn_pathAnalysisOwnTxPowerWatts, 3, 5);
-
-		grdPnlStation.add(new Label("Own ant. gain dBi:"), 0, 6);
-		grdPnlStation.add(txtFldstn_pathAnalysisOwnAntennaGainDbi, 1, 6);
-
-		grdPnlStation.add(new Label("DX OM TX power W:"), 2, 6);
-		grdPnlStation.add(txtFldstn_pathAnalysisDefaultTargetTxPowerWatts, 3, 6);
-
-		grdPnlStation.add(new Label("DX OM ant. gain dBi:"), 0, 7);
-		grdPnlStation.add(txtFldstn_pathAnalysisDefaultTargetAntennaGainDbi, 1, 7);
-
-		grdPnlStation.add(lbl_station_pstRotatorEnabled, 0, 12);
-		grdPnlStation.add(chkBx_station_pstRotatorEnabled, 1, 12);
-
-		grdPnlStation.add(new Label("PSTRotator host:"), 0, 13);
-		grdPnlStation.add(txtFld_station_pstRotatorHost, 1, 13);
-
-		grdPnlStation.add(new Label("PSTRotator UDP port:"), 0, 14);
-		grdPnlStation.add(txtFld_station_pstRotatorPort, 1, 14);
-
-
-		VBox vbxStation = new VBox();
-		vbxStation.setPadding(new Insets(10, 10, 10, 10));
-
-        GridPane grdPanelServerHostName = new GridPane();
-
-
-
-		TextField stn_txtServerDNS = new TextField(
-				this.chatcontroller.getChatPreferences().getStn_on4kstServersDns()
-		);
-		stn_txtServerDNS.setFocusTraversable(false);
-		stn_txtServerDNS.focusedProperty().addListener((observable, oldValue, newValue) -> {
-			if (!newValue) {
-				chatcontroller.getChatPreferences().setStn_on4kstServersDns(
-						stn_txtServerDNS.getText().trim()
-				);
-			}
-		});
-
-		grdPanelServerHostName.add(
-				new Label("ON4KST server [www.on4kst.info]:"),
-				0,
-				1
-		);
-		grdPanelServerHostName.add(stn_txtServerDNS, 1, 1);
-
-		TextField stn_txtServerPort = new TextField(
-				Integer.toString(
-						this.chatcontroller.getChatPreferences().getStn_on4kstServersPort()
-				)
-		);
-		stn_txtServerPort.setFocusTraversable(false);
-		stn_txtServerPort.focusedProperty().addListener((observable, oldValue, newValue) -> {
-			if (newValue) {
-				return;
-			}
-
-			try {
-				int configuredPort = Integer.parseInt(stn_txtServerPort.getText().trim());
-
-				if (configuredPort < 1 || configuredPort > 65535) {
-					throw new NumberFormatException();
-				}
-
-				chatcontroller.getChatPreferences().setStn_on4kstServersPort(
-						configuredPort
-				);
-			} catch (NumberFormatException exception) {
-				showUserInputErrorWindow(
-						"\"" + stn_txtServerPort.getText()
-								+ "\" is not a valid TCP port. Enter a value between 1 and 65534. PSTRotator reports its position on the following UDP port."
-				);
-
-				stn_txtServerPort.setText(
-						Integer.toString(
-								chatcontroller.getChatPreferences().getStn_on4kstServersPort()
-						)
-				);
-			}
-		});
-
-		grdPanelServerHostName.add(new Label("Port [23001]:"), 2, 1);
-		grdPanelServerHostName.add(stn_txtServerPort, 3, 1);
-
-        vbxStation.getChildren().addAll(grdPanelServerHostName);
-
-        vbxStation.getChildren().addAll(
-				generateLabeledSeparator(100, "Set your Login Credentials and Station Parameters here"), grdPnlStation);
-//		vbxStation.getChildren().addAll(generateLabeledSeparator(50,
-//				"! ! ! ! Don´t forget to reset the worked stations information before starting a new contest ! ! ! !"));
-
-
-		CheckBox settings_chkbx_QRV50 = new CheckBox("My station uses 6m band");
-		settings_chkbx_QRV50.setSelected(chatcontroller.getChatPreferences().isStn_bandActive50());
-		settings_chkbx_QRV50.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive50(
-						settings_chkbx_QRV50.isSelected());
-				System.out.println("[Main.java, Info]: setted my 50 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive50());
-				chatMemberTableFilterQTFAndQRBHbox.setVisible(false);
-				chatMemberTableFilterQTFAndQRBHbox.setVisible(true);
-			}
-		});
-
-		CheckBox settings_chkbx_QRV70 = new CheckBox("My station uses 4m band");
-		settings_chkbx_QRV70.setSelected(chatcontroller.getChatPreferences().isStn_bandActive70());
-		settings_chkbx_QRV70.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive70(
-						settings_chkbx_QRV70.isSelected());
-				System.out.println("[Main.java, Info]: setted my 70 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive70());
-				chatMemberTableFilterQTFAndQRBHbox.setVisible(false);
-				chatMemberTableFilterQTFAndQRBHbox.setVisible(true);
-			}
-		});
-
-		CheckBox settings_chkbx_QRV144 = new CheckBox("My station uses 2m band");
-		settings_chkbx_QRV144.setSelected(chatcontroller.getChatPreferences().isStn_bandActive144());
-		settings_chkbx_QRV144.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive144(
-						settings_chkbx_QRV144.isSelected());
-				System.out.println("[Main.java, Info]: setted my 144 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive144());
-				chatMemberTableFilterQTFAndQRBHbox.setVisible(false);
-				chatMemberTableFilterQTFAndQRBHbox.setVisible(true);
-			}
-		});
-
-		CheckBox settings_chkbx_QRV432 = new CheckBox("My station uses 70cm band");
-		settings_chkbx_QRV432.setSelected(chatcontroller.getChatPreferences().isStn_bandActive432());
-		settings_chkbx_QRV432.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive432(
-						settings_chkbx_QRV432.isSelected());
-				System.out.println("[Main.java, Info]: setted my 432 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive432());
-			}
-		});
-
-		CheckBox settings_chkbx_QRV1240 = new CheckBox("My station uses 23cm band");
-		settings_chkbx_QRV1240.setSelected(chatcontroller.getChatPreferences().isStn_bandActive1240());
-		settings_chkbx_QRV1240.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive1240(
-						settings_chkbx_QRV1240.isSelected());
-				System.out.println("[Main.java, Info]: setted my 1240 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive1240());
-			}
-		});
-
-		CheckBox settings_chkbx_QRV2300 = new CheckBox("My station uses 13cm band");
-		settings_chkbx_QRV2300.setSelected(chatcontroller.getChatPreferences().isStn_bandActive2300());
-		settings_chkbx_QRV2300.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive2300(
-						settings_chkbx_QRV2300.isSelected());
-				System.out.println("[Main.java, Info]: setted my 2300 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive2300());
-			}
-		});
-
-		CheckBox settings_chkbx_QRV3400 = new CheckBox("My station uses 9cm band");
-		settings_chkbx_QRV3400.setSelected(chatcontroller.getChatPreferences().isStn_bandActive3400());
-		settings_chkbx_QRV3400.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive3400(
-						settings_chkbx_QRV3400.isSelected());
-				System.out.println("[Main.java, Info]: setted my 3400 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive3400());
-			}
-		});
-
-		CheckBox settings_chkbx_QRV5600 = new CheckBox("My station uses 6cm band");
-		settings_chkbx_QRV5600.setSelected(chatcontroller.getChatPreferences().isStn_bandActive5600());
-		settings_chkbx_QRV5600.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive5600(
-						settings_chkbx_QRV5600.isSelected());
-				System.out.println("[Main.java, Info]: setted my 5600 qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive5600());
-			}
-		});
-
-		CheckBox settings_chkbx_QRV10G = new CheckBox("My station uses 3cm band");
-		settings_chkbx_QRV10G.setSelected(chatcontroller.getChatPreferences().isStn_bandActive10G());
-		settings_chkbx_QRV10G.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setStn_bandActive10G(
-						settings_chkbx_QRV10G.isSelected());
-				System.out.println("[Main.java, Info]: setted my 10G qrv setting to: "
-						+ chatcontroller.getChatPreferences().isStn_bandActive10G());
-			}
-		});
-
-
-		GridPane grdPnlStation_bands = new GridPane();
-		grdPnlStation_bands.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlStation_bands.setVgap(5);
-		grdPnlStation_bands.setHgap(5);
-
-		grdPnlStation_bands.add(new Label("Define on which bands you will be qrv today (changes UI a bit ... click save, then restart!)"), 0, 0, 3,1);
-		grdPnlStation_bands.add(settings_chkbx_QRV144, 0, 1);
-		grdPnlStation_bands.add(settings_chkbx_QRV432, 1, 1);
-		grdPnlStation_bands.add(settings_chkbx_QRV1240, 2, 1);
-		grdPnlStation_bands.add(settings_chkbx_QRV2300, 0, 2);
-		grdPnlStation_bands.add(settings_chkbx_QRV3400, 1, 2);
-		grdPnlStation_bands.add(settings_chkbx_QRV5600, 2, 2);
-		grdPnlStation_bands.add(settings_chkbx_QRV10G, 0, 3);
-		grdPnlStation_bands.add(settings_chkbx_QRV50, 1, 3);
-		grdPnlStation_bands.add(settings_chkbx_QRV70, 2, 3);
-
-		grdPnlStation_bands.setStyle("   -fx-border-color: lightgray;\n" +
-				"    -fx-vgap: 5;\n" +
-				"    -fx-hgap: 5;\n" +
-				"    -fx-padding: 5;");
-
-		vbxStation.getChildren().add(new Label("    ")); //need some space there
-		vbxStation.getChildren().add(grdPnlStation_bands);
-
-//		vbxStation.getChildren().add(settings_chkbx_QRV144);
-//		vbxStation.getChildren().add(settings_chkbx_QRV432);
-//		vbxStation.getChildren().add(settings_chkbx_qRV1240);
-//		vbxStation.getChildren().add(settings_chkbx_QRV2300);
-//		vbxStation.getChildren().add(settings_chkbx_QRV3400);
-//		vbxStation.getChildren().add(settings_chkbx_QRV5600);
-//		vbxStation.getChildren().add(settings_chkbx_QRV10G);
-
-
-
-
-		/*************************************************************************************
-		 * Log synch settings Tab
-		 *************************************************************************************/
-
-		GridPane grdPnlLog = new GridPane();
-		grdPnlLog.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlLog.setVgap(5);
-		grdPnlLog.setHgap(5);
-
-		Label lblEnableFileBased = new Label(
-				"Read worked callsigns periodically from a log file (without band information)"
-		);
-		CheckBox chkBxEnableFileBasedInterpreterUCX = new CheckBox();
-		chkBxEnableFileBasedInterpreterUCX
-				.setSelected(this.chatcontroller.getChatPreferences().isLogsynch_fileBasedWkdCallInterpreterEnabled());
-
-		chkBxEnableFileBasedInterpreterUCX.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-//                chk2.setSelected(!newValue);
-				chatcontroller.getChatPreferences().setLogsynch_fileBasedWkdCallInterpreterEnabled(
-						chkBxEnableFileBasedInterpreterUCX.isSelected());
-				System.out.println("[Main.java, Info]: setted the file based worked-station-list to: "
-						+ chatcontroller.getChatPreferences().isLogsynch_fileBasedWkdCallInterpreterEnabled());
-			}
-		});
-
-		Label lblWkdInterpreterPathToFileTitle = new Label("Log file to be monitored:");
-		Label lblWkdInterpreterPathToFile = new Label(
-				this.chatcontroller.getChatPreferences().getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
-
-		Label lblUDPbyUCXLogBackupFilePathAndNameTitle = new Label("Backup UDP msgs to");
-		Label lblUDPbyUCXLogBackupFilePathAndName = new Label(
-				this.chatcontroller.getChatPreferences().getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup());
-
-		Label lblEnableUDPbyUCX = new Label(
-				"Process QSO messages from N1MM+, QARTEST, UCXLog and DXLog.net"
-		);
-		CheckBox chkBxEnableUCXLogUDPReceiver = new CheckBox();
-		chkBxEnableUCXLogUDPReceiver
-				.setSelected(this.chatcontroller.getChatPreferences().isLogsynch_ucxUDPWkdCallListenerEnabled());
-		chkBxEnableUCXLogUDPReceiver.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-//                chk2.setSelected(!newValue);
-				chatcontroller.getChatPreferences()
-						.setLogsynch_ucxUDPWkdCallListenerEnabled(chkBxEnableUCXLogUDPReceiver.isSelected());
-				System.out.println("[Main.java, Info]: setted the udp worked-station receiver to: "
-						+ chatcontroller.getChatPreferences().isLogsynch_ucxUDPWkdCallListenerEnabled());
-			}
-		});
-
-		Label lblUDPByUCX = new Label(
-				"Shared UDP port for QSO and TRX messages [default 12060]:"
-		);
-		TextField txtFldUDPPortforUCX = new TextField("");
-		txtFldUDPPortforUCX.setFocusTraversable(false);
-		txtFldUDPPortforUCX
-				.setText(this.chatcontroller.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort() + "");
-		txtFldUDPPortforUCX.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue,
-					Boolean newPropertyValue) {
-				if (newPropertyValue) {
-//		            System.out.println("Textfield on focus");
-					// Do nothing until field loses focus, user will enter his frequency
-				} else {
-					if (GuiUtils.isNumeric(txtFldUDPPortforUCX.getText())) {
-
-						System.out.println("[Main.java, Info]: Set the ucx-listener port property by hand to: "
-								+ txtFldUDPPortforUCX.getText());
-//		            chatcontroller.getChatPreferences().setMYQRG(txt_ownqrg.getText());
-						chatcontroller.getChatPreferences()
-								.setLogsynch_ucxUDPWkdCallListenerPort(Integer.parseInt(txtFldUDPPortforUCX.getText()));
-//		            MYQRGButton.setText(txt_ownqrg.getText());
-					} else {
-						txtFldUDPPortforUCX.setText(txtFldUDPPortforUCX.getText() + " is an invalid Port");
-					}
-
-				}
-			}
-		});
-
-		HBox labeledSeparatorLogSynch = new HBox();
-		
-		Button btn_changeFilePathAndName = new Button("Choose...");
-		
-		btn_changeFilePathAndName.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				File filechooserSelectedfile;
-				
-				FileChooser fileChooser = new FileChooser();
-				fileChooser.setTitle("Choose Readonly-Loginterpreter-File");
-				fileChooser.setInitialDirectory(
-			            new File(System.getProperty("user.home"))
-			        ); 
-				
-				try {
-					
-					filechooserSelectedfile = fileChooser.showOpenDialog(primaryStage);
-					
-				} catch (NullPointerException e) {
-					
-					filechooserSelectedfile = new File(chatcontroller.getChatPreferences().getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
-				}
-				
-				System.out.println("KST4CApp: Filechooser got " + filechooserSelectedfile.getAbsolutePath());
-				
-				chatcontroller.getChatPreferences().setLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly(filechooserSelectedfile.getAbsolutePath());
-
-				lblWkdInterpreterPathToFile.setText(chatcontroller.getChatPreferences().getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly());
-				
-				
-			}
-		});
-
-
-		grdPnlLog.add(generateLabeledSeparator(100, "Win-Test Network-Listener"), 0, 6, 2, 1);
-
-		Label lblEnableWintest = new Label("Receive Win-Test network based UDP log messages");
-		CheckBox chkBxEnableWintestUDPReceiver = new CheckBox();
-		chkBxEnableWintestUDPReceiver.setSelected(
-				this.chatcontroller.getChatPreferences().isLogsynch_wintestNetworkListenerEnabled()
-		);
-
-		Label lblUDPByWintest = new Label("UDP-Port for Win-Test listener (default is 9871)");
-		TextField txtFldUDPPortforWintest = new TextField(
-				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkPort() + ""
-		);
-
-		txtFldUDPPortforWintest.focusedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> arg0, Boolean oldPropertyValue, Boolean newPropertyValue) {
-				if (newPropertyValue) {
-					// focus gained -> nichts
-				} else {
-					if (GuiUtils.isNumeric(txtFldUDPPortforWintest.getText())) {
-
-						chatcontroller.getChatPreferences()
-								.setLogsynch_wintestNetworkPort(Integer.parseInt(txtFldUDPPortforWintest.getText()));
-
-						// Wenn enabled: Listener auf neuem Port neu starten
-						if (chatcontroller.getChatPreferences().isLogsynch_wintestNetworkListenerEnabled()) {
-							chatcontroller.restartWintestUdpListenerIfEnabled();
-						}
-
-						System.out.println("[Main.java, Info]: set Win-Test listener port to: "
-								+ txtFldUDPPortforWintest.getText());
-
-					} else {
-						txtFldUDPPortforWintest.setText(txtFldUDPPortforWintest.getText() + " is an invalid Port");
-					}
-				}
-			}
-		});
-
-
-		chkBxEnableWintestUDPReceiver.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences()
-						.setLogsynch_wintestNetworkListenerEnabled(chkBxEnableWintestUDPReceiver.isSelected());
-
-				txtFldUDPPortforWintest.setDisable(!chkBxEnableWintestUDPReceiver.isSelected());
-
-				if (chkBxEnableWintestUDPReceiver.isSelected()) {
-					chatcontroller.restartWintestUdpListenerIfEnabled();
-				} else {
-					chatcontroller.stopWintestUdpListener();
-				}
-
-				System.out.println("[Main.java, Info]: Win-Test UDP listener enabled: "
-						+ chatcontroller.getChatPreferences().isLogsynch_wintestNetworkListenerEnabled());
-			}
-		});
-
-
-
-		txtFldUDPPortforWintest.setFocusTraversable(false);
-		txtFldUDPPortforWintest.setDisable(!chkBxEnableWintestUDPReceiver.isSelected());
-
-//		grdPnlLog.add(new Label("Settings for the file interpreter, which can interprete ASCII Callsigns out of all kinds of files by Patternmatching"), 0,0,1,1);
-		grdPnlLog.add(generateLabeledSeparator(100, "File polling for worked callsigns"), 0, 0, 2, 1);
-		grdPnlLog.add(lblEnableFileBased, 0, 1);
-		grdPnlLog.add(chkBxEnableFileBasedInterpreterUCX, 1, 1);
-		grdPnlLog.add(lblWkdInterpreterPathToFileTitle, 0, 2);
-		grdPnlLog.add(lblWkdInterpreterPathToFile, 1, 2);
-		grdPnlLog.add(btn_changeFilePathAndName, 2, 2);
-//		grdPnlLog.add(generateLabeledSeparator(100, "N1MM/QARTEST/UCXLog/DXLog.net Network-Listener"), 0, 3, 2, 1);
-		grdPnlLog.add(
-				generateLabeledSeparator(
-						100,
-						"Network-based QSO synchronization (N1MM/QARTEST/UCXLog/DXLog)"
-				),
-				0,
-				3,
-				2,
-				1
-		);
-		grdPnlLog.add(lblEnableUDPbyUCX, 0, 4);
-		grdPnlLog.add(chkBxEnableUCXLogUDPReceiver, 1, 4);
-		grdPnlLog.add(lblUDPByUCX, 0, 5);
-		grdPnlLog.add(txtFldUDPPortforUCX, 1, 5);
-//		grdPnlLog.add(lblUDPbyUCXLogBackupFilePathAndNameTitle, 0, 6); removed due to db usage now
-//		grdPnlLog.add(lblUDPbyUCXLogBackupFilePathAndName, 1, 6); removed due to db usage now
-//		grdPnlLog.add(new Button("Change..."), 2, 6); removed due to db usage now
-		grdPnlLog.add(lblEnableWintest, 0, 7);
-		grdPnlLog.add(chkBxEnableWintestUDPReceiver, 1, 7);
-		grdPnlLog.add(lblUDPByWintest, 0, 8);
-		grdPnlLog.add(txtFldUDPPortforWintest, 1, 8);
-
-		// --- QRG sync from Win-Test STATUS ---
-		Label lblWtQrgSync = new Label("Win-Test STATUS QRG Sync (updates own QRG from Win-Test transceiver frequency)");
-		CheckBox chkBxWtQrgSync = new CheckBox();
-		chkBxWtQrgSync.setSelected(
-				this.chatcontroller.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()
-		);
-		chkBxWtQrgSync.selectedProperty().addListener((obs, oldVal, newVal) -> {
-			chatcontroller.getChatPreferences().setLogsynch_wintestQrgSyncEnabled(newVal);
-			System.out.println("[Main.java, Info]: Win-Test QRG sync enabled: " + newVal);
-			boolean anyActive = chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled() || newVal;
-			if (!anyActive) {
-				detachOwnQrgFollower();
-				txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by hand (watch prefs!)"));
-			} else {
-				attachOwnQrgFollower();
-				txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by the log program (watch prefs!)"));
-			}
-		});
-		Label lblWtUsePassQrg = new Label("Use pass frequency from Win-Test STATUS (instead of own QRG)");
-		CheckBox chkBxWtUsePassQrg = new CheckBox();
-		chkBxWtUsePassQrg.setSelected(
-				this.chatcontroller.getChatPreferences().isLogsynch_wintestUsePassQrg()
-		);
-		chkBxWtUsePassQrg.selectedProperty().addListener((obs, oldVal, newVal) -> {
-			chatcontroller.getChatPreferences().setLogsynch_wintestUsePassQrg(newVal);
-			System.out.println("[Main.java, Info]: Win-Test use pass QRG: " + newVal);
-		});
-
-		Label lblWtStationName = new Label("KST station name in Win-Test network (src of SKED packets)");
-		TextField txtFldWtStationName = new TextField(
-				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkStationNameOfKST()
-		);
-		txtFldWtStationName.setFocusTraversable(false);
-		txtFldWtStationName.focusedProperty().addListener((obs, oldVal, newVal) -> {
-			if (!newVal) { // focus lost
-				chatcontroller.getChatPreferences()
-						.setLogsynch_wintestNetworkStationNameOfKST(txtFldWtStationName.getText().trim());
-				System.out.println("[Main.java, Info]: Win-Test KST station name set to: "
-						+ txtFldWtStationName.getText().trim());
-			}
-		});
-
-		Label lblWtStationFilter = new Label("Win-Test station name filter (e.g. STN1, empty = accept all)");
-		TextField txtFldWtStationFilter = new TextField(
-				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkStationNameOfWintestClient1()
-		);
-		txtFldWtStationFilter.setFocusTraversable(false);
-		txtFldWtStationFilter.focusedProperty().addListener((obs, oldVal, newVal) -> {
-			if (!newVal) {
-				chatcontroller.getChatPreferences()
-						.setLogsynch_wintestNetworkStationNameOfWintestClient1(txtFldWtStationFilter.getText().trim());
-				System.out.println("[Main.java, Info]: Win-Test station filter set to: "
-						+ txtFldWtStationFilter.getText().trim());
-			}
-		});
-
-		Label lblWtBroadcastAddr = new Label("UDP broadcast address for Win-Test (default = internet interface broadcast)");
-		TextField txtFldWtBroadcastAddr = new TextField(
-				this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress()
-		);
-		txtFldWtBroadcastAddr.setFocusTraversable(false);
-		txtFldWtBroadcastAddr.focusedProperty().addListener((obs, oldVal, newVal) -> {
-			if (!newVal) {
-				chatcontroller.getChatPreferences()
-						.setLogsynch_wintestNetworkBroadcastAddress(txtFldWtBroadcastAddr.getText().trim());
-				System.out.println("[Main.java, Info]: Win-Test broadcast address set to: "
-						+ txtFldWtBroadcastAddr.getText().trim());
-			}
-		});
-
-		grdPnlLog.add(lblWtStationName, 0, 9);
-		grdPnlLog.add(txtFldWtStationName, 1, 9);
-
-		// Auto-detect subnet broadcast if preference is still the default
-		String currentBroadcast = this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress();
-		if ("255.255.255.255".equals(currentBroadcast)) {
-			try {
-				String detected = detectPreferredWintestBroadcastAddress();
-				if (detected != null && !detected.isBlank()) {
-					this.chatcontroller.getChatPreferences().setLogsynch_wintestNetworkBroadcastAddress(detected);
-					System.out.println("[Main.java, Info]: Auto-detected WT broadcast: " + detected);
-				}
-			} catch (Exception ex) {
-				System.out.println("[Main.java, Warning]: Could not auto-detect broadcast: " + ex.getMessage());
-			}
-		}
-		// Re-read (may have been auto-detected)
-		txtFldWtBroadcastAddr.setText(this.chatcontroller.getChatPreferences().getLogsynch_wintestNetworkBroadcastAddress());
-
-		grdPnlLog.add(lblWtBroadcastAddr, 0, 10);
-		grdPnlLog.add(txtFldWtBroadcastAddr, 1, 10);
-
-		VBox vbxLog = new VBox();
-		vbxLog.setPadding(new Insets(10, 10, 10, 10));
-		vbxLog.getChildren().addAll(grdPnlLog);
-
-		/*************************************************************************************
-		 * TRX synch settings Tab
-		 *************************************************************************************/
-
-		GridPane grdPnltrx = new GridPane();
-		grdPnltrx.setPadding(new Insets(10, 10, 10, 10));
-		grdPnltrx.setVgap(5);
-		grdPnltrx.setHgap(5);
-
-		Label lblEnableTRXMsgbyUCX = new Label(
-				"Update MYQRG from RadioInfo messages received on the shared log-sync port"
-		);
-		CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
-
-//		CheckBox chkBxEnableXVTRUsage = new CheckBox();
-//
-//		Label lblXVTRRFQrg = new Label("XVTR RF QRG in kHz, e.g. \"144000\" for 144 MHz), default = 144000");
-//		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your xvtr send?"));
-//
-//		Label lblTRXIFQrg = new Label("TRX IF QRG in kHz, e.g. \"28000\" for 28 MHz), default = 28000");
-//		lblXVTRRFQrg.setTooltip(new Tooltip("Where will your TRX IF be?"));
-
-//		Label lblRedultingLoQRG = new Label("The value of " + asd + " will be added to the readed QRG of your TRX to show correct QRG");
-
-
-		chkBxEnableTRXMsgbyUCX
-				.setSelected(this.chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled());
-
-		chkBxEnableTRXMsgbyUCX.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-				chatcontroller.getChatPreferences().setTrxSynch_ucxLogUDPListenerEnabled(newValue);
-				boolean anyActive = newValue || chatcontroller.getChatPreferences().isLogsynch_wintestQrgSyncEnabled();
-				if (!anyActive) {
-					detachOwnQrgFollower();
-					txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by hand (watch prefs!)"));
-					System.out.println("[Main.java, Info]: MYQRG will be changed only by User input");
-				} else {
-					attachOwnQrgFollower();
-					txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by the log program (watch prefs!)"));
-				}
-			}
-		});
-
-		// Unconditionally add listener to manually sync the textfield input to the button 
-		// (this listener also fires correctly when the value is updated by the binding)
-//		txt_ownqrgMainCategory.textProperty().addListener((observable, oldValue, newValue) -> {
-//			MYQRGButton.textProperty().set(newValue);
-//		});
-		txt_ownqrgMainCategory.textProperty().addListener((observable, oldValue, newValue) -> {
-			if (Platform.isFxApplicationThread()) {
-				MYQRGButton.textProperty().set(newValue);
-			} else {
-				Platform.runLater(() -> MYQRGButton.textProperty().set(newValue));
-			}
-		});
-
-		// That's the default behaviour of the myqrg textfield
-		if (this.chatcontroller.getChatPreferences().isTrxSynch_ucxLogUDPListenerEnabled() || this.chatcontroller.getChatPreferences().isLogsynch_wintestQrgSyncEnabled()) {
-			txt_ownqrgMainCategory.setTooltip(new Tooltip("Your cq qrg will be updated by the log program (watch prefs!)"));
-			attachOwnQrgFollower();
-		} else {
-			txt_ownqrgMainCategory.setTooltip(new Tooltip("enter your cq qrg here"));
-		}
-
-		grdPnltrx.add(generateLabeledSeparator(100, "Receive UCXLog TRX info"), 0, 0, 2, 1);
-		grdPnltrx.add(lblEnableTRXMsgbyUCX, 0, 1);
-		grdPnltrx.add(chkBxEnableTRXMsgbyUCX, 1, 1);
-
-		grdPnltrx.add(generateLabeledSeparator(100, "Win-Test TRX sync"), 0, 2, 2, 1);
-		grdPnltrx.add(lblWtQrgSync, 0, 3);
-		grdPnltrx.add(chkBxWtQrgSync, 1, 3);
-		grdPnltrx.add(lblWtUsePassQrg, 0, 4);
-		grdPnltrx.add(chkBxWtUsePassQrg, 1, 4);
-		grdPnltrx.add(lblWtStationFilter, 0, 5);
-		grdPnltrx.add(txtFldWtStationFilter, 1, 5);
-
-		VBox vbxTRXSynch = new VBox();
-		vbxTRXSynch.setPadding(new Insets(10, 10, 10, 10));
-		vbxTRXSynch.getChildren().addAll(grdPnltrx);
-
-		/*************************************************************************************
-		 * Airscout settings Tab
-		 *************************************************************************************/
-
-		GridPane grdPnlAirScout = new GridPane();
-		grdPnlAirScout.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlAirScout.setVgap(5);
-		grdPnlAirScout.setHgap(5);
-
-		Label lblASEnableUDPMsgbyAS =
-				new Label(
-						"Enable AirScout UDP integration "
-								+ "(AirScout 0.9.9.5 or newer)"
-				);
-
-		Label lblASServerName =
-				new Label("AirScout server identifier [AS]:");
-
-		Label lblASChatClientName =
-				new Label("KST4Contest client identifier [KST]:");
-
-		Label lblASUdpPort =
-				new Label("AirScout UDP port [9872] — reconnect after changing:");
-
-		Label lblASAutoBand =
-				new Label("Select AirScout frequency automatically per station:");
-
-		Label lblASBandName =
-				new Label("Forced AirScout band value [1440000 = 144 MHz]:");
-
-		CheckBox chkBxEnableUDPMsgbyAS = new CheckBox();
-		chkBxEnableUDPMsgbyAS.setSelected(
-				chatcontroller.getChatPreferences()
-						.isAirScout_asUDPListenerEnabled()
-		);
-		chkBxEnableUDPMsgbyAS.setTooltip(
-				new Tooltip(
-						"When disabled, KST4Contest neither sends AirScout queries "
-								+ "nor processes AirScout responses."
-				)
-		);
-		chkBxEnableUDPMsgbyAS.selectedProperty().addListener(
-				(observable, oldValue, newValue) ->
-						chatcontroller.getChatPreferences()
-								.setAirScout_asUDPListenerEnabled(newValue)
-		);
-
-		TextField txtFld_asServerNameString = new TextField(
-				chatcontroller.getChatPreferences()
-						.getAirScout_asServerNameString()
-		);
-		txtFld_asServerNameString.setFocusTraversable(false);
-		txtFld_asServerNameString.setTooltip(
-				new Tooltip(
-						"Logical identifier of the target AirScout server. "
-								+ "Use different identifiers if several AirScout "
-								+ "servers share the network."
-				)
-		);
-		txtFld_asServerNameString.focusedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					if (newValue) {
-						return;
-					}
-
-					String enteredIdentifier =
-							txtFld_asServerNameString.getText().trim();
-
-					if (isValidAirScoutIdentifier(enteredIdentifier)) {
-						chatcontroller.getChatPreferences()
-								.setAirScout_asServerNameString(
-										enteredIdentifier
-								);
-					} else {
-						showUserInputErrorWindow(
-								"The AirScout server identifier must not be empty "
-										+ "and must not contain quotation marks "
-										+ "or line breaks."
-						);
-
-						txtFld_asServerNameString.setText(
-								chatcontroller.getChatPreferences()
-										.getAirScout_asServerNameString()
-						);
-					}
-				}
-		);
-
-		TextField txtFld_asClientNameString = new TextField(
-				chatcontroller.getChatPreferences()
-						.getAirScout_asClientNameString()
-		);
-		txtFld_asClientNameString.setFocusTraversable(false);
-		txtFld_asClientNameString.setTooltip(
-				new Tooltip(
-						"Identifier of this KST4Contest instance. Assign a unique "
-								+ "identifier to every client in a multi-client setup."
-				)
-		);
-		txtFld_asClientNameString.focusedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					if (newValue) {
-						return;
-					}
-
-					String enteredIdentifier =
-							txtFld_asClientNameString.getText().trim();
-
-					if (isValidAirScoutIdentifier(enteredIdentifier)) {
-						chatcontroller.getChatPreferences()
-								.setAirScout_asClientNameString(
-										enteredIdentifier
-								);
-					} else {
-						showUserInputErrorWindow(
-								"The AirScout client identifier must not be empty "
-										+ "and must not contain quotation marks "
-										+ "or line breaks."
-						);
-
-						txtFld_asClientNameString.setText(
-								chatcontroller.getChatPreferences()
-										.getAirScout_asClientNameString()
-						);
-					}
-				}
-		);
-
-		TextField txtFld_asUDPPortInt = new TextField(
-				Integer.toString(
-						chatcontroller.getChatPreferences()
-								.getAirScout_asCommunicationPort()
-				)
-		);
-		txtFld_asUDPPortInt.setFocusTraversable(false);
-		txtFld_asUDPPortInt.setTooltip(
-				new Tooltip(
-						"The UDP port must match the AirScout network settings. "
-								+ "Reconnect KST4Contest after changing it."
-				)
-		);
-		txtFld_asUDPPortInt.focusedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					if (newValue) {
-						return;
-					}
-
-					try {
-						int configuredPort = Integer.parseInt(
-								txtFld_asUDPPortInt.getText().trim()
-						);
-
-						if (configuredPort < 1 || configuredPort > 65535) {
-							throw new NumberFormatException();
-						}
-
-						chatcontroller.getChatPreferences()
-								.setAirScout_asCommunicationPort(
-										configuredPort
-								);
-					} catch (NumberFormatException exception) {
-						showUserInputErrorWindow(
-								"\"" + txtFld_asUDPPortInt.getText()
-										+ "\" is not a valid UDP port. "
-										+ "Enter a value between 1 and 65534. PSTRotator reports its position on the following UDP port."
-						);
-
-						txtFld_asUDPPortInt.setText(
-								Integer.toString(
-										chatcontroller.getChatPreferences()
-												.getAirScout_asCommunicationPort()
-								)
-						);
-					}
-				}
-		);
-
-		TextField txtFld_asQRGInt = new TextField(
-				chatcontroller.getChatPreferences()
-						.getAirScout_asBandString()
-		);
-
-		CheckBox chkBxAutoAirScoutBand = new CheckBox("Auto per station");
-		chkBxAutoAirScoutBand.setSelected(
-				chatcontroller.getChatPreferences()
-						.isAirScout_autoBandSelectionEnabled()
-		);
-		chkBxAutoAirScoutBand.setTooltip(
-				new Tooltip(
-						"Uses the station's current QRG first, then station-name and "
-								+ "chat-category evidence. Disable this option only to force "
-								+ "one protocol value for every station."
-				)
-		);
-		txtFld_asQRGInt.setDisable(chkBxAutoAirScoutBand.isSelected());
-		chkBxAutoAirScoutBand.selectedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					chatcontroller.getChatPreferences()
-							.setAirScout_autoBandSelectionEnabled(newValue);
-					txtFld_asQRGInt.setDisable(newValue);
-				}
-		);
-
-		txtFld_asQRGInt.setFocusTraversable(false);
-		txtFld_asQRGInt.setTooltip(
-				new Tooltip(
-						"Fallback used only when automatic per-station selection is "
-								+ "disabled. Examples: 1440000 for 144 MHz or 4320000 "
-								+ "for 432 MHz."
-				)
-		);
-
-
-		txtFld_asQRGInt.focusedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					if (newValue) {
-						return;
-					}
-
-					try {
-						long configuredBandValue = Long.parseLong(
-								txtFld_asQRGInt.getText().trim()
-						);
-
-						if (configuredBandValue <= 0) {
-							throw new NumberFormatException();
-						}
-
-						chatcontroller.getChatPreferences()
-								.setAirScout_asBandString(
-										Long.toString(configuredBandValue)
-								);
-					} catch (NumberFormatException exception) {
-						showUserInputErrorWindow(
-								"\"" + txtFld_asQRGInt.getText()
-										+ "\" is not a valid AirScout band value."
-						);
-
-						txtFld_asQRGInt.setText(
-								chatcontroller.getChatPreferences()
-										.getAirScout_asBandString()
-						);
-					}
-				}
-		);
-
-		Label lblASChangeNote = new Label(
-				"Server identifier, client identifier and frequency mode are applied "
-						+ "immediately. Reconnect after changing the UDP port."
-		);
-		lblASChangeNote.setWrapText(true);
-
-		grdPnlAirScout.add(
-				generateLabeledSeparator(
-						100,
-						"AirScout UDP communication"
-				),
-				0,
-				0,
-				2,
-				1
-		);
-		grdPnlAirScout.add(lblASEnableUDPMsgbyAS, 0, 1);
-		grdPnlAirScout.add(chkBxEnableUDPMsgbyAS, 1, 1);
-		grdPnlAirScout.add(lblASServerName, 0, 2);
-		grdPnlAirScout.add(txtFld_asServerNameString, 1, 2);
-		grdPnlAirScout.add(lblASChatClientName, 0, 3);
-		grdPnlAirScout.add(txtFld_asClientNameString, 1, 3);
-		grdPnlAirScout.add(lblASUdpPort, 0, 4);
-		grdPnlAirScout.add(txtFld_asUDPPortInt, 1, 4);
-		grdPnlAirScout.add(lblASAutoBand, 0, 5);
-		grdPnlAirScout.add(chkBxAutoAirScoutBand, 1, 5);
-		grdPnlAirScout.add(lblASBandName, 0, 6);
-		grdPnlAirScout.add(txtFld_asQRGInt, 1, 6);
-		grdPnlAirScout.add(lblASChangeNote, 0, 7, 2, 1);
-
-		VBox vbxAirScout = new VBox();
-		vbxAirScout.setPadding(new Insets(10, 10, 10, 10));
-		vbxAirScout.getChildren().addAll(grdPnlAirScout);
-
-		/*************************************************************************************
-		 * Notification settings Tab
-		 *************************************************************************************/
-
-		GridPane grdPnlNotify = new GridPane();
-		grdPnlNotify.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlNotify.setVgap(5);
-		grdPnlNotify.setHgap(5);
-		grdPnlNotify.add(generateLabeledSeparator(100, "Notification settings"), 0, 0, 2, 1);
-
-//		Label lblNitificationInfo = new Label(
-//				"Switch bands, prefix worked by others alert, direction notifications, notification pattern matchers");
-//        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
-
-		Label lblNotifyEnableSimpleSounds = new Label(
-				"Play notification sounds for pm, "
-						+ "directional opportunities, sked reminders "
-						+ "and band hints"
-		);
-
-		Label lblNotifyEnableCWSounds = new Label(
-				"Spell the sender's callsign in CW "
-						+ "for new private messages"
-		);
-
-		Label lblNotifyEnableVoiceSounds = new Label(
-				"Speak the sender's callsign phonetically "
-						+ "for new private messages"
-		);
-
-
-		CheckBox chkBxEnableNotifySimpleSounds = new CheckBox();
-		chkBxEnableNotifySimpleSounds.setSelected(this.chatcontroller.getChatPreferences().isNotify_playSimpleSounds());
-
-		chkBxEnableNotifySimpleSounds.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences()
-						.setNotify_playSimpleSounds(chkBxEnableNotifySimpleSounds.isSelected());
-				System.out.println("[Main.java, Info]: Notification simplesounds enabled: " + newValue);
-			}
-		});
-
-
-		CheckBox chkBxEnableNotifyCWSounds = new CheckBox();
-		chkBxEnableNotifyCWSounds.setSelected(this.chatcontroller.getChatPreferences().isNotify_playCWCallsignsOnRxedPMs());
-
-		chkBxEnableNotifyCWSounds.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences()
-						.setNotify_playCWCallsignsOnRxedPMs(chkBxEnableNotifyCWSounds.isSelected());
-				System.out.println("[Main.java, Info]: Notification CW Callsigns enabled: " + newValue);
-			}
-		});
-
-		CheckBox chkBxEnableNotifyVoiceSounds = new CheckBox();
-		chkBxEnableNotifyVoiceSounds.setSelected(this.chatcontroller.getChatPreferences().isNotify_playVoiceCallsignsOnRxedPMs());
-
-		chkBxEnableNotifyVoiceSounds.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences()
-						.setNotify_playVoiceCallsignsOnRxedPMs(chkBxEnableNotifyVoiceSounds.isSelected());
-				System.out.println("[Main.java, Info]: Notification Voice Callsigns enabled: " + newValue);
-			}
-		});
-
-		Label lblNotifyEnableDXClusterServer = new Label(
-				"Enable the local DX Cluster server and forward "
-						+ "detected directional opportunities"
-		);
-
-		CheckBox chkBxNotifyEnableDXClusterServer =
-				new CheckBox();
-
-		chkBxNotifyEnableDXClusterServer.setSelected(
-				this.chatcontroller
-						.getChatPreferences()
-						.isNotify_dxClusterServerEnabled()
-		);
-
-		chkBxNotifyEnableDXClusterServer
-				.selectedProperty()
-				.addListener(
-						(observable, oldValue, newValue) -> {
-							chatcontroller
-									.getChatPreferences()
-									.setNotify_dxClusterServerEnabled(
-											newValue
-									);
-
-							if (chatcontroller
-									.isConnectedAndLoggedIn()) {
-								if (newValue) {
-									chatcontroller
-											.startDxClusterServerIfEnabled();
-								} else {
-									chatcontroller
-											.stopDxClusterServer();
-								}
-							}
-
-							System.out.println(
-									"[Kst4ContestApplication] "
-											+ "DX Cluster server enabled: "
-											+ newValue
-							);
-						}
-				);
-
-		TextField txtFld_notify_DXclusterServerPortSetting =
-				new TextField(
-						Integer.toString(
-								this.chatcontroller
-										.getChatPreferences()
-										.getNotify_dxclusterServerPort()
-						)
-				);
-
-		txtFld_notify_DXclusterServerPortSetting
-				.focusedProperty()
-				.addListener(
-						(observable, oldValue, focused) -> {
-							if (focused) {
-								return;
-							}
-
-							String enteredPort =
-									txtFld_notify_DXclusterServerPortSetting
-											.getText()
-											.trim();
-
-							int previousPort =
-									chatcontroller
-											.getChatPreferences()
-											.getNotify_dxclusterServerPort();
-
-							try {
-								int port =
-										Integer.parseInt(enteredPort);
-
-								if (port < 1 || port > 65535) {
-									throw new NumberFormatException(
-											"Port outside valid range"
-									);
-								}
-
-								chatcontroller
-										.getChatPreferences()
-										.setNotify_dxclusterServerPort(
-												port
-										);
-
-								txtFld_notify_DXclusterServerPortSetting
-										.setText(
-												Integer.toString(port)
-										);
-
-								if (port != previousPort
-										&& chatcontroller
-										.isConnectedAndLoggedIn()
-										&& chatcontroller
-										.getChatPreferences()
-										.isNotify_dxClusterServerEnabled()) {
-									chatcontroller
-											.restartDxClusterServerIfEnabled();
-								}
-							} catch (NumberFormatException exception) {
-								showUserInputErrorWindow(
-										"\""
-												+ enteredPort
-												+ "\" is not a valid TCP port. "
-												+ "Enter a value from 1 to 65535."
-								);
-
-								txtFld_notify_DXclusterServerPortSetting
-										.setText(
-												Integer.toString(
-														previousPort
-												)
-										);
-							}
-						}
-				);
-
-		ComboBox<Band> cmbBx_notifyFrequencyFallbackBand =
-				new ComboBox<>(
-						FXCollections.observableArrayList(Band.values())
-				);
-
-		cmbBx_notifyFrequencyFallbackBand.setEditable(false);
-		cmbBx_notifyFrequencyFallbackBand.setMaxWidth(Double.MAX_VALUE);
-		cmbBx_notifyFrequencyFallbackBand.setTooltip(
-				new Tooltip(
-						"Used for relative QRG values such as .210 when no band "
-								+ "has been recognized for the sender during the "
-								+ "previous 30 minutes. This setting affects the "
-								+ "general QRG detection, not only DX-Cluster spots."
-				)
-		);
-
-		cmbBx_notifyFrequencyFallbackBand.setConverter(
-				new StringConverter<Band>() {
-					@Override
-					public String toString(Band band) {
-						if (band == null) {
-							return "";
-						}
-
-						String displayLabel = band.getDisplayLabel();
-						if (band.getPrefix().equals(displayLabel)) {
-							return band.getPrefix() + " MHz";
-						}
-
-						return band.getPrefix()
-								+ " MHz ("
-								+ displayLabel
-								+ ")";
-					}
-
-					@Override
-					public Band fromString(String displayedValue) {
-						if (displayedValue == null) {
-							return null;
-						}
-
-						int firstSpace = displayedValue.indexOf(' ');
-						String prefix = firstSpace >= 0
-								? displayedValue.substring(0, firstSpace)
-								: displayedValue;
-
-						return Band.fromPrefix(prefix);
-					}
-				}
-		);
-
-		Band configuredFallbackBand = Band.fromPrefix(
-				chatcontroller
-						.getChatPreferences()
-						.getNotify_optionalFrequencyPrefix()
-						.get()
-		);
-
-		if (configuredFallbackBand == null) {
-			configuredFallbackBand = Band.B_144;
-			chatcontroller
-					.getChatPreferences()
-					.setNotify_optionalFrequencyPrefix(
-							configuredFallbackBand.getPrefix()
-					);
-		}
-
-		cmbBx_notifyFrequencyFallbackBand.setValue(configuredFallbackBand);
-
-		cmbBx_notifyFrequencyFallbackBand
-				.valueProperty()
-				.addListener(
-						(observable, oldBand, newBand) -> {
-							if (newBand != null) {
-								chatcontroller
-										.getChatPreferences()
-										.setNotify_optionalFrequencyPrefix(
-												newBand.getPrefix()
-										);
-							}
-						}
-				);
-
-		TextField txtFld_notify_DXclusterServerSpottersCallSign =
-				new TextField(
-						this.chatcontroller
-								.getChatPreferences()
-								.getNotify_DXCSrv_SpottersCallSign()
-								.get()
-				);
-
-		txtFld_notify_DXclusterServerSpottersCallSign
-				.focusedProperty()
-				.addListener(
-						(observable, oldValue, focused) -> {
-							if (focused) {
-								return;
-							}
-
-							String spotterCallSign =
-									txtFld_notify_DXclusterServerSpottersCallSign
-											.getText()
-											.trim()
-											.toUpperCase(Locale.ROOT);
-
-							if (GuiUtils.isCallSignSyntax(
-									spotterCallSign
-							)) {
-								chatcontroller
-										.getChatPreferences()
-										.setNotify_DXCSrv_SpottersCallSign(
-												spotterCallSign
-										);
-
-								txtFld_notify_DXclusterServerSpottersCallSign
-										.setText(spotterCallSign);
-							} else {
-								showUserInputErrorWindow(
-										"\""
-												+ spotterCallSign
-												+ "\" is not a valid "
-												+ "spotter callsign."
-								);
-
-								txtFld_notify_DXclusterServerSpottersCallSign
-										.setText(
-												chatcontroller
-														.getChatPreferences()
-														.getNotify_DXCSrv_SpottersCallSign()
-														.get()
-										);
-							}
-						}
-				);
-
-		Button btn_notify_clusterServerTestMessage =
-				new Button("Send test spot");
-
-		btn_notify_clusterServerTestMessage.setOnAction(
-				event -> {
-					var dxClusterServer =
-							chatcontroller.getDxClusterServer();
-
-					if (!chatcontroller.isConnectedAndLoggedIn()
-							|| dxClusterServer == null) {
-						Alert alert =
-								new Alert(AlertType.INFORMATION);
-
-						alert.setTitle("DX Cluster test");
-						alert.setHeaderText(
-								"Connect KST4Contest and enable "
-										+ "the local DX Cluster server first."
-						);
-						alert.show();
-						return;
-					}
-
-					if (!dxClusterServer.hasConnectedClients()) {
-						Alert alert =
-								new Alert(AlertType.INFORMATION);
-
-						alert.setTitle("DX Cluster test");
-						alert.setHeaderText(
-								"No DX Cluster client is connected "
-										+ "to KST4Contest."
-						);
-						alert.setContentText(
-								"Connect the logger to TCP port "
-										+ chatcontroller
-										.getChatPreferences()
-										.getNotify_dxclusterServerPort()
-										+ " and try again."
-						);
-						alert.show();
-						return;
-					}
-
-					ChatMember testSpot = new ChatMember();
-					testSpot.setFrequency(
-							new SimpleValue<>("300")
-					);
-					testSpot.setQra("DXC test: You donated $100!");
-					testSpot.setCallSign("DO5AMF");
-
-					if (!dxClusterServer
-							.broadcastSingleDXClusterEntryToLoggers(
-									testSpot
-							)) {
-						Alert alert =
-								new Alert(AlertType.INFORMATION);
-
-						alert.setTitle("DX Cluster test");
-						alert.setHeaderText(
-								"The test spot could not be delivered."
-						);
-						alert.setContentText(
-								"Check the logger connection "
-										+ "and try again."
-						);
-						alert.show();
-					}
-				}
-		);
-
-
-		grdPnlNotify.add(lblNotifyEnableSimpleSounds, 0, 1);
-		grdPnlNotify.add(chkBxEnableNotifySimpleSounds, 1, 1);
-
-		grdPnlNotify.add(lblNotifyEnableCWSounds, 0, 2);
-		grdPnlNotify.add(chkBxEnableNotifyCWSounds, 1, 2);
-
-		grdPnlNotify.add(lblNotifyEnableVoiceSounds, 0, 3);
-		grdPnlNotify.add(chkBxEnableNotifyVoiceSounds, 1, 3);
-
-		grdPnlNotify.add(new Label(""), 0, 4); //placeholder before seperator
-
-
-		grdPnlNotify.add(
-				generateLabeledSeparator(
-						100,
-						"Local DX Cluster output"
-				),
-				0,
-				5,
-				2,
-				1
-		);
-
-		grdPnlNotify.add(
-				lblNotifyEnableDXClusterServer,
-				0,
-				6
-		);
-		grdPnlNotify.add(
-				chkBxNotifyEnableDXClusterServer,
-				1,
-				6
-		);
-
-		grdPnlNotify.add(
-				new Label("TCP port [default: 8000]:"),
-				0,
-				7
-		);
-		grdPnlNotify.add(
-				txtFld_notify_DXclusterServerPortSetting,
-				1,
-				7
-		);
-
-		grdPnlNotify.add(
-				new Label(
-						"Fallback band for relative QRG detection:"
-				),
-				0,
-				8
-		);
-		grdPnlNotify.add(
-				cmbBx_notifyFrequencyFallbackBand,
-				1,
-				8
-		);
-
-		grdPnlNotify.add(
-				new Label(
-						"Spotter callsign — use a callsign "
-								+ "different from the contest callsign:"
-				),
-				0,
-				9
-		);
-		grdPnlNotify.add(
-				txtFld_notify_DXclusterServerSpottersCallSign,
-				1,
-				9
-		);
-
-		Label lblNotifyDXClusterTriggerExplanation =
-				new Label(
-						"Spots are generated only for detected "
-								+ "directional opportunities "
-								+ "with a known frequency."
-				);
-
-		lblNotifyDXClusterTriggerExplanation.setWrapText(true);
-
-		grdPnlNotify.add(
-				lblNotifyDXClusterTriggerExplanation,
-				0,
-				10,
-				2,
-				1
-		);
-
-		grdPnlNotify.add(
-				btn_notify_clusterServerTestMessage,
-				1,
-				11
-		);
-
-		grdPnlNotify.add(generateLabeledSeparator(100, "Band-upgrade hint (after log entry)"), 0, 13, 2, 1);
-
-		Label lblNotifyBandUpgradeHint = new Label(
-				"Blink + sound if a logged station still offers another unworked enabled band"
-		);
-		CheckBox chkBxNotifyBandUpgradeHint = new CheckBox();
-		chkBxNotifyBandUpgradeHint.setSelected(chatcontroller.getChatPreferences().isNotify_bandUpgradeHintOnLogEnabled());
-		chkBxNotifyBandUpgradeHint.selectedProperty().addListener((obs, o, n) ->
-				chatcontroller.getChatPreferences().setNotify_bandUpgradeHintOnLogEnabled(n)
-		);
-
-		Label lblNotifyBandUpgradeBoost = new Label("Priority boost for band-upgrade cases (better visibility in toplists)");
-		CheckBox chkBxNotifyBandUpgradeBoost = new CheckBox();
-		chkBxNotifyBandUpgradeBoost.setSelected(chatcontroller.getChatPreferences().isNotify_bandUpgradePriorityBoostEnabled());
-		chkBxNotifyBandUpgradeBoost.selectedProperty().addListener((obs, o, n) ->
-				chatcontroller.getChatPreferences().setNotify_bandUpgradePriorityBoostEnabled(n)
-		);
-
-		grdPnlNotify.add(lblNotifyBandUpgradeHint, 0, 14);
-		grdPnlNotify.add(chkBxNotifyBandUpgradeHint, 1, 14);
-
-		grdPnlNotify.add(lblNotifyBandUpgradeBoost, 0, 15);
-		grdPnlNotify.add(chkBxNotifyBandUpgradeBoost, 1, 15);
-
-
-//        grdPnlNotify.add(generateLabeledSeparator(100, "QSO Sniffing tool"), 0, 14, 2, 1);
-		grdPnlNotify.add(
-				generateLabeledSeparator(
-						100,
-						"QSO monitoring"
-				),
-				0,
-				17,
-				2,
-				1
-		);
-
-		TableView<String> tblVw_notify_sniffCallSigns =
-				initNotifyAtCallSignTable();
-
-		tblVw_notify_sniffCallSigns.setItems(mirrorOf(
-				this.chatcontroller
-						.getLstNotify_QSOSniffer_sniffedCallSignList()));
-
-		Button btn_notifySniffCall_addLine =
-				new Button("Add monitored callsign");
-
-		btn_notifySniffCall_addLine.setOnAction(
-				event -> {
-					TextInputDialog dialog =
-							new TextInputDialog();
-
-					dialog.setTitle("QSO monitoring");
-					dialog.setHeaderText(
-							"Add a callsign to the monitoring list"
-					);
-					dialog.setContentText("Callsign:");
-
-					dialog.showAndWait().ifPresent(
-							input -> {
-								String enteredCallSign =
-										input
-												.trim()
-												.toUpperCase(
-														Locale.ROOT
-												);
-
-								String monitoredBaseCall =
-										ChatMember
-												.normalizeCallSignToBaseCallSign(
-														enteredCallSign
-												);
-
-								if (!GuiUtils.isCallSignSyntax(
-										monitoredBaseCall
-								)) {
-									alertWindowEvent(
-											"Please enter "
-													+ "a valid callsign."
-									);
-									return;
-								}
-
-								boolean duplicate =
-										chatcontroller
-												.getLstNotify_QSOSniffer_sniffedCallSignList().snapshot()
-												.stream()
-												.anyMatch(
-														existing ->
-																existing != null
-																		&& existing
-																		.equalsIgnoreCase(
-																				monitoredBaseCall
-																		)
-												);
-
-								if (duplicate) {
-									alertWindowEvent(
-											"This base callsign is already "
-													+ "in the monitoring list."
-									);
-									return;
-								}
-
-								chatcontroller
-										.getLstNotify_QSOSniffer_sniffedCallSignList()
-										.add(monitoredBaseCall);
-							}
-					);
-				}
-		);
-
-		grdPnlNotify.add(
-				tblVw_notify_sniffCallSigns,
-				0,
-				18
-		);
-		grdPnlNotify.add(
-				btn_notifySniffCall_addLine,
-				0,
-				19
-		);
-
-		VBox vbxNotify = new VBox();
-		vbxNotify.setPadding(new Insets(10, 10, 10, 10));
-		vbxNotify.getChildren().add(grdPnlNotify);
-
-		/*************************************************************************************
-		 * shorts & snippets tab
-		 *************************************************************************************/
-		GridPane grdPnlShorts = new GridPane();
-		grdPnlShorts.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlShorts.setVgap(5);
-		grdPnlShorts.setHgap(5);
-
-		grdPnlShorts.add(
-				generateLabeledSeparator(100, "Shortcut buttons above the message field"),
-				0,
-				0,
-				2,
-				1
-		);
-
-		TableView<String> tblVw_shortcuts = initShortcutTable();
-		tblVw_shortcuts.setItems(mirrorOf(
-				this.chatcontroller.getChatPreferences().getLst_txtShortCutBtnList()));
-
-		Button btn_Short_addLine = new Button("Add shortcut");
-		btn_Short_addLine.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				String newShortcut =
-						"CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key";
-				chatcontroller.getChatPreferences()
-						.getLst_txtShortCutBtnList()
-						.mutate(list -> list.add(0, newShortcut));
-				tblVw_shortcuts.getSelectionModel().clearAndSelect(0);
-				tblVw_shortcuts.scrollTo(0);
-				tblVw_shortcuts.edit(0, tblVw_shortcuts.getColumns().get(0));
-			}
-		});
-
-		Button btn_Short_changePosPlus = new Button("Move selected down");
-		btn_Short_changePosPlus.setOnAction(event -> {
-			if (moveSelectedTableEntry(tblVw_shortcuts, 1)) {
-				refreshShortcutButtons();
-			}
-		});
-
-		Button btn_Short_changePosMinus = new Button("Move selected up");
-		btn_Short_changePosMinus.setOnAction(event -> {
-			if (moveSelectedTableEntry(tblVw_shortcuts, -1)) {
-				refreshShortcutButtons();
-			}
-		});
-
-		HBox hbxTxtShortBtnBox = new HBox();
-		hbxTxtShortBtnBox.getChildren().addAll(
-				btn_Short_addLine,
-				btn_Short_changePosPlus,
-				btn_Short_changePosMinus
-		);
-
-		grdPnlShorts.add(tblVw_shortcuts, 0, 1, 2, 1);
-		grdPnlShorts.add(hbxTxtShortBtnBox, 0, 2, 2, 1);
-
-		grdPnlShorts.add(
-				generateLabeledSeparator(
-						100,
-						"Text snippets (the first 10 use Ctrl+1 through Ctrl+0)"
-				),
-				0,
-				3,
-				2,
-				1
-		);
-
-		TableView<String> tblVw_textsnippets = initTextSnippetsTable();
-		tblVw_textsnippets.setItems(mirrorOf(
-				this.chatcontroller.getChatPreferences().getLst_txtSnipList()));
-
-		Button btn_Snip_addLine = new Button("Add new snippet");
-		btn_Snip_addLine.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				String newTextSnippet =
-						"CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key";
-				chatcontroller.getChatPreferences()
-						.getLst_txtSnipList()
-						.mutate(list -> list.add(0, newTextSnippet));
-				tblVw_textsnippets.getSelectionModel().clearAndSelect(0);
-				tblVw_textsnippets.scrollTo(0);
-				tblVw_textsnippets.edit(0, tblVw_textsnippets.getColumns().get(0));
-			}
-		});
-
-		Button btn_Snip_changePosPlus = new Button("Move selected down");
-		btn_Snip_changePosPlus.setOnAction(event -> {
-			if (moveSelectedTableEntry(tblVw_textsnippets, 1)) {
-				refreshTextSnippetContextMenus();
-			}
-		});
-
-		Button btn_Snip_changePosMinus = new Button("Move selected up");
-		btn_Snip_changePosMinus.setOnAction(event -> {
-			if (moveSelectedTableEntry(tblVw_textsnippets, -1)) {
-				refreshTextSnippetContextMenus();
-			}
-		});
-
-		HBox hbxTxtSnipBtnBox = new HBox();
-		hbxTxtSnipBtnBox.getChildren().addAll(
-				btn_Snip_addLine,
-				btn_Snip_changePosPlus,
-				btn_Snip_changePosMinus
-		);
-
-		grdPnlShorts.add(tblVw_textsnippets, 0, 4, 2, 1);
-		grdPnlShorts.add(hbxTxtSnipBtnBox, 0, 5, 2, 1);
-
-		VBox vbxShorts = new VBox();
-		vbxShorts.setPadding(new Insets(10, 10, 10, 10));
-		vbxShorts.getChildren().add(grdPnlShorts);
-
-		/*************************************************************************************
-		 * Beacons / CQ messages
-		 *************************************************************************************/
-
-		GridPane grdPnlBeacon = new GridPane();
-		grdPnlBeacon.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlBeacon.setVgap(5);
-		grdPnlBeacon.setHgap(5);
-
-		grdPnlBeacon.add(
-				generateLabeledSeparator(100, "CQ beacons for the public chat"),
-				0,
-				0,
-				2,
-				1
-		);
-
-		ChatCategory mainBeaconCategory = chatcontroller.getChatCategoryMain();
-		ChatCategory secondBeaconCategory = chatcontroller.getChatCategorySecondChat();
-
-		String mainBeaconCategoryName =
-				mainBeaconCategory.getChatCategoryName(mainBeaconCategory.getCategoryNumber());
-		String secondBeaconCategoryName = secondBeaconCategory == null
-				? "Second chat category"
-				: secondBeaconCategory.getChatCategoryName(secondBeaconCategory.getCategoryNumber());
-
-		grdPnlBeacon.add(
-				new Label("[" + mainBeaconCategoryName + "] Enable CQ beacon:"),
-				0,
-				1
-		);
-
-		CheckBox chkBxBeaconsEnabledMainCategory = new CheckBox();
-		chkBxBeaconsEnabledMainCategory.setSelected(
-				chatcontroller.getChatPreferences().isBcn_beaconsEnabledMainCat()
-		);
-		chkBxBeaconsEnabledMainCategory.selectedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					chatcontroller.getChatPreferences()
-							.setBcn_beaconsEnabledMainCat(newValue);
-					System.out.println("[Main.java, Info]: Main-category beacon enabled: "
-							+ newValue);
-				}
-		);
-
-		grdPnlBeacon.add(chkBxBeaconsEnabledMainCategory, 1, 1);
-
-		grdPnlBeacon.add(
-				new Label("Beacon message [max. "
-						+ ChatController.MAX_BEACON_TEXT_LENGTH
-						+ " characters]:"),
-				0,
-				2
-		);
-
-		TextField txtFldBeaconText = new TextField(
-				chatcontroller.getChatPreferences().getBcn_beaconTextMainCat()
-		);
-
-		txtFldBeaconText.setPrefWidth(400);
-		txtFldBeaconText.setFocusTraversable(false);
-		grdPnlBeacon.add(txtFldBeaconText, 1, 2);
-		txtFldBeaconText.focusedProperty().addListener(
-				(observable, oldValue, focused) -> {
-					if (!focused) {
-						applyBeaconTextSetting(txtFldBeaconText, true);
-					}
-				}
-		);
-
-		grdPnlBeacon.add(
-				new Label("[" + secondBeaconCategoryName + "] Enable CQ beacon:"),
-				0,
-				3
-		);
-
-		CheckBox chkBxBeaconsEnabledSecondCategory = new CheckBox();
-		chkBxBeaconsEnabledSecondCategory.setSelected(
-				chatcontroller.getChatPreferences().isBcn_beaconsEnabledSecondCat()
-		);
-		chkBxBeaconsEnabledSecondCategory.selectedProperty().addListener(
-				(observable, oldValue, newValue) -> {
-					chatcontroller.getChatPreferences()
-							.setBcn_beaconsEnabledSecondCat(newValue);
-					System.out.println("[Main.java, Info]: Second-category beacon enabled: "
-							+ newValue);
-				}
-		);
-
-		grdPnlBeacon.add(chkBxBeaconsEnabledSecondCategory, 1, 3);
-
-		grdPnlBeacon.add(
-				new Label("Beacon message [max. "
-						+ ChatController.MAX_BEACON_TEXT_LENGTH
-						+ " characters]:"),
-				0,
-				4
-		);
-
-		TextField txtFldBeaconTextSecondCat = new TextField(
-				chatcontroller.getChatPreferences().getBcn_beaconTextSecondCat()
-		);
-		txtFldBeaconTextSecondCat.setFocusTraversable(false);
-		grdPnlBeacon.add(txtFldBeaconTextSecondCat, 1, 4);
-		txtFldBeaconTextSecondCat.focusedProperty().addListener(
-				(observable, oldValue, focused) -> {
-					if (!focused) {
-						applyBeaconTextSetting(txtFldBeaconTextSecondCat, false);
-					}
-				}
-		);
-
-		grdPnlBeacon.add(
-				new Label("Shared beacon interval [minutes, min. "
-						+ ChatController.MIN_BEACON_INTERVAL_MINUTES
-						+ "]:"),
-				0,
-				5
-		);
-
-		TextField txtFldBeaconInterval = new TextField(
-				Integer.toString(
-						Math.max(
-								ChatController.MIN_BEACON_INTERVAL_MINUTES,
-								chatcontroller.getChatPreferences()
-										.getBcn_beaconIntervalInMinutesMainCat()
-						)
-				)
-		);
-		txtFldBeaconInterval.focusedProperty().addListener(
-				(observable, oldValue, focused) -> {
-					if (!focused) {
-						applySharedBeaconInterval(txtFldBeaconInterval);
-					}
-				}
-		);
-		grdPnlBeacon.add(txtFldBeaconInterval, 1, 5);
-
-		VBox vbxBeacon = new VBox();
-		vbxBeacon.setPadding(new Insets(10, 10, 10, 10));
-		vbxBeacon.getChildren().add(grdPnlBeacon);
-
-		/*************************************************************************************
-		 * Messagehandling ex Unworked station PM
-		 *************************************************************************************/
-
-		GridPane grdPnlMessageHandlingBeacon = new GridPane();
-		grdPnlMessageHandlingBeacon.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlMessageHandlingBeacon.setVgap(5);
-		grdPnlMessageHandlingBeacon.setHgap(5);
-
-//        Label lblEnableTRXMsgbyUCX = new Label("Receive UCXLog network based UDP trx messages");
-//        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
-
-		grdPnlMessageHandlingBeacon.add(generateLabeledSeparator(100,
-				"Automatic answering options"), 0, 0, 2, 1);
-
-//		Label lbl_unwkd_autoAnswerDescriptor = new Label("Auto-answer Text:");
-//		grdPnlMessageHandlingBeacon.add(lbl_unwkd_autoAnswerDescriptor,0,3);
-
-		CheckBox chkbx_msgHandlingAutoAnswerEnabled = new CheckBox("Enable automatic reply to all private messages");
-		chkbx_msgHandlingAutoAnswerEnabled.setTooltip(new Tooltip(
-				"KST4Contest replies with the configured text in the chat category from which the private message was received.\n"
-						+ "The same station can receive one automatic reply per chat category every two minutes."));
-		chkbx_msgHandlingAutoAnswerEnabled.setSelected(this.chatcontroller.getChatPreferences().isMsgHandling_autoAnswerEnabled());
-		chkbx_msgHandlingAutoAnswerEnabled.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerEnabled(chkbx_msgHandlingAutoAnswerEnabled.isSelected());
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerEnabledSecondCat(chkbx_msgHandlingAutoAnswerEnabled.isSelected());
-				System.out.println("[Main.java, Info]: Autoreply turned on: " + newValue);
-			}
-		});
-
-		CheckBox chkbx_messageHandlingAutoQRGInfoEnabled = new CheckBox("Enable automatic QRG replies");
-
-		String qrgRequestExamples = "ur qrg?\n"
-				+ "your qrg?\n"
-				+ "qrg?\n"
-				+ "freq?\n"
-				+ "pse qrg";
-
-		chkbx_messageHandlingAutoQRGInfoEnabled.setTooltip(new Tooltip(
-				"KST4Contest replies with the QRG configured for the chat category in which the request was received.\n"
-						+ "Recognized text:\n" + qrgRequestExamples));
-		chkbx_messageHandlingAutoQRGInfoEnabled.setSelected(this.chatcontroller.getChatPreferences().isMessageHandling_autoAnswerToQRGRequestEnabled());
-		chkbx_messageHandlingAutoQRGInfoEnabled.selectedProperty().addListener(new ChangeListener<Boolean>() {
-			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerToQRGRequestEnabled(chkbx_messageHandlingAutoQRGInfoEnabled.isSelected());
-				System.out.println("[Main.java, Info]: Autoreply (QRG) turned on: " + newValue);
-			}
-		});
-
-		TextField txtFld_messageHandlingAutoAnswer = new TextField();
-		txtFld_messageHandlingAutoAnswer.setPrefWidth(400);
-		txtFld_messageHandlingAutoAnswer.setText(this.chatcontroller.getChatPreferences().getMessageHandling_autoAnswerTextMainCat());
-		txtFld_messageHandlingAutoAnswer.textProperty().addListener(new ChangeListener<String>() {
-
-			@Override
-			public void changed(ObservableValue<? extends String> observed, String oldString, String newString) {
-				System.out.println("[Main.java, Info]: Set the auto-answer text: " + newString);
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextMainCat(newString);
-				chatcontroller.getChatPreferences().setMessageHandling_autoAnswerTextSecondCat(newString);
-			}
-		});
-
-		grdPnlMessageHandlingBeacon.add(chkbx_msgHandlingAutoAnswerEnabled, 0, 1);
-		grdPnlMessageHandlingBeacon.add(txtFld_messageHandlingAutoAnswer, 1, 1);
-
-		grdPnlMessageHandlingBeacon.add(chkbx_messageHandlingAutoQRGInfoEnabled, 0, 2, 2, 1);
-
-		grdPnlMessageHandlingBeacon.add(generateLabeledSeparator(
-				100, "Debug and contest history"), 0, 3, 2, 1);
-
-		CheckBox chkbxDebugModeToFile =
-				new CheckBox("Enable debug mode to file");
-		chkbxDebugModeToFile.setSelected(chatcontroller.getChatPreferences()
-				.isMessageHandling_debugModeToFileEnabled());
-		chkbxDebugModeToFile.setTooltip(new Tooltip(
-				"Records complete ON4KST RX/TX session traffic in Messagehistory.raw "
-						+ "and adds diagnostic details to kst4contest-errors.log.\n"
-						+ "Login passwords are redacted. Warnings and errors are always logged."));
-		chkbxDebugModeToFile.selectedProperty().addListener(
-				(observable, oldValue, enabled) -> {
-					chatcontroller.getChatPreferences()
-							.setMessageHandling_debugModeToFileEnabled(enabled);
-					if (enabled) {
-						setDebugFileLoggingEnabled(true);
-						chatcontroller.setMessageHistoryRecordingEnabled(true);
-					} else {
-						chatcontroller.setMessageHistoryRecordingEnabled(false);
-						setDebugFileLoggingEnabled(false);
-					}
-				});
-		grdPnlMessageHandlingBeacon.add(chkbxDebugModeToFile, 0, 4, 2, 1);
-
-		VBox vbxMsgHandlBeacon = new VBox();
-		vbxMsgHandlBeacon.setPadding(new Insets(10, 10, 10, 10));
-		vbxMsgHandlBeacon.getChildren().addAll(grdPnlMessageHandlingBeacon);
-
-		/*************************************************************************************
-		 * Internal database section / worked stations
-		 *************************************************************************************/
-
-		GridPane grdPnlInternalDBPane = new GridPane();
-		grdPnlInternalDBPane.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlInternalDBPane.setVgap(5);
-		grdPnlInternalDBPane.setHgap(5);
-
-//        Label lblEnableTRXMsgbyUCX = new Label("Receive UCXLog network based UDP trx messages");
-//        CheckBox chkBxEnableTRXMsgbyUCX = new CheckBox();
-
-		grdPnlInternalDBPane.add(
-				generateLabeledSeparator(
-						100,
-						"Internal contest data: worked stations, NOT-QRV tags and worked grids"
-				),
-				0,
-				0,
-				2,
-				1
-		);
-//        grdPnlShorts.add(lblEnableTRXMsgbyUCX, 0, 1);
-//        grdPnlShorts.add(chkBxEnableTRXMsgbyUCX, 1, 1);
-
-		VBox vbxInternalDB = new VBox();
-		vbxInternalDB.setPadding(new Insets(10, 10, 10, 10));
-		vbxInternalDB.getChildren().addAll(grdPnlInternalDBPane);
-
-		TableView<ChatMember> tblVw_worked = new TableView<ChatMember>();
-		final TableView<ChatMember> finalTblVwWorked = tblVw_worked; //effectively final variable
-
-		tblVw_worked = initWkdStnTable();
-//		tblVw_worked.setItems(); TODO
-
-		Button btn_wkdDB_refresh = new Button("Refresh worked database");
-		btn_wkdDB_refresh.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
-				finalTblVwWorked.refresh();
-			}
-		});
-
-		Button btn_wkdDB_reset = new Button("Reset worked, NOT-QRV and grid data...");
-		btn_wkdDB_reset.setTooltip(new Tooltip(
-				"Manual reset of all contest-related database flags. "
-						+ "This is normally not required because entries expire automatically after three days."
-		));
-
-		btn_wkdDB_reset.setOnAction(event -> {
-			Alert confirmation = new Alert(AlertType.CONFIRMATION);
-			confirmation.setTitle("Reset contest data");
-			confirmation.setHeaderText("Reset all worked, NOT-QRV and grid data?");
-			confirmation.setContentText(
-					"This removes all worked markings, manually assigned NOT-QRV tags "
-							+ "and stored worked-grid information. The operation cannot be undone.\n\n"
-							+ "The selected Simplelogfile is not changed. Callsigns contained in it will be "
-							+ "marked as worked again when the file is read within the next minute.\n\n"
-							+ "A reset before every contest is normally not required because these data "
-							+ "expire automatically after three days."
-			);
-
-			ButtonType resetButton = new ButtonType(
-					"Reset data",
-					ButtonBar.ButtonData.OK_DONE
-			);
-			ButtonType cancelButton = new ButtonType(
-					"Cancel",
-					ButtonBar.ButtonData.CANCEL_CLOSE
-			);
-			confirmation.getButtonTypes().setAll(resetButton, cancelButton);
-
-			if (confirmation.showAndWait().orElse(cancelButton) != resetButton) {
-				return;
-			}
-
-			int affectedLines = chatcontroller.getDbHandler().resetWorkedDataInDB();
-
-			if (affectedLines < 0) {
-				Alert error = new Alert(AlertType.ERROR);
-				error.setTitle("Reset contest data");
-				error.setHeaderText("The contest data could not be reset.");
-				error.setContentText(
-						"The internal database may be unavailable or inconsistent. "
-								+ "No successful reset was confirmed."
-				);
-				error.show();
-				return;
-			}
-
-			chatcontroller.resetWorkedAndQrvInfoInGuiLists();
-			chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
-			finalTblVwWorked.refresh();
-
-			Alert information = new Alert(AlertType.INFORMATION);
-			information.setTitle("Reset contest data");
-			information.setHeaderText("The contest data were reset.");
-			information.setContentText(
-					affectedLines
-							+ " callsign database entries were updated. "
-							+ "Worked-grid data were cleared as well. The selected Simplelogfile was not changed; "
-							+ "callsigns contained in it will be marked as worked again when the file is next read."
-			);
-			information.show();
-		});
-
-		HBox hbxwkdShortBtnBox = new HBox();
-		grdPnlInternalDBPane.add(hbxwkdShortBtnBox, 0, 2, 2, 1);
-		hbxwkdShortBtnBox.getChildren().addAll(btn_wkdDB_refresh, btn_wkdDB_reset);
-
-
-		grdPnlInternalDBPane.add(tblVw_worked, 0, 1, 2, 1);
-
-		/*************************************************************************************
-		 * Internal database section / End
-		 *************************************************************************************/
-
-		/*************************************************************************************
-		 * GUI options
-		 *************************************************************************************/
-
-		GridPane grdPnlGuiOptions = new GridPane();
-		grdPnlGuiOptions.setPadding(new Insets(10, 10, 10, 10));
-		grdPnlGuiOptions.setVgap(5);
-		grdPnlGuiOptions.setHgap(5);
-
-
-		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Set selected user default message-filtering"),
-				0, 0, 2, 1);
-		grdPnlGuiOptions.add(new Label("By default show...:"), 0, 1);
-
-		HBox guiOptions_hbxUserInfoMessageFilter = new HBox();
-		guiOptions_hbxUserInfoMessageFilter.setPadding(new Insets(10, 10, 10, 10));
-
-		grdPnlGuiOptions.add(guiOptions_hbxUserInfoMessageFilter, 1, 1);
-//		grdPnlGuiOptions.add(new Label("Beacon message [<100 Chars]:"), 0, 2);
-
-		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Bring color to the people (SM6VTZ wish for next subversion! Pse patience)"),
-				0, 2, 2, 1);
-		grdPnlGuiOptions.add(new Label("Coloring mode:"), 0, 3);
-
-		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Band table hints"), 0, 4, 2, 1);
-
-		Label lblShowGrossFieldWorkedHint = new Label(
-				"Show \"o\" in band columns when the grid square is already worked on that band"
-		);
-		CheckBox chkBxShowGrossFieldWorkedHint = new CheckBox();
-		chkBxShowGrossFieldWorkedHint.setSelected(
-				chatcontroller.getChatPreferences().isGuiOptions_showGrossFieldWorkedHintInBandColumns()
-		);
-		chkBxShowGrossFieldWorkedHint.selectedProperty().addListener((obs, o, n) -> {
-			chatcontroller.getChatPreferences().setGuiOptions_showGrossFieldWorkedHintInBandColumns(n);
-			GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
-		});
-
-		grdPnlGuiOptions.add(lblShowGrossFieldWorkedHint, 0, 5);
-		grdPnlGuiOptions.add(chkBxShowGrossFieldWorkedHint, 1, 5);
-
-		Label lblShowFreshCallHint = new Label(
-				"Show \"a\" in band columns for a call not worked on any band yet (otherwise always \"B+\")"
-		);
-		CheckBox chkBxShowFreshCallHint = new CheckBox();
-		chkBxShowFreshCallHint.setSelected(
-				chatcontroller.getChatPreferences().isGuiOptions_showFreshCallHintInBandColumns()
-		);
-		chkBxShowFreshCallHint.selectedProperty().addListener((obs, o, n) -> {
-			chatcontroller.getChatPreferences().setGuiOptions_showFreshCallHintInBandColumns(n);
-			GuiUtils.triggerGUIFilteredChatMemberListChange(chatcontroller);
-		});
-
-		grdPnlGuiOptions.add(lblShowFreshCallHint, 0, 6);
-		grdPnlGuiOptions.add(chkBxShowFreshCallHint, 1, 6);
-
-		// Startup design of this operator profile; the Windows menu only switches for the session.
-		grdPnlGuiOptions.add(generateLabeledSeparator(100, "Design"), 0, 7, 2, 1);
-
-		ToggleGroup guiOptions_tglGrpDesign = new ToggleGroup();
-		RadioButton designLightModeRB = new RadioButton("Light mode ");
-		designLightModeRB.setToggleGroup(guiOptions_tglGrpDesign);
-		RadioButton designDarkModeRB = new RadioButton("Dark mode ");
-		designDarkModeRB.setToggleGroup(guiOptions_tglGrpDesign);
-
-		if (chatcontroller.getChatPreferences().isGUI_darkModeActiveByDefault()) {
-			designDarkModeRB.setSelected(true);
-		} else {
-			designLightModeRB.setSelected(true);
-		}
-
-		guiOptions_tglGrpDesign.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
-			if (newToggle == null) {
-				return;
-			}
-			boolean darkMode = newToggle == designDarkModeRB;
-			chatcontroller.getChatPreferences().setGUI_darkModeActiveByDefault(darkMode);
-			applyTheme(darkMode);
-		});
-
-		grdPnlGuiOptions.add(new Label("Design at startup of this profile:"), 0, 8);
-		grdPnlGuiOptions.add(new HBox(designLightModeRB, designDarkModeRB), 1, 8);
-
-
-
-
-		ToggleGroup guiOptions_tglGrpSelectedCallsignFilter = new ToggleGroup();
-		RadioButton selectedCallSignFilterToMeMsgRB = new RadioButton("...pm to me ");
-//		selectedCallSignFilterToMeMsgRB.setSelected(true);
-		selectedCallSignFilterToMeMsgRB.setToggleGroup(guiOptions_tglGrpSelectedCallsignFilter);
-		RadioButton selectedCallSignFilterMsgToOtherRB = new RadioButton("...pm to other ");
-		selectedCallSignFilterMsgToOtherRB.setToggleGroup(guiOptions_tglGrpSelectedCallsignFilter);
-		RadioButton selectedCallSignFilterMsgpublic = new RadioButton("...public msgs ");
-		selectedCallSignFilterMsgpublic.setToggleGroup(guiOptions_tglGrpSelectedCallsignFilter);
-		RadioButton selectedCallSignNoFilterRB = new RadioButton("...all messages ");
-		selectedCallSignNoFilterRB.setToggleGroup(guiOptions_tglGrpSelectedCallsignFilter);
-
-
-		guiOptions_tglGrpSelectedCallsignFilter.selectedToggleProperty().addListener(new ChangeListener<Toggle>() {
-			@Override
-			public void changed(ObservableValue<? extends Toggle> observableValue, Toggle toggle, Toggle t1) {
-
-				RadioButton radioButton = (RadioButton) guiOptions_tglGrpSelectedCallsignFilter.getSelectedToggle();
-
-				if (radioButton.equals(selectedCallSignFilterToMeMsgRB)) {
-
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToMe(true);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToOther(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPublicMsgs(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterNothing(false);
-
-					System.out.println(t1 + " filter to me was selected ");
-				} else if (radioButton.equals(selectedCallSignFilterMsgToOtherRB)) {
-
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToOther(true);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPublicMsgs(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterNothing(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToMe(false);
-
-					System.out.println(t1 + " filter to other was selected ");
-				} else if (radioButton.equals(selectedCallSignFilterMsgpublic)) {
-
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPublicMsgs(true);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToOther(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterNothing(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToMe(false);
-
-					System.out.println(t1 + " Gui options: filter to public was selected");
-				} else if (radioButton.equals(selectedCallSignNoFilterRB)) {
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterNothing(true);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPublicMsgs(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToOther(false);
-					chatcontroller.getChatPreferences().setGuiOptions_defaultFilterPmToMe(false);
-
-					System.out.println(t1 + " Gui options: no filter was selected");
-				}
-			}
-		});
-
-
-		guiOptions_hbxUserInfoMessageFilter.getChildren().add(selectedCallSignNoFilterRB);
-		guiOptions_hbxUserInfoMessageFilter.getChildren().add(selectedCallSignFilterToMeMsgRB);
-		guiOptions_hbxUserInfoMessageFilter.getChildren().add(selectedCallSignFilterMsgToOtherRB);
-		guiOptions_hbxUserInfoMessageFilter.getChildren().add(selectedCallSignFilterMsgpublic);
-
-		if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterNothing()) {
-			selectedCallSignNoFilterRB.setSelected(true);
-		} else if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToMe()) {
-			selectedCallSignFilterToMeMsgRB.setSelected(true);
-		} else if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToOther()) {
-			selectedCallSignFilterMsgToOtherRB.setSelected(true);
-		} else if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPublicMsgs()) {
-			selectedCallSignFilterMsgpublic.setSelected(true);
-		}
-
-		VBox vbxGuiOptions = new VBox();
-		vbxGuiOptions.setPadding(new Insets(10, 10, 10, 10));
-		vbxGuiOptions.getChildren().addAll(grdPnlGuiOptions);
-
-		/*************************************************************************************
-		 * GUI options End
-		 *************************************************************************************/
-
-
-
-		/**
-		 * Building the options tabpanel
-		 */
-
-		Tab tbStationSettings = new Tab("Station", vbxStation);
-		Tab tbLogSynchSet = new Tab("Log synch", vbxLog);
-		Tab tbTRXSynchSet = new Tab("TRX synch", vbxTRXSynch);
-		Tab tbAirScoutSettings = new Tab("Airscout", vbxAirScout);
-		Tab tbNotify = new Tab("Notification", vbxNotify);
-		Tab tbShorts = new Tab("Shortcuts", vbxShorts);
-//        Tab tbMacro = new Tab("Macros" , new Label("Set the right clickable Macros"));
-		Tab tbBeacon = new Tab("Beacon", vbxBeacon);
-		Tab tbMsgHandling = new Tab("Messagehandling", vbxMsgHandlBeacon);
-		Tab tbInternalDB = new Tab("Workedstn database", vbxInternalDB);
-		Tab tbGui = new Tab("GUI", vbxGuiOptions);
-
-		/*
-		 * Appended last on purpose so no established tab position shifts. Contest
-		 * operators navigate these tabs by muscle memory.
-		 */
-		Tab tbProfiles = new Tab("Profiles", new OperatorProfileSettingsPane(
-				new OperatorProfileManagementService(),
-				this::requestOperatorProfileSwitch));
-
-
-		/**
-		 * Automatic update of tab contents out of the database
-		 */
-		tbInternalDB.setOnSelectionChanged(new EventHandler<Event>() {
-			@Override
-			public void handle(Event event) {
-				if (tbInternalDB.isSelected()) {
-					chatcontroller.refreshWorkedStateAndDatabaseListFromDatabase();
-				}
-			}
-		});
-
-
-		tabPaneOptions.getTabs().addAll(tbStationSettings, tbLogSynchSet, tbTRXSynchSet, tbAirScoutSettings, tbNotify,
-				tbShorts, tbBeacon, tbMsgHandling, tbInternalDB, tbGui, tbProfiles);
-
-		optionsPanel.setLeft(tabPaneOptions);
-
-		HBox vbxButtons = new HBox();
-		vbxButtons.setPadding(new Insets(20, 20, 20, 20));
-
-		Button btnOptionsPnlApply = new Button("Apply/Close prefs");
-		btnOptionsPnlApply.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				settingsStage.hide();
-			}
-		});
-
-		Button btnOptionspnlDisconnect = new Button("Disconnect & close Chat");
-		btnOptionspnlDisconnect.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				closeWindowEvent(null);
-
-//				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
-
-			}
-		});
-
-
-		Button btnOptionspnlDisconnectOnly = new Button("Disconnect");
-		btnOptionspnlDisconnectOnly.setDisable(true);
-		menuItemFileDisconnect.setDisable(true);
-		menuItemOptionsAwayBack.setDisable(true);
-
-		if (chatcontroller.isDisconnected()) {
-
-			btnOptionspnlDisconnectOnly.setDisable(true);
-			menuItemFileDisconnect.setDisable(true);
-			menuItemOptionsAwayBack.setDisable(true);
-
-		} else if (chatcontroller.isConnectedAndNOTLoggedIn()) {
-			btnOptionspnlDisconnectOnly.setDisable(true);
-			menuItemFileDisconnect.setDisable(true);
-			menuItemOptionsAwayBack.setDisable(true);
-		}
-
-		else if (chatcontroller.isConnectedAndLoggedIn()) {
-			btnOptionspnlDisconnectOnly.setDisable(false);
-			menuItemFileDisconnect.setDisable(false);
-			menuItemFileConnect.setDisable(true);
-			menuItemOptionsAwayBack.setDisable(false);
-		}
-
-		btnOptionspnlDisconnectOnly.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-//				closeWindowEvent(null);
-//				System.out.println("UI: disc requested");
-				chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
-
-				txtFldCallSign.setDisable(false);
-				txtFldPassword.setDisable(false);
-				txtFldNameInChatMainCat.setDisable(false);
-				txtFldLocator.setDisable(false);
-				choiceBxChatChategory.setDisable(false);
-				btnOptionspnlConnect.setDisable(false);
-				btnOptionspnlDisconnect.setDisable(false);
-				btnOptionspnlDisconnectOnly.setDisable(true);
-				txtFldstn_antennaBeamWidthDeg.setDisable(false);
-				txtFldstn_qtfDefault.setDisable(false);
-				txtFldstn_maxQRBDefault.setDisable(false);
-				menuItemOptionsSetFrequencyAsName.setDisable(true);
-				menuItemOptionsAwayBack.setDisable(true);
-				menuItemFileConnect.setDisable(false);
-				station_chkBxEnableSecondChat.setDisable(false);
-				stn_choiceBxChatChategorySecond.setDisable(false);
-			}
-		});
-
-		String btnText = "Connect to " + chatcontroller.getChatPreferences().getLoginChatCategoryMain()
-				.getChatCategoryName(choiceBxChatChategory.getSelectionModel().getSelectedItem().getCategoryNumber());
-		ChatCategory secCat = chatcontroller.getChatPreferences().getLoginChatCategorySecond();
-		if (chatcontroller.getChatPreferences().isLoginToSecondChatEnabled() && secCat != null) {
-			btnText += " & " + secCat.getChatCategoryName(secCat.getCategoryNumber());
-		}
-		btnOptionspnlConnect = new Button(btnText);
-		btnOptionspnlConnect.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-				chatcontroller.getChatPreferences().setStn_loginCallSign(txtFldCallSign.getText());
-				chatcontroller.getChatPreferences().setStn_loginPassword(txtFldPassword.getText());
-				chatcontroller.getChatPreferences().setStn_loginLocatorMainCat(txtFldLocator.getText());
-				chatcontroller.getChatPreferences().setStn_loginNameMainCat(txtFldNameInChatMainCat.getText());
-				chatcontroller.getChatPreferences()
-						.setLoginChatCategoryMain(choiceBxChatChategory.getSelectionModel().getSelectedItem());
-
-				chatcontroller.getChatPreferences().setStn_loginNameSecondCat(txtFldNameInChatSecondCat.getText());
-
-				//here is where all settings has to be written to the preferences instance
-
-
-				LOGGER.log(
-						Level.INFO,
-						"Settings window: ON4KST connection requested for {0} in {1}; "
-								+ "second chat enabled: {2}",
-						new Object[] {
-								chatcontroller.getChatPreferences().getStn_loginCallSign(),
-								choiceBxChatChategory.getSelectionModel().getSelectedItem(),
-								chatcontroller.getChatPreferences().isLoginToSecondChatEnabled()
-						}
-				);
-
-				try {
-
-
-
-					chatcontroller.execute(); // TODO:THAT IS THE MAIN POINT WHERE THE CHAT WILL BE STARTED...MUST CATCH
-												// Passwordfailedexc in future
-
-					btnOptionspnlDisconnectOnly.setDisable(false);
-					menuItemFileDisconnect.setDisable(false);
-					menuItemFileConnect.setDisable(true);
-					menuItemOptionsAwayBack.setDisable(false);
-					menuItemOptionsSetFrequencyAsName.setDisable(false);
-
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-					btnOptionspnlConnect.setDisable(false);
-				} catch (IOException e) {
-					e.printStackTrace();
-					btnOptionspnlConnect.setDisable(false);
-				}
-				txtFldCallSign.setDisable(true);
-				txtFldPassword.setDisable(true);
-				txtFldNameInChatMainCat.setDisable(true);
-				txtFldNameInChatSecondCat.setDisable(true);
-				txtFldLocator.setDisable(true);
-				choiceBxChatChategory.setDisable(true);
-				txtFldstn_antennaBeamWidthDeg.setDisable(true);
-				txtFldstn_qtfDefault.setDisable(true);
-				txtFldstn_maxQRBDefault.setDisable(true);
-				btnOptionspnlConnect.setDisable(true);
-				btnOptionspnlDisconnect.setDisable(false);
-//				chatcontroller.setConnectedAndLoggedIn(true);
-//				chatcontroller.setDisconnected(false);
-				station_chkBxEnableSecondChat.setDisable(true);
-				stn_choiceBxChatChategorySecond.setDisable(true);
-			}
-		});
-
-		Button btn_preferences_saveAsDefault = new Button("Save settings");
-		btn_preferences_saveAsDefault.setOnAction(new EventHandler<ActionEvent>() {
-			@Override
-			public void handle(ActionEvent event) {
-
-				System.out.println("saved");
-
-				if (chatcontroller.getChatPreferences().writePreferencesToXmlFile()
-						&& layoutAutosave != null) {
-					layoutAutosave.cancelPending();
-				}
-				Alert a = new Alert(AlertType.INFORMATION);
-
-				a.setTitle("Info");
-				a.setHeaderText("Settings are stored as default to the xml config file:");
-				a.setContentText(chatcontroller.getChatPreferences().getStoreAndRestorePreferencesFileName());
-				a.show();
-
-//				ChatMessage sendMe = new ChatMessage();
-//				sendMe.setMessageText(txt_chatMessageUserInput.getText());
-//				sendMe.setMessageDirectedToServer(false);
-//
-//				chatcontroller.getMessageTXBus().add(sendMe);
-//
-//				txt_chatMessageUserInput.clear();
-
-			}
-		});
-
-		vbxButtons.getChildren().addAll(btnOptionspnlConnect, btn_preferences_saveAsDefault, btnOptionsPnlApply,
-				btnOptionspnlDisconnect, btnOptionspnlDisconnectOnly);
-
-//		AnchorPane anchorPaneOkAndSave = new AnchorPane();
-//		AnchorPane.setRightAnchor(vbxButtons, 10d);
-//		AnchorPane.setBottomAnchor(vbxButtons, 10d);
-//
-//		anchorPaneOkAndSave.getChildren().addAll(vbxButtons);
-
-//		optionsPanel.setBottom(anchorPaneOkAndSave);
-//        optionsPanel.setAlignment(vbxButtons, Pos.CENTER);;
-
-
-		vbxButtons.setAlignment(Pos.CENTER_LEFT);
-		optionsPanel.setBottom(vbxButtons);
-
-//        VBox vBox = new VBox(tabPaneOptions);
-		settingsScene = new Scene(optionsPanel, chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0], chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1]);
-		registerThemedScene(settingsScene);
-		settingsScene.widthProperty().addListener((observable, oldValue, newValue) -> {
-			chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0] = newValue.doubleValue();
-			requestLayoutSave();
-		});
-		settingsScene.heightProperty().addListener((observable, oldValue, newValue) -> {
-			chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1] = newValue.doubleValue();
-			requestLayoutSave();
-		});
-
-		installSharedSystemMenuBar(settingsScene);
-		settingsStage.setScene(settingsScene);
-
-//		settingsStage.getScene().getWindow().addEventFilter(WindowEvent.WINDOW_CLOSE_REQUEST, this::closeWindowEvent);
-
-		settingsStage.show();
+		openSettingsWindow();
 
 
 
@@ -12943,9 +9899,6 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 			if (menuItemOptionsSetFrequencyAsName != null) {
 				menuItemOptionsSetFrequencyAsName.setDisable(!online);
 			}
-			if (btnOptionspnlConnect != null) {
-				btnOptionspnlConnect.setDisable(active);
-			}
 			if (sendButton != null) {
 				sendButton.setDisable(!online);
 			}
@@ -12997,7 +9950,64 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 	 * spurious TableView selection events, so no extra guard is needed here.</p>
 	 */
 	private void forceChatMemberFilterRefresh() {
+		updateComposeFilters();
 		applyChatMemberFilterPredicates();
+	}
+
+	private void updateComposeFilters() {
+		if (composeMainWindowState == null) return;
+		kst4contest.view.compose.StationFilterState state = composeMainWindowState.getStationFilter();
+
+		String text = state.getSearchText().trim();
+		boolean hasText = !text.isEmpty();
+
+		java.util.function.Predicate<ChatMember> unifiedPredicate = member -> {
+			if (hasText) {
+				String cs = member.getCallSign();
+				if (cs == null || !cs.toUpperCase(java.util.Locale.ROOT).contains(text.toUpperCase(java.util.Locale.ROOT))) {
+					return false;
+				}
+			}
+
+			if (state.isOn(kst4contest.view.compose.StationFilter.ONLY_NEW_GRIDS) && !chatcontroller.isNewGridSquare(member)) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.TROPO_REACHABLE) && !isReachableViaTropoFilterMatch(member)) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.NEW_BANDS) && !isNewBandOpportunity(member)) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.AIRSCOUT_NEXT_5_MIN) && !hasAsWindowInNextMinutes(member, 5)) return false;
+
+			if (state.isOn(kst4contest.view.compose.StationFilter.MAX_QRB)) {
+				Double qrb = member.getQrb();
+				if (qrb == null || qrb > state.getMaxQrbKm()) return false;
+			}
+
+			if (state.isOn(kst4contest.view.compose.StationFilter.QTF)) {
+				Double qtf = member.getQTFdirection();
+				if (qtf == null || !kst4contest.locatorUtils.DirectionUtils.isAngleInRange(qtf, state.getQtfDegrees(), chatcontroller.getChatPreferences().getStn_antennaBeamWidthDeg())) return false;
+			}
+
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_INACTIVE)) {
+				long inactiveMinutes = kst4contest.controller.Utils4KST.time_getSecondsBetweenEpochAndNow(member.getActivityTimeLastInEpoch() + "") / 60;
+				if (inactiveMinutes > 20L) return false;
+			}
+
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_ANY) && member.isWorked()) return false;
+
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_50) && (member.isWorked50() || !member.isQrv50())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_70) && (member.isWorked70() || !member.isQrv70())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_144) && (member.isWorked144() || !member.isQrv144())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_432) && (member.isWorked432() || !member.isQrv432())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_23) && (member.isWorked1240() || !member.isQrv1240())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_13) && (member.isWorked2300() || !member.isQrv2300())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_9) && (member.isWorked3400() || !member.isQrv3400())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_6) && (member.isWorked5600() || !member.isQrv5600())) return false;
+			if (state.isOn(kst4contest.view.compose.StationFilter.HIDE_WORKED_3) && (member.isWorked10G() || !member.isQrv10G())) return false;
+
+			return true;
+		};
+
+		composeMainWindowState.getStations().setRowFilter(unifiedPredicate::test);
+
+		chatcontroller.clearChatMemberListFilterPredicates();
+		chatcontroller.addChatMemberListFilterPredicate(unifiedPredicate);
 	}
 
 	@Override
@@ -13026,6 +10036,9 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 
 					if (tbl_chatMember != null) {
 						tbl_chatMember.refresh();
+					}
+					if (composeMainWindowState != null) {
+						composeMainWindowState.getStations().forceRedraw();
 					}
 
 					refreshStationMapIfVisible();
@@ -13376,6 +10389,869 @@ public class Kst4ContestApplication extends Application implements StatusUpdateL
 		if (tbl_chatMember != null) {
 			tbl_chatMember.refresh();
 		}
+	}
+
+	/*************************************************************************************
+	 * Settings window (Compose)
+	 *
+	 * The window, its eleven tabs and the rules of every field live in Kotlin under
+	 * kst4contest.view.compose. What stays here is the work only this class can do:
+	 * rebuilding JavaFX controls, and starting or dropping the ON4KST session.
+	 ************************************************************************************/
+
+	/**
+	 * There is no configurable base font size; the JavaFX settings window used the
+	 * platform default. This is the same value the operator profile picker uses, so both
+	 * Compose windows read like the JavaFX ones next to them.
+	 */
+	private static final float SETTINGS_WINDOW_FONT_SIZE_SP = 12f;
+
+	private final SettingsNotices settingsNotices = new SettingsNotices();
+
+	/**
+	 * The monitor window's roster subscriptions. Held so shutdownRuntime can release
+	 * them: a discarded runtime that still feeds a closed window keeps itself alive.
+	 */
+	private java.util.function.Consumer<java.util.List<ClusterMessage>> monitorClusterListener;
+
+	private java.util.function.Consumer<java.util.List<ChatMessage>> monitorChatListener;
+
+	/** Releases the monitor window's roster subscriptions. */
+	private void releaseMonitorListeners() {
+
+		if (monitorClusterListener != null) {
+			chatcontroller.getLst_clusterMemberList().removeListener(monitorClusterListener);
+			monitorClusterListener = null;
+		}
+
+		if (monitorChatListener != null) {
+			chatcontroller.getLst_globalChatMessageList().removeListener(monitorChatListener);
+			monitorChatListener = null;
+		}
+	}
+
+	/*****************************************************
+	 * The Compose main window, opened beside the JavaFX one
+	 ****************************************************/
+
+	/** Held so the feeds can be released; a discarded runtime that still feeds a window lives on. */
+	private MainWindowState composeMainWindowState;
+	private java.util.function.Consumer<java.util.List<ChatMember>> composeMemberListener;
+	private java.util.function.Consumer<java.util.List<ChatMessage>> composeChatListener;
+	private java.util.function.Consumer<java.util.List<ClusterMessage>> composeClusterListener;
+
+	/**
+	 * Opens the Compose main window beside the JavaFX one.
+	 *
+	 * <p>Only on --compose-main-window, and never a second time. The two run side by side so
+	 * the operator can compare them against a live session, which is the only way the
+	 * differences of the last three Etappen came to light.</p>
+	 */
+	private void openComposeMainWindowIfRequested() {
+
+		// Etappe 5c: Compose Hauptfenster wird immer gestartet
+		// if (!CommandLineOptions.remembered().isComposeMainWindowRequested()) {
+		// 	return;
+		// }
+
+		// if (MainWindowHost.isOpen()) {
+		// 	return;
+		// }
+
+		ColumnWidthStore widths = new ColumnWidthStore() {
+			@Override
+			public Double width(String tableId, String columnId) {
+				java.util.OptionalDouble stored =
+						chatcontroller.getChatPreferences().getTableColumnWidth(tableId, columnId);
+				return stored.isPresent() ? stored.getAsDouble() : null;
+			}
+
+			@Override
+			public void setWidth(String tableId, String columnId, double width) {
+				chatcontroller.getChatPreferences().setTableColumnWidth(tableId, columnId, width);
+			}
+
+			@Override
+			public void requestSave() {
+				requestLayoutSave();
+			}
+		};
+
+		/*
+		 * Own table ids, deliberately. The Compose window's columns are the operator's to
+		 * arrange separately while both windows are on screen; sharing the ids would let a
+		 * drag in one silently rearrange the other.
+		 */
+		DataTableState<ChatMember> stations = new DataTableState<>(
+				StationColumns.INSTANCE.all(
+						member -> {
+							Band band = resolveReachabilityBandForUi(member);
+							chatcontroller.getReachabilityService()
+									.ensureTropoMarginCalculated(member, band);
+							return member.formatTropoSsbMarginForBand(band);
+						},
+						member -> parseTableDouble(formatPriorityScore(member)),
+						(member, band, worked) -> formatBandCellStatus(member, band, worked),
+						BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences())),
+				RowKeys.INSTANCE.byValue(ChatMember::getCallSign),
+				"compose-stations",
+				widths);
+
+		DataTableState<ChatMessage> directed = new DataTableState<>(
+				DirectedMessageColumns.INSTANCE.all(
+						() -> chatcontroller.getChatPreferences().getStn_loginCallSign(),
+						chatcontroller::formatChatMessageTextForDisplay),
+				RowKeys.INSTANCE.byReference(),
+				"compose-directed-messages",
+				widths);
+
+		DataTableState<ChatMessage> publicMessages = new DataTableState<>(
+				PublicMessageColumns.INSTANCE.all(),
+				RowKeys.INSTANCE.byReference(),
+				"compose-public-messages",
+				widths);
+
+		DataTableState<ClusterMessage> cluster = new DataTableState<>(
+				MonitorColumns.INSTANCE.dxCluster(),
+				RowKeys.INSTANCE.byReference(),
+				"compose-dx-cluster",
+				widths);
+
+		DataTableState<ChatMessage> qsoOfTheOther = new DataTableState<>(
+				MonitorColumns.INSTANCE.qsoOfTheOther(),
+				RowKeys.INSTANCE.byReference(),
+				"compose-qso-other",
+				widths);
+
+		DataTableState<ChatMessage> selectedStationMessages = new DataTableState<>(
+				SelectedStationMessageColumns.INSTANCE.all(),
+				RowKeys.INSTANCE.byReference(),
+				"compose-selected-station-messages",
+				widths);
+
+		MainMenuState menu = new MainMenuState();
+		MainWindowSurroundings surroundings = new MainWindowSurroundings(menu);
+
+		SelectedStationState selectedStation = new SelectedStationState(
+				member -> {
+					chatcontroller.propagateNotQrvStateToActiveMembers(member);
+					return kotlin.Unit.INSTANCE;
+				},
+				this::createSkedFromCompose,
+				member -> kotlin.Unit.INSTANCE,
+				member -> kotlin.Unit.INSTANCE,
+				filter -> {
+					if (filter == null) {
+						return kotlin.Unit.INSTANCE;
+					}
+					Predicate<ChatMessage> predicate;
+					switch (filter) {
+						case PM_TO_ME:
+							predicate = chatMessage -> {
+								try {
+									if (chatMessage.getReceiver().getCallSign().equals("ALL") && !(chatMessage.getMessageText().toLowerCase().contains(chatcontroller.getChatPreferences().getStn_loginCallSign().toLowerCase()))) {
+										return false;
+									}
+									return ((chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign())) || (chatMessage.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign()))) &&
+											((chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())) || (chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign())));
+								} catch (Exception e) { return false; }
+							};
+							break;
+						case PM_TO_OTHER:
+							predicate = chatMessage -> {
+								try {
+									return (chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign()) && !chatMessage.getReceiver().getCallSign().equals("ALL") && !chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign())) ||
+											(chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign()) && !chatMessage.getReceiver().getCallSign().equals("ALL") && !chatMessage.getReceiver().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign()));
+								} catch (Exception e) { return false; }
+							};
+							break;
+						case PUBLIC:
+							predicate = chatMessage -> {
+								try {
+									return chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign()) && chatMessage.getReceiver().getCallSign().equals("ALL");
+								} catch (Exception e) { return false; }
+							};
+							break;
+						case NOTHING:
+						default:
+							predicate = chatMessage -> {
+								try {
+									return chatMessage.getSender().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign()) || chatMessage.getReceiver().getCallSign().equals(selectedCallSignInfoStageChatMember.getCallSign());
+								} catch (Exception e) { return false; }
+							};
+							break;
+					}
+					applySelectedCallSignInfoFilter(predicate);
+					return kotlin.Unit.INSTANCE;
+				},
+				member -> {
+					if (member == null || member.getCallSignRaw() == null) {
+						return "";
+					}
+					return formatDetectedRxBandsForCallsignRaw(member.getCallSignRaw(), 30L * 60L * 1000L);
+				},
+				member -> {
+					if (member == null) return null;
+					java.util.EnumSet<Band> enabledBands = kst4contest.logic.BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences());
+					return resolveDefaultSkedBand(member, enabledBands);
+				});
+
+		if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToMe()) {
+			selectedStation.setMessageFilter(SelectedMessageFilter.PM_TO_ME);
+		} else if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToOther()) {
+			selectedStation.setMessageFilter(SelectedMessageFilter.PM_TO_OTHER);
+		} else {
+			selectedStation.setMessageFilter(SelectedMessageFilter.NOTHING);
+		}
+
+		TopPriorityState topPriority = new TopPriorityState(
+				this::composeTopStations,
+				member -> selectStationInCompose(selectedStation, stations, member));
+
+		ChatInputState chatInput = new ChatInputState(new ComposeChatInputActions(this));
+
+		composeMainWindowState = new MainWindowState(
+				BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences()),
+				chatcontroller.getChatPreferences(),
+				stations,
+				new StationFilterState(),
+				directed,
+				publicMessages,
+				cluster,
+				qsoOfTheOther,
+				selectedStationMessages,
+				selectedStation,
+				topPriority,
+				new TimelineState(),
+				chatInput,
+				menu,
+				surroundings,
+				new BlinkingNotice(),
+				new BlinkingNotice(),
+				new ThreadStatusButtons(),
+				new SplitterState(
+						2,
+						chatcontroller.getChatPreferences().getGUImainWindowLeftSplitPane_dividerposition(),
+						SplitterState.DEFAULT_MIN_PANE_PX,
+						positions -> {
+							chatcontroller.getChatPreferences()
+									.setGUImainWindowLeftSplitPane_dividerposition(positions);
+							requestLayoutSave();
+							return kotlin.Unit.INSTANCE;
+						}),
+				new SplitterState(
+						MainWindowState.MESSAGE_PANE_COUNT,
+						chatcontroller.getChatPreferences().getGUImessageSectionSplitpane_dividerposition(),
+						SplitterState.DEFAULT_MIN_PANE_PX,
+						positions -> {
+							chatcontroller.getChatPreferences()
+									.setGUImessageSectionSplitpane_dividerposition(positions);
+							requestLayoutSave();
+							return kotlin.Unit.INSTANCE;
+						}),
+				new SplitterState(
+						MainWindowState.RIGHT_PANE_COUNT,
+						chatcontroller.getChatPreferences().getGUImainWindowRightSplitPane_dividerposition(),
+						SplitterState.DEFAULT_MIN_PANE_PX,
+						positions -> {
+							chatcontroller.getChatPreferences()
+									.setGUImainWindowRightSplitPane_dividerposition(positions);
+							requestLayoutSave();
+							return kotlin.Unit.INSTANCE;
+						}));
+
+		menu.setConnectLabel(buildComposeConnectLabel());
+
+		/*
+		 * Subscribed first and seeded afterwards, so a message arriving in between is not
+		 * missed — the order FxRosterBinding uses for the same reason.
+		 */
+		composeMemberListener = rows -> uiDispatcher.runOnUi(() -> stations.replaceRows(rows));
+		chatcontroller.getLst_chatMemberList().addListener(composeMemberListener);
+
+		composeChatListener = rows -> uiDispatcher.runOnUi(() -> {
+			directed.replaceRows(chatcontroller.toMeMessages());
+			publicMessages.replaceRows(rows);
+			qsoOfTheOther.replaceRows(chatcontroller.toOtherMessages());
+		});
+		chatcontroller.getLst_globalChatMessageList().addListener(composeChatListener);
+
+		composeClusterListener = rows -> uiDispatcher.runOnUi(() -> cluster.replaceRows(rows));
+		chatcontroller.getLst_clusterMemberList().addListener(composeClusterListener);
+
+		if (chatcontroller.getScoreService() != null) {
+			chatcontroller.getScoreService().topCandidates().addListener(candidates -> uiDispatcher.runOnUi(() -> topPriority.refresh()));
+		}
+		uiDispatcher.runOnUi(() -> topPriority.refresh());
+
+		stations.replaceRows(chatcontroller.getLst_chatMemberList().snapshot());
+		directed.replaceRows(chatcontroller.toMeMessages());
+		publicMessages.replaceRows(chatcontroller.getLst_globalChatMessageList().snapshot());
+		cluster.replaceRows(chatcontroller.getLst_clusterMemberList().snapshot());
+		qsoOfTheOther.replaceRows(chatcontroller.toOtherMessages());
+		if (selectedCallSignInfoMessageBinding != null) {
+			selectedStationMessages.replaceRows(new java.util.ArrayList<>(selectedCallSignInfoMessageBinding.list()));
+		}
+
+		double[] storedSize = chatcontroller.getChatPreferences().getGUIscn_ChatwindowMainSceneSizeHW();
+		javafx.geometry.Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+		MainWindowSize size = MainWindowFrame.INSTANCE.startupSize(
+				storedSize, screen.getHeight(), screen.getWidth());
+
+		MainWindowHost.show(
+				composeMainWindowState,
+				new ComposeMenuActions(this),
+				MainWindowFrame.INSTANCE.title(
+						"KST4Contest (Compose)", buildOperatorProfileTitleSuffixForCompose()),
+				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
+				SETTINGS_WINDOW_FONT_SIZE_SP,
+				(float) size.getWidthDp(),
+				(float) size.getHeightDp(),
+				(width, height) -> {
+					/*
+					 * Not written to the profile while both windows live: the JavaFX window
+					 * owns that setting, and two windows writing one size would leave the
+					 * operator's arrangement to whichever was resized last.
+					 */
+					return kotlin.Unit.INSTANCE;
+				},
+				() -> composeSkedBands(selectedStation.getSelected()),
+				address -> runOnUi(() -> getHostServices().showDocument(address)),
+				() -> {
+					runOnUi(() -> showSelectedCallsignOnMap());
+					return kotlin.Unit.INSTANCE;
+				},
+				() -> {
+					if (selectedCallSignInfoStageChatMember != null) {
+						chatcontroller.airScout_SendAsShowPathPacket(selectedCallSignInfoStageChatMember);
+					}
+					return kotlin.Unit.INSTANCE;
+				},
+				member -> selectStationInCompose(selectedStation, stations, member),
+				message -> onDirectedMessageClickedInCompose(selectedStation, stations, composeMainWindowState.getChatInput(), message),
+				this::isOwnChatMessage,
+				this::chatMessageAgeSeconds,
+				() -> {
+					runOnUi(() -> {
+						updateComposeFilters();
+					});
+					return kotlin.Unit.INSTANCE;
+				},
+				() -> {
+					runOnUi(() -> showTopPriorityCandidatesWindow(tbl_chatMember, txt_chatMessageUserInput));
+					return kotlin.Unit.INSTANCE;
+				},
+				candidate -> {
+					if (candidate == null) return kotlin.Unit.INSTANCE;
+					ChatMember resolved = resolveChatMemberForCallRawAndCategory(
+							candidate.getCallSignRaw(), candidate.getPreferredChatCategory());
+					if (resolved != null) {
+						selectStationInCompose(selectedStation, stations, resolved);
+						composeMainWindowState.getChatInput().prepareCq(resolved.getCallSign(), false);
+						
+						// Sync with JavaFX state just in case
+						prepareCqTextForSelectedChatMember(resolved, false);
+						focusChatMemberAndPrepareCq(resolved, false);
+					}
+					return kotlin.Unit.INSTANCE;
+				});
+
+		updateComposeSurroundings();
+	}
+
+	/**
+	 * Arranges a sked from the Compose panel, exactly as the JavaFX sked button does.
+	 *
+	 * @return whether it was arranged; a station without a bearing still gets one, at 0°, as
+	 *         the original did
+	 */
+	private boolean createSkedFromCompose(
+			final ChatMember selectedMember,
+			final int minutes,
+			final Band band,
+			final String mode) {
+
+		if (selectedMember == null || band == null) {
+			return false;
+		}
+
+		long skedTime = System.currentTimeMillis() + minutes * 60_000L;
+		double azimuth =
+				selectedMember.getQTFdirection() != null ? selectedMember.getQTFdirection() : 0.0;
+
+		ContestSked sked = new ContestSked(
+				selectedMember.getCallSignRaw(),
+				selectedMember.getCallSign(),
+				selectedMember.getChatCategory(),
+				azimuth,
+				skedTime,
+				band);
+
+		chatcontroller.addSked(sked);
+		chatcontroller.getScoreService().requestRecompute("sked-created");
+
+		// Arm PM reminders, exactly as the JavaFX Create sked handler does
+		if (composeMainWindowState != null) {
+			SelectedStationState ssState = composeMainWindowState.getSelectedStation();
+			if (ssState.getRemindPm()) {
+				List<Integer> offsets = parseMinuteOffsets(ssState.getReminderOffsets());
+				chatcontroller.getSkedReminderService().armReminders(
+						sked.getTargetChatCallsign(),
+						sked.getTargetChatCategory(),
+						skedTime,
+						offsets
+				);
+			}
+		}
+
+		return true;
+	}
+
+	/** The Connect item's label, built exactly as initMenuBar builds it. */
+	private String buildComposeConnectLabel() {
+		ChatCategory mainCat = chatcontroller.getChatPreferences().getLoginChatCategoryMain();
+		if (mainCat == null) {
+			return "Connect";
+		}
+
+		String label = "Connect to " + mainCat.getChatCategoryName(mainCat.getCategoryNumber());
+		if (chatcontroller.getChatPreferences().isLoginToSecondChatEnabled()) {
+			ChatCategory secondCat = chatcontroller.getChatPreferences().getLoginChatCategorySecond();
+			if (secondCat != null) {
+				label += " & " + secondCat.getChatCategoryName(secondCat.getCategoryNumber());
+			}
+		}
+		return label;
+	}
+
+	/** The profile name for the title, or null for the root profile. */
+	private String buildOperatorProfileTitleSuffixForCompose() {
+		OperatorProfileSelection activeProfile = ActiveOperatorProfile.get();
+		if (activeProfile == null || activeProfile.getProfile().isRootProfile()) {
+			return null;
+		}
+		return activeProfile.getProfile().getDisplayName();
+	}
+
+	/** The bands a sked can be arranged on for this station: enabled here, available there. */
+	private java.util.List<Band> composeSkedBands(ChatMember selectedMember) {
+		if (selectedMember == null) {
+			return java.util.List.of();
+		}
+
+		java.util.List<ChatMember> variants =
+				chatcontroller.findActiveChatMembersByRawCall(selectedMember.getCallSignRaw());
+		if (variants.isEmpty()) {
+			variants = java.util.List.of(selectedMember);
+		}
+
+		BandOpportunityResolver.Resolution resolution =
+				BandOpportunityResolver.resolve(variants, System.currentTimeMillis());
+		EnumSet<Band> enabledBands =
+				BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences());
+
+		EnumSet<Band> available = EnumSet.copyOf(resolution.getAvailableBands());
+		available.retainAll(enabledBands);
+		return new ArrayList<>(available);
+	}
+
+	/** The score service's ranking, as the Compose priority bar wants it. */
+	private java.util.List<kotlin.Pair<ChatMember, Double>> composeTopStations() {
+		java.util.List<kotlin.Pair<ChatMember, Double>> out = new ArrayList<>();
+
+		if (chatcontroller.getScoreService() == null) {
+			return out;
+		}
+
+		for (ScoreService.TopCandidate candidate
+				: chatcontroller.getScoreService().topCandidates().snapshot()) {
+
+			/*
+			 * A candidate names a callsign, not a station. The first active variant is the one
+			 * the JavaFX buttons resolved to as well; a callsign with no variant left the chat
+			 * between the ranking and this draw.
+			 */
+			java.util.List<ChatMember> variants =
+					chatcontroller.findActiveChatMembersByRawCall(candidate.getCallSignRaw());
+			if (!variants.isEmpty()) {
+				out.add(new kotlin.Pair<>(variants.get(0), candidate.getScore()));
+			}
+		}
+		return out;
+	}
+
+	/**
+	 * Selects a station in the Compose window: the panel, the table and the score service, the
+	 * three places the JavaFX selection listener kept in step.
+	 */
+	private kotlin.Unit selectStationInCompose(
+			SelectedStationState panel,
+			DataTableState<ChatMember> table,
+			ChatMember member) {
+
+		panel.select(member);
+		table.select(member);
+		
+		selectedCallSignInfoStageChatMember = member;
+		if (selectedCallSignInfoMessageBinding != null) {
+			selectedCallSignInfoMessageBinding.refresh();
+			Platform.runLater(() -> {
+				if (composeMainWindowState != null) {
+					uiDispatcher.runOnUi(() -> composeMainWindowState.getSelectedStationMessages().replaceRows(
+							new java.util.ArrayList<>(selectedCallSignInfoMessageBinding.list())
+					));
+				}
+			});
+		}
+
+		if (member != null && chatcontroller.getScoreService() != null) {
+			chatcontroller.getScoreService().setSelectedChatMember(member);
+			
+			if (composeMainWindowState != null && composeMainWindowState.getChatInput() != null) {
+				composeMainWindowState.getChatInput().prepareCq(member.getCallSign(), false);
+			}
+			
+			// Also sync JavaFX side
+			runOnUi(() -> {
+				programmaticChatMemberSelectionChange = true;
+				try {
+					focusChatMemberAndPrepareCq(member, false);
+				} finally {
+					programmaticChatMemberSelectionChange = false;
+				}
+			});
+		}
+		return kotlin.Unit.INSTANCE;
+	}
+
+	private kotlin.Unit onDirectedMessageClickedInCompose(
+			SelectedStationState panel,
+			DataTableState<ChatMember> stationsTable,
+			ChatInputState chatInput,
+			ChatMessage message) {
+		
+		if (message == null || message.getSender() == null) {
+			return kotlin.Unit.INSTANCE;
+		}
+
+		if (message.getSender().getCallSign().equals(chatcontroller.getChatPreferences().getStn_loginCallSign())) {
+			String receiverCallsign = message.getMessageText().substring(2, message.getMessageText().indexOf(")"));
+			chatInput.prepareCq(receiverCallsign, false);
+			
+			// Sync with JavaFX state just in case
+			prepareCqTextForCallsign(receiverCallsign, message.getChatCategory(), false);
+		} else {
+			selectStationInCompose(panel, stationsTable, message.getSender());
+			
+			chatInput.prepareCq(message.getSender().getCallSign(), false);
+			
+			// Sync with JavaFX state just in case
+			prepareCqTextForSelectedChatMember(message.getSender(), false);
+			focusChatMemberAndPrepareCq(message.getSender(), false);
+		}
+
+		return kotlin.Unit.INSTANCE;
+	}
+
+	/** Whether a message came from this station; decides its row colour. */
+	private boolean isOwnChatMessage(ChatMessage message) {
+		if (message == null || message.getSender() == null) {
+			return false;
+		}
+
+		String ownCall = chatcontroller.getChatPreferences().getStn_loginCallSign();
+		return ownCall != null && ownCall.equals(message.getSender().getCallSign());
+	}
+
+	/** How long ago a message arrived, for the fading highlight. */
+	private long chatMessageAgeSeconds(ChatMessage message) {
+		if (message == null) {
+			return Long.MAX_VALUE;
+		}
+
+		try {
+			long generated = Long.parseLong(message.getMessageGeneratedTime());
+			return (System.currentTimeMillis() / 1000L) - generated;
+		} catch (RuntimeException notATimestamp) {
+			return Long.MAX_VALUE;
+		}
+	}
+
+	/** Pushes the link state and the window flags into the Compose window. */
+	private void updateComposeSurroundings() {
+		if (composeMainWindowState == null) {
+			return;
+		}
+
+		MainWindowSurroundings surroundings = composeMainWindowState.getSurroundings();
+		surroundings.setConnectionState(chatcontroller.getOn4KstConnectionState());
+		surroundings.setSettingsWindowOpen(SettingsWindow.isOpen());
+		surroundings.setMonitorWindowOpen(MonitorWindow.isOpen());
+		composeMainWindowState.getMenu().setAwayFromChat(
+				chatcontroller.getChatPreferences().isStn_loginAFKState());
+	}
+
+	/** Releases the Compose window's feeds; a discarded runtime that still feeds one lives on. */
+	private void releaseComposeMainWindow() {
+		if (composeMemberListener != null) {
+			chatcontroller.getLst_chatMemberList().removeListener(composeMemberListener);
+			composeMemberListener = null;
+		}
+		if (composeChatListener != null) {
+			chatcontroller.getLst_globalChatMessageList().removeListener(composeChatListener);
+			composeChatListener = null;
+		}
+		if (composeClusterListener != null) {
+			chatcontroller.getLst_clusterMemberList().removeListener(composeClusterListener);
+			composeClusterListener = null;
+		}
+		if (composeMainWindowState != null) {
+			composeMainWindowState.release();
+			composeMainWindowState = null;
+		}
+	}
+
+	/**
+	 * Opens the cluster and QSO monitor.
+	 *
+	 * Both tables follow their roster: the listener replaces the rows, and
+	 * DataTableState keeps the selection on the row the operator picked rather than on
+	 * the position it happened to occupy. The two subscriptions are held in fields and
+	 * released by releaseMonitorListeners, because a discarded runtime that still feeds
+	 * a closed window keeps itself alive.
+	 */
+	private void openMonitorWindow() {
+
+		/*
+		 * Guarded before anything is built. Without this a second click registers two
+		 * more roster listeners and then hands them to a window that refuses to open,
+		 * so every inbound message would re-run toOtherMessages once more over up to
+		 * thirty thousand stored messages — work whose result is thrown away, on the
+		 * thread that draws.
+		 */
+		if (MonitorWindow.isOpen()) {
+			return;
+		}
+
+		ColumnWidthStore widths = new ColumnWidthStore() {
+			@Override
+			public Double width(String tableId, String columnId) {
+				java.util.OptionalDouble stored =
+						chatcontroller.getChatPreferences().getTableColumnWidth(tableId, columnId);
+				return stored.isPresent() ? stored.getAsDouble() : null;
+			}
+
+			@Override
+			public void setWidth(String tableId, String columnId, double width) {
+				chatcontroller.getChatPreferences().setTableColumnWidth(tableId, columnId, width);
+			}
+
+			@Override
+			public void requestSave() {
+				requestLayoutSave();
+			}
+		};
+
+		DataTableState<ClusterMessage> clusterTable = new DataTableState<>(
+				MonitorColumns.INSTANCE.dxCluster(),
+				RowKeys.INSTANCE.byReference(),
+				"dx-cluster-monitor",
+				widths);
+
+		DataTableState<ChatMessage> qsoTable = new DataTableState<>(
+				MonitorColumns.INSTANCE.qsoOfTheOther(),
+				RowKeys.INSTANCE.byReference(),
+				"qso-other-monitor",
+				widths);
+
+		/*
+		 * Subscribed first and seeded afterwards, so a message arriving in between is
+		 * not missed — the order FxRosterBinding uses for the same reason.
+		 */
+		monitorClusterListener = rows -> uiDispatcher.runOnUi(() -> clusterTable.replaceRows(rows));
+		chatcontroller.getLst_clusterMemberList().addListener(monitorClusterListener);
+
+		/*
+		 * The QSO table shows a filtered view, so the whole filter is re-run rather
+		 * than the delivered list being used: toOtherMessages is what decides which
+		 * messages belong to other operators.
+		 */
+		monitorChatListener =
+				rows -> uiDispatcher.runOnUi(() -> qsoTable.replaceRows(chatcontroller.toOtherMessages()));
+		chatcontroller.getLst_globalChatMessageList().addListener(monitorChatListener);
+
+		clusterTable.replaceRows(chatcontroller.getLst_clusterMemberList().snapshot());
+		qsoTable.replaceRows(chatcontroller.toOtherMessages());
+
+		MonitorWindow.show(
+				clusterTable,
+				qsoTable,
+				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
+				SETTINGS_WINDOW_FONT_SIZE_SP,
+				(float) chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0],
+				(float) chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1],
+				(width, height) -> {
+					chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0] = width;
+					chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1] = height;
+					requestLayoutSave();
+					return kotlin.Unit.INSTANCE;
+				});
+	}
+
+	/**
+	 * Opens the update window when the server carries a newer release.
+	 *
+	 * The decision itself lives in UpdateWindowState and is covered by tests; what
+	 * stays here is reaching the system browser, which is the host application's
+	 * business.
+	 */
+	private void openUpdateWindowIfAvailable() {
+
+		try {
+			UpdateWindowState updateState = new UpdateWindowState(
+					chatcontroller.getUpdateInformation(),
+					ApplicationConstants.APPLICATION_CURRENT_VERSION,
+					ApplicationConstants.APPLICATION_CURRENTVERSIONNUMBER);
+
+			if (!updateState.getUpdateAvailable()) {
+				return;
+			}
+
+			UpdateWindow.show(
+					updateState,
+					chatcontroller.getChatPreferences().isGUI_darkModeActive(),
+					SETTINGS_WINDOW_FONT_SIZE_SP,
+					(float) chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0],
+					(float) chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1],
+					address -> getHostServices().showDocument(address),
+					(width, height) -> {
+						chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0] = width;
+						chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1] = height;
+						requestLayoutSave();
+						return kotlin.Unit.INSTANCE;
+					});
+		} catch (Exception updateProblem) {
+			// The client must start even when the update service is unreachable.
+			System.out.println("[KST4ContestApp, ERROR]: Problem on Updateservice! "
+					+ updateProblem.getMessage());
+			updateProblem.printStackTrace();
+		}
+	}
+
+	/**
+	 * Opens the settings window, or does nothing when it is already open.
+	 *
+	 * <p>This window carries the Connect button and is therefore the way into the chat,
+	 * which is why it is opened once at startup as the JavaFX window was.</p>
+	 */
+	private void openSettingsWindow() {
+
+		SettingsWindow.show(
+				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices),
+				settingsNotices,
+				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
+				SETTINGS_WINDOW_FONT_SIZE_SP,
+				(float) chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0],
+				(float) chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1],
+				(width, height) -> {
+					chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0] = width;
+					chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1] = height;
+					requestLayoutSave();
+					return kotlin.Unit.INSTANCE;
+				},
+				SettingsTabsKt.settingsButtons(chatcontroller, this, settingsNotices));
+	}
+
+	@Override
+	public void refreshShortcutButtonsFromSettings() {
+		uiDispatcher.runOnUi(this::refreshShortcutButtons);
+	}
+
+	@Override
+	public void refreshTextSnippetContextMenusFromSettings() {
+		uiDispatcher.runOnUi(this::refreshTextSnippetContextMenus);
+	}
+
+	@Override
+	public String detectWintestBroadcastAddress() {
+
+		try {
+			return detectPreferredWintestBroadcastAddress();
+		} catch (Exception detectionProblem) {
+			System.out.println("[Main.java, Warning]: Could not auto-detect broadcast: "
+					+ detectionProblem.getMessage());
+			return null;
+		}
+	}
+
+	@Override
+	public void applyOwnQrgFollower(boolean enabled) {
+
+		uiDispatcher.runOnUi(() -> {
+			if (enabled) {
+				attachOwnQrgFollower();
+			} else {
+				detachOwnQrgFollower();
+			}
+		});
+	}
+
+	/**
+	 * The worked-stations rows are a snapshot the tab takes from the roster itself, so
+	 * there is nothing for this class to redraw. The JavaFX table needed an explicit
+	 * refresh because a TableView does not notice that the objects inside it changed.
+	 */
+	@Override
+	public void refreshWorkedStationsView() {
+		// nothing to do: the Compose tab re-reads the roster
+	}
+
+	@Override
+	public void switchToOperatorProfile(OperatorProfile profile) {
+		uiDispatcher.runOnUi(() -> requestOperatorProfileSwitch(profile));
+	}
+
+	/**
+	 * Starts the ON4KST session. The credentials are already in the preferences: every
+	 * field of the Station tab writes through as it is edited, so there is nothing to
+	 * collect here first.
+	 */
+	@Override
+	public String connectFromSettings() {
+
+		try {
+			chatcontroller.execute();
+			return null;
+		} catch (InterruptedException interrupted) {
+			Thread.currentThread().interrupt();
+			return "The connection was interrupted: " + interrupted.getMessage();
+		} catch (IOException connectionProblem) {
+			return "The ON4KST server could not be reached: " + connectionProblem.getMessage();
+		}
+	}
+
+	@Override
+	public void disconnectOnlyFromSettings() {
+		chatcontroller.disconnect(ApplicationConstants.DISCSTRING_DISCONNECTONLY);
+	}
+
+	@Override
+	public void disconnectAndCloseChatFromSettings() {
+		uiDispatcher.runOnUi(() -> closeWindowEvent(null));
+	}
+
+	@Override
+	public String savePreferencesFromSettings() {
+
+		if (!chatcontroller.getChatPreferences().writePreferencesToXmlFile()) {
+			return null;
+		}
+
+		if (layoutAutosave != null) {
+			layoutAutosave.cancelPending();
+		}
+
+		return chatcontroller.getChatPreferences().getStoreAndRestorePreferencesFileName();
 	}
 
 	private String detectPreferredWintestBroadcastAddress() {

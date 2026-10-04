@@ -77,7 +77,7 @@ public class GuiUtils {
 	 * @param maybeCallSignValue
 	 * @return true if yes
 	 */
-	static boolean isCallSignSyntax(String maybeCallSignValue) {
+	public static boolean isCallSignSyntax(String maybeCallSignValue) {
 
 		Pattern pattern = Pattern.compile(PTRN_CALLSIGNSYNTAX, Pattern.CASE_INSENSITIVE);
 		Matcher matcher = pattern.matcher(maybeCallSignValue);

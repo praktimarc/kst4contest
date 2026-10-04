@@ -19,34 +19,14 @@ build() {
     export JAVA_HOME=$(find /usr/lib/jvm -maxdepth 1 -name 'java-21-*' -type d | head -n 1)
     export PATH="${JAVA_HOME}/bin:${PATH}"
 
-    ./gradlew --offline -S :app-desktop:collectRuntime
+    ./gradlew --offline -S :app-desktop:createDistributable
 
+    # package() reads dist/KST4Contest. Application name, icon and the JDK
+    # module list come from app-desktop/build.gradle.kts, so this PKGBUILD no
+    # longer has to keep its own copy of them.
+    rm -rf dist
     mkdir -p dist
-    # From the Gradle build onwards the list lives in gradle.properties. Older
-    # tarballs still carry it in pom.xml or derive it via packaging/AddModules.java.
-    if [ -f gradle.properties ]; then
-        ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-    elif [ -f packaging/AddModules.java ]; then
-        ADD_MODULES="$(java packaging/AddModules.java)"
-    else
-        ADD_MODULES="$(sed -n 's:.*<addmodule>\(.*\)</addmodule>.*:\1:p' pom.xml | paste -sd,)"
-    fi
-    # Same story for the packaging icon: without --icon jpackage silently ships
-    # its own Duke placeholder, but tarballs older than v1.42.0 have no icon to
-    # point at, so only pass the flag when the file is actually there.
-    ICON_ARGS=()
-    if [ -f packaging/icons/kst4contest.png ]; then
-        ICON_ARGS=(--icon packaging/icons/kst4contest.png)
-    fi
-    jpackage \
-        --type app-image \
-        --name KST4Contest \
-        "${ICON_ARGS[@]}" \
-        --input app-desktop/build/dist-libs \
-        --main-jar app.jar \
-        --main-class kst4contest.view.Main \
-        --add-modules "$ADD_MODULES" \
-        --dest dist
+    cp -a app-desktop/build/compose/binaries/main/app/KST4Contest dist/
 }
 
 package() {

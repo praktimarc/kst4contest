@@ -9,6 +9,9 @@ allprojects {
 
     repositories {
         mavenCentral()
+        // Compose Multiplatform pulls its androidx.lifecycle and androidx.annotation
+        // artifacts from Google's repository; they are not on Maven Central.
+        google()
     }
 }
 

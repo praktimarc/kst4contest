@@ -1,0 +1,5 @@
+setCallSign
+setChatCategoryMain
+setChatCategorySecondChat
+setFrequency
+setQra

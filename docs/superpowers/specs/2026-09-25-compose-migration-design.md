@@ -171,19 +171,41 @@ Danach das Einstellungsfenster mit seinen zwölf Reitern: Station, Log synch, TR
 
 > Nachzuschärfen nach Etappe 2: der genaue Zuschnitt der `DataTable`-Schnittstelle. Er hängt davon ab, wie sich `ObservableRoster` in der Praxis anfühlt.
 
-### Etappe 4 — Profil-Dialog, Update-Fenster, Monitor-Fenster
+### Etappe 4 — Update-Fenster und Monitor-Fenster
 
-**Ziel:** Drei weitere Fenster portiert; die Muster aus Etappe 3 sind bestätigt.
+**Ziel:** Die zwei letzten Nebenfenster portiert; die Muster aus Etappe 3 sind an
+Live-Daten bestätigt.
 
-**Umfang**
+**Umfang zurechtgerückt nach Etappe 3b.** Die Spezifikation nannte hier ursprünglich
+vier Dinge. Zwei sind bereits erledigt und entfallen:
 
-- `OperatorProfilePickerDialog` und `OperatorProfileSettingsPane`.
-- Das Update-Fenster (`Kst4ContestApplication.java:9242`).
-- Das Monitor-Fenster für Cluster und QSOs (`:9180`), das die `DataTable` erstmals mit Live-Daten belastet.
+| ursprünglich genannt | Stand |
+|---|---|
+| `OperatorProfilePickerDialog` | in Etappe 3a nach Compose portiert |
+| `OperatorProfileSettingsPane` | gelöscht, ersetzt durch `ProfilesTab` (Etappe 3b) |
+| Update-Fenster | offen, `Kst4ContestApplication.java:9458` |
+| Monitor-Fenster für Cluster und QSOs | offen, `:9396` |
 
-Die Layout-IDs für das Monitor-Fenster bleiben von denen des Hauptfensters getrennt, wie in `PROJECT_CONTEXT.md` festgelegt.
+- Das **Update-Fenster** ist das einfachere: ein Textfeld, ein Fortschritt, zwei
+  Knöpfe. Es prüft vor allem, ob ein Compose-Fenster aus einem Hintergrundfaden
+  heraus sauber auf- und zugeht.
+- Das **Monitor-Fenster** ist der eigentliche Prüfstein: es belastet die `DataTable`
+  erstmals mit **Live-Daten**. Genau dort saßen in Etappe 2 die Sortier- und
+  Fokusfehler, und zwar nicht in der Tabelle selbst, sondern in der Kopplung
+  zwischen Roster und Anzeige.
 
-**Abnahmekriterium:** Die drei Fenster sind funktionsgleich. Fenstergrößen, Positionen und Spaltenbreiten werden unverändert entprellt gespeichert und beim Herunterfahren geschrieben.
+Die Layout-IDs für das Monitor-Fenster bleiben von denen des Hauptfensters getrennt,
+wie in `PROJECT_CONTEXT.md` festgelegt.
+
+**Abnahmekriterium:** Beide Fenster sind funktionsgleich. Fenstergrößen, Positionen
+und Spaltenbreiten werden unverändert entprellt gespeichert und beim Herunterfahren
+geschrieben. Das Monitor-Fenster hält eine Stunde Dauerlast aus dem Simulator aus,
+ohne dass die Auswahl springt oder die Sortierung kippt.
+
+> Nach Etappe 3b gelernt und hier anzuwenden: Ein Bedienelement, das an einem Wert
+> hängt, der kein Compose-Zustand ist, zeichnet sich nicht neu. Bei Live-Daten fällt
+> das nicht als „reagiert nicht" auf, sondern als veraltete Anzeige — schwerer zu
+> bemerken und schlimmer in der Wirkung.
 
 ### Etappe 5 — Hauptfenster
 
@@ -224,9 +246,143 @@ Die Karte wird als Compose-Canvas neu umgesetzt:
 
 Zum Abschluss werden die JavaFX-Abhängigkeiten aus dem Build entfernt und `opens kst4contest.view.map to javafx.web` verliert seinen Gegenstand.
 
+**Eine Abhängigkeit, die hier zerbricht.** `JavaFxStylesheet.derive` ruft heute
+`com.sun.javafx.util.Utils.deriveColor` über Reflexion auf, weil eine Nachbildung in
+Etappe 3b nachweislich falsch war: die Helligkeit, von der JavaFX ableitet, ist nicht
+der HSB-Wert, sondern `0.3R + 0.59G + 0.11B`, und der positive Zweig folgte keiner der
+naheliegenden Formeln. Mit dem Entfernen von JavaFX greift die Rückfallnäherung — und
+die ist messbar daneben. **Vor dem Entfernen** muss `derive` durch eine eigene,
+gegen JavaFX gepinnte Umsetzung ersetzt werden, sonst verschieben sich alle
+abgeleiteten Farben still: die Fensterfläche und die Innenfläche jedes Eingabefelds.
+
 **Abnahmekriterium:** Die Karte zeigt dieselben Informationen wie die Leaflet-Fassung. Offline-DEM, Terrain-Pakete und der Profil-Cache funktionieren unverändert. Im Projekt existiert keine JavaFX-Abhängigkeit mehr.
 
 > Nachzuschärfen nach Etappe 5: Leistungsverhalten des Canvas bei mehreren tausend Markern. Falls das Zeichnen nicht trägt, ist eine Vorabaggregation der Marker im Kern der Ausweg.
+
+### Etappe 7 — Compose-Oberflächentests
+
+**Ziel:** Die Zeichenebene bekommt ein Netz. Die Fehlerklasse, die in Etappe 3b
+ausschließlich durch Hinsehen gefunden wurde, fällt künftig im Bau auf.
+
+**Warum am Ende**
+
+Die Oberfläche ändert sich durch Etappe 4 bis 6 weiter. Tests, die heute gegen die
+Fenster aus Etappe 3b geschrieben würden, wären dreimal neu zu schreiben. Die
+Beweislage wird jetzt festgehalten, die Tests entstehen, wenn die Flächen stehen.
+
+**Beweislage: was in Etappe 3b kein Test gesehen hat**
+
+Sämtliche folgenden Fehler standen gleichzeitig mit einem grünen Bau aus 382
+Testfällen im Zweig. Keiner davon zeichnet, deshalb sah keiner etwas.
+
+| Klasse | Erscheinung in Etappe 3b |
+|---|---|
+| Ein Bedienelement hängt an einem nicht beobachtbaren Wert und zeichnet sich nicht neu | Jeder Tastendruck in den Einstellungen wurde durchgeschrieben und nicht angezeigt; die Auswahl im Profil-Reiter wanderte nicht mit; die abgewählte Listenzeile behielt ihren Akzentrahmen |
+| Ein Layout schneidet ab, statt umzubrechen | Der Reiterstreifen schnitt „Workedstn database" mitten im Wort ab; die Knopfleiste quetschte „Disconnect & close Chat" zu einer 540px hohen Farbsäule |
+| Inhalt ist höher als das Fenster und unerreichbar | Der Reiterinhalt endete mitten im Formular, ohne Hinweis, dass mehr folgt |
+| Farben stammen nicht aus der Stilvorlage | Die Fensterfläche nahm `-fx-base` statt `derive(-fx-base, 26.4%)`; der Akzent war Material-Violett statt des Grüns aus `.text-field .text` |
+
+**Umfang**
+
+- `org.jetbrains.compose.ui:ui-test-desktop` als Testabhängigkeit, benutzt über
+  `runComposeUiTest { }`. **Keine** JUnit-4-Brücke: das Projekt bleibt auf Jupiter,
+  und `runComposeUiTest` ist aus einem gewöhnlichen `@Test` heraus aufrufbar. Die
+  Funktion ist als `@ExperimentalTestApi` gekennzeichnet; die Einwilligung wird an
+  einer Stelle gebündelt und begründet.
+- Je ein Rückfalltest für die vier Klassen oben, geschrieben gegen die dann
+  aktuellen Fenster.
+- Die beiden Abdeckungsnetze aus Etappe 3b bleiben bestehen. Sie prüfen
+  **Text** — dass ein Setzer irgendwo aufgerufen wird. Diese Tests prüfen
+  **Verhalten** — dass der Wert auf dem Schirm ankommt. Das eine ersetzt das andere
+  nicht.
+
+**Abnahmekriterium**
+
+Für jede der vier Klassen wird der ursprüngliche Fehler **absichtlich wieder
+eingebaut**, und der zugehörige Test muss fehlschlagen. Eine Prüfsammlung, die den
+Fehler nicht fängt, für den sie geschrieben wurde, ist wertlos; das ist die einzige
+Abnahme, die hier etwas aussagt.
+
+> Zu klären vor Beginn: ob die Tests ohne Bildschirm laufen. Skiko zeichnet in einer
+> Softwarefassung, aber das ist für diesen Bau nicht erprobt. Falls sie einen
+> Bildschirm brauchen, laufen sie in der CI unter Xvfb oder gar nicht — dann wären
+> sie nur lokal etwas wert, und das gehört vorher entschieden, nicht nachher
+> festgestellt.
+
+### Etappe 8 — Farben anpassbar machen
+
+**Ziel:** Der Operateur bestimmt die Farben seines Clients, ohne Dateien im
+Installationsverzeichnis anzufassen.
+
+**Ausgangslage, die dafür spricht**
+
+Die halbe Voraussetzung ist bereits da, nur nicht verdrahtet:
+
+- `ApplicationFileUtils.copyResourceIfRequired` legt beim Start Kopien von
+  `KST4ContestDefaultDay.css` und `KST4ContestDefaultEvening.css` im
+  Anwendungsverzeichnis ab.
+- **Gelesen wird diese Kopie nie.** `applyThemeStylesheet` übergibt den blanken
+  Dateinamen an `Scene.getStylesheets()`, und JavaFX löst relative Namen gegen den
+  Klassenpfad auf. Wer seine Kopie bearbeitet, sieht keinerlei Wirkung.
+- `JavaFxStylesheet` liest aus demselben Grund die Klassenpfad-Ressource: solange
+  JavaFX die Kopie ignoriert, würde ein Compose-Fenster, das sie liest, als einziges
+  anders aussehen.
+
+**Umfang**
+
+- Die Kopie im Profilverzeichnis wird zur maßgeblichen Quelle. Ab Etappe 6 gibt es
+  kein JavaFX mehr, das dagegenhält — vorher muss beides dieselbe Datei lesen.
+- Die Palette wird **pro Profil** gehalten. Ein Profil ist heute schon der Träger für
+  Einstellungen und Layout; Farben gehören in dieselbe Schublade.
+- Eine Oberfläche zum Anpassen im Einstellungsfenster: die Handvoll Rollen, die
+  `JavaFxPalette` bereits benennt — Fläche, Feldinneres, Text, Akzent, Trennlinie —
+  statt eines freien CSS-Editors. Zurücksetzen auf die Auslieferung gehört dazu.
+- Ein Kontrastwächter. Eine frei gewählte Textfarbe auf einer frei gewählten Fläche
+  kann unlesbar werden; die Oberfläche muss das sagen, bevor sie es speichert.
+
+**Abnahmekriterium:** Eine geänderte Palette überlebt den Neustart, gilt für alle
+Fenster gleichzeitig und ist pro Profil verschieden. Das Zurücksetzen stellt exakt die
+ausgelieferten Farben her.
+
+> Setzt Etappe 6 voraus, nicht wegen der Karte, sondern wegen `derive`: solange die
+> Ableitung an JavaFX hängt, ist die Palette nicht frei wählbar, ohne dass dieselbe
+> Rechnung in Compose nachgebaut ist. Siehe den Hinweis in Etappe 6.
+
+### Etappe 9 — Mehrsprachigkeit
+
+**Ziel:** Die Oberfläche spricht die Sprache des Operateurs. Deutsch und Englisch zum
+Start.
+
+**Umfang**
+
+Grob 232 sichtbare Zeichenketten in den Compose-Quellen und rund 492 im verbliebenen
+Java-Teil — die Zahl schrumpft mit jeder Etappe, weshalb diese Arbeit ans Ende gehört.
+
+**Die eigentliche Schwierigkeit ist nicht das Übersetzen, sondern die Abgrenzung.**
+Drei Sorten Text liegen heute nebeneinander im Quelltext und sehen gleich aus:
+
+| Sorte | Beispiele | übersetzen? |
+|---|---|---|
+| Oberflächentext | „Save settings", „Active bands", „Callsign" | **ja** |
+| Protokolltext | `/AWAY`, `/BACK`, `/CQ `, `SETNAME`, `MYQRG` | **nein, niemals** — das geht an den ON4KST-Server |
+| Funkerkürzel | „Pse Sked?", „qrv 144.300", „tnx om, 73" | **nein** — das geht an andere Funker und ist international |
+
+Ein übersetzter Protokollbefehl bricht die Verbindung, ein übersetztes Funkerkürzel
+macht den Operateur unverständlich. Beides fällt in keinem Test auf und erst im
+Contest, also unter Zeitdruck.
+
+- Vor dem Herausziehen wird jede Zeichenkette einer der drei Sorten zugeordnet, und
+  die Zuordnung wird festgehalten — nicht im Kopf des Übersetzenden.
+- Die Vorgabewerte in `ChatPreferences` (Beacon-Vorlagen, Antworttexte, Kurztasten)
+  sind Funkertext und bleiben, wie sie sind. Sie stehen zudem in der gespeicherten
+  XML jedes Operateurs; sie zu übersetzen würde bestehende Profile ändern.
+- Ressourcenbündel pro Sprache, Auswahl im GUI-Reiter, Vorgabe aus der Systemsprache
+  mit Rückfall auf Englisch.
+
+**Abnahmekriterium:** Die Oberfläche lässt sich umschalten und bleibt nach Neustart
+umgeschaltet. **Kein einziger an den Server oder an andere Funker gehender Text
+ändert sich mit der Sprache** — das ist gegen die Protokoll-Zeichenketten und die
+`ChatPreferences`-Vorgabewerte zu prüfen, nicht durch Hinsehen.
 
 ## Invarianten — was unverändert bleiben muss
 
@@ -277,6 +433,48 @@ Diese Punkte sind in `AGENTS.md` und `PROJECT_CONTEXT.md` festgelegt und werden 
 | Compose-Erfahrung fehlt bei beiden Entwicklern | mittel | Das Einstellungsfenster als erstes Lernstück ist bewusst ungefährlich gewählt |
 | Funktionsgleichheit ist schwer nachweisbar | mittel | Vergleich Fenster für Fenster gegen die noch laufende JavaFX-Fassung; Protokoll und Persistenz sind durch `core`-Tests gedeckt |
 | 1.50 verschiebt sich erheblich | angenommen | Bewusste Entscheidung. Kein Termin gesetzt |
+| **JavaFX und Compose können auf macOS nicht koexistieren** | **eingetreten** | Am 28.09.2026 auf einem Mac nachgewiesen. Siehe den Abschnitt darunter; noch nicht entschieden, wie damit umgegangen wird |
+
+## Eingetretenes Risiko: macOS trägt die Koexistenz nicht
+
+Am 28.09.2026 auf einem Mac (macOS 27, arm64, Temurin 21) festgestellt: Übersetzen und
+die vollständige Testreihe laufen dort sauber — **660 Testfälle, keine Fehler**, genau wie
+auf Linux. Sobald aber ein Compose-Fenster geöffnet wird, hängt die Anwendung.
+
+Thread-Abzug eines hängenden Starts:
+
+```
+main                      → wartet in Application.launch  (JavaFX besitzt den Haupt-Runloop)
+JavaFX Application Thread → wartet in OperatorProfilePickerWindow.showAndSelect
+operator-profile-picker   → hängt in sun.lwawt.macosx.LWCToolkit.initAppkit
+```
+
+Kein AWT-, AppKit- oder Skiko-Thread existiert. Auf macOS muss AppKit auf Thread 0
+laufen; JavaFX nimmt diesen Runloop mit `Application.launch` in Besitz und gibt ihn nie
+her, also wartet `initAppkit` auf einen Hauptthread, der nie wieder zuhört. X11 und
+Wayland kennen diese Einschränkung nicht — deshalb ist es vier Etappen lang nicht
+aufgefallen.
+
+Der Profilwähler ist nur der Auslöser, weil er zuerst dran ist. Einstellungsfenster,
+Monitor, Update-Fenster und Hauptfenster benutzen denselben `ComposeWindowHost`.
+
+**Das trifft das Verfahren dieser Spezifikation im Kern:** der Vergleich Fenster für
+Fenster gegen die laufende JavaFX-Fassung — der Umgang mit dem Risiko
+„Funktionsgleichheit ist schwer nachweisbar" — setzt Koexistenz voraus, und die gibt es
+auf macOS nicht.
+
+Drei Wege:
+
+1. **Startreihenfolge umdrehen.** AWT/Compose besitzt den Hauptthread, JavaFX wird
+   eingebettet gestartet (`Platform.startup` statt `Application.launch`, ggf. mit
+   `-Djavafx.embed.singleThread=true`). Wirkt sofort und für den Rest der Migration,
+   fasst aber den Anwendungsstart an und betrifft damit auch Linux. Als eigene Etappe
+   nach 5c zu führen, nicht hinein: sonst sind zwei riskante Umbauten gleichzeitig offen.
+2. **macOS bis zum Ende zurückstellen.** Das Problem verschwindet mit JavaFX. Kostet
+   nichts, aber bis dahin ist auf macOS nichts zu testen — und Etappe 1 hat Packaging für
+   drei Plattformen ausdrücklich zuerst gemacht, um genau das zu vermeiden.
+3. **Compose-Fenster auf macOS abschalten.** Arbeit, die später wieder herausfliegt.
+
 
 ## Offene Punkte
 
@@ -286,3 +484,7 @@ Diese Fragen werden bewusst erst beantwortet, wenn die vorangehende Etappe Erfah
 2. Ob `Platform.setImplicitExit(false)` in Compose eine Entsprechung braucht — nach Etappe 4.
 3. Aggregationsstrategie für Kartenmarker, falls das Canvas-Zeichnen nicht trägt — nach Etappe 5.
 4. Ob das Geländeprofil als eigene Compose-Zeichnung oder über eine Diagrammbibliothek entsteht — nach Etappe 5.
+5. Ob die Compose-Oberflächentests ohne Bildschirm laufen — vor Etappe 7.
+6. Welcher der drei Wege beim macOS-Befund gegangen wird — zu entscheiden, bevor Etappe 6
+   JavaFX entfernt, denn Weg 1 wäre danach umsonst gebaut.
+6. Ob die Farbpalette pro Profil oder pro Installation gilt — vor Etappe 8.

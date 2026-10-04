@@ -92,8 +92,14 @@ public final class MapCallsignRawSnapshotBuilder {
             boolean worked = variants.stream().anyMatch(this::isWorkedAtAnyBand);
             boolean selected = callSignRaw.equals(selectedCallsignRaw);
 
-            double qrbKm = representative.getQrb() != null ? representative.getQrb() : 0.0;
-            double qtfDeg = representative.getQTFdirection() != null ? representative.getQTFdirection() : 0.0;
+            /*
+             * NaN and not 0.0 when the value is absent. Zero is a legitimate reading —
+             * a station at the operator's own locator is 0 km away — so collapsing null
+             * onto it destroys the difference between "right here" and "not known", and
+             * every consumer then shows a distance that was never measured.
+             */
+            double qrbKm = representative.getQrb() != null ? representative.getQrb() : Double.NaN;
+            double qtfDeg = representative.getQTFdirection() != null ? representative.getQTFdirection() : Double.NaN;
 
             int reachableAirplanes = variants.stream()
                     .map(ChatMember::getAirPlaneReflectInfo)

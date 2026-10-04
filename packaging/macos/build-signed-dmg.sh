@@ -4,8 +4,9 @@
 #
 # jpackage cannot sign the app itself: it ad-hoc signs the embedded runtime and
 # then re-runs codesign on the same files without --force, which codesign
-# rejects with "is already signed". So this builds an unsigned app-image, signs
-# it from the inside out ourselves, and only then wraps it into a DMG.
+# rejects with "is already signed". So this takes the unsigned bundle from
+# :app-desktop:createDistributable, signs it from the inside out ourselves, and
+# only then wraps it into a DMG.
 #
 # Required:
 #   SIGNING_IDENTITY   The name part of the Developer ID Application certificate,
@@ -49,38 +50,29 @@ elif [ -n "${NOTARY_PROFILE:-}" ]; then
     NOTARY_ARGS=(--keychain-profile "$NOTARY_PROFILE")
 fi
 
-echo "==> Building JAR and collecting runtime dependencies"
+# The DMG carries the same version the Compose packaging stamps into the
+# bundle. gradle.properties keeps that value free of a qualifier, because the
+# DMG and MSI formats reject one.
+APP_VERSION="$(grep -m1 '^composePackageVersion=' gradle.properties | cut -d= -f2)"
+[ -n "$APP_VERSION" ] || { echo "composePackageVersion missing from gradle.properties" >&2; exit 1; }
+echo "==> Bundle version: $APP_VERSION"
+
+echo "==> Step 1/4: building the unsigned app bundle"
 chmod +x gradlew
-./gradlew -S :app-desktop:collectRuntime
+# createDistributable builds the bundle including its jlinked runtime. Name,
+# icon, bundle identifier and the JDK module list all come from
+# app-desktop/build.gradle.kts, so this script cannot drift from the CI build.
+MACOSX_DEPLOYMENT_TARGET="13.0" ./gradlew -S :app-desktop:createDistributable
 
-# jpackage only accepts a numeric major[.minor[.patch]] as the macOS bundle
-# version, so a Maven qualifier like "-nightly" has to be trimmed off.
-POM_VERSION="${JAR##*/praktiKST-}"
-POM_VERSION="${POM_VERSION%.jar}"
-APP_VERSION="$(printf '%s' "$POM_VERSION" | sed -e 's/[^0-9.].*$//' -e 's/\.*$//')"
-[ -n "$APP_VERSION" ] || { echo "Could not derive app version from $JAR" >&2; exit 1; }
-echo "==> Version: $POM_VERSION -> bundle version $APP_VERSION"
-
-echo "==> Step 1/4: jpackage app-image (unsigned)"
 rm -rf dist
-mkdir -p dist
-ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-
-MACOSX_DEPLOYMENT_TARGET="13.0" jpackage \
-    --type app-image \
-    --name KST4Contest \
-    --app-version "$APP_VERSION" \
-    --icon packaging/icons/kst4contest.icns \
-    --input app-desktop/build/dist-libs \
-    --main-jar app.jar \
-    --main-class kst4contest.view.Main \
-    --add-modules "$ADD_MODULES" \
-    --mac-package-identifier "$BUNDLE_ID" \
-    --mac-package-name KST4Contest \
-    --dest dist/appimage
+mkdir -p dist/appimage
+# ditto and not cp -R: the signing steps below depend on extended attributes,
+# and only ditto preserves them.
+ditto app-desktop/build/compose/binaries/main/app/KST4Contest.app \
+    dist/appimage/KST4Contest.app
 
 APP="dist/appimage/KST4Contest.app"
-[ -d "$APP" ] || { echo "jpackage produced no app image" >&2; exit 1; }
+[ -d "$APP" ] || { echo "createDistributable produced no app bundle" >&2; exit 1; }
 
 echo "==> Step 2/4: signing bundle contents (this takes a few minutes)"
 

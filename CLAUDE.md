@@ -29,5 +29,5 @@ sind über beide Module hinweg dieselben.
 
 Spezifikationen liegen unter `docs/superpowers/specs/`, Umsetzungspläne unter
 `docs/superpowers/plans/`. Der aktuelle Umbau ist die Ablösung von JavaFX durch
-Compose Multiplatform in sechs Etappen; Etappe 1 (Gradle, zwei Module, JPMS raus)
+Compose Multiplatform in neun Etappen; Etappe 1 (Gradle, zwei Module, JPMS raus)
 ist abgeschlossen.

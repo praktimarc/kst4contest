@@ -34,39 +34,23 @@ jobs:
         shell: pwsh
         run: choco install wixtoolset --no-progress -y
 
-      - name: Build JAR and copy runtime dependencies
+      - name: Build app-image
         shell: pwsh
         run: |
-          .\gradlew.bat -S :app-desktop:collectRuntime
-          $jar = Get-ChildItem -Path target -Filter 'praktiKST-*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $jar) {
-            throw "No project JAR produced"
-          }
-          Copy-Item $jar.FullName app-desktop/build/dist-libs/app.jar
-
-      - name: Build app-image with jpackage
-        shell: pwsh
-        run: |
+          .\gradlew.bat -S :app-desktop:createDistributable
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $addModules = (Select-String -Path gradle.properties -Pattern '^jpackageAddModules=').Line.Split('=')[1]
-          if ($LASTEXITCODE -ne 0) { throw "Failed to resolve --add-modules from module-info.java" }
-          jpackage `
-            --type app-image `
-            --name praktiKST `
-            --icon packaging/icons/kst4contest.ico `
-            --input app-desktop/build/dist-libs `
-            --main-jar app.jar `
-            --main-class kst4contest.view.Main `
-            --add-modules $addModules `
-            --dest dist
+          # The next step reads dist/KST4Contest, so the Compose output goes
+          # there. The module list now lives in app-desktop/build.gradle.kts.
+          if (Test-Path dist/KST4Contest) { Remove-Item -Recurse -Force dist/KST4Contest }
+          Copy-Item -Recurse app-desktop/build/compose/binaries/main/app/KST4Contest dist/KST4Contest
 
       - name: Create Windows ZIP
         shell: pwsh
         run: |
-          if (-not (Test-Path dist/praktiKST)) {
-            throw "No Windows app-image produced by jpackage"
+          if (-not (Test-Path dist/KST4Contest)) {
+            throw "No Windows app-image produced by createDistributable"
           }
-          Compress-Archive -Path dist/praktiKST -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
+          Compress-Archive -Path dist/KST4Contest -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4.3.4
@@ -91,23 +75,14 @@ jobs:
       - name: Ensure gradlew is executable
         run: chmod +x gradlew
 
-      - name: Build JAR and copy runtime dependencies
+      - name: Build app-image
         run: |
-          ./gradlew -S :app-desktop:collectRuntime
-
-      - name: Build app-image with jpackage
-        run: |
+          ./gradlew -S :app-desktop:createDistributable
           mkdir -p dist
-          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-          jpackage \
-            --type app-image \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input app-desktop/build/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Main \
-            --add-modules "$ADD_MODULES" \
-            --dest dist
+          # The following steps read dist/KST4Contest, so the Compose output goes
+          # there. The module list now lives in app-desktop/build.gradle.kts.
+          rm -rf dist/KST4Contest
+          cp -a app-desktop/build/compose/binaries/main/app/KST4Contest dist/
 
       - name: Create AppDir metadata
         run: |
@@ -171,27 +146,13 @@ jobs:
       - name: Ensure gradlew is executable
         run: chmod +x gradlew
 
-      - name: Build JAR and copy runtime dependencies
-        run: |
-          ./gradlew -S :app-desktop:collectRuntime
-
       - name: Build Debian package
         run: |
+          ./gradlew -S :app-desktop:packageDeb
           mkdir -p dist
-          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-          jpackage \
-            --type deb \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input app-desktop/build/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Main \
-            --add-modules "$ADD_MODULES" \
-            --linux-package-deps "libgstreamer1.0-0,libgstreamer-plugins-base1.0-0,gstreamer1.0-plugins-good" \
-            --dest dist
-          DEB="$(ls dist/*.deb | head -n 1)"
+          DEB="$(ls app-desktop/build/compose/binaries/main/deb/*.deb | head -n 1)"
           if [ -z "$DEB" ]; then
-            echo "No DEB produced by jpackage" && exit 1
+            echo "No DEB produced by packageDeb" && exit 1
           fi
           mv "$DEB" "dist/KST4Contest-${{ github.ref_name }}-debian-amd64.deb"
 
@@ -223,27 +184,13 @@ jobs:
       - name: Ensure gradlew is executable
         run: chmod +x gradlew
 
-      - name: Build JAR and copy runtime dependencies
-        run: |
-          ./gradlew -S :app-desktop:collectRuntime
-
       - name: Build Fedora package
         run: |
+          ./gradlew -S :app-desktop:packageRpm
           mkdir -p dist
-          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-          jpackage \
-            --type rpm \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input app-desktop/build/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Main \
-            --add-modules "$ADD_MODULES" \
-            --linux-package-deps "gstreamer1,gstreamer1-plugins-base,gstreamer1-plugins-good" \
-            --dest dist
-          RPM="$(ls dist/*.rpm | head -n 1)"
+          RPM="$(ls app-desktop/build/compose/binaries/main/rpm/*.rpm | head -n 1)"
           if [ -z "$RPM" ]; then
-            echo "No RPM produced by jpackage" && exit 1
+            echo "No RPM produced by packageRpm" && exit 1
           fi
           mv "$RPM" "dist/KST4Contest-${{ github.ref_name }}-fedora-x86_64.rpm"
 
@@ -275,23 +222,14 @@ jobs:
       - name: Ensure gradlew is executable
         run: chmod +x gradlew
 
-      - name: Build JAR and copy runtime dependencies
+      - name: Build app-image
         run: |
-          ./gradlew -S :app-desktop:collectRuntime
-
-      - name: Build app-image with jpackage
-        run: |
+          ./gradlew -S :app-desktop:createDistributable
           mkdir -p dist
-          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-          jpackage \
-            --type app-image \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input app-desktop/build/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Main \
-            --add-modules "$ADD_MODULES" \
-            --dest dist
+          # The following steps read dist/KST4Contest, so the Compose output goes
+          # there. The module list now lives in app-desktop/build.gradle.kts.
+          rm -rf dist/KST4Contest
+          cp -a app-desktop/build/compose/binaries/main/app/KST4Contest dist/
 
       - name: Build Arch Linux package artifact
         run: |
@@ -388,20 +326,13 @@ jobs:
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak --user install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
 
-      - name: Build app-image with jpackage
+      - name: Build app-image
         run: |
-          ./gradlew -S :app-desktop:collectRuntime
+          ./gradlew -S :app-desktop:createDistributable
           mkdir -p target/flatpak-src
-          ADD_MODULES="$(grep -m1 '^jpackageAddModules=' gradle.properties | cut -d= -f2)"
-          jpackage \
-            --type app-image \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input app-desktop/build/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Main \
-            --add-modules "$ADD_MODULES" \
-            --dest target/flatpak-src
+          # The manifest's source is flatpak-src/KST4Contest.
+          rm -rf target/flatpak-src/KST4Contest
+          cp -a app-desktop/build/compose/binaries/main/app/KST4Contest target/flatpak-src/
 
       - name: Create Flatpak manifest
         run: |

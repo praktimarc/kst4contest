@@ -59,3 +59,9 @@ website/_site/
 build/
 core/build/
 app-desktop/build/
+
+# Agent scratch area - screenshots, notes, throwaway scripts
+scratch/
+
+# Kotlin incremental build data
+.kotlin/
