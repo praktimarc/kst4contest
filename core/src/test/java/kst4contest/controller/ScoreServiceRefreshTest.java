@@ -13,10 +13,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import org.mockito.invocation.Invocation;
 
-import javafx.application.Platform;
 import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMember;
@@ -54,20 +52,26 @@ class ScoreServiceRefreshTest {
     }
 
     @Test
-    void userListRefreshKeepsDiagnosticAndReasonlessCallbacksSeparate() {
+    void userListRefreshKeepsDiagnosticAndReasonlessCallbacksSeparate() throws Exception {
         ChatController controller = mock(
                 ChatController.class,
                 org.mockito.Answers.CALLS_REAL_METHODS);
+        /*
+         * CALLS_REAL_METHODS runs no constructor, so the dispatcher field stays null. Give
+         * the mock the direct dispatcher the no-arg constructor installs; it runs inline and
+         * reports the calling thread as the UI thread, which is what the fire methods branch
+         * on. This replaces the old static Platform mock -- core no longer touches JavaFX.
+         */
+        java.lang.reflect.Field dispatcherField =
+                ChatController.class.getDeclaredField("uiDispatcher");
+        dispatcherField.setAccessible(true);
+        dispatcherField.set(controller, new kst4contest.observe.DirectUiDispatcher());
+
         StatusUpdateListener listener = mock(StatusUpdateListener.class);
         controller.setStatusListener(listener);
 
-        try (MockedStatic<Platform> platform =
-                     org.mockito.Mockito.mockStatic(Platform.class)) {
-            platform.when(Platform::isFxApplicationThread).thenReturn(true);
-
-            controller.fireUserListUpdate();
-            controller.fireUserListUpdate("Reachability calculated");
-        }
+        controller.fireUserListUpdate();
+        controller.fireUserListUpdate("Reachability calculated");
 
         verify(listener).onUserListUpdated();
         verify(listener).onUserListUpdated("Reachability calculated");

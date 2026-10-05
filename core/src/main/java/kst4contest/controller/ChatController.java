@@ -2501,10 +2501,10 @@ private SimpleRoster<String>
 			return;
 		}
 
-		if (Platform.isFxApplicationThread()) {
+		if (uiDispatcher.isUiThread()) {
 			statusListener.onUserListUpdated();
 		} else {
-			Platform.runLater(statusListener::onUserListUpdated);
+			uiDispatcher.runOnUi(statusListener::onUserListUpdated);
 		}
 	}
 
