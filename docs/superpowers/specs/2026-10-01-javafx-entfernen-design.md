@@ -4,7 +4,7 @@ Vertieft: `docs/superpowers/specs/2026-09-25-compose-migration-design.md`, Etapp
 zweite Hälfte („Entfernung von JavaFX").
 
 Die erste Hälfte — die Karte als Compose-Canvas — ist umgesetzt und abgenommen
-(`docs/superpowers/plans/2026-10-01-etappe6-karte-compose-parity.md`). Dieser Entwurf
+(Plan entfernt nach der Ausführung). Dieser Entwurf
 behandelt ausschließlich, was danach noch zwischen dem Projekt und einem Build ohne
 `org.openjfx` steht.
 
