@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -15,6 +16,8 @@ import kst4contest.view.compose.Form
  */
 @Composable
 fun StationTab(state: StationTabState) {
+    val strings = LocalStrings.current
+
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -22,38 +25,38 @@ fun StationTab(state: StationTabState) {
          * These are the login credentials, so they are locked while the session is
          * logged in: the running connection would not pick up a change.
          */
-        Form.section("Own station") {
-            Form.text("Callsign", state.stn_loginCallSign, state.loginFieldsEnabled) {
+        Form.section(strings.stationOwnSection) {
+            Form.text(strings.stationCallsign, state.stn_loginCallSign, state.loginFieldsEnabled) {
                 state.stn_loginCallSign = it
             }
-            Form.text("Name, main category", state.stn_loginNameMainCat, state.loginFieldsEnabled) {
+            Form.text(strings.stationNameMain, state.stn_loginNameMainCat, state.loginFieldsEnabled) {
                 state.stn_loginNameMainCat = it
             }
-            Form.text("Name, second category", state.stn_loginNameSecondCat, state.loginFieldsEnabled) {
+            Form.text(strings.stationNameSecond, state.stn_loginNameSecondCat, state.loginFieldsEnabled) {
                 state.stn_loginNameSecondCat = it
             }
-            Form.text("Locator", state.stn_loginLocatorMainCat, state.loginFieldsEnabled) {
+            Form.text(strings.stationLocator, state.stn_loginLocatorMainCat, state.loginFieldsEnabled) {
                 state.stn_loginLocatorMainCat = it
             }
-            Form.password("Password", state.stn_loginPassword, state.loginFieldsEnabled) {
+            Form.password(strings.stationPassword, state.stn_loginPassword, state.loginFieldsEnabled) {
                 state.stn_loginPassword = it
             }
         }
 
-        Form.section("Chat category") {
+        Form.section(strings.stationChatSection) {
             Form.choice(
-                label = "Main category",
+                label = strings.stationMainCategory,
                 items = state.availableCategories,
                 selected = state.loginChatCategoryMain,
                 describe = state::describeCategory,
                 enabled = state.loginFieldsEnabled,
                 onSelect = state::selectMainCategory,
             )
-            Form.check("2nd chat: log in to a second category", state.loginToSecondChatEnabled) {
+            Form.check(strings.stationSecondChatEnabled, state.loginToSecondChatEnabled) {
                 state.loginToSecondChatEnabled = it
             }
             Form.choice(
-                label = "Second category",
+                label = strings.stationSecondCategory,
                 items = state.secondCategoryOptions,
                 selected = state.loginChatCategorySecond,
                 describe = state::describeCategory,
@@ -62,12 +65,12 @@ fun StationTab(state: StationTabState) {
             )
         }
 
-        Form.section("ON4KST server") {
-            Form.text("Server host name", state.stn_on4kstServersDns) { state.stn_on4kstServersDns = it }
-            Form.int("Server port", state.stn_on4kstServersPort) { state.stn_on4kstServersPort = it }
+        Form.section(strings.stationServerSection) {
+            Form.text(strings.stationServerHost, state.stn_on4kstServersDns) { state.stn_on4kstServersDns = it }
+            Form.int(strings.stationServerPort, state.stn_on4kstServersPort) { state.stn_on4kstServersPort = it }
         }
 
-        Form.flowingSection("Active bands") {
+        Form.flowingSection(strings.stationBandsSection) {
             Form.check("50 MHz", state.stn_bandActive50) { state.stn_bandActive50 = it }
             Form.check("70 MHz", state.stn_bandActive70) { state.stn_bandActive70 = it }
             Form.check("144 MHz", state.stn_bandActive144) { state.stn_bandActive144 = it }
@@ -79,25 +82,25 @@ fun StationTab(state: StationTabState) {
             Form.check("10 GHz", state.stn_bandActive10G) { state.stn_bandActive10G = it }
         }
 
-        Form.section("Defaults") {
-            Form.decimal("Maximum QRB", state.stn_maxQRBDefault) { state.stn_maxQRBDefault = it }
-            Form.decimal("QTF", state.stn_qtfDefault) { state.stn_qtfDefault = it }
-            Form.decimal("Antenna beam width, degrees", state.stn_antennaBeamWidthDeg) { state.stn_antennaBeamWidthDeg = it }
+        Form.section(strings.stationDefaultsSection) {
+            Form.decimal(strings.stationMaxQrb, state.stn_maxQRBDefault) { state.stn_maxQRBDefault = it }
+            Form.decimal(strings.stationQtf, state.stn_qtfDefault) { state.stn_qtfDefault = it }
+            Form.decimal(strings.stationBeamWidth, state.stn_antennaBeamWidthDeg) { state.stn_antennaBeamWidthDeg = it }
         }
 
-        Form.section("PSTRotator") {
-            Form.check("Rotator sync enabled", state.stn_pstRotatorEnabled) { state.stn_pstRotatorEnabled = it }
-            Form.text("Rotator host", state.stn_pstRotatorHost) { state.stn_pstRotatorHost = it }
-            Form.int("Rotator port", state.stn_pstRotatorPort) { state.stn_pstRotatorPort = it }
+        Form.section(strings.stationRotatorSection) {
+            Form.check(strings.stationRotatorEnabled, state.stn_pstRotatorEnabled) { state.stn_pstRotatorEnabled = it }
+            Form.text(strings.stationRotatorHost, state.stn_pstRotatorHost) { state.stn_pstRotatorHost = it }
+            Form.int(strings.stationRotatorPort, state.stn_pstRotatorPort) { state.stn_pstRotatorPort = it }
         }
 
-        Form.section("Path analysis defaults") {
-            Form.decimal("Own TX power, watts", state.stn_pathAnalysisOwnTxPowerWatts) { state.stn_pathAnalysisOwnTxPowerWatts = it }
-            Form.decimal("Own antenna gain, dBi", state.stn_pathAnalysisOwnAntennaGainDbi) { state.stn_pathAnalysisOwnAntennaGainDbi = it }
-            Form.decimal("Own antenna height, metres", state.stn_pathAnalysisOwnAntennaHeightMeters) { state.stn_pathAnalysisOwnAntennaHeightMeters = it }
-            Form.decimal("Target TX power, watts", state.stn_pathAnalysisDefaultTargetTxPowerWatts) { state.stn_pathAnalysisDefaultTargetTxPowerWatts = it }
-            Form.decimal("Target antenna gain, dBi", state.stn_pathAnalysisDefaultTargetAntennaGainDbi) { state.stn_pathAnalysisDefaultTargetAntennaGainDbi = it }
-            Form.text("DEM root directory", state.stn_pathAnalysisDemRootDirectory) { state.stn_pathAnalysisDemRootDirectory = it }
+        Form.section(strings.stationPathSection) {
+            Form.decimal(strings.stationOwnTxPower, state.stn_pathAnalysisOwnTxPowerWatts) { state.stn_pathAnalysisOwnTxPowerWatts = it }
+            Form.decimal(strings.stationOwnAntennaGain, state.stn_pathAnalysisOwnAntennaGainDbi) { state.stn_pathAnalysisOwnAntennaGainDbi = it }
+            Form.decimal(strings.stationOwnAntennaHeight, state.stn_pathAnalysisOwnAntennaHeightMeters) { state.stn_pathAnalysisOwnAntennaHeightMeters = it }
+            Form.decimal(strings.stationTargetTxPower, state.stn_pathAnalysisDefaultTargetTxPowerWatts) { state.stn_pathAnalysisDefaultTargetTxPowerWatts = it }
+            Form.decimal(strings.stationTargetAntennaGain, state.stn_pathAnalysisDefaultTargetAntennaGainDbi) { state.stn_pathAnalysisDefaultTargetAntennaGainDbi = it }
+            Form.text(strings.stationDemDirectory, state.stn_pathAnalysisDemRootDirectory) { state.stn_pathAnalysisDemRootDirectory = it }
         }
     }
 }

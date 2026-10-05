@@ -51,7 +51,7 @@ class StationColumnsTest {
                 "Tropo", "Score", "Act", "50", "70", "144", "432", "23",
                 "13", "9", "6", "3", "wkdany", "NOT QRV @", "Category",
             ),
-            columns().map { it.title },
+            columns().map { it.title() },
         )
     }
 

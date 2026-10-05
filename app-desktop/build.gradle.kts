@@ -42,6 +42,44 @@ dependencies {
     testRuntimeOnly(libs.junit.platform.launcher)
 }
 
+/*
+ * The translation files are turned into Kotlin before anything compiles, by the
+ * :i18n-generator module. Two consequences worth naming:
+ *
+ * - A broken translation fails `./gradlew classes`, which is what the PR workflow already
+ *   runs -- so a contributor's mistake is reported in their pull request without a new
+ *   workflow existing for it.
+ * - The generator is reached through its own configuration, not through `implementation`, so
+ *   it stays out of the application's runtime classpath and out of the jar.
+ */
+val i18nGenerator: Configuration by configurations.creating
+
+dependencies {
+    i18nGenerator(project(":i18n-generator"))
+}
+
+val generatedI18nDirectory = layout.buildDirectory.dir("generated/i18n")
+
+val generateStrings by tasks.registering(JavaExec::class) {
+    description = "Generates Strings.kt from app-desktop/src/main/i18n"
+    group = "build"
+
+    classpath = i18nGenerator
+    mainClass.set("kst4contest.i18n.GeneratorMain")
+
+    val input = layout.projectDirectory.dir("src/main/i18n")
+    inputs.dir(input)
+    outputs.dir(generatedI18nDirectory)
+
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(input.asFile.absolutePath, generatedI18nDirectory.get().asFile.absolutePath)
+    })
+}
+
+kotlin.sourceSets["main"].kotlin.srcDir(generatedI18nDirectory)
+
+tasks.named("compileKotlin") { dependsOn(generateStrings) }
+
 compose.desktop {
     application {
         // Main forwards to Kst4ContestApplication.main. It was a workaround for

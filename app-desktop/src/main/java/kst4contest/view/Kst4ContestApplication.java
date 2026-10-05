@@ -286,14 +286,14 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 	private void toggleStationMapWindow() {
 		if (composeMainWindowState != null) {
-			kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState, paletteStore);
+			kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState, paletteStore, languageStore);
 		}
 	}
 
 	private void showSelectedCallsignOnMap() {
 		if (composeMainWindowState != null) {
 			if (!kst4contest.view.compose.map.StationMapWindow.INSTANCE.isShowing()) {
-				kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState, paletteStore);
+				kst4contest.view.compose.map.StationMapWindow.INSTANCE.toggle(composeMainWindowState, paletteStore, languageStore);
 			}
 		}
 	}
@@ -382,7 +382,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 */
 	private String formatDetectedRxBandsForCallsignRaw(String callSignRaw, long maxAgeMs) {
 
-		if (callSignRaw == null) return "Bands: -";
+		if (callSignRaw == null) return kst4contest.view.i18n.CurrentStrings.get().getTooltipBandsNone();
 
 		List<ChatMember> variants = chatcontroller.findActiveChatMembersByRawCall(callSignRaw);
 		BandOpportunityResolver.Resolution bandResolution =
@@ -390,7 +390,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		EnumSet<Band> availableBands = bandResolution.getAvailableBands();
 
 		if (availableBands.isEmpty()) {
-			return "Bands: -";
+			return kst4contest.view.i18n.CurrentStrings.get().getTooltipBandsNone();
 		}
 
 		Map<Band, ChatMember.ActiveFrequencyInfo> newestPerBand =
@@ -416,7 +416,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 			}
 		}
 
-		StringBuilder result = new StringBuilder("Bands: ").append(
+		StringBuilder result = new StringBuilder(kst4contest.view.i18n.CurrentStrings.get().getTooltipBandsPrefix() + " ").append(
 				availableBands.stream()
 						.sorted()
 						.map(this::bandToHumanLabel)
@@ -547,17 +547,12 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 * resolved status for the given band.
 	 */
 	private String buildBandCellStatusTooltipText(ChatMember chatMember, Band band, String status) {
-		StringBuilder tooltip = new StringBuilder("Band status:\n")
-				.append("X = worked on this band\n")
-				.append("B+ = band available, not worked on this band yet (call already worked on another band)\n")
-				.append("a = band available, call not worked on any band yet (can be turned off in GUI settings; falls back to B+)\n")
-				.append("o = grid square already worked on this band, by any station (can be turned off in GUI settings)\n")
-				.append("(empty) = no information for this band\n")
-				.append("o can combine with the others, e.g. \"ao\" or \"B+o\"");
+		StringBuilder tooltip = new StringBuilder(kst4contest.view.i18n.CurrentStrings.get().getTooltipBandStatusLegend());
 
 		if (chatMember != null && band != null) {
-			tooltip.append("\n\nThis station (").append(bandToHumanLabel(band)).append("):\n")
-					.append("Status: ").append(status == null || status.isBlank() ? "-" : status);
+			tooltip.append(kst4contest.view.i18n.CurrentStrings.get().tooltipBandStatusThisStation(
+					bandToHumanLabel(band),
+					status == null || status.isBlank() ? "-" : status));
 		}
 
 		return tooltip.toString();
@@ -1373,7 +1368,8 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 				candidate -> uiDispatcher.runOnUi(() -> selectTopCandidate(candidate)),
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
-				paletteStore
+				paletteStore,
+				languageStore
 		);
 	}
 
@@ -1909,8 +1905,8 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 		if (bootstrap.getStartupWarning() != null) {
 			ComposeAlert.acknowledge(
-					"Operator profile",
-					"The requested operator profile was not found.",
+					kst4contest.view.i18n.CurrentStrings.get().getAlertProfileTitle(),
+					kst4contest.view.i18n.CurrentStrings.get().getAlertProfileNotFound(),
 					bootstrap.getStartupWarning());
 		}
 
@@ -1955,11 +1951,9 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 		if (selectableProfiles.size() < 2) {
 			ComposeAlert.acknowledge(
-					"Operator profiles",
-					"Only one operator profile is configured.",
-					"Additional profiles are created in the settings window on the "
-							+ "\"Profiles\" tab. Each profile keeps its own settings and layout, "
-							+ "and can either share the station worked database or use its own.",
+					kst4contest.view.i18n.CurrentStrings.get().getAlertProfilesTitle(),
+					kst4contest.view.i18n.CurrentStrings.get().getAlertOnlyOneProfile(),
+					kst4contest.view.i18n.CurrentStrings.get().getAlertOnlyOneProfileBody(),
 					chatcontroller.getChatPreferences().isGUI_darkModeActive());
 			return;
 		}
@@ -2007,14 +2001,11 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	private boolean confirmOperatorProfileSwitch(OperatorProfile targetProfile) {
 
 		return ComposeAlert.confirm(
-				"Switch operator profile",
-				"Switch to \"" + targetProfile.getDisplayName() + "\"?",
-				"The ON4KST connection is closed and all windows are rebuilt with the "
-						+ "settings and layout of the selected profile.\n\n"
-						+ "Unsaved settings of the current profile are lost. Window sizes, "
-						+ "divider and column widths are saved automatically.",
-				"Switch profile",
-				"Cancel",
+				kst4contest.view.i18n.CurrentStrings.get().getAlertSwitchProfileTitle(),
+				kst4contest.view.i18n.CurrentStrings.get().alertSwitchProfileQuestion(targetProfile.getDisplayName()),
+				kst4contest.view.i18n.CurrentStrings.get().getAlertSwitchProfileBody(),
+				kst4contest.view.i18n.CurrentStrings.get().getDialogSwitchProfile(),
+				kst4contest.view.i18n.CurrentStrings.get().getDialogCancel(),
 				chatcontroller.getChatPreferences().isGUI_darkModeActive());
 	}
 
@@ -2171,6 +2162,9 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		 */
 		paletteStore = kst4contest.view.compose.PaletteStoreFactory.create(
 				chatcontroller.getChatPreferences(), activeOperatorProfile.getProfile());
+
+		languageStore = kst4contest.view.i18n.LanguageStoreFactory.create(
+				chatcontroller.getChatPreferences(), java.util.Locale.getDefault());
 		messageVariableResolver = new MessageVariableResolver(chatcontroller.getChatPreferences());
 		chatcontroller.setStatusListener(this); //callback interface for updating Thread events in visual
 
@@ -2371,17 +2365,16 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		}
 
 		String grossField = WorkedGrossFieldCache.extractGrossField(member.getQra());
-		String gridText = grossField == null ? "unknown grid" : "grid " + grossField;
+		String gridText = grossField == null
+				? kst4contest.view.i18n.CurrentStrings.get().getTooltipUnknownGrid()
+				: kst4contest.view.i18n.CurrentStrings.get().tooltipGrid(grossField);
 
-		return "Worked status:\n"
-				+ "empty = call not worked, grid not worked\n"
-				+ "x = call worked\n"
-				+ "o = grid worked\n"
-				+ "xo = call and grid worked\n\n"
-				+ "This station:\n"
-				+ "Call worked: " + (member.isWorked() ? "yes" : "no") + "\n"
-				+ "Grid worked: " + (chatcontroller != null && chatcontroller.isGridSquareWorkedAny(member) ? "yes" : "no")
-				+ " (" + gridText + ")";
+		return kst4contest.view.i18n.CurrentStrings.get().getTooltipWorkedStatusLegend()
+				+ kst4contest.view.i18n.CurrentStrings.get().tooltipWorkedStatusThisStation(
+						member.isWorked() ? kst4contest.view.i18n.CurrentStrings.get().getTooltipYes() : kst4contest.view.i18n.CurrentStrings.get().getTooltipNo(),
+						chatcontroller != null && chatcontroller.isGridSquareWorkedAny(member)
+								? kst4contest.view.i18n.CurrentStrings.get().getTooltipYes() : kst4contest.view.i18n.CurrentStrings.get().getTooltipNo(),
+						gridText);
 	}
 
 //	/**
@@ -2435,11 +2428,11 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		 * Linux, so the two genuinely differ.
 		 */
 		boolean quit = ComposeAlert.confirm(
-				"Quit application",
+				kst4contest.view.i18n.CurrentStrings.get().getAlertQuitTitle(),
 				null,
-				"Do you want to disconnect from the Chat?",
-				"Yes",
-				"Cancel",
+				kst4contest.view.i18n.CurrentStrings.get().getAlertQuitQuestion(),
+				kst4contest.view.i18n.CurrentStrings.get().getDialogYes(),
+				kst4contest.view.i18n.CurrentStrings.get().getDialogCancel(),
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				ConfirmKind.YES);
 
@@ -2570,19 +2563,10 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	@Override
 	public void onSimpleLogFileCreated(Path filePath) {
 		ComposeAlert.showWithLink(
-				"Simplelogfile created",
-				"The selected Simplelogfile did not exist and has been created",
-				"File: " + filePath + "\n\n"
-						+ "First check whether you need the Simplelogfile integration. If your logging "
-						+ "application provides a supported network interface, use that interface for "
-						+ "band and locator information.\n\n"
-						+ "If you use Simplelogfile, configure your logging application to write its live log to this file. "
-						+ "Then log a test QSO and verify that the callsign is marked as worked "
-						+ "in KST4Contest within one minute.\n\n"
-						+ "Before each contest, verify that the logging application writes the current "
-						+ "contest log to this exact file. KST4Contest does not reset Simplelogfile-derived "
-						+ "Worked marks automatically when a new contest starts.",
-				"Open the Simplelogfile manual",
+				kst4contest.view.i18n.CurrentStrings.get().getAlertSimpleLogTitle(),
+				kst4contest.view.i18n.CurrentStrings.get().getAlertSimpleLogHeader(),
+				kst4contest.view.i18n.CurrentStrings.get().alertSimpleLogBody(filePath),
+				kst4contest.view.i18n.CurrentStrings.get().getAlertSimpleLogLink(),
 				SIMPLE_LOG_MANUAL_URL,
 				chatcontroller.getChatPreferences().isGUI_darkModeActive());
 	}
@@ -2985,6 +2969,14 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 * separate rebuild to do here.
 	 */
 	private kst4contest.view.compose.PaletteStore paletteStore;
+
+	/**
+	 * The interface language of the active profile, handed to every Compose window.
+	 *
+	 * Built once per runtime start, which is also once per profile: a profile switch tears the
+	 * runtime down and starts it again on a fresh application object.
+	 */
+	private kst4contest.view.i18n.LanguageStore languageStore;
 	private java.util.function.Consumer<java.util.List<ChatMember>> composeMemberListener;
 	private java.util.function.Consumer<java.util.List<ChatMessage>> composeChatListener;
 	private java.util.function.Consumer<java.util.List<ClusterMessage>> composeClusterListener;
@@ -3268,11 +3260,11 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		MainWindowHost.show(
 				composeMainWindowState,
 				new ComposeMenuActions(this),
-				MainWindowFrame.INSTANCE.title(
-						"KST4Contest (Compose)", buildOperatorProfileTitleSuffixForCompose()),
+				buildOperatorProfileTitleSuffixForCompose(),
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
 				paletteStore,
+				languageStore,
 				(float) size.getWidthDp(),
 				(float) size.getHeightDp(),
 				(width, height) -> {
@@ -3394,12 +3386,20 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 	/** The Connect item's label, built exactly as initMenuBar builds it. */
 	private String buildComposeConnectLabel() {
+		/*
+		 * Through the volatile bridge rather than a composition local: this runs on whatever
+		 * thread rebuilt the menu state, not inside a composition. The menu picks the new
+		 * label up the next time the state is rebuilt.
+		 */
+		kst4contest.view.i18n.Strings strings = kst4contest.view.i18n.CurrentStrings.get();
+
 		ChatCategory mainCat = chatcontroller.getChatPreferences().getLoginChatCategoryMain();
 		if (mainCat == null) {
-			return "Connect";
+			return strings.getConnectionConnect();
 		}
 
-		String label = "Connect to " + mainCat.getChatCategoryName(mainCat.getCategoryNumber());
+		String label = strings.connectionConnectTo(
+				mainCat.getChatCategoryName(mainCat.getCategoryNumber()));
 		if (chatcontroller.getChatPreferences().isLoginToSecondChatEnabled()) {
 			ChatCategory secondCat = chatcontroller.getChatPreferences().getLoginChatCategorySecond();
 			if (secondCat != null) {
@@ -3668,6 +3668,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
 				paletteStore,
+				languageStore,
 				(float) chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[0],
 				(float) chatcontroller.getChatPreferences().getGUIclusterAndQSOMonStage_SceneSizeHW()[1],
 				(width, height) -> {
@@ -3702,6 +3703,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 					SETTINGS_WINDOW_FONT_SIZE_SP,
 					paletteStore,
+					languageStore,
 					(float) chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[0],
 					(float) chatcontroller.getChatPreferences().getGUIstage_updateStage_SceneSizeHW()[1],
 					address -> ExternalDocuments.open(address),
@@ -3728,11 +3730,12 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	private void openSettingsWindow() {
 
 		SettingsWindow.show(
-				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices, paletteStore),
+				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices, paletteStore, languageStore),
 				settingsNotices,
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
 				paletteStore,
+				languageStore,
 				(float) chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[0],
 				(float) chatcontroller.getChatPreferences().getGUIsettingsStageSceneSizeHW()[1],
 				(width, height) -> {
@@ -3760,9 +3763,9 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 		if (call == null || call.isBlank() || pass == null || pass.isBlank()) {
 			ComposeAlert.show(
-					"Cannot connect",
-					"Login credentials missing",
-					"Please configure your callsign and password in Settings first.",
+					kst4contest.view.i18n.CurrentStrings.get().getAlertCannotConnectTitle(),
+					kst4contest.view.i18n.CurrentStrings.get().getAlertCredentialsMissing(),
+					kst4contest.view.i18n.CurrentStrings.get().getAlertCredentialsMissingBody(),
 					darkMode);
 			return;
 		}
@@ -3772,9 +3775,9 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		} catch (InterruptedException | IOException e) {
 			LOGGER.log(java.util.logging.Level.SEVERE, "Exception", e);
 			ComposeAlert.show(
-					"Connection failed",
+					kst4contest.view.i18n.CurrentStrings.get().getAlertConnectionFailedTitle(),
 					null,
-					"Could not connect: " + e.getMessage(),
+					kst4contest.view.i18n.CurrentStrings.get().alertConnectionFailedBody(String.valueOf(e.getMessage())),
 					darkMode);
 		}
 	}

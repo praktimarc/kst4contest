@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.Strings
 /**
  * One line of a menu.
  *
@@ -43,25 +44,31 @@ fun mainMenuModel(
     actions: MainMenuActions,
     settingsWindowOpen: Boolean,
     monitorWindowOpen: Boolean,
+    /*
+     * Passed in rather than read from the composition, because this model is deliberately not
+     * a composable -- both renderers build from it and the two menu tests assert over it
+     * without a composition in sight.
+     */
+    strings: Strings,
 ): List<MenuSpec> = listOf(
     MenuSpec(
-        "File",
+        strings.menuFile,
         listOf(
             MenuEntry.Item(state.connectLabel, state.canConnect, actions::connect),
-            MenuEntry.Item("Disconnect", state.canDisconnect, actions::disconnect),
+            MenuEntry.Item(strings.menuDisconnect, state.canDisconnect, actions::disconnect),
             MenuEntry.Item(
-                "Switch operator profile...",
+                strings.menuSwitchOperatorProfile,
                 state.canSwitchProfile,
                 actions::switchOperatorProfile,
             ),
-            MenuEntry.Item("Exit + disconnect", state.canExit, actions::exitApplication),
+            MenuEntry.Item(strings.menuExitAndDisconnect, state.canExit, actions::exitApplication),
         ),
     ),
     MenuSpec(
-        "Options",
+        strings.menuOptions,
         listOf(
             MenuEntry.Item(
-                "Set QRG as name in Chat (main category)",
+                strings.menuSetQrgAsNameInChat,
                 state.canUseChatActions,
                 actions::setQrgAsNameInChat,
             ),
@@ -71,60 +78,59 @@ fun mainMenuModel(
              * click handler as JavaFX did.
              */
             MenuEntry.Item(
-                state.awayMenuLabel,
+                state.awayMenuLabel(strings),
                 state.canUseChatActions,
                 actions::toggleAwayState,
             ),
             MenuEntry.Item(
-                if (settingsWindowOpen) "hide options" else "Show options",
+                if (settingsWindowOpen) strings.menuHideOptions else strings.menuShowOptions,
                 enabled = true,
                 actions::toggleSettingsWindow,
             ),
         ),
     ),
     MenuSpec(
-        "Windows",
+        strings.menuWindows,
         listOf(
             MenuEntry.Item(
-                if (monitorWindowOpen) "Hide cluster / stranger QSOs"
-                else "Show cluster / stranger QSOs",
+                if (monitorWindowOpen) strings.menuHideMonitor else strings.menuShowMonitor,
                 enabled = true,
                 actions::toggleMonitorWindow,
             ),
             MenuEntry.Item(
-                if (settingsWindowOpen) "hide options" else "show options",
+                if (settingsWindowOpen) strings.menuHideOptions else strings.menuShowOptions,
                 enabled = true,
                 actions::toggleSettingsWindow,
             ),
             MenuEntry.Separator,
-            MenuEntry.Item("Show / hide station map", enabled = true, actions::toggleStationMap),
+            MenuEntry.Item(strings.menuToggleStationMap, enabled = true, actions::toggleStationMap),
             MenuEntry.Separator,
-            MenuEntry.Item("Use dark mode design", enabled = true, actions::useDarkDesign),
-            MenuEntry.Item("Use default mode design", enabled = true, actions::useDefaultDesign),
+            MenuEntry.Item(strings.menuUseDarkDesign, enabled = true, actions::useDarkDesign),
+            MenuEntry.Item(strings.menuUseDefaultDesign, enabled = true, actions::useDefaultDesign),
         ),
     ),
     MenuSpec(
-        "Info",
+        strings.menuInfo,
         listOf(
             MenuEntry.Item(
-                "Donate for kst4Contest development via PayPal",
+                strings.menuDonatePayPal,
                 enabled = true,
                 actions::openDonationPage,
             ),
             MenuEntry.Item(
-                "Donate for OV3T´s plane feed service",
+                strings.menuDonateOv3t,
                 enabled = true,
                 actions::openOv3tDonationPage,
             ),
-            MenuEntry.Item("Visit DARC X08-Homepage", enabled = true, actions::openHomepage),
-            MenuEntry.Item("Join kst4Contest newsgroup", enabled = true, actions::openNewsgroup),
+            MenuEntry.Item(strings.menuHomepage, enabled = true, actions::openHomepage),
+            MenuEntry.Item(strings.menuNewsgroup, enabled = true, actions::openNewsgroup),
             MenuEntry.Item(
-                "Contact the author using default mail app",
+                strings.menuContactAuthor,
                 enabled = true,
                 actions::contactAuthor,
             ),
             MenuEntry.Separator,
-            MenuEntry.Item("About...", enabled = true, actions::showAbout),
+            MenuEntry.Item(strings.menuAbout, enabled = true, actions::showAbout),
         ),
     ),
 )

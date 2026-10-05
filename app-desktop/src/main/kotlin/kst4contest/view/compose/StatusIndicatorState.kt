@@ -42,7 +42,7 @@ object ConnectionIndicator {
 
     fun tooltipFor(state: On4KstConnectionState?, detail: String?): String {
         val effective = state ?: On4KstConnectionState.DISCONNECTED
-        return "ON4KST link: ${effective.name}\n${detailFor(state, detail)}"
+        return kst4contest.view.i18n.CurrentStrings.get().statusLinkTooltip(effective.name, detailFor(state, detail))
     }
 
     /**
@@ -57,22 +57,22 @@ object ConnectionIndicator {
     }
 
     /**
-     * Title of the macOS connection state menu, e.g. "🟢 LINK: Connected".
+     * Title of the macOS connection state menu, e.g. kst4contest.view.i18n.CurrentStrings.get().statusLinkConnected.
      *
      * Finer than the badge: in the menu bar there is room to distinguish shutting down
      * from connecting, and a reconnect from a dead link.
      */
     fun macOsMenuTitle(state: On4KstConnectionState?): String =
         when (state ?: On4KstConnectionState.DISCONNECTED) {
-            On4KstConnectionState.ONLINE -> "🟢 LINK: Connected"
+            On4KstConnectionState.ONLINE -> kst4contest.view.i18n.CurrentStrings.get().statusLinkConnected
             On4KstConnectionState.CONNECTING,
             On4KstConnectionState.WAITING_FOR_LOGIN_PROMPT,
             On4KstConnectionState.AUTHENTICATING,
             On4KstConnectionState.SYNCING_MAIN_CHAT,
-            On4KstConnectionState.SYNCING_SECOND_CHAT -> "🟡 LINK: Connecting…"
-            On4KstConnectionState.STOPPING -> "🟡 LINK: Disconnecting…"
-            On4KstConnectionState.RECONNECT_WAIT -> "🔴 LINK: Reconnecting…"
-            On4KstConnectionState.DISCONNECTED -> "🔴 LINK: Disconnected"
+            On4KstConnectionState.SYNCING_SECOND_CHAT -> kst4contest.view.i18n.CurrentStrings.get().statusLinkConnecting
+            On4KstConnectionState.STOPPING -> kst4contest.view.i18n.CurrentStrings.get().statusLinkDisconnecting
+            On4KstConnectionState.RECONNECT_WAIT -> kst4contest.view.i18n.CurrentStrings.get().statusLinkReconnecting
+            On4KstConnectionState.DISCONNECTED -> kst4contest.view.i18n.CurrentStrings.get().statusLinkDisconnected
         }
 }
 

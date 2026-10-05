@@ -29,8 +29,18 @@ data class CellAccent(val background: Color? = null, val foreground: Color? = nu
  * @param comparator sorts this column; without one the displayed text decides
  */
 class DataColumn<T>(
+    /**
+     * Never translated: this is what the stored column layout is keyed on, so a language
+     * change must leave it alone or every operator's remembered widths and order would be
+     * read under names that no longer match.
+     */
     val id: String,
-    val title: String,
+    /**
+     * Read when the header is drawn, not stored as text. The column lists are built once at
+     * startup, outside any composition; a stored title would stay in the language that was
+     * in force then while everything around it switched.
+     */
+    val title: () -> String,
     val value: (T) -> String,
     val tooltip: ((T, String) -> String)? = null,
     val accent: ((T, String) -> CellAccent?)? = null,
@@ -42,7 +52,20 @@ class DataColumn<T>(
      * 9 6 3" say nothing about what they mean.
      */
     val group: String? = null,
-)
+) {
+
+    /** For a title that genuinely never changes -- a ham abbreviation, or a test. */
+    constructor(
+        id: String,
+        title: String,
+        value: (T) -> String,
+        tooltip: ((T, String) -> String)? = null,
+        accent: ((T, String) -> CellAccent?)? = null,
+        comparator: Comparator<T>? = null,
+        weight: Float = 1f,
+        group: String? = null,
+    ) : this(id, { title }, value, tooltip, accent, comparator, weight, group)
+}
 
 /**
  * Gives every row a key that survives a refresh.

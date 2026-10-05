@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -17,13 +18,15 @@ import kst4contest.view.compose.Form
  */
 @Composable
 fun ShortcutsTab(state: ShortcutsTabState, onRefused: (String) -> Unit) {
+    val strings = LocalStrings.current
+
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Form.section("Shortcut buttons above the message field") {
+        Form.section(strings.shortcutsButtonsSection) {
             DataTable(
                 state = state.shortcuts,
-                addButtonText = "Add shortcut",
+                addButtonText = strings.shortcutsAddButton,
                 newEntryTemplate = ShortcutsTabState.NEW_ENTRY_TEMPLATE,
                 onChanged = state::commitShortcuts,
                 onRefused = onRefused,
@@ -31,10 +34,10 @@ fun ShortcutsTab(state: ShortcutsTabState, onRefused: (String) -> Unit) {
             )
         }
 
-        Form.section("Text snippets (the first 10 use Ctrl+1 through Ctrl+0)") {
+        Form.section(strings.shortcutsSnippetsSection) {
             DataTable(
                 state = state.snippets,
-                addButtonText = "Add new snippet",
+                addButtonText = strings.shortcutsAddSnippet,
                 newEntryTemplate = ShortcutsTabState.NEW_ENTRY_TEMPLATE,
                 onChanged = state::commitSnippets,
                 onRefused = onRefused,

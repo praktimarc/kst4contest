@@ -190,17 +190,17 @@ fun ChatInputRow(
         InlineCommittedField(
             stored = ownQrgMain.value.orEmpty(),
             onCommit = { prefs.getMYQRGFirstCat().set(it) },
-            tooltip = "Your own frequency in the main category",
+            tooltip = kst4contest.view.i18n.CurrentStrings.get().chatOwnQrgTooltip,
         )
         InlineCommittedField(
             stored = ownQrgSecond.value.orEmpty(),
             onCommit = { prefs.getMYQRGSecondCat().set(it) },
-            tooltip = "Enter the frequency for the second chat category by hand",
+            tooltip = kst4contest.view.i18n.CurrentStrings.get().chatSecondQrgTooltip,
         )
         InlineCommittedField(
             stored = antennaQtf.value?.toString().orEmpty(),
             onCommit = { text -> text.toDoubleOrNull()?.let { prefs.getActualQTF().set(it) } },
-            tooltip = "Your antenna heading (QTF); read from the rotator when one is synced",
+            tooltip = kst4contest.view.i18n.CurrentStrings.get().chatQtfTooltip,
         )
     }
 }

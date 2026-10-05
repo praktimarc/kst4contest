@@ -149,7 +149,7 @@ class MainWindowSurroundings(private val menu: MainMenuState = MainMenuState()) 
             menu.connectionState = value
         }
 
-    var connectionDetail: String by mutableStateOf("No ON4KST connection")
+    var connectionDetail: String by mutableStateOf(kst4contest.view.i18n.CurrentStrings.get().statusNoConnection)
 
     var settingsWindowOpen: Boolean by mutableStateOf(false)
 

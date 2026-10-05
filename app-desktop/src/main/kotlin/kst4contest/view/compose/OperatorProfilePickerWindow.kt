@@ -121,7 +121,7 @@ object OperatorProfilePickerWindow {
         chosen: AtomicReference<OperatorProfile?>,
     ) {
         val dialog = ComposeDialog(owner = null, modalityType = Dialog.ModalityType.APPLICATION_MODAL)
-        dialog.title = "Select operator profile"
+        dialog.title = kst4contest.view.i18n.CurrentStrings.get().pickerTitle
         dialog.size = DIALOG_SIZE
         dialog.setLocationRelativeTo(null)
         /* Disposed and not hidden: a hidden dialog keeps its window and Skia layer alive. */
@@ -161,7 +161,7 @@ private fun PickerContent(
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("More than one operator profile is configured.")
+            Text(kst4contest.view.i18n.CurrentStrings.get().pickerMoreThanOne)
 
             LazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 items(state.profiles, key = { it.profileId }) { profile ->
@@ -214,8 +214,8 @@ private fun PickerContent(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
-                Form.button("Start", enabled = state.canConfirm, onClick = onStart)
-                Form.button("Quit", onClick = onQuit)
+                Form.button(kst4contest.view.i18n.CurrentStrings.get().pickerStart, enabled = state.canConfirm, onClick = onStart)
+                Form.button(kst4contest.view.i18n.CurrentStrings.get().pickerQuit, onClick = onQuit)
             }
         }
     }

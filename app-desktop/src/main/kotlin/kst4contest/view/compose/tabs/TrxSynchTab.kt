@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -26,32 +27,34 @@ import kst4contest.view.compose.Form
 fun TrxSynchTab(state: TrxSynchTabState) {
     /* See LogSynchTab: the facade holds no snapshot state, so writes need a revision. */
     var revision by remember { mutableStateOf(0) }
+    val strings = LocalStrings.current
+
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         @Suppress("UNUSED_EXPRESSION") revision
 
-        Form.section("Receive UCXLog TRX info") {
+        Form.section(strings.trxSynchUcxSection) {
             Form.check(
-                "Update MYQRG from RadioInfo messages received on the shared log-sync port",
+                strings.trxSynchUcxEnabled,
                 state.trxSynch_ucxLogUDPListenerEnabled,
             ) { state.trxSynch_ucxLogUDPListenerEnabled = it; revision++ }
         }
 
-        Form.section("Win-Test TRX sync") {
+        Form.section(strings.trxSynchWinTestSection) {
             Form.check(
-                "Win-Test STATUS QRG Sync (updates own QRG from Win-Test transceiver frequency)",
+                strings.trxSynchWinTestEnabled,
                 state.logsynch_wintestQrgSyncEnabled,
             ) { state.logsynch_wintestQrgSyncEnabled = it; revision++ }
 
             Form.check(
-                "Use pass frequency from Win-Test STATUS (instead of own QRG)",
+                strings.trxSynchWinTestPassFrequency,
                 state.logsynch_wintestUsePassQrg,
             ) { state.logsynch_wintestUsePassQrg = it; revision++ }
 
             GuardedTextField(
-                label = "Win-Test station name filter (e.g. STN1, empty = accept all)",
+                label = strings.trxSynchWinTestStationFilter,
                 value = state.logsynch_wintestNetworkStationNameOfWintestClient1,
                 onAccepted = {
                     state.logsynch_wintestNetworkStationNameOfWintestClient1 = it
@@ -60,8 +63,8 @@ fun TrxSynchTab(state: TrxSynchTabState) {
             )
         }
 
-        Form.section("What an enabled source does") {
-            Text(TrxSynchTabState.QRG_SOURCE_HINT)
+        Form.section(strings.trxSynchHintSection) {
+            Text(strings.trxSynchHint)
         }
     }
 }

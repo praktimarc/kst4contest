@@ -28,7 +28,7 @@ class PublicMessageColumnsTest {
     fun `the headings are the ones the operator reads`() {
         assertEquals(
             listOf("Time", "Callsign", "Name", "Last QRG", "Message", "Category"),
-            PublicMessageColumns.all().map { it.title },
+            PublicMessageColumns.all().map { it.title() },
         )
     }
 

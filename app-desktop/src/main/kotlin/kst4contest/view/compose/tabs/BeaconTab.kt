@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -16,36 +17,38 @@ import kst4contest.view.compose.Form
  */
 @Composable
 fun BeaconTab(state: BeaconTabState, onRefused: (String) -> Unit) {
+    val strings = LocalStrings.current
+
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Form.section("CQ beacon for " + state.mainCategoryName) {
-            Form.check("Send the beacon in this category", state.bcn_beaconsEnabledMainCat) {
+        Form.section(strings.beaconSectionFor(state.mainCategoryName)) {
+            Form.check(strings.beaconEnabled, state.bcn_beaconsEnabledMainCat) {
                 state.bcn_beaconsEnabledMainCat = it
             }
             Form.committed(
-                label = "Beacon message",
+                label = strings.beaconMessage,
                 stored = state.beaconTextMainCat,
                 commit = state::commitBeaconTextMainCat,
                 onRefused = onRefused,
             )
         }
 
-        Form.section("CQ beacon for " + state.secondCategoryName) {
-            Form.check("Send the beacon in this category", state.bcn_beaconsEnabledSecondCat) {
+        Form.section(strings.beaconSectionFor(state.secondCategoryName)) {
+            Form.check(strings.beaconEnabled, state.bcn_beaconsEnabledSecondCat) {
                 state.bcn_beaconsEnabledSecondCat = it
             }
             Form.committed(
-                label = "Beacon message",
+                label = strings.beaconMessage,
                 stored = state.beaconTextSecondCat,
                 commit = state::commitBeaconTextSecondCat,
                 onRefused = onRefused,
             )
         }
 
-        Form.section("Shared interval") {
+        Form.section(strings.beaconIntervalSection) {
             Form.committed(
-                label = "Interval in whole minutes",
+                label = strings.beaconIntervalMinutes,
                 stored = state.beaconIntervalMinutes.toString(),
                 commit = state::commitBeaconInterval,
                 onRefused = onRefused,

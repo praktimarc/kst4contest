@@ -1,5 +1,6 @@
 package kst4contest.view.compose.map
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -43,6 +44,8 @@ fun PathProfileChart(
     obstructionSummary: PathObstructionSummary = PathObstructionSummary.empty(),
     onProfilePointHovered: ((PathProfilePoint?) -> Unit)? = null
 ) {
+    val strings = LocalStrings.current
+
     val textMeasurer = rememberTextMeasurer()
     val textStyle = TextStyle(fontSize = 12.sp)
 
@@ -141,16 +144,16 @@ fun PathProfileChart(
                 val distance = if (totalDistanceKm.isFinite()) totalDistanceKm * xFraction else 0.0
                 safeDrawText(textMeasurer, String.format(Locale.US, "%.0f", distance), topLeft = Offset((x - 8).toFloat(), (plotY + plotHeight + 16.0).toFloat()), style = style)
             }
-            safeDrawText(textMeasurer, "Height [m]", topLeft = Offset(plotX.toFloat(), (plotY - 14.0).toFloat()), style = style)
-            safeDrawText(textMeasurer, "Distance [km]", topLeft = Offset((plotX + plotWidth / 2.0 - 30.0).toFloat(), (plotY + plotHeight + 34.0).toFloat()), style = style)
+            safeDrawText(textMeasurer, strings.chartHeightAxis, topLeft = Offset(plotX.toFloat(), (plotY - 14.0).toFloat()), style = style)
+            safeDrawText(textMeasurer, strings.chartDistanceAxis, topLeft = Offset((plotX + plotWidth / 2.0 - 30.0).toFloat(), (plotY + plotHeight + 34.0).toFloat()), style = style)
             if (analysisFrequencyMHz.isFinite() && analysisFrequencyMHz > 0.0) {
-                val freqText = String.format(Locale.US, "f = %.3f MHz", analysisFrequencyMHz)
+                val freqText = strings.chartFrequency(String.format(Locale.US, "%.3f", analysisFrequencyMHz))
                 safeDrawText(textMeasurer, freqText, topLeft = Offset((plotX + plotWidth - estimateTextWidth(freqText)).toFloat(), (plotY + plotHeight + 34.0).toFloat()), style = style)
             }
         }
 
         if (profilePoints.isEmpty()) {
-            safeDrawText(textMeasurer, "No profile samples available.", topLeft = Offset(plotX.toFloat(), (plotY + plotHeight / 2.0).toFloat()), style = textStyle.copy(color = textColor))
+            safeDrawText(textMeasurer, strings.chartNoSamples, topLeft = Offset(plotX.toFloat(), (plotY + plotHeight / 2.0).toFloat()), style = textStyle.copy(color = textColor))
             drawAxisLabels(0.0, 1.0)
             return@Canvas
         }
@@ -338,7 +341,7 @@ fun PathProfileChart(
             drawLine(endpointMarker, Offset(x2.toFloat(), y2Ground.toFloat()), Offset(x2.toFloat(), y2Antenna.toFloat()), strokeWidth = 1.2f)
             drawCircle(endpointMarker, radius = 3f, center = Offset(x2.toFloat(), y2Antenna.toFloat()))
 
-            val homeLabel = buildEndpointLabel("Home", first.elevationMeters(), homeAntennaHeightMeters)
+            val homeLabel = buildEndpointLabel(strings.chartHome, first.elevationMeters(), homeAntennaHeightMeters)
             val dxLabel = buildEndpointLabel("DX", last.elevationMeters(), targetAntennaHeightMeters)
 
             val headerLabelY = plotY - 20.0 // Adjusted for Compose text drawing top-left
@@ -373,11 +376,11 @@ fun PathProfileChart(
             }
 
             if (homeHorizonKm.isFinite() && homeHorizonKm > 0.0 && homeHorizonKm < totalDistanceKm) {
-                drawVerticalHorizonMarker(homeHorizonKm, "Home radio horizon")
+                drawVerticalHorizonMarker(homeHorizonKm, strings.chartHomeRadioHorizon)
             }
             val targetMarkerDistanceKm = totalDistanceKm - targetHorizonKm
             if (targetMarkerDistanceKm.isFinite() && targetMarkerDistanceKm > 0.0 && targetMarkerDistanceKm < totalDistanceKm) {
-                drawVerticalHorizonMarker(targetMarkerDistanceKm, "DX radio horizon")
+                drawVerticalHorizonMarker(targetMarkerDistanceKm, strings.chartDxRadioHorizon)
             }
         }
 
@@ -410,10 +413,10 @@ fun PathProfileChart(
             }
 
             if (horizonSummary.hasHomeTerrainHorizon()) {
-                drawTerrainHorizonMarker(horizonSummary.homeTerrainHorizonSampleIndex(), "Home terrain horizon")
+                drawTerrainHorizonMarker(horizonSummary.homeTerrainHorizonSampleIndex(), strings.chartHomeTerrainHorizon)
             }
             if (horizonSummary.hasTargetTerrainHorizon()) {
-                drawTerrainHorizonMarker(horizonSummary.targetTerrainHorizonSampleIndex(), "DX terrain horizon")
+                drawTerrainHorizonMarker(horizonSummary.targetTerrainHorizonSampleIndex(), strings.chartDxTerrainHorizon)
             }
         }
 
@@ -434,7 +437,10 @@ fun PathProfileChart(
 
                 drawLine(obstructionMarker, Offset(x.toFloat(), y.toFloat()), Offset(x.toFloat(), (plotY + plotHeight).toFloat()), strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 4f)))
 
-                val label = String.format(Locale.US, "Diffraction candidate %.1f km, KE ≈ %.1f dB", obstructionSummary.dominantObstructionPathDistanceKm(), obstructionSummary.estimatedKnifeEdgeLossDb())
+                val label = strings.chartDiffractionCandidate(
+                    String.format(Locale.US, "%.1f", obstructionSummary.dominantObstructionPathDistanceKm()),
+                    String.format(Locale.US, "%.1f", obstructionSummary.estimatedKnifeEdgeLossDb()),
+                )
                 val labelWidth = estimateTextWidth(label)
                 var labelX = x + 8.0
                 if (labelX + labelWidth > plotX + plotWidth) {
@@ -478,9 +484,15 @@ fun PathProfileChart(
             drawLine(criticalMarker, Offset(x.toFloat(), y.toFloat()), Offset(x.toFloat(), (plotY + plotHeight).toFloat()), strokeWidth = 1f)
 
             val label = if (criticalPoint.hasFresnelIntrusion()) {
-                String.format(Locale.US, "Critical point: Fresnel intrusion %.1f m @ %.1f km", criticalPoint.fresnelIntrusionMeters(), criticalPoint.distanceKm())
+                strings.chartCriticalFresnel(
+                    String.format(Locale.US, "%.1f", criticalPoint.fresnelIntrusionMeters()),
+                    String.format(Locale.US, "%.1f", criticalPoint.distanceKm()),
+                )
             } else {
-                String.format(Locale.US, "Critical point: LOS clearance %.1f m @ %.1f km", criticalPoint.lineOfSightClearanceMeters(), criticalPoint.distanceKm())
+                strings.chartCriticalLos(
+                    String.format(Locale.US, "%.1f", criticalPoint.lineOfSightClearanceMeters()),
+                    String.format(Locale.US, "%.1f", criticalPoint.distanceKm()),
+                )
             }
 
             val labelWidth = estimateTextWidth(label)
@@ -504,7 +516,7 @@ fun PathProfileChart(
         val legY = headerTop + 12.0
         val textY = legY - 10.0 // adjust for compose text drawing top-left vs baseline
 
-        safeDrawText(textMeasurer, "Legend:", topLeft = Offset(legX.toFloat(), textY.toFloat()), style = textStyle.copy(color = textColor))
+        safeDrawText(textMeasurer, strings.chartLegend, topLeft = Offset(legX.toFloat(), textY.toFloat()), style = textStyle.copy(color = textColor))
         legX += 48.0
 
         fun drawHorizontalLegendLineItem(lineColor: Color, dashed: Boolean, lx: Double, ly: Double, text: String): Double {
@@ -545,13 +557,13 @@ fun PathProfileChart(
             return lx + 14.0 + estimateTextWidth(text) + 18.0
         }
 
-        legX = drawHorizontalLegendLineItem(terrainLine, false, legX, legY, "Terrain")
-        legX = drawHorizontalLegendLineItem(losLine, false, legX, legY, "LOS")
-        legX = drawHorizontalLegendLineItem(fresnelLine, true, legX, legY, "Fresnel")
-        legX = drawHorizontalLegendLineItem(horizonMarker, true, legX, legY, "Radio hor.")
-        legX = drawHorizontalLegendTriangleItem(terrainHorizonMarker, legX, legY, "Terr. hor.")
-        legX = drawHorizontalLegendDiamondItem(obstructionMarker, legX, legY, "Diffraction")
-        drawHorizontalLegendDotItem(criticalMarker, legX, legY, "Critical")
+        legX = drawHorizontalLegendLineItem(terrainLine, false, legX, legY, strings.chartTerrain)
+        legX = drawHorizontalLegendLineItem(losLine, false, legX, legY, strings.chartLos)
+        legX = drawHorizontalLegendLineItem(fresnelLine, true, legX, legY, strings.chartFresnel)
+        legX = drawHorizontalLegendLineItem(horizonMarker, true, legX, legY, strings.chartRadioHorizonShort)
+        legX = drawHorizontalLegendTriangleItem(terrainHorizonMarker, legX, legY, strings.chartTerrainHorizonShort)
+        legX = drawHorizontalLegendDiamondItem(obstructionMarker, legX, legY, strings.chartDiffraction)
+        drawHorizontalLegendDotItem(criticalMarker, legX, legY, strings.chartCritical)
     }
 }
 

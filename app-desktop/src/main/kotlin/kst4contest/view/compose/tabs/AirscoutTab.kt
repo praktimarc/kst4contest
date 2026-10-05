@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -27,34 +28,36 @@ import kst4contest.view.compose.Form
 fun AirscoutTab(state: AirscoutTabState) {
     /* See LogSynchTab: the facade holds no snapshot state, so writes need a revision. */
     var revision by remember { mutableStateOf(0) }
+    val strings = LocalStrings.current
+
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         @Suppress("UNUSED_EXPRESSION") revision
 
-        Form.section("AirScout UDP communication") {
+        Form.section(strings.airscoutUdpSection) {
             Form.check(
-                "Enable AirScout UDP integration (AirScout 0.9.9.5 or newer)",
+                strings.airscoutEnabled,
                 state.airScout_asUDPListenerEnabled,
             ) { state.airScout_asUDPListenerEnabled = it; revision++ }
 
             GuardedTextField(
-                label = "AirScout server identifier [AS]:",
+                label = strings.airscoutServerIdentifier,
                 value = state.airScout_asServerNameString,
                 accepts = { AirscoutTabState.isValidIdentifier(it) },
                 onAccepted = { state.airScout_asServerNameString = it; revision++ },
             )
 
             GuardedTextField(
-                label = "KST4Contest client identifier [KST]:",
+                label = strings.airscoutClientIdentifier,
                 value = state.airScout_asClientNameString,
                 accepts = { AirscoutTabState.isValidIdentifier(it) },
                 onAccepted = { state.airScout_asClientNameString = it; revision++ },
             )
 
             GuardedTextField(
-                label = "AirScout UDP port [9872] — reconnect after changing:",
+                label = strings.airscoutUdpPort,
                 value = state.airScout_asCommunicationPort.toString(),
                 accepts = { typed ->
                     typed.trim().toIntOrNull()?.let { AirscoutTabState.isValidPort(it) } == true
@@ -63,14 +66,14 @@ fun AirscoutTab(state: AirscoutTabState) {
             )
         }
 
-        Form.section("Queried frequency") {
+        Form.section(strings.airscoutFrequencySection) {
             Form.check(
-                "Select AirScout frequency automatically per station",
+                strings.airscoutAutomaticFrequency,
                 state.airScout_autoBandSelectionEnabled,
             ) { state.airScout_autoBandSelectionEnabled = it; revision++ }
 
             GuardedTextField(
-                label = "Forced AirScout band value [1440000 = 144 MHz]:",
+                label = strings.airscoutForcedBand,
                 value = state.airScout_asBandString,
                 enabled = state.bandValueEditable,
                 accepts = { AirscoutTabState.parseBandValue(it) != null },
@@ -78,15 +81,12 @@ fun AirscoutTab(state: AirscoutTabState) {
             )
 
             Text(
-                "Automatic selection uses the station's current QRG first, then " +
-                    "station-name and chat-category evidence. Disable it only to force " +
-                    "one protocol value for every station."
+                strings.airscoutAutomaticHint
             )
         }
 
         Text(
-            "Server identifier, client identifier and frequency mode are applied " +
-                "immediately. Reconnect after changing the UDP port."
+            strings.airscoutApplyHint
         )
     }
 }

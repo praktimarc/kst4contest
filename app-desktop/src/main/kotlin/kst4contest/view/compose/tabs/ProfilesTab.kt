@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -47,6 +48,8 @@ import kst4contest.view.compose.Form
  */
 @Composable
 fun ProfilesTab(state: ProfilesTabState) {
+    val strings = LocalStrings.current
+
     var notice by remember { mutableStateOf<ProfileNotice?>(null) }
     var dialog by remember { mutableStateOf<ProfileDialog?>(null) }
 
@@ -59,22 +62,22 @@ fun ProfilesTab(state: ProfilesTabState) {
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Form.labelledRow("Active profile:") { Text(state.activeProfileName) }
-            Form.labelledRow("Settings file:") { Text(state.preferencesPath) }
-            Form.labelledRow("Worked stations:") { Text(state.workedDatabasePath) }
+            Form.labelledRow(strings.profilesActive) { Text(state.activeProfileName) }
+            Form.labelledRow(strings.profilesSettingsFile) { Text(state.preferencesPath) }
+            Form.labelledRow(strings.profilesWorkedStations) { Text(state.workedDatabasePath) }
         }
 
         ProfileList(state, state::select)
 
         Row(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
-            Form.button("New profile...") { dialog = ProfileDialog.Create }
-            Form.button("Duplicate...") {
+            Form.button(strings.profilesNew) { dialog = ProfileDialog.Create }
+            Form.button(strings.profilesDuplicate) {
                 dialog = ProfileDialog.Duplicate(state.duplicateNameSuggestion())
             }
-            Form.button("Rename...") {
+            Form.button(strings.profilesRename) {
                 state.selected?.let { dialog = ProfileDialog.Rename(it.displayName) }
             }
-            Form.button("Delete...") {
+            Form.button(strings.profilesDelete) {
                 val profile = state.selected
                 if (profile == null) {
                     act { state.deleteSelected() }
@@ -85,7 +88,7 @@ fun ProfilesTab(state: ProfilesTabState) {
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
-            Form.button("Change worked stations...") {
+            Form.button(strings.profilesChangeWorked) {
                 val profile = state.selected
                 if (profile == null || !state.canChangeWorkedDataMode(profile)) {
                     act { state.changeWorkedDataModeOfSelected(false) }
@@ -94,14 +97,11 @@ fun ProfilesTab(state: ProfilesTabState) {
                 }
             }
 
-            Form.button("Switch to selected profile...") { act { state.activateSelected() } }
+            Form.button(strings.profilesSwitchTo) { act { state.activateSelected() } }
         }
 
         Text(
-            "Each profile has its own settings and window layout. A profile can either share " +
-                "the common station worked stations, which is what a multi operator station " +
-                "wants, or keep its own. Duplicating a profile copies everything except " +
-                "callsign and password, and never copies worked stations.",
+            strings.profilesExplanation,
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -121,9 +121,9 @@ fun ProfilesTab(state: ProfilesTabState) {
     notice?.let { shown ->
         AlertDialog(
             onDismissRequest = { notice = null },
-            title = { Text("Operator profiles") },
+            title = { Text(strings.profilesDialogTitle) },
             text = { Text(shown.message) },
-            confirmButton = { TextButton(onClick = { notice = null }) { Text("OK") } },
+            confirmButton = { TextButton(onClick = { notice = null }) { Text(strings.dialogOk) } },
         )
     }
 }
@@ -134,16 +134,18 @@ fun ProfilesTab(state: ProfilesTabState) {
  */
 @Composable
 private fun ProfileList(state: ProfilesTabState, onSelect: (OperatorProfile?) -> Unit) {
+    val strings = LocalStrings.current
+
     if (state.profiles.isEmpty()) {
-        Text("No operator profile configured.")
+        Text(strings.profilesNone)
         return
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            HeaderCell("Profile", 0.4f)
-            HeaderCell("Worked stations", 0.4f)
-            HeaderCell("Last used", 0.2f)
+            HeaderCell(strings.profilesColumnProfile, 0.4f)
+            HeaderCell(strings.profilesColumnWorked, 0.4f)
+            HeaderCell(strings.profilesColumnLastUsed, 0.2f)
         }
 
         LazyColumn(modifier = Modifier.height(200.dp).fillMaxWidth()) {
@@ -182,7 +184,7 @@ private fun ProfileList(state: ProfilesTabState, onSelect: (OperatorProfile?) ->
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            profile.displayName + if (state.isActive(profile)) "  (in use)" else "",
+                            profile.displayName + if (state.isActive(profile)) strings.profilesInUse else "",
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(0.4f),
                         )
@@ -233,6 +235,8 @@ private fun ProfileDialogs(
     onDelete: () -> Unit,
     onWorkedData: (Boolean) -> Unit,
 ) {
+    val strings = LocalStrings.current
+
     when (dialog) {
         ProfileDialog.Create -> {
             var name by remember { mutableStateOf("") }
@@ -240,21 +244,21 @@ private fun ProfileDialogs(
 
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("New operator profile") },
+                title = { Text(strings.profilesNewTitle) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Name and worked stations of the new profile")
+                        Text(strings.profilesNewBody)
                         OutlinedTextField(
                             value = name,
                             onValueChange = { name = it },
                             singleLine = true,
-                            label = { Text("Profile name, for example DN9APW") },
+                            label = { Text(strings.profilesNameLabel) },
                         )
                         WorkedDataChoice(shared) { shared = it }
                     }
                 },
-                confirmButton = { TextButton(onClick = { onCreate(name, shared) }) { Text("Create profile") } },
-                dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+                confirmButton = { TextButton(onClick = { onCreate(name, shared) }) { Text(strings.profilesCreate) } },
+                dismissButton = { TextButton(onClick = onDismiss) { Text(strings.dialogCancel) } },
             )
         }
 
@@ -263,13 +267,12 @@ private fun ProfileDialogs(
 
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Duplicate operator profile") },
+                title = { Text(strings.profilesDuplicateTitle) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Name of the new profile")
+                        Text(strings.profilesDuplicateBody)
                         Text(
-                            "Everything is copied except callsign and password. Worked stations " +
-                                "are never copied.",
+                            strings.profilesDuplicateHint,
                             style = MaterialTheme.typography.bodySmall,
                         )
                         OutlinedTextField(
@@ -279,8 +282,8 @@ private fun ProfileDialogs(
                         )
                     }
                 },
-                confirmButton = { TextButton(onClick = { onDuplicate(name) }) { Text("OK") } },
-                dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+                confirmButton = { TextButton(onClick = { onDuplicate(name) }) { Text(strings.dialogOk) } },
+                dismissButton = { TextButton(onClick = onDismiss) { Text(strings.dialogCancel) } },
             )
         }
 
@@ -289,12 +292,12 @@ private fun ProfileDialogs(
 
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Rename operator profile") },
+                title = { Text(strings.profilesRenameTitle) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("New name of the profile")
+                        Text(strings.profilesRenameBody)
                         Text(
-                            "Files and folders of the profile are not touched.",
+                            strings.profilesRenameHint,
                             style = MaterialTheme.typography.bodySmall,
                         )
                         OutlinedTextField(
@@ -304,22 +307,22 @@ private fun ProfileDialogs(
                         )
                     }
                 },
-                confirmButton = { TextButton(onClick = { onRename(name) }) { Text("OK") } },
-                dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+                confirmButton = { TextButton(onClick = { onRename(name) }) { Text(strings.dialogOk) } },
+                dismissButton = { TextButton(onClick = onDismiss) { Text(strings.dialogCancel) } },
             )
         }
 
         is ProfileDialog.ConfirmDelete -> AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Delete operator profile") },
+            title = { Text(strings.profilesDeleteTitle) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Delete the profile \"" + dialog.profile.displayName + "\"?")
+                    Text(strings.profilesDeleteBody(dialog.profile.displayName))
                     Text(dialog.consequences)
                 }
             },
-            confirmButton = { TextButton(onClick = onDelete) { Text("Delete profile") } },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+            confirmButton = { TextButton(onClick = onDelete) { Text(strings.profilesDeleteConfirm) } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(strings.dialogCancel) } },
         )
 
         is ProfileDialog.WorkedData -> {
@@ -327,20 +330,19 @@ private fun ProfileDialogs(
 
             AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Worked stations") },
+                title = { Text(strings.profilesWorkedTitle) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Worked stations of \"" + dialog.profile.displayName + "\"")
+                        Text(strings.profilesWorkedBody(dialog.profile.displayName))
                         WorkedDataChoice(shared) { shared = it }
                         Text(
-                            "Switching does not move any data. Worked stations already collected " +
-                                "under the other setting stay where they are.",
+                            strings.profilesWorkedHint,
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                 },
                 confirmButton = { TextButton(onClick = { onWorkedData(shared) }) { Text("Apply") } },
-                dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+                dismissButton = { TextButton(onClick = onDismiss) { Text(strings.dialogCancel) } },
             )
         }
     }

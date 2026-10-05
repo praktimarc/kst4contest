@@ -2,10 +2,13 @@ package kst4contest.view.compose.tabs
 
 import androidx.compose.ui.graphics.Color
 import kst4contest.model.PaletteRole
+import kst4contest.view.compose.ContrastPair
 import kst4contest.view.compose.JavaFxStylesheet
 import kst4contest.view.compose.PaletteSource
 import kst4contest.view.compose.OperatorProfilePaletteFiles
 import kst4contest.view.compose.PaletteStore
+import kst4contest.view.i18n.Strings
+import kst4contest.view.i18n.Translations
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -25,6 +28,11 @@ class ColoursTabStateTest {
     private val stored = mutableMapOf(false to "", true to "")
     private var fileRoles: Map<PaletteRole, Color> = emptyMap()
     private var darkMode = false
+
+    private fun baseStrings(): Strings {
+        val base = Translations.BY_LANGUAGE.getValue(Translations.BASE_LANGUAGE)
+        return Strings { key -> base[key] ?: key }
+    }
 
     private fun state(): ColoursTabState {
         val store = PaletteStore(
@@ -57,7 +65,11 @@ class ColoursTabStateTest {
         rows.forEach {
             assertEquals(PaletteSource.SHIPPED, it.source, "${it.role}")
             assertTrue(it.hex.matches(Regex("#[0-9A-F]{6}")), "${it.role} shows '${it.hex}'")
-            assertTrue(it.label.isNotBlank(), "${it.role} has no label")
+            /*
+             * The label is resolved at the point of use rather than held, so the tab retitles
+             * its rows when the language changes. Resolved here against the base language.
+             */
+            assertTrue(it.label(baseStrings()).isNotBlank(), "${it.role} has no label")
         }
     }
 
@@ -147,7 +159,7 @@ class ColoursTabStateTest {
 
         // White label text on the light window surface is unreadable and worse than shipped.
         assertTrue(
-            tab.warnings().any { it.what.contains("Text on the window surface") },
+            tab.warnings().any { it.what == ContrastPair.TEXT_ON_WINDOW_SURFACE },
             "no warning for white on light grey: ${tab.warnings()}",
         )
     }

@@ -31,7 +31,7 @@ class MonitorColumnsTest {
     fun `the DX cluster columns keep their headings`() {
         assertEquals(
             listOf("Time", "Call tx", "LOC tx", "Call rx", "LOC rx", "QRG", "Message", "wkd"),
-            MonitorColumns.dxCluster().map { it.title },
+            MonitorColumns.dxCluster().map { it.title() },
         )
     }
 

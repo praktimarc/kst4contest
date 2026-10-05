@@ -399,6 +399,13 @@ public class ChatPreferences {
 	/** The same for the evening design. Two designs, two independent sets. */
 	private String guiOptions_paletteOverridesEvening = "";
 
+	/**
+	 * The operator's interface language: empty for the system language, otherwise a language
+	 * code such as "de". Per profile, like every other GUI preference -- at a multi operator
+	 * station two operators may want two languages.
+	 */
+	private String guiOptions_language = "";
+
 	private double[] GUIstationMapStageSceneSizeHW = new double[] { 1000, 800 };
 	private double[] GUIstationMapStagePositionXY = new double[] { Double.NaN, Double.NaN };
 	private boolean GUIstationMapPathAnalysisVisible = true;
@@ -826,6 +833,25 @@ public class ChatPreferences {
 	public void setGuiOptions_paletteOverridesEvening(String guiOptions_paletteOverridesEvening) {
 		this.guiOptions_paletteOverridesEvening =
 				guiOptions_paletteOverridesEvening == null ? "" : guiOptions_paletteOverridesEvening;
+	}
+
+	/**
+	 * Returns the operator's interface language.
+	 *
+	 * @return a language code, or empty for the system language
+	 */
+	public String getGuiOptions_language() {
+		return guiOptions_language;
+	}
+
+	/**
+	 * Sets the operator's interface language.
+	 *
+	 * @param guiOptions_language a language code, or empty for the system language; null
+	 *        becomes empty
+	 */
+	public void setGuiOptions_language(String guiOptions_language) {
+		this.guiOptions_language = guiOptions_language == null ? "" : guiOptions_language;
 	}
 
 	public boolean isGuiOptions_defaultFilterPmToOther() {
@@ -2149,6 +2175,10 @@ public class ChatPreferences {
 			guiOptions_paletteOverridesEvening.setTextContent(this.getGuiOptions_paletteOverridesEvening());
 			guiSaveableOptions.appendChild(guiOptions_paletteOverridesEvening);
 
+			Element guiOptions_language = doc.createElement("guiOptions_language");
+			guiOptions_language.setTextContent(this.getGuiOptions_language());
+			guiSaveableOptions.appendChild(guiOptions_language);
+
 			Element guiOptions_darkModeActive = doc.createElement("guiOptions_darkModeActive");
 			guiOptions_darkModeActive.setTextContent(this.GUI_darkModeActive + "");
 			guiSaveableOptions.appendChild(guiOptions_darkModeActive);
@@ -3226,6 +3256,7 @@ public class ChatPreferences {
 				// Added in release 1.50: the operator's own colours, one string per design.
 				this.setGuiOptions_paletteOverridesDay(getText(guiSaveableOptionsEl, this.getGuiOptions_paletteOverridesDay(), "guiOptions_paletteOverridesDay"));
 				this.setGuiOptions_paletteOverridesEvening(getText(guiSaveableOptionsEl, this.getGuiOptions_paletteOverridesEvening(), "guiOptions_paletteOverridesEvening"));
+				this.setGuiOptions_language(getText(guiSaveableOptionsEl, this.getGuiOptions_language(), "guiOptions_language"));
 
 				// Added in later versions: dark mode flags
 				this.GUI_darkModeActive = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActive, "guiOptions_darkModeActive");

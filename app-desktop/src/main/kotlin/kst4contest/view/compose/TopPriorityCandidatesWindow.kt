@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -78,12 +79,18 @@ object TopPriorityCandidatesWindow {
          * palette.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile, handed to the window. Null draws the
+         * base language.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
     ) {
         host.show(
-            title = "Top priority candidates",
+            title = { kst4contest.view.i18n.CurrentStrings.get().candidatesTitle },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
+            languageStore = languageStore,
             widthDp = 360f,
             heightDp = 500f,
         ) { close ->
@@ -118,7 +125,7 @@ object TopPriorityCandidatesWindow {
                     )
                     HorizontalDivider(Modifier.padding(vertical = 4.dp))
                     Text(
-                        "Double-click a candidate to select it.",
+                        LocalStrings.current.candidatesDoubleClick,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -141,7 +148,7 @@ object TopPriorityCandidatesWindow {
         modifier: Modifier = Modifier,
     ) {
         if (ranking.isEmpty()) {
-            Text("No candidates yet.", modifier = modifier.padding(4.dp))
+            Text(LocalStrings.current.candidatesNone, modifier = modifier.padding(4.dp))
             return
         }
 

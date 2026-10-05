@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -48,6 +49,7 @@ fun SelectedStationPanel(
     onShowPathInAirScout: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
     val member = state.selected
 
     Column(
@@ -56,7 +58,7 @@ fun SelectedStationPanel(
     ) {
         if (member == null) {
             Text(
-                "No station selected.",
+                strings.selectedNone,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.outline,
             )
@@ -89,7 +91,7 @@ fun SelectedStationPanel(
             if (lastActSec > 0L) {
                 val actStr = MessageFormats.clockTime(lastActSec.toString())
                 val minAgo = kst4contest.controller.Utils4KST.time_getSecondsBetweenEpochAndNow(lastActSec.toString()) / 60
-                Text("Last activity: $actStr ($minAgo min ago)", style = MaterialTheme.typography.bodySmall)
+                Text(strings.selectedLastActivity(actStr, minAgo), style = MaterialTheme.typography.bodySmall)
             }
 
             val detectedBands = state.detectedBands()
@@ -98,7 +100,7 @@ fun SelectedStationPanel(
             }
         }
 
-        Form.section("Show messages") {
+        Form.section(strings.selectedShowMessages) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
                 SelectedMessageFilter.entries.forEach { filter ->
                     RadioChoice(
@@ -115,7 +117,7 @@ fun SelectedStationPanel(
             modifier = Modifier.weight(1f).fillMaxWidth(),
         )
 
-        Form.section("Tag not QRV") {
+        Form.section(strings.selectedTagNotQrv) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
                 val activeNotQrvBands = NotQrvBand.entries.filter { activeBands.contains(it.band) }
                 
@@ -137,21 +139,21 @@ fun SelectedStationPanel(
                 verticalArrangement = Arrangement.spacedBy(Density.FIELD_GAP)
             ) {
                 Form.inlineChoice(
-                    label = "Sked in (min)",
+                    label = strings.selectedSkedInMinutes,
                     items = SelectedStationState.SKED_MINUTES,
                     selected = state.skedMinutes,
                     describe = { it.toString() },
                     onSelect = { state.skedMinutes = it },
                 )
                 Form.inlineChoice(
-                    label = "Band",
+                    label = strings.selectedBand,
                     items = skedBands,
                     selected = state.skedBand,
                     describe = { it.prefix + " MHz" },
                     onSelect = { state.skedBand = it },
                 )
                 Form.inlineChoice(
-                    label = "Mode",
+                    label = strings.selectedMode,
                     items = SelectedStationState.SKED_MODES,
                     selected = state.skedMode,
                     describe = { it },
@@ -160,9 +162,9 @@ fun SelectedStationPanel(
             }
             
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Form.check("Remind-PM in", state.remindPm) { state.remindPm = it }
+                Form.check(strings.selectedRemindPmIn, state.remindPm) { state.remindPm = it }
                 Form.inlineChoice(
-                    label = "Reminder offsets",
+                    label = strings.selectedReminderOffsets,
                     items = SelectedStationState.REMINDER_OFFSETS,
                     selected = state.reminderOffsets,
                     describe = { it },
@@ -172,20 +174,20 @@ fun SelectedStationPanel(
             }
 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
-                Form.button("Create sked", enabled = state.canCreateSked) { state.createSked() }
-                Form.button("Sked fail", enabled = state.canCreateSked) { state.markSkedFail() }
-                Form.button("Reset fail", enabled = state.canCreateSked) { state.resetSkedFail() }
+                Form.button(strings.selectedCreateSked, enabled = state.canCreateSked) { state.createSked() }
+                Form.button(strings.selectedSkedFail, enabled = state.canCreateSked) { state.markSkedFail() }
+                Form.button(strings.selectedResetFail, enabled = state.canCreateSked) { state.resetSkedFail() }
             }
         }
 
-        Form.section("Look up and show") {
+        Form.section(strings.selectedLookUpAndShow) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
-                Form.button("Show path in AS", onClick = onShowPathInAirScout)
+                Form.button(strings.selectedShowPathInAs, onClick = onShowPathInAirScout)
                 Form.button("🗺 Show on map", onClick = onShowOnMap)
-                Form.button("Lookup on qrz.com", enabled = state.canLookUp) {
+                Form.button(strings.selectedLookupQrz, enabled = state.canLookUp) {
                     openInBrowser.accept(state.qrzComUrl())
                 }
-                Form.button("Lookup on qrzcq.com", enabled = state.canLookUp) {
+                Form.button(strings.selectedLookupQrzcq, enabled = state.canLookUp) {
                     openInBrowser.accept(state.qrzCqUrl())
                 }
             }
@@ -205,18 +207,20 @@ fun TopPriorityBar(
     onShowMore: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
+
     Row(
         modifier = modifier.padding(2.dp),
         horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Priority:", style = MaterialTheme.typography.bodySmall)
+        Text(strings.selectedPriority, style = MaterialTheme.typography.bodySmall)
 
         state.entries.forEach { entry ->
             Form.button(entry.label, onClick = entry.select)
         }
 
-        Form.button("more", onClick = onShowMore)
+        Form.button(strings.selectedMore, onClick = onShowMore)
     }
 }
 
@@ -230,6 +234,7 @@ fun TopPriorityBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RadioChoice(label: String, selected: Boolean, onSelect: () -> Unit) {
+    val strings = LocalStrings.current
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
         Row(
             modifier = Modifier

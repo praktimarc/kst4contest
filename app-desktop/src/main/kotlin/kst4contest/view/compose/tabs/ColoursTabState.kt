@@ -8,6 +8,8 @@ import kst4contest.view.compose.PaletteSource
 import kst4contest.view.compose.PaletteStore
 import kst4contest.view.compose.contrastWarnings
 import kst4contest.view.compose.hexOf
+import kst4contest.view.i18n.CurrentStrings
+import kst4contest.view.i18n.Strings
 
 /**
  * One row of the colours tab: a role, what it is set to, and where that came from.
@@ -18,7 +20,7 @@ import kst4contest.view.compose.hexOf
  */
 data class RoleRow(
     val role: PaletteRole,
-    val label: String,
+    val label: (Strings) -> String,
     val hex: String,
     val source: PaletteSource,
 )
@@ -81,8 +83,8 @@ class ColoursTabState(
             return null
         }
 
-        return "'$text' is not a colour. Six hexadecimal digits with a leading hash, "
-                .plus("for example #3C7A4B. ${LABELS.getValue(role)} is unchanged.")
+        return CurrentStrings.get()
+            .coloursNotAColour(text, LABELS.getValue(role)(CurrentStrings.get()))
     }
 
     /**
@@ -153,14 +155,17 @@ class ColoursTabState(
          * strip and the selected-row tint, while "Window surface" is what the windows are
          * filled with. An operator reaching for "Surface" to darken the client and seeing
          * almost nothing happen would reasonably conclude the control is broken.
+         *
+         * Resolved from the texts at the point of use rather than held: the tab must retitle
+         * its rows when the language changes, and this object outlives a recomposition.
          */
-        val LABELS = mapOf(
-            PaletteRole.SURFACE to "Surface (menu strip, selected rows)",
-            PaletteRole.WINDOW_SURFACE to "Window surface (the windows themselves)",
-            PaletteRole.FIELD_INTERIOR to "Field interior (fields, lists, buttons)",
-            PaletteRole.TEXT to "Text",
-            PaletteRole.ACCENT to "Accent",
-            PaletteRole.SEPARATOR to "Separator line",
+        val LABELS: Map<PaletteRole, (Strings) -> String> = mapOf(
+            PaletteRole.SURFACE to { it.coloursRoleSurface },
+            PaletteRole.WINDOW_SURFACE to { it.coloursRoleWindowSurface },
+            PaletteRole.FIELD_INTERIOR to { it.coloursRoleFieldInterior },
+            PaletteRole.TEXT to { it.coloursRoleText },
+            PaletteRole.ACCENT to { it.coloursRoleAccent },
+            PaletteRole.SEPARATOR to { it.coloursRoleSeparator },
         )
     }
 }

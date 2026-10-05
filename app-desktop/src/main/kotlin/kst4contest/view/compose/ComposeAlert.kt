@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.CurrentStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -168,7 +169,7 @@ object ComposeAlert {
                 title = title,
                 header = header,
                 body = body,
-                confirmText = "OK",
+                confirmText = CurrentStrings.get().alertOk,
                 cancelText = null,
                 confirmKind = ConfirmKind.OK_DONE,
                 darkMode = darkMode,
@@ -185,7 +186,7 @@ object ComposeAlert {
             title = title,
             header = header,
             body = body,
-            confirmText = "OK",
+            confirmText = CurrentStrings.get().alertOk,
             cancelText = null,
             confirmKind = ConfirmKind.OK_DONE,
             darkMode = darkMode,

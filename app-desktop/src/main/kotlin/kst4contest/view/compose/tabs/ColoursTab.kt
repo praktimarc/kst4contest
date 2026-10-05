@@ -1,5 +1,7 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
+import kst4contest.view.i18n.Strings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.focus.focusRequester
@@ -20,6 +22,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import kst4contest.view.compose.ContrastPair
 import kst4contest.view.compose.Density
 import kst4contest.view.compose.Form
 import kst4contest.view.compose.JavaFxPalette
@@ -71,6 +74,8 @@ fun ColoursTab(
      */
     val focus = remember { FocusRequester() }
 
+    val strings = LocalStrings.current
+
     LaunchedEffect(Unit) {
         state.rememberCurrentState()
         /*
@@ -102,7 +107,7 @@ fun ColoursTab(
             },
     ) {
 
-        Form.section("Colours of this design") {
+        Form.section(strings.coloursSection) {
             state.roles().forEach { row ->
                 /*
                  * The provenance sits in the label, beside the field it explains, rather than
@@ -110,7 +115,7 @@ fun ColoursTab(
                  * means anything next to the colour.
                  */
                 Form.committed(
-                    label = "${row.label} (${provenanceOf(row.source)})",
+                    label = strings.coloursRoleWithSource(row.label(strings), provenanceOf(row.source, strings)),
                     stored = row.hex,
                     commit = { typed -> state.set(row.role, typed) },
                     onRefused = reportRefusal,
@@ -120,26 +125,29 @@ fun ColoursTab(
 
         val warnings = state.warnings()
         if (warnings.isNotEmpty()) {
-            Form.section("Readability") {
+            Form.section(strings.coloursReadabilitySection) {
                 warnings.forEach { warning ->
                     Text(
                         /*
                          * Both numbers, because the message is comparative: the guard reports
                          * that a pair got worse than it shipped, not that it fails a standard.
                          */
-                        text = "%s now reads at %.1f to 1, where this design ships %.1f to 1."
-                            .format(warning.what, warning.ratio, warning.shippedRatio),
+                        text = strings.coloursWarning(
+                            nameOf(warning.what, strings),
+                            "%.1f".format(warning.ratio),
+                            "%.1f".format(warning.shippedRatio),
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
                 Text(
-                    "The colours are kept either way — a hard combination can be deliberate.",
+                    strings.coloursWarningKept,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
 
-        Form.section("Keeping these colours") {
+        Form.section(strings.coloursKeepingSection) {
             /*
              * The tab with the most visible immediate effect is also the one where "it looked
              * right, so it must be stored" is the easiest wrong conclusion to draw. Every
@@ -147,19 +155,18 @@ fun ColoursTab(
              * under the operator's hands while they decide.
              */
             Text(
-                "A colour applies at once, everywhere. It survives a restart only once "
-                    + "Save settings has been pressed.",
+                strings.coloursKeepingHint,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
 
-        Form.section("Ways back") {
+        Form.section(strings.coloursWaysBackSection) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Form.button(
-                    "Back to how it was (${ColourShortcuts.labelFor(ColourAction.BACK_TO_PREVIOUS)})"
+                    strings.coloursBackToPrevious(ColourShortcuts.labelFor(ColourAction.BACK_TO_PREVIOUS))
                 ) { state.restoreRemembered() }
                 Form.button(
-                    "Discard my changes (${ColourShortcuts.labelFor(ColourAction.DISCARD_CHANGES)})"
+                    strings.coloursDiscardChanges(ColourShortcuts.labelFor(ColourAction.DISCARD_CHANGES))
                 ) { state.discardChanges() }
             }
 
@@ -172,24 +179,22 @@ fun ColoursTab(
             ResetToShippedButton(state.shipped()) { state.resetToShipped() }
         }
 
-        Form.section("Editing the stylesheet by hand") {
+        Form.section(strings.coloursFileSection) {
             Text(
                 if (state.stylesheetExists()) {
-                    "This design reads ${state.stylesheetPath()}. A colour set above "
-                        .plus("overrides what the file says for that role.")
+                    strings.coloursFileReads(state.stylesheetPath())
                 } else {
-                    "This design has no stylesheet of its own. One can be written to "
-                        .plus("${state.stylesheetPath()} as a starting point.")
+                    strings.coloursFileAbsent(state.stylesheetPath())
                 },
                 style = MaterialTheme.typography.bodySmall,
             )
-            Form.button("Write this design's stylesheet into my profile") {
+            Form.button(strings.coloursExportButton) {
                 /*
                  * An existing file is never replaced -- it is the operator's own work, and a
                  * misclick here would be the one loss this tab could cause that cannot be
                  * undone from inside the application.
                  */
-                reportExport(state.exportStylesheet(), reportOutcome, reportRefusal)
+                reportExport(state.exportStylesheet(), strings, reportOutcome, reportRefusal)
             }
         }
     }
@@ -198,20 +203,21 @@ fun ColoursTab(
 /** Says what the export did, through the channel that matches the outcome. */
 private fun reportExport(
     outcome: StylesheetExportOutcome,
+    strings: Strings,
     reportOutcome: (String) -> Unit,
     reportRefusal: (String) -> Unit,
 ) = when (outcome) {
     is StylesheetExportOutcome.Written -> reportOutcome(
-        "Written to ${outcome.path}. Edit it and restart to see the result."
+        strings.coloursExportWritten(outcome.path)
     )
 
     /* Not a failure: the file is the operator's own, and leaving it alone is the point. */
     is StylesheetExportOutcome.AlreadyThere -> reportOutcome(
-        "${outcome.path} is already there and was left untouched."
+        strings.coloursExportAlreadyThere(outcome.path)
     )
 
     is StylesheetExportOutcome.Failed -> reportRefusal(
-        "Could not write the stylesheet: ${outcome.reason}"
+        strings.coloursExportFailed(outcome.reason)
     )
 }
 
@@ -223,6 +229,7 @@ private fun reportExport(
  */
 @Composable
 private fun ResetToShippedButton(shipped: JavaFxPalette, onClick: () -> Unit) {
+    val strings = LocalStrings.current
     val colours = lifelineColours(shipped)
 
     Button(
@@ -237,16 +244,23 @@ private fun ResetToShippedButton(shipped: JavaFxPalette, onClick: () -> Unit) {
         modifier = Modifier.padding(top = 6.dp),
     ) {
         Text(
-            "Reset to the shipped colours "
-                + "(${ColourShortcuts.labelFor(ColourAction.RESET_TO_SHIPPED)})",
+            strings.coloursResetToShipped(ColourShortcuts.labelFor(ColourAction.RESET_TO_SHIPPED)),
             style = MaterialTheme.typography.bodyMedium,
         )
     }
 }
 
+/** The pair a warning is about, in words. */
+private fun nameOf(pair: ContrastPair, strings: Strings): String = when (pair) {
+    ContrastPair.TEXT_ON_WINDOW_SURFACE -> strings.contrastTextOnWindowSurface
+    ContrastPair.TEXT_INSIDE_FIELD -> strings.contrastTextInsideField
+    ContrastPair.ACCENT_ON_WINDOW_SURFACE -> strings.contrastAccentOnWindowSurface
+    ContrastPair.TEXT_ON_MENU_STRIP -> strings.contrastTextOnMenuStrip
+}
+
 /** Why a role is the colour it is — the spec's mandatory answer to "why is this colour this?" */
-private fun provenanceOf(source: PaletteSource): String = when (source) {
-    PaletteSource.SHIPPED -> "shipped"
-    PaletteSource.FILE -> "from file"
-    PaletteSource.CHANGED -> "changed"
+private fun provenanceOf(source: PaletteSource, strings: Strings): String = when (source) {
+    PaletteSource.SHIPPED -> strings.coloursSourceShipped
+    PaletteSource.FILE -> strings.coloursSourceFile
+    PaletteSource.CHANGED -> strings.coloursSourceChanged
 }

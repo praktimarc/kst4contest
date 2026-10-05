@@ -22,16 +22,16 @@ object DirectedMessageColumns {
     ): List<DataColumn<ChatMessage>> = listOf(
         DataColumn(
             id = "time",
-            title = "Time",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnTime },
             value = { MessageFormats.clockTime(it.messageGeneratedTime) },
             weight = 0.7f,
         ),
         DataColumn(
             id = "callsign",
-            title = "Callsign",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnCallsign },
             value = { MonitorColumns.callSignOf(it.sender) },
         ),
-        DataColumn(id = "name", title = "Name", value = { it.sender?.name.orEmpty() }),
+        DataColumn(id = "name", title = { kst4contest.view.i18n.CurrentStrings.get().columnName }, value = { it.sender?.name.orEmpty() }),
         DataColumn(id = "qra", title = "QRA", value = { MonitorColumns.qraOf(it.sender) }),
         DataColumn(
             id = "qrb",
@@ -42,13 +42,13 @@ object DirectedMessageColumns {
         ),
         DataColumn(
             id = "message",
-            title = "Message",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnMessage },
             value = formatMessage,
             weight = 3f,
         ),
         DataColumn(
             id = "last-qrg",
-            title = "Last known QRG",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnLastKnownQrg },
             value = { MessageFormats.paddedQrg(MonitorColumns.frequencyOf(it.sender)) },
             weight = 0.9f,
         ),

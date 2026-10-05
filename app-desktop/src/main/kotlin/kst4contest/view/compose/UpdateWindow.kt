@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -61,16 +62,22 @@ object UpdateWindow {
          * palette.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile, handed to the window. Null draws the
+         * base language.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
         widthDp: Float,
         heightDp: Float,
         openReleasePage: Consumer<String>,
         onResized: (Float, Float) -> Unit,
     ) {
         host.show(
-            title = "Update information",
+            title = { kst4contest.view.i18n.CurrentStrings.get().updateTitle },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
+            languageStore = languageStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
@@ -83,25 +90,26 @@ object UpdateWindow {
 
 @Composable
 private fun UpdateContent(state: UpdateWindowState, openReleasePage: (String) -> Unit) {
+    val strings = LocalStrings.current
     Surface(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.padding(10.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(Density.FIELD_GAP),
         ) {
-            Text("Update available!", style = MaterialTheme.typography.titleMedium)
+            Text(strings.updateAvailable, style = MaterialTheme.typography.titleMedium)
 
-            Form.section("Versions") {
-                Form.labelledRow("Installed version:") { Text(state.installedVersion) }
-                Form.labelledRow("Latest stable version:") { Text(state.latestVersion) }
+            Form.section(strings.updateVersions) {
+                Form.labelledRow(strings.updateInstalledVersion) { Text(state.installedVersion) }
+                Form.labelledRow(strings.updateLatestVersion) { Text(state.latestVersion) }
             }
 
-            Form.section("Main changes:") { Text(state.majorChanges) }
+            Form.section(strings.updateMainChanges) { Text(state.majorChanges) }
 
-            Form.section("Additional information:") { Text(state.adminMessage) }
+            Form.section(strings.updateAdditionalInformation) { Text(state.adminMessage) }
 
-            Form.section("Download:") {
+            Form.section(strings.updateDownload) {
                 Text(
-                    "Open release page",
+                    strings.updateOpenReleasePage,
                     color = MaterialTheme.colorScheme.primary,
                     textDecoration = TextDecoration.Underline,
                     modifier = Modifier.clickable { openReleasePage(state.releasePageUrl) },
@@ -113,8 +121,8 @@ private fun UpdateContent(state: UpdateWindowState, openReleasePage: (String) ->
              * is fixed at two — a heading and its lines — so two expandable sections do
              * the same job without a tree component.
              */
-            UpdateBranch("ChangeLog", state.changeLog)
-            UpdateBranch("Known bugs", state.knownBugs)
+            UpdateBranch(strings.updateChangeLog, state.changeLog)
+            UpdateBranch(strings.updateKnownBugs, state.knownBugs)
         }
     }
 }
@@ -122,6 +130,7 @@ private fun UpdateContent(state: UpdateWindowState, openReleasePage: (String) ->
 /** One branch of the former tree: a heading, and sections that fold open. */
 @Composable
 private fun UpdateBranch(title: String, sections: List<UpdateSection>) {
+    val strings = LocalStrings.current
     if (sections.isEmpty()) {
         return
     }

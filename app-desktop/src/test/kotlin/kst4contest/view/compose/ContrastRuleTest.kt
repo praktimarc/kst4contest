@@ -14,6 +14,9 @@ import kotlin.math.abs
  * that always fires teaches the operator to ignore warnings. The reference numbers below are
  * the ones WCAG itself states for black and white.
  *
+ * The pair is an enum rather than its name, deliberately: a translated name here would make
+ * every one of these filters depend on whichever language ran last in the shared JVM.
+ *
  * The comparison is against the shipped sheet rather than against the bare floor, because
  * the shipped sheets do not meet that floor themselves -- measured: the evening accent sits
  * at 2.26 on its own surface. What is reported is therefore "this change made a pair harder
@@ -99,7 +102,7 @@ class ContrastRuleTest {
 
         assertEquals(4, warnings.size, "every pair must warn: ${warnings.map { it.what }}")
         warnings.forEach {
-            assertTrue(it.ratio < CONTRAST_FLOOR, it.what)
+            assertTrue(it.ratio < CONTRAST_FLOOR, "${it.what}")
             assertTrue(it.ratio < it.shippedRatio, "${it.what} is not actually worse than shipped")
         }
     }
@@ -119,7 +122,7 @@ class ContrastRuleTest {
         val warnings = contrastWarnings(blackWindows, day)
 
         assertTrue(
-            warnings.any { it.what.contains("window surface") },
+            warnings.any { it.what == ContrastPair.TEXT_ON_WINDOW_SURFACE },
             "no warning when every label in every window went black on black: "
                     + "${warnings.map { it.what }}",
         )
@@ -137,7 +140,7 @@ class ContrastRuleTest {
         val warnings = contrastWarnings(invisibleAccent, day)
 
         assertTrue(
-            warnings.any { it.what.contains("Accent") },
+            warnings.any { it.what == ContrastPair.ACCENT_ON_WINDOW_SURFACE },
             "an accent identical to the surface it is drawn on did not warn: "
                     + "${warnings.map { it.what }}",
         )
@@ -152,7 +155,7 @@ class ContrastRuleTest {
          */
         val better = evening.copy(accent = Color.White)
 
-        val accentWarnings = contrastWarnings(better, evening).filter { it.what.contains("Accent") }
+        val accentWarnings = contrastWarnings(better, evening).filter { it.what == ContrastPair.ACCENT_ON_WINDOW_SURFACE }
 
         assertTrue(accentWarnings.isEmpty(), "an improvement warned: $accentWarnings")
     }
@@ -162,7 +165,7 @@ class ContrastRuleTest {
         // Worse than shipped but still well over the floor: nothing to say.
         val slightlyWorse = day.copy(labelTextFill = Color(0xFF444444))
 
-        val textWarnings = contrastWarnings(slightlyWorse, day).filter { it.what.contains("Text") }
+        val textWarnings = contrastWarnings(slightlyWorse, day).filter { it.what.name.startsWith("TEXT") }
 
         assertTrue(textWarnings.isEmpty(), "a readable pair warned: $textWarnings")
     }

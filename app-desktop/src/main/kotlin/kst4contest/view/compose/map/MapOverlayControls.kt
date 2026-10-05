@@ -1,5 +1,6 @@
 package kst4contest.view.compose.map
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -40,9 +41,11 @@ internal fun BoxScope.MapOverlayControls(
     onZoomIn: () -> Unit,
     onZoomOut: () -> Unit,
 ) {
+    val strings = LocalStrings.current
     Column(
         modifier = Modifier.align(Alignment.TopStart).padding(10.dp),
     ) {
+    val strings = LocalStrings.current
         ZoomButton("+", darkMode, onZoomIn)
         ZoomButton("−", darkMode, onZoomOut)
     }
@@ -53,7 +56,7 @@ internal fun BoxScope.MapOverlayControls(
          * and an operator in a contest should not have to guess which one they have.
          */
         Text(
-            text = "Map tiles unavailable — check the network connection.",
+            text = strings.mapTilesUnavailable,
             color = TILE_WARNING_TEXT,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
@@ -92,6 +95,7 @@ private fun ZoomButton(label: String, darkMode: Boolean, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
+    val strings = LocalStrings.current
         Text(
             text = label,
             color = if (darkMode) CONTROL_TEXT_DARK else CONTROL_TEXT_LIGHT,

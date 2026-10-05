@@ -43,7 +43,13 @@ import androidx.compose.ui.unit.dp
  * its own, and so the window does not need to know what any of them contains.
  */
 class SettingsTab(
-    val title: String,
+    /**
+     * Read during composition, not stored as text, so a language change retitles the strip
+     * of an already open window. The tabs themselves are built once, outside any
+     * composition; without this the titles would only follow on the next time the window
+     * was opened.
+     */
+    val title: () -> String,
     /**
      * Called when the operator selects this tab, before its content is shown. The
      * worked-stations tab used it to re-read the database, which it has to: its list is
@@ -51,7 +57,15 @@ class SettingsTab(
      */
     val onSelected: (() -> Unit)? = null,
     val content: @Composable () -> Unit,
-)
+) {
+
+    /** For a title that genuinely never changes -- the tests, and anything not translated. */
+    constructor(
+        title: String,
+        onSelected: (() -> Unit)? = null,
+        content: @Composable () -> Unit,
+    ) : this({ title }, onSelected, content)
+}
 
 /** Something the window has to tell the operator. */
 sealed interface SettingsNotice {
@@ -140,16 +154,22 @@ object SettingsWindow {
          * palette.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile, handed to the window. Null draws the
+         * base language.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
         buttons: @Composable (close: () -> Unit) -> Unit,
     ) {
         host.show(
-            title = "Change Client Settings",
+            title = { "Change Client Settings" },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
+            languageStore = languageStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
@@ -290,7 +310,7 @@ internal fun SettingsTabStrip(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        tab.title,
+                        tab.title(),
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 1,
                         color = if (isSelected) {

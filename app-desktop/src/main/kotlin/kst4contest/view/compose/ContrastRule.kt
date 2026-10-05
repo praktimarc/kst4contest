@@ -6,14 +6,21 @@ import kotlin.math.pow
 /** WCAG AA for body text. Below this a pair is reported, never refused. */
 const val CONTRAST_FLOOR = 4.5
 
+/** The pairs that actually sit on top of each other, as the tab names them. */
+enum class ContrastPair { TEXT_ON_WINDOW_SURFACE, TEXT_INSIDE_FIELD, ACCENT_ON_WINDOW_SURFACE, TEXT_ON_MENU_STRIP }
+
 /**
- * One pair that reads badly, named the way the settings tab shows it.
+ * One pair that reads badly.
+ *
+ * Carries the pair itself and not its name: this is a pure function, and a translated string
+ * here would make every test that filters on it depend on whichever language ran last in the
+ * shared JVM. The tab turns it into words.
  *
  * @param ratio what the pair measures now
  * @param shippedRatio what the same pair measures in the shipped sheet, so the tab can say
  *        how far the change moved it
  */
-data class ContrastWarning(val what: String, val ratio: Double, val shippedRatio: Double)
+data class ContrastWarning(val what: ContrastPair, val ratio: Double, val shippedRatio: Double)
 
 /**
  * The WCAG contrast ratio of two colours, between 1.0 and 21.0.
@@ -63,13 +70,13 @@ fun contrastWarnings(resolved: JavaFxPalette, shipped: JavaFxPalette): List<Cont
 
     fun pairsOf(palette: JavaFxPalette) = listOf(
         /* onBackground/onSurface on background/surface: nearly every label in every window. */
-        "Text on the window surface" to (palette.labelTextFill to palette.windowBackground),
+        ContrastPair.TEXT_ON_WINDOW_SURFACE to (palette.labelTextFill to palette.windowBackground),
         /* onSurfaceVariant on surfaceVariant: inside a field, a list, and on every button. */
-        "Text inside a field" to (palette.labelTextFill to palette.controlInnerBackground),
+        ContrastPair.TEXT_INSIDE_FIELD to (palette.labelTextFill to palette.controlInnerBackground),
         /* primary as text and as a tab underline, on the window surface. */
-        "Accent on the window surface" to (palette.textAccent to palette.windowBackground),
+        ContrastPair.ACCENT_ON_WINDOW_SURFACE to (palette.textAccent to palette.windowBackground),
         /* The menu strip paints base behind its titles; narrow, but it is real. */
-        "Text on the menu strip" to (palette.labelTextFill to palette.base),
+        ContrastPair.TEXT_ON_MENU_STRIP to (palette.labelTextFill to palette.base),
     )
 
     val shippedRatios = pairsOf(shipped).associate { (what, colours) ->

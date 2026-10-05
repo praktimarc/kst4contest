@@ -153,7 +153,12 @@ class ComposeWindowHost(private val threadName: String) {
      *        window sizes explicitly.
      */
     fun show(
-        title: String,
+        /**
+         * Read during composition, so a window whose title says what the chat is doing keeps
+         * saying it. A captured string would freeze at whatever was true when the window
+         * opened -- which for the main window is "disconnected", for the whole session.
+         */
+        title: () -> String,
         darkMode: Boolean,
         baseFontSizeSp: Float,
         widthDp: Float,
@@ -170,6 +175,11 @@ class ComposeWindowHost(private val threadName: String) {
          * for a window that opens before a profile exists.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile. Null draws the base language, which
+         * is right for a window that opens before a profile exists.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
         /**
          * What a close request from outside should do — the title bar's X, and a tiling
          * window manager's close, which is the same WM_DELETE_WINDOW either way.
@@ -230,7 +240,7 @@ class ComposeWindowHost(private val threadName: String) {
                     Window(
                         onCloseRequest = { onCloseRequest?.invoke() ?: exitApplication() },
                         state = windowState,
-                        title = title,
+                        title = title(),
                         alwaysOnTop = alwaysOnTop,
                         icon = applicationIcon(),
                     ) {
@@ -252,7 +262,17 @@ class ComposeWindowHost(private val threadName: String) {
                             onDispose { frame = null }
                         }
 
-                        CompositionLocalProvider(LocalPaletteStore provides paletteStore) {
+                        CompositionLocalProvider(
+                            LocalPaletteStore provides paletteStore,
+                            /*
+                             * Read inside the composition, not outside: that state read is
+                             * what makes a language change recompose this window. Etappe 8
+                             * shipped the outside version for the palette.
+                             */
+                            kst4contest.view.i18n.LocalStrings provides
+                                (languageStore?.strings
+                                    ?: kst4contest.view.i18n.LocalStrings.current),
+                        ) {
                             Kst4ContestTheme(
                                 darkMode = darkModeState.value,
                                 baseFontSizeSp = baseFontSizeSp,

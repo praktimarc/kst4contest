@@ -1,5 +1,7 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.Strings
+import kst4contest.view.i18n.Translations
 import kst4contest.controller.On4KstConnectionState
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -80,15 +82,27 @@ class MainMenuStateTest {
      * away. JavaFX flipped setText() inside the handler; here it follows the state, so it
      * is right even when the state changes from elsewhere.
      */
+    /*
+     * The base language's texts, built here rather than taken from a store: this test asserts
+     * over the real English wording, and a store would make it depend on whichever language
+     * ran last in the shared JVM.
+     */
+    private fun baseStrings(): Strings {
+        val base = Translations.BY_LANGUAGE.getValue(Translations.BASE_LANGUAGE)
+        return Strings { key -> base[key] ?: key }
+    }
+
     @Test
     fun `the away item says what pressing it will do`() {
         val state = MainMenuState()
 
+        val strings = baseStrings()
+
         state.awayFromChat = false
-        assertEquals("Show me as AWAY FROM chat!", state.awayMenuLabel)
+        assertEquals("Show me as AWAY FROM chat!", state.awayMenuLabel(strings))
 
         state.awayFromChat = true
-        assertEquals("Show me as ACTIVE in chat!", state.awayMenuLabel)
+        assertEquals("Show me as ACTIVE in chat!", state.awayMenuLabel(strings))
     }
 
     /** Nobody is away before the session exists. */

@@ -1,5 +1,6 @@
 package kst4contest.view.compose.map
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -38,20 +39,28 @@ object StationMapWindow {
          * palette.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile, handed to the window. Null draws the
+         * base language.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
     ) {
         isDarkThemeState.value = darkMode
         host.show(
-            title = "Station Map",
+            title = { kst4contest.view.i18n.CurrentStrings.get().mapTitle },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
+            languageStore = languageStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
         ) { _ ->
+            val strings = LocalStrings.current
+
             val window = this.window
             androidx.compose.runtime.LaunchedEffect(window) { window?.minimumSize = java.awt.Dimension(900, 600) }
             val tileFetcher = remember { TileFetcher() }
@@ -201,13 +210,13 @@ object StationMapWindow {
                     }
 
                     if (selectedMember != null) {
-                        kst4contest.view.compose.Form.button("Trigger cluster spot") {
+                        kst4contest.view.compose.Form.button(strings.mapTriggerClusterSpot) {
                             ApplicationRuntimeLauncher.getCurrent()?.chatController
                                 ?.dxClusterServer?.broadcastSingleDXClusterEntryToLoggers(selectedMember)
                         }
                     }
 
-                    kst4contest.view.compose.Form.button("Reset view") {
+                    kst4contest.view.compose.Form.button(strings.mapResetView) {
                         mainWindowState.selectedStation.select(null)
                         val home = runCatching {
                             kst4contest.locatorUtils.Location(ownLocator6)
@@ -222,19 +231,19 @@ object StationMapWindow {
                             groupingEnabled = it
                             prefs.isGUIstationMapClusteringEnabled = it
                         }
-                        Text("Group nearby stations", modifier = Modifier.padding(start = 4.dp))
+                        Text(strings.mapGroupNearby, modifier = Modifier.padding(start = 4.dp))
                     }
 
                     if (!pathAnalysisVisible) {
                         Text(
-                            text = "Path analysis is hidden.",
+                            text = strings.mapPathAnalysisHidden,
                             fontStyle = FontStyle.Italic,
                             modifier = Modifier.alpha(0.85f)
                         )
                     }
 
                     kst4contest.view.compose.Form.button(
-                        if (pathAnalysisVisible) "Hide path analysis" else "Show path analysis"
+                        if (pathAnalysisVisible) strings.mapHidePathAnalysis else strings.mapShowPathAnalysis
                     ) {
                         pathAnalysisVisible = !pathAnalysisVisible
                         prefs.isGUIstationMapPathAnalysisVisible = pathAnalysisVisible
@@ -354,7 +363,11 @@ object StationMapWindow {
     
     fun isShowing(): Boolean = host.isOpen
     
-    fun toggle(mainWindowState: MainWindowState, paletteStore: PaletteStore? = null) {
+    fun toggle(
+        mainWindowState: MainWindowState,
+        paletteStore: PaletteStore? = null,
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
+    ) {
         if (isShowing()) {
             hide()
         } else {
@@ -363,6 +376,7 @@ object StationMapWindow {
                 darkMode = mainWindowState.prefs.isGUI_darkModeActive,
                 baseFontSizeSp = 12f,
                 paletteStore = paletteStore,
+                languageStore = languageStore,
                 widthDp = 1000f,
                 heightDp = 700f,
                 onResized = { w, h -> }

@@ -19,13 +19,13 @@ import kst4contest.model.ClusterMessage
 object MonitorColumns {
 
     fun dxCluster(): List<DataColumn<ClusterMessage>> = listOf(
-        DataColumn(id = "time", title = "Time", value = { MessageFormats.clockTime(it.timeGenerated) }, weight = 0.7f),
+        DataColumn(id = "time", title = { kst4contest.view.i18n.CurrentStrings.get().columnTime }, value = { MessageFormats.clockTime(it.timeGenerated) }, weight = 0.7f),
         DataColumn(id = "call-tx", title = "Call tx", value = { callSignOf(it.sender) }),
         DataColumn(id = "locator-tx", title = "LOC tx", value = { qraOf(it.sender) }, weight = 0.7f),
         DataColumn(id = "call-rx", title = "Call rx", value = { callSignOf(it.receiver) }),
         DataColumn(id = "locator-rx", title = "LOC rx", value = { qraOf(it.receiver) }, weight = 0.7f),
         DataColumn(id = "qrg", title = "QRG", value = { MessageFormats.paddedQrg(frequencyOf(it.receiver)) }, weight = 0.8f),
-        DataColumn(id = "message", title = "Message", value = { it.messageInhibited.orEmpty() }, weight = 2.5f),
+        DataColumn(id = "message", title = { kst4contest.view.i18n.CurrentStrings.get().columnMessage }, value = { it.messageInhibited.orEmpty() }, weight = 2.5f),
         /* "X" and not "true": the JavaFX cell printed a cross. */
         DataColumn(id = "worked", title = "wkd", value = { if (it.isReceiverWkd) "X" else "" }, weight = 0.4f),
     )
@@ -36,14 +36,14 @@ object MonitorColumns {
      * never showed.
      */
     fun qsoOfTheOther(): List<DataColumn<ChatMessage>> = listOf(
-        DataColumn(id = "time", title = "Time", value = { MessageFormats.clockTime(it.messageGeneratedTime) }, weight = 0.7f),
+        DataColumn(id = "time", title = { kst4contest.view.i18n.CurrentStrings.get().columnTime }, value = { MessageFormats.clockTime(it.messageGeneratedTime) }, weight = 0.7f),
         DataColumn(id = "call-tx", title = "Call TX", value = { callSignOf(it.sender) }),
-        DataColumn(id = "last-qrg-tx", title = "Last QRG TX", value = { frequencyOf(it.sender) }, weight = 0.8f),
+        DataColumn(id = "last-qrg-tx", title = { kst4contest.view.i18n.CurrentStrings.get().columnLastQrgTx }, value = { frequencyOf(it.sender) }, weight = 0.8f),
         DataColumn(id = "worked-tx", title = "wkd TX?", value = { workedMark(it.sender) }, weight = 0.4f),
         DataColumn(id = "call-rx", title = "Call RX", value = { callSignOf(it.receiver) }),
-        DataColumn(id = "last-qrg-rx", title = "Last QRG RX", value = { frequencyOf(it.receiver) }, weight = 0.8f),
+        DataColumn(id = "last-qrg-rx", title = { kst4contest.view.i18n.CurrentStrings.get().columnLastQrgRx }, value = { frequencyOf(it.receiver) }, weight = 0.8f),
         DataColumn(id = "worked-rx", title = "wkd RX?", value = { workedMark(it.receiver) }, weight = 0.4f),
-        DataColumn(id = "message", title = "Message", value = { it.messageText.orEmpty() }, weight = 2.5f),
+        DataColumn(id = "message", title = { kst4contest.view.i18n.CurrentStrings.get().columnMessage }, value = { it.messageText.orEmpty() }, weight = 2.5f),
         /*
          * From the sender, not from the message. Both carry a field of that name and
          * they are set on different parsing paths, so they are not always the same

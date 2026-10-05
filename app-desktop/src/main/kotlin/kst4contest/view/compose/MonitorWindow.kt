@@ -51,15 +51,21 @@ object MonitorWindow {
          * palette.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile, handed to the window. Null draws the
+         * base language.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
     ) {
         host.show(
-            title = "Cluster & QSO of the other",
+            title = { "Cluster & QSO of the other" },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
+            languageStore = languageStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,

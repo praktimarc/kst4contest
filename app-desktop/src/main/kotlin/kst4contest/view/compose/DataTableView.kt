@@ -227,7 +227,7 @@ fun <T> DataTableView(
                     contentAlignment = Alignment.CenterStart,
                 ) {
                     Text(
-                        column.title + if (sorted) (if (state.sortAscending) " ▲" else " ▼") else "",
+                        column.title() + if (sorted) (if (state.sortAscending) " ▲" else " ▼") else "",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,

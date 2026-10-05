@@ -15,7 +15,7 @@ import kst4contest.model.ChatPreferences
  *
  * Switching a source on is not itself a frequency: PROJECT_CONTEXT records that an
  * automatic QRG update needs an enabled source *and* valid incoming RadioInfo or
- * Win-Test STATUS data. [QRG_SOURCE_HINT] is the text the tab shows so an operator
+ * Win-Test STATUS data. [QRG_SOURCE_HINT_KEY] names the text the tab shows so an operator
  * cannot read a checked box as "my QRG is being kept current".
  *
  * @param applyOwnQrgFollower attaches the own-QRG follower when any source is enabled
@@ -68,9 +68,11 @@ class TrxSynchTabState(
          * Shown on the tab. Both halves are load-bearing: an enabled source without
          * incoming data leaves the own QRG exactly as the operator typed it.
          */
-        const val QRG_SOURCE_HINT: String =
-            "An enabled source does not produce a frequency by itself. The own QRG is " +
-                "only updated once valid RadioInfo or Win-Test STATUS data actually " +
-                "arrives; until then it stays as entered by hand."
+        /**
+         * The key of the text the tab shows. The text itself lives in the translation files;
+         * keeping a copy here would be two sentences that can drift apart, and the operator
+         * would read whichever one the tab happened to use.
+         */
+        const val QRG_SOURCE_HINT_KEY: String = "trxSynch.hint"
     }
 }

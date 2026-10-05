@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -43,7 +44,12 @@ fun MessageTabs(
 ) {
     var selected by remember { mutableStateOf(0) }
 
-    val titles = listOf("Public messages", "DXCluster messages", "QSO of the other")
+    val strings = LocalStrings.current
+    val titles = listOf(
+        strings.messagesPublic,
+        strings.messagesDxCluster,
+        strings.messagesQsoOfTheOther,
+    )
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant)) {

@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,47 +36,49 @@ import kst4contest.view.compose.Form
 @Composable
 fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
     var askForCallSign by remember { mutableStateOf(false) }
+    val strings = LocalStrings.current
+
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Form.section("Sounds") {
-            Form.check("Play simple sounds", state.notify_playSimpleSounds) {
+        Form.section(strings.notificationSoundsSection) {
+            Form.check(strings.notificationSimpleSounds, state.notify_playSimpleSounds) {
                 state.notify_playSimpleSounds = it
             }
             Form.check(
-                "Play the callsign in CW on a received private message",
+                strings.notificationCwCallsign,
                 state.notify_playCWCallsignsOnRxedPMs,
             ) { state.notify_playCWCallsignsOnRxedPMs = it }
             Form.check(
-                "Speak the callsign on a received private message",
+                strings.notificationSpeakCallsign,
                 state.notify_playVoiceCallsignsOnRxedPMs,
             ) { state.notify_playVoiceCallsignsOnRxedPMs = it }
         }
 
-        Form.section("Band upgrade hints") {
+        Form.section(strings.notificationBandUpgradeSection) {
             Form.check(
-                "Hint at a band upgrade when a QSO is logged",
+                strings.notificationBandUpgradeHint,
                 state.notify_bandUpgradeHintOnLogEnabled,
             ) { state.notify_bandUpgradeHintOnLogEnabled = it }
             Form.check(
-                "Raise the priority of a station worth upgrading",
+                strings.notificationBandUpgradePriority,
                 state.notify_bandUpgradePriorityBoostEnabled,
             ) { state.notify_bandUpgradePriorityBoostEnabled = it }
         }
 
-        Form.section("Local DX Cluster server") {
-            Form.check("Run the DX Cluster server", state.notify_dxClusterServerEnabled) {
+        Form.section(strings.notificationClusterSection) {
+            Form.check(strings.notificationClusterEnabled, state.notify_dxClusterServerEnabled) {
                 state.enableDxClusterServer(it)
             }
             Form.committed(
-                label = "TCP port",
+                label = strings.notificationClusterPort,
                 stored = state.notify_dxclusterServerPort.toString(),
                 commit = state::commitDxClusterServerPort,
                 onRefused = onRefused,
             )
             Form.committed(
-                label = "Spotter callsign",
+                label = strings.notificationSpotterCallsign,
                 stored = state.notify_DXCSrv_SpottersCallSign,
                 commit = state::commitSpotterCallSign,
                 onRefused = onRefused,
@@ -85,7 +88,7 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
              * stored setting contains.
              */
             Form.choice(
-                label = "Fallback band for a spot without band information",
+                label = strings.notificationFallbackBand,
                 items = Band.entries,
                 selected = state.notify_optionalFrequencyPrefix,
                 describe = { it.prefix + " MHz" },
@@ -97,14 +100,14 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
                  * "no logger connected" the same way, which is exactly what the
                  * operator is testing for.
                  */
-                Form.button("Send a test spot") { state.sendTestSpot()?.let(onRefused) }
+                Form.button(strings.notificationSendTestSpot) { state.sendTestSpot()?.let(onRefused) }
             }
         }
 
-        Form.section("QSO monitoring") {
+        Form.section(strings.notificationMonitoringSection) {
             DataTable(
                 state = state.monitoredCallSigns,
-                addButtonText = "Add monitored callsign",
+                addButtonText = strings.notificationAddMonitored,
                 newEntryTemplate = "",
                 onChanged = state::commitMonitoredCallSigns,
                 onRefused = onRefused,
@@ -122,15 +125,15 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
 
         AlertDialog(
             onDismissRequest = { askForCallSign = false },
-            title = { Text("QSO monitoring") },
+            title = { Text(strings.notificationMonitoringSection) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Add a callsign to the monitoring list")
+                    Text(strings.notificationAddCallsignToList)
                     OutlinedTextField(
                         value = entered,
                         onValueChange = { entered = it },
                         singleLine = true,
-                        label = { Text("Callsign") },
+                        label = { Text(strings.notificationCallsign) },
                     )
                 }
             },
@@ -138,10 +141,10 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
                 TextButton(onClick = {
                     askForCallSign = false
                     state.addMonitoredCallSign(entered)?.let(onRefused)
-                }) { Text("OK") }
+                }) { Text(strings.dialogOk) }
             },
             dismissButton = {
-                TextButton(onClick = { askForCallSign = false }) { Text("Cancel") }
+                TextButton(onClick = { askForCallSign = false }) { Text(strings.dialogCancel) }
             },
         )
     }

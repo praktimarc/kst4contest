@@ -52,7 +52,7 @@ class ComposeWindowHostCloseTest {
     private fun openHost(name: String): ComposeWindowHost {
         val host = ComposeWindowHost(name)
         host.show(
-            title = "close test",
+            title = { "close test" },
             darkMode = false,
             baseFontSizeSp = 12f,
             widthDp = 200f,
@@ -101,7 +101,7 @@ class ComposeWindowHostCloseTest {
         val asked = java.util.concurrent.CountDownLatch(1)
         val host = ComposeWindowHost("close-request-override")
         host.show(
-            title = "close request test",
+            title = { "close request test" },
             darkMode = false,
             baseFontSizeSp = 12f,
             widthDp = 200f,

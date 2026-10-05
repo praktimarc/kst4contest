@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,23 +32,24 @@ import kst4contest.view.compose.Form
  */
 @Composable
 fun WorkedDatabaseTab(state: WorkedDatabaseTabState) {
+    val strings = LocalStrings.current
+
     var revision by remember { mutableStateOf(0) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         @Suppress("UNUSED_EXPRESSION") revision
 
-        Form.section("Worked station database") {
+        Form.section(strings.workedSection) {
             Text(
-                "Worked, NOT-QRV and grid data expire after three days on their own. "
-                    + "A reset before every contest is normally not required."
+                strings.workedExpiryHint
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Form.button("Refresh worked database") { state.refresh(); revision++ }
-                Form.button("Reset worked, NOT-QRV and grid data...") {
+                Form.button(strings.workedRefresh) { state.refresh(); revision++ }
+                Form.button(strings.workedReset) {
                     state.requestReset(); revision++
                 }
             }
-            state.lastAffectedLines?.let { Text("Last reset affected $it rows.") }
+            state.lastAffectedLines?.let { Text(strings.workedLastResetAffected(it)) }
 
             WorkedStationsTable(state.workedStations, revision)
         }
@@ -56,20 +58,17 @@ fun WorkedDatabaseTab(state: WorkedDatabaseTabState) {
     if (state.confirmationPending) {
         AlertDialog(
             onDismissRequest = { state.cancelReset(); revision++ },
-            title = { Text("Reset contest data") },
+            title = { Text(strings.workedResetDialogTitle) },
             text = {
                 Text(
-                    "Reset all worked, NOT-QRV and grid data?\n\n"
-                        + "This clears every contest-related flag in the internal database. "
-                        + "A reset before every contest is normally not required because "
-                        + "these data expire after three days."
+                    strings.workedResetDialogBody
                 )
             },
             confirmButton = {
-                TextButton(onClick = { state.confirmReset(); revision++ }) { Text("Reset data") }
+                TextButton(onClick = { state.confirmReset(); revision++ }) { Text(strings.workedResetConfirm) }
             },
             dismissButton = {
-                TextButton(onClick = { state.cancelReset(); revision++ }) { Text("Cancel") }
+                TextButton(onClick = { state.cancelReset(); revision++ }) { Text(strings.dialogCancel) }
             },
         )
     }
@@ -77,15 +76,14 @@ fun WorkedDatabaseTab(state: WorkedDatabaseTabState) {
     if (state.resetFailed) {
         AlertDialog(
             onDismissRequest = { state.dismissError(); revision++ },
-            title = { Text("Reset contest data") },
+            title = { Text(strings.workedResetDialogTitle) },
             text = {
                 Text(
-                    "The contest data could not be reset. The internal database may be "
-                        + "unavailable or inconsistent. No successful reset was confirmed."
+                    strings.workedResetFailed
                 )
             },
             confirmButton = {
-                TextButton(onClick = { state.dismissError(); revision++ }) { Text("OK") }
+                TextButton(onClick = { state.dismissError(); revision++ }) { Text(strings.dialogOk) }
             },
         )
     }
@@ -101,6 +99,8 @@ fun WorkedDatabaseTab(state: WorkedDatabaseTabState) {
  */
 @Composable
 private fun WorkedStationsTable(rows: List<ChatMember>, revision: Int) {
+    val strings = LocalStrings.current
+
     @Suppress("UNUSED_EXPRESSION") revision
 
     val bands: List<Pair<String, (ChatMember) -> Boolean>> = listOf(
@@ -117,13 +117,13 @@ private fun WorkedStationsTable(rows: List<ChatMember>, revision: Int) {
     )
 
     if (rows.isEmpty()) {
-        Text("The worked database holds no callsigns.")
+        Text(strings.workedEmpty)
         return
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Callsign", fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
+            Text(strings.stationCallsign, fontWeight = FontWeight.Bold, modifier = Modifier.weight(2f))
             bands.forEach { (label, _) ->
                 Text(label, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             }

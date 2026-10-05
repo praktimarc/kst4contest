@@ -10,7 +10,7 @@ object SelectedStationMessageColumns {
     fun all(): List<DataColumn<ChatMessage>> = listOf(
         DataColumn(
             id = "time",
-            title = "Time",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnTime },
             value = { MessageFormats.clockTime(it.messageGeneratedTime) },
             weight = 0.7f,
         ),
@@ -28,19 +28,19 @@ object SelectedStationMessageColumns {
         ),
         DataColumn(
             id = "qrg-tx",
-            title = "Last QRG TX",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnLastQrgTx },
             value = { it.sender?.frequency?.get()?.takeIf { s -> s.isNotBlank() } ?: "" },
             weight = 0.8f,
         ),
         DataColumn(
             id = "qrg-rx",
-            title = "Last QRG RX",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnLastQrgRx },
             value = { it.receiver?.frequency?.get()?.takeIf { s -> s.isNotBlank() } ?: "" },
             weight = 0.8f,
         ),
         DataColumn(
             id = "message",
-            title = "Message",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnMessage },
             value = { it.messageText.orEmpty() },
             weight = 3f,
         ),

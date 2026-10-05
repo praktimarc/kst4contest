@@ -110,7 +110,9 @@ fun buildSettingsTabs(
     host: SettingsHost,
     notices: SettingsNotices,
     paletteStore: PaletteStore,
+    languageStore: kst4contest.view.i18n.LanguageStore,
 ): List<SettingsTab> {
+
     val prefs = controller.chatPreferences
 
     val stationState = StationTabState(
@@ -150,8 +152,8 @@ fun buildSettingsTabs(
         prefs,
         validateBeaconTemplate = { template -> controller.validateBeaconTemplate(template) },
         restartBeaconTimer = { controller.restartBeaconTimer() },
-        mainCategoryName = categoryName(controller.chatCategoryMain, "Main chat category"),
-        secondCategoryName = categoryName(controller.chatCategorySecondChat, "Second chat category"),
+        mainCategoryName = categoryName(controller.chatCategoryMain, kst4contest.view.i18n.CurrentStrings.get().settingsCategoryMainFallback),
+        secondCategoryName = categoryName(controller.chatCategorySecondChat, kst4contest.view.i18n.CurrentStrings.get().settingsCategorySecondFallback),
     )
 
     val logSynchState = LogSynchTabState(
@@ -193,35 +195,35 @@ fun buildSettingsTabs(
      * so a tidier order or a shorter title would be a regression, not an improvement.
      */
     return listOf(
-        SettingsTab("Station") { StationTab(stationState) },
-        SettingsTab("Log synch") { LogSynchTab(logSynchState) },
-        SettingsTab("TRX synch") { TrxSynchTab(TrxSynchTabState(prefs, host::applyOwnQrgFollower)) },
-        SettingsTab("Airscout") { AirscoutTab(AirscoutTabState(prefs)) },
-        SettingsTab("Notification") { NotificationTab(notificationState, reportRefusal) },
-        SettingsTab("Shortcuts") { ShortcutsTab(shortcutsState, reportRefusal) },
-        SettingsTab("Beacon") { BeaconTab(beaconState, reportRefusal) },
-        SettingsTab("Messagehandling") { MessageHandlingTab(MessageHandlingTabState(prefs)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabStation }) { StationTab(stationState) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabLogSynch }) { LogSynchTab(logSynchState) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabTrxSynch }) { TrxSynchTab(TrxSynchTabState(prefs, host::applyOwnQrgFollower)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabAirscout }) { AirscoutTab(AirscoutTabState(prefs)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabNotification }) { NotificationTab(notificationState, reportRefusal) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabShortcuts }) { ShortcutsTab(shortcutsState, reportRefusal) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabBeacon }) { BeaconTab(beaconState, reportRefusal) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabMessageHandling }) { MessageHandlingTab(MessageHandlingTabState(prefs)) },
         /*
          * Selecting this tab re-read the database in the JavaFX window; the list is a
          * snapshot and would otherwise show what was true when the window opened.
          */
         SettingsTab(
-            "Workedstn database",
+            { kst4contest.view.i18n.CurrentStrings.get().tabWorkedDatabase },
             onSelected = { controller.refreshWorkedStateAndDatabaseListFromDatabase() },
         ) { WorkedDatabaseTab(workedDatabaseState) },
-        SettingsTab("GUI") { GuiOptionsTab(GuiOptionsTabState(prefs)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabGui }) { GuiOptionsTab(GuiOptionsTabState(prefs, languageStore)) },
         /*
          * Appended last on purpose so no established tab position shifts, the reason
          * the JavaFX tab gave for the same placement.
          */
-        SettingsTab("Profiles", onSelected = profilesState::refresh) { ProfilesTab(profilesState) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabProfiles }, onSelected = profilesState::refresh) { ProfilesTab(profilesState) },
         /*
          * Appended after Profiles for the same reason Profiles was appended after GUI. The
          * tab edits whichever design is in force, which is why it reads the flag through a
          * lambda rather than taking its value here: the operator can switch day/evening from
          * the main window's menu while this tab is open.
          */
-        SettingsTab("Colours") {
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabColours }) {
             /*
              * Remembered rather than rebuilt: the tab recomposes on every colour change, and
              * the design flag is read through a lambda precisely so the object itself does not

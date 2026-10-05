@@ -81,7 +81,14 @@ class TrxSynchTabStateTest {
         s.state.trxSynch_ucxLogUDPListenerEnabled = true
 
         assertTrue(s.state.anyQrgSourceEnabled)
-        val hint = TrxSynchTabState.QRG_SOURCE_HINT
+        /*
+         * Read from the translation rather than from a constant beside it: one sentence, one
+         * place. What this asserts is a content requirement on the English text, which is
+         * where that text now lives.
+         */
+        val hint = kst4contest.view.i18n.Translations.BY_LANGUAGE
+            .getValue(kst4contest.view.i18n.Translations.BASE_LANGUAGE)
+            .getValue(TrxSynchTabState.QRG_SOURCE_HINT_KEY)
         assertTrue(hint.contains("valid", ignoreCase = true) && hint.contains("data", ignoreCase = true),
             "the hint must say that incoming data is required as well, not just a source: <$hint>")
         assertTrue(hint.contains("RadioInfo") && hint.contains("STATUS"),

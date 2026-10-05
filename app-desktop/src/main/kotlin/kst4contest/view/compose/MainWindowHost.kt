@@ -30,7 +30,7 @@ object MainWindowHost {
 
     /**
      * @param state everything the window draws; replacing it is what a profile switch will be
-     * @param title the window title, rebuilt by the caller as the chat state changes
+     * @param profileName the profile part of the title; the chat part is read from the state
      */
     private var currentState by androidx.compose.runtime.mutableStateOf<MainWindowState?>(null)
     private var currentActions by androidx.compose.runtime.mutableStateOf<MainMenuActions?>(null)
@@ -50,7 +50,13 @@ object MainWindowHost {
     fun show(
         state: MainWindowState,
         actions: MainMenuActions,
-        title: String,
+        /**
+         * The profile name for the title, or null for the only profile. The rest of the
+         * title is what the chat is doing, and that is read from the state during
+         * composition -- as the JavaFX window did, where the title carried the whole
+         * connection line.
+         */
+        profileName: String?,
         darkMode: Boolean,
         baseFontSizeSp: Float,
         /**
@@ -58,6 +64,11 @@ object MainWindowHost {
          * palette.
          */
         paletteStore: PaletteStore? = null,
+        /**
+         * The interface language of the active profile, handed to the window. Null draws the
+         * base language.
+         */
+        languageStore: kst4contest.view.i18n.LanguageStore? = null,
         widthDp: Float,
         heightDp: Float,
         onResized: (Float, Float) -> Unit,
@@ -95,10 +106,26 @@ object MainWindowHost {
         currentOnCandidateClicked = onCandidateClicked
 
         host.show(
-            title = title,
+            title = {
+                /*
+                 * Read inside the composition, so the title follows the connection the way
+                 * the JavaFX one did: "Connected to: 2: 144/432 MHz as DN5PW in JO50JP
+                 * (73 users online, 73 shown), 29 messages total." A captured string would
+                 * say "disconnected" for the life of the session.
+                 */
+                val surroundings = currentState?.surroundings
+                MainWindowFrame.title(
+                    chatState = MainWindowFrame.chatState(
+                        surroundings?.connectionState,
+                        surroundings?.connectionDetail,
+                    ),
+                    profileName = profileName,
+                )
+            },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
+            languageStore = languageStore,
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,

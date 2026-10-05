@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +42,8 @@ fun StationFilterBar(
     onChanged: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
+
     Column(
         modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
@@ -52,7 +55,7 @@ fun StationFilterBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // Reset filters
-            FilterButton("Reset filters", on = false, isAccent = true) {
+            FilterButton(strings.filterReset, on = false, isAccent = true) {
                 filters.reset()
                 onChanged()
             }
@@ -67,7 +70,7 @@ fun StationFilterBar(
                     onChanged()
                 },
             )
-            Text("Show only QRB [km] <=", style = MaterialTheme.typography.bodySmall)
+            Text(strings.filterShowOnlyQrb, style = MaterialTheme.typography.bodySmall)
             CompactTextField(
                 value = if (filters.maxQrbKm.rem(1) == 0.0) filters.maxQrbKm.toInt().toString() else filters.maxQrbKm.toString(),
                 onValueChange = {
@@ -93,7 +96,7 @@ fun StationFilterBar(
                     onChanged()
                 },
             )
-            Text("Show only QTF:", style = MaterialTheme.typography.bodySmall)
+            Text(strings.filterShowOnlyQtf, style = MaterialTheme.typography.bodySmall)
             CompactTextField(
                 value = if (filters.qtfDegrees.rem(1) == 0.0) filters.qtfDegrees.toInt().toString() else filters.qtfDegrees.toString(),
                 onValueChange = {
@@ -132,13 +135,13 @@ fun StationFilterBar(
                     filters.searchText = it
                     onChanged()
                 },
-                placeholder = "Find...",
+                placeholder = strings.filterFind,
                 modifier = Modifier.width(90.dp),
             )
 
             VerticalSeparator()
 
-            Text("Hide worked:", style = MaterialTheme.typography.bodySmall)
+            Text(strings.filterHideWorked, style = MaterialTheme.typography.bodySmall)
             FilterButton("wkdany", on = filters.hideWorkedAny) {
                 filters.hideWorkedAny = !filters.hideWorkedAny
                 onChanged()
@@ -154,11 +157,11 @@ fun StationFilterBar(
 
             VerticalSeparator()
 
-            FilterButton("Inactive stations", on = filters.hideInactive) {
+            FilterButton(strings.filterInactiveStations, on = filters.hideInactive) {
                 filters.hideInactive = !filters.hideInactive
                 onChanged()
             }
-            FilterButton("Only new grids", on = filters.onlyNewGrids) {
+            FilterButton(strings.filterOnlyNewGrids, on = filters.onlyNewGrids) {
                 filters.onlyNewGrids = !filters.onlyNewGrids
                 onChanged()
             }
@@ -170,14 +173,14 @@ fun StationFilterBar(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilterButton("Grid color", on = filters.gridColouring) {
+            FilterButton(strings.filterGridColour, on = filters.gridColouring) {
                 filters.gridColouring = !filters.gridColouring
             }
-            FilterButton("Tropo >=0dB", on = filters.tropoReachable) {
+            FilterButton(strings.filterTropo, on = filters.tropoReachable) {
                 filters.tropoReachable = !filters.tropoReachable
                 onChanged()
             }
-            FilterButton("New bands", on = filters.newBands) {
+            FilterButton(strings.filterNewBands, on = filters.newBands) {
                 filters.newBands = !filters.newBands
                 onChanged()
             }

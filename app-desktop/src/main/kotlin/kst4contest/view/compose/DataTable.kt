@@ -368,12 +368,12 @@ fun DataTable(
             }
 
             if (showMoveButtons) {
-                Form.button("Move selected down") { if (state.moveSelected(1)) changed() }
-                Form.button("Move selected up") { if (state.moveSelected(-1)) changed() }
+                Form.button(kst4contest.view.i18n.CurrentStrings.get().listMoveDown) { if (state.moveSelected(1)) changed() }
+                Form.button(kst4contest.view.i18n.CurrentStrings.get().listMoveUp) { if (state.moveSelected(-1)) changed() }
             }
 
             Text(
-                "Clear the text of an entry to remove it.",
+                kst4contest.view.i18n.CurrentStrings.get().listClearToRemove,
                 style = MaterialTheme.typography.bodySmall,
             )
         }

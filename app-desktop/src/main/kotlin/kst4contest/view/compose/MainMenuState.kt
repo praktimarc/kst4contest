@@ -1,5 +1,6 @@
 package kst4contest.view.compose
 
+import kst4contest.view.i18n.Strings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -55,9 +56,12 @@ class MainMenuState {
     /**
      * What the away item says. It names the next action rather than the current state,
      * which is what the JavaFX wording did.
+     *
+     * Takes the texts as a parameter: this is a plain state holder, not a composable, so the
+     * caller reads the composition local and hands them over.
      */
-    val awayMenuLabel: String
-        get() = if (awayFromChat) "Show me as ACTIVE in chat!" else "Show me as AWAY FROM chat!"
+    fun awayMenuLabel(strings: Strings): String =
+        if (awayFromChat) strings.menuShowMeAsActive else strings.menuShowMeAsAway
 
     /** Never blocked: switching profiles tears the session down on its own. */
     val canSwitchProfile: Boolean = true

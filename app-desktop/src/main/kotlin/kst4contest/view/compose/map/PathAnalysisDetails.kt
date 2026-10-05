@@ -1,5 +1,6 @@
 package kst4contest.view.compose.map
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -34,9 +35,10 @@ internal fun PathAnalysisDetails(
     darkMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val strings = LocalStrings.current
     Column(modifier) {
         Text(
-            "Path / terrain analysis",
+            strings.pathTitle,
             fontSize = TextUnit(12f, TextUnitType.Sp),
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(top = 2.dp),
@@ -45,23 +47,23 @@ internal fun PathAnalysisDetails(
 
         if (result == null) {
             Text(
-                "Select a station to prepare path and terrain analysis.",
+                strings.pathSelectStation,
                 fontSize = TextUnit(12f, TextUnitType.Sp),
             )
             return@Column
         }
 
-        DetailRow("From locator:", result.fromLocator6().ifBlank { "-" })
-        DetailRow("To locator:", result.toLocator6().ifBlank { "-" })
-        DetailRow("Distance/QTF:", "${result.distanceText()} / ${result.bearingText()}")
-        DetailRow("Endpoints:", result.endpointSummaryText())
-        DetailRow("Source:", "${result.analysisMode().ifBlank { "-" }} / ${result.profilePoints().size} samples")
-        DetailRow("Frequency:", result.analysisFrequencyText())
-        DetailRow("Refraction:", result.effectiveEarthRadiusText())
-        DetailRow("Radio horizon:", result.radioHorizonText())
-        DetailRow("Terrain horizon:", result.terrainHorizonText())
-        DetailRow("Fresnel:", "${result.fresnelText()} / ${result.worstFresnelClearanceText()}")
-        DetailRow("Obstruction:", result.obstructionText())
+        DetailRow(strings.pathFromLocator, result.fromLocator6().ifBlank { "-" })
+        DetailRow(strings.pathToLocator, result.toLocator6().ifBlank { "-" })
+        DetailRow(strings.pathDistanceQtf, "${result.distanceText()} / ${result.bearingText()}")
+        DetailRow(strings.pathEndpoints, result.endpointSummaryText())
+        DetailRow(strings.pathSource, "${result.analysisMode().ifBlank { "-" }} / ${result.profilePoints().size} samples")
+        DetailRow(strings.pathFrequency, result.analysisFrequencyText())
+        DetailRow(strings.pathRefraction, result.effectiveEarthRadiusText())
+        DetailRow(strings.pathRadioHorizon, result.radioHorizonText())
+        DetailRow(strings.pathTerrainHorizon, result.terrainHorizonText())
+        DetailRow(strings.pathFresnel, "${result.fresnelText()} / ${result.worstFresnelClearanceText()}")
+        DetailRow(strings.pathObstruction, result.obstructionText())
 
         val severity = result.propagationSeverityLevel()
         val textColor = if (darkMode) Color(0xFFF0F0F0) else Color(0xFF202020)
@@ -84,7 +86,7 @@ internal fun PathAnalysisDetails(
 
         Row(Modifier.padding(vertical = 2.dp).fillMaxWidth()) {
             Text(
-                "Assessment:",
+                strings.pathAssessment,
                 modifier = Modifier.weight(LABEL_WEIGHT),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = TextUnit(11f, TextUnitType.Sp),
@@ -102,12 +104,12 @@ internal fun PathAnalysisDetails(
             }
         }
 
-        DetailRow("Link budget:", result.linkBudgetText())
-        DetailRow("RX power:", result.linkBudgetRxPowerText())
-        DetailRow("CW hint:", result.cwHintText())
-        DetailRow("Mechanisms:", result.propagationMechanismsText(), valueColor = textColor, valueBold = true)
-        DetailRow("LOS:", "${result.losText()} / worst ${result.worstClearanceText()}")
-        DetailRow("Status:", result.statusText())
+        DetailRow(strings.pathLinkBudget, result.linkBudgetText())
+        DetailRow(strings.pathRxPower, result.linkBudgetRxPowerText())
+        DetailRow(strings.pathCwHint, result.cwHintText())
+        DetailRow(strings.pathMechanisms, result.propagationMechanismsText(), valueColor = textColor, valueBold = true)
+        DetailRow(strings.pathLos, "${result.losText()} / worst ${result.worstClearanceText()}")
+        DetailRow(strings.pathStatus, result.statusText())
     }
 }
 
@@ -126,6 +128,7 @@ private fun DetailRow(
     valueColor: Color = Color.Unspecified,
     valueBold: Boolean = false,
 ) {
+    val strings = LocalStrings.current
     Row(Modifier.fillMaxWidth()) {
         Text(
             text = label,

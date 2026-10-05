@@ -32,7 +32,7 @@ class DirectedMessageColumnsTest {
     fun `the titles are the ones on screen today`() {
         assertEquals(
             listOf("Time", "Callsign", "Name", "QRA", "QRB", "Message", "Last known QRG", "AP [minutes / pot%]", "Category"),
-            columns.map { it.title },
+            columns.map { it.title() },
         )
     }
 

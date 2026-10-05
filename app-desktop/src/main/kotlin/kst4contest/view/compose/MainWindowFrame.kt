@@ -62,14 +62,32 @@ object MainWindowFrame {
      * The wording separates a scheduled reconnect from a dead session, which is the
      * difference between waiting and doing something about it.
      */
+    /**
+     * What the title's first half says.
+     *
+     * The live connection detail while the chat is usable -- which is the whole status line,
+     * exactly what the JavaFX title carried -- and a wording about the attempt otherwise. A
+     * blank detail falls through to the offline wording rather than leaving the title empty.
+     *
+     * @param state the connection state, null before the first push
+     * @param detail the status line the controller pushes
+     * @return the chat half of the title
+     */
+    fun chatState(state: On4KstConnectionState?, detail: String?): String =
+        if (state == On4KstConnectionState.ONLINE && !detail.isNullOrBlank()) {
+            detail
+        } else {
+            offlineChatState(state)
+        }
+
     fun offlineChatState(state: On4KstConnectionState?): String =
         when (state ?: On4KstConnectionState.DISCONNECTED) {
-            On4KstConnectionState.RECONNECT_WAIT -> "CONNECTION LOST – reconnect scheduled"
-            On4KstConnectionState.CONNECTING -> "Connecting to ON4KST…"
+            On4KstConnectionState.RECONNECT_WAIT -> kst4contest.view.i18n.CurrentStrings.get().titleConnectionLost
+            On4KstConnectionState.CONNECTING -> kst4contest.view.i18n.CurrentStrings.get().titleConnecting
             On4KstConnectionState.WAITING_FOR_LOGIN_PROMPT,
-            On4KstConnectionState.AUTHENTICATING -> "Connected – authenticating with ON4KST…"
+            On4KstConnectionState.AUTHENTICATING -> kst4contest.view.i18n.CurrentStrings.get().titleAuthenticating
             On4KstConnectionState.SYNCING_MAIN_CHAT,
-            On4KstConnectionState.SYNCING_SECOND_CHAT -> "Connected – synchronizing ON4KST chat data…"
-            else -> "DISCONNECTED!"
+            On4KstConnectionState.SYNCING_SECOND_CHAT -> kst4contest.view.i18n.CurrentStrings.get().titleSynchronizing
+            else -> kst4contest.view.i18n.CurrentStrings.get().titleDisconnected
         }
 }

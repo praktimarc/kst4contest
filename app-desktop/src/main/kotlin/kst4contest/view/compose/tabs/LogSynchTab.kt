@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -30,45 +31,47 @@ fun LogSynchTab(state: LogSynchTabState) {
      * is the device WorkedDatabaseTab uses for the same reason.
      */
     var revision by remember { mutableStateOf(0) }
+    val strings = LocalStrings.current
+
 
     Column(
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         @Suppress("UNUSED_EXPRESSION") revision
 
-        Form.section("File polling for worked callsigns") {
+        Form.section(strings.logSynchFileSection) {
             Form.check(
-                "Read worked callsigns periodically from a log file (without band information)",
+                strings.logSynchFileEnabled,
                 state.logsynch_fileBasedWkdCallInterpreterEnabled,
             ) { state.logsynch_fileBasedWkdCallInterpreterEnabled = it; revision++ }
 
             FilePathRow(
-                label = "Log file to be monitored:",
+                label = strings.logSynchFileLabel,
                 value = state.logsynch_fileBasedWkdCallInterpreterFileNameReadOnly,
-                chooserTitle = "Choose Readonly-Loginterpreter-File",
+                chooserTitle = strings.logSynchFileChooserTitle,
             ) { state.logsynch_fileBasedWkdCallInterpreterFileNameReadOnly = it; revision++ }
         }
 
-        Form.section("Network-based QSO synchronization (N1MM/QARTEST/UCXLog/DXLog)") {
+        Form.section(strings.logSynchNetworkSection) {
             Form.check(
-                "Process QSO messages from N1MM+, QARTEST, UCXLog and DXLog.net",
+                strings.logSynchNetworkEnabled,
                 state.logsynch_ucxUDPWkdCallListenerEnabled,
             ) { state.logsynch_ucxUDPWkdCallListenerEnabled = it; revision++ }
 
             Form.int(
-                "Shared UDP port for QSO and TRX messages [default 12060]:",
+                strings.logSynchSharedPort,
                 state.logsynch_ucxUDPWkdCallListenerPort,
             ) { state.logsynch_ucxUDPWkdCallListenerPort = it; revision++ }
         }
 
-        Form.section("Win-Test Network-Listener") {
+        Form.section(strings.logSynchWinTestSection) {
             Form.check(
-                "Receive Win-Test network based UDP log messages",
+                strings.logSynchWinTestEnabled,
                 state.logsynch_wintestNetworkListenerEnabled,
             ) { state.logsynch_wintestNetworkListenerEnabled = it; revision++ }
 
             GuardedTextField(
-                label = "UDP-Port for Win-Test listener (default is 9871)",
+                label = strings.logSynchWinTestPort,
                 value = state.logsynch_wintestNetworkPort.toString(),
                 enabled = state.logsynch_wintestNetworkListenerEnabled,
                 accepts = { it.trim().toIntOrNull() != null },
@@ -78,21 +81,19 @@ fun LogSynchTab(state: LogSynchTabState) {
             )
 
             GuardedTextField(
-                label = "KST station name in Win-Test network (src of SKED packets)",
+                label = strings.logSynchWinTestStationName,
                 value = state.logsynch_wintestNetworkStationNameOfKST,
                 onAccepted = { state.logsynch_wintestNetworkStationNameOfKST = it; revision++ },
             )
 
             GuardedTextField(
-                label = "UDP broadcast address for Win-Test (default = internet interface broadcast)",
+                label = strings.logSynchWinTestBroadcast,
                 value = state.logsynch_wintestNetworkBroadcastAddress,
                 onAccepted = { state.logsynch_wintestNetworkBroadcastAddress = it; revision++ },
             )
 
             Text(
-                "The broadcast address is detected once while it is still " +
-                    "${LogSynchTabState.DEFAULT_BROADCAST_ADDRESS}. A port change takes " +
-                    "effect on the running listener when the field loses focus."
+                strings.logSynchWinTestHint(LogSynchTabState.DEFAULT_BROADCAST_ADDRESS)
             )
         }
     }

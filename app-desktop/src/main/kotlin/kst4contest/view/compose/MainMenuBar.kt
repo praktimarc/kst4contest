@@ -25,6 +25,7 @@ import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import kst4contest.controller.On4KstConnectionState
 import kst4contest.utils.PlatformUtils
+import kst4contest.view.i18n.LocalStrings
 
 /**
  * What the menu bar does when something is picked.
@@ -81,8 +82,11 @@ fun FrameWindowScope.Kst4ContestMenuBar(
     connectionState: On4KstConnectionState? = null,
     connectionDetail: String? = null,
 ) {
+    val strings = LocalStrings.current
+
     MenuBar {
-        mainMenuModel(state, actions, settingsWindowOpen, monitorWindowOpen).forEach { menu ->
+        mainMenuModel(state, actions, settingsWindowOpen, monitorWindowOpen, strings)
+            .forEach { menu ->
             Menu(menu.title) {
                 menu.entries.forEach { entry ->
                     when (entry) {
@@ -136,7 +140,8 @@ fun Kst4ContestMenuRow(
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalJavaFxPalette.current
-    val menus = mainMenuModel(state, actions, settingsWindowOpen, monitorWindowOpen)
+    val strings = LocalStrings.current
+    val menus = mainMenuModel(state, actions, settingsWindowOpen, monitorWindowOpen, strings)
 
     Row(
         modifier = modifier

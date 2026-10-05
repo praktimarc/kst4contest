@@ -118,4 +118,41 @@ class MainWindowFrameTest {
     fun `no connection state at all reads as disconnected`() {
         assertEquals("DISCONNECTED!", MainWindowFrame.offlineChatState(null))
     }
+
+    /**
+     * The title carries the whole connection line while the chat is usable.
+     *
+     * The JavaFX window did that -- "Connected to: 2: 144/432 MHz as DN5PW (Testing) in
+     * JO50JP (73 users online, 73 shown), 29 messages total." -- and the Compose window
+     * opened with a fixed "KST4Contest (Compose)" instead, which told a tiling window
+     * manager nothing and told the operator less.
+     */
+    @Test
+    fun `the title carries the live connection line once the chat is usable`() {
+        val detail = "Connected to: 2: 144/432 MHz  as DN5PW (Testing) in JO50JP " +
+            "(73 users online, 73 shown), 29 messages total."
+
+        assertEquals(detail, MainWindowFrame.chatState(On4KstConnectionState.ONLINE, detail))
+    }
+
+    @Test
+    fun `an unusable chat says what it is doing instead`() {
+        assertEquals(
+            MainWindowFrame.offlineChatState(On4KstConnectionState.CONNECTING),
+            MainWindowFrame.chatState(On4KstConnectionState.CONNECTING, "ignored while connecting"),
+        )
+    }
+
+    @Test
+    fun `a blank detail falls through rather than leaving the title empty`() {
+        // The feed substitutes the state name for a blank detail, but it may not have run yet.
+        assertEquals(
+            MainWindowFrame.offlineChatState(On4KstConnectionState.ONLINE),
+            MainWindowFrame.chatState(On4KstConnectionState.ONLINE, "   "),
+        )
+        assertEquals(
+            MainWindowFrame.offlineChatState(null),
+            MainWindowFrame.chatState(null, null),
+        )
+    }
 }
