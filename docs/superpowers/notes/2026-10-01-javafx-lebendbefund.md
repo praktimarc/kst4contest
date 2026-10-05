@@ -43,7 +43,8 @@ Erhoben am 1. Oktober 2026 auf Linux, Branch `nextMajorRelease/version1_50`.
 > und darum nicht testbar war). Erstmals mit Tests: vier, darunter „ein Stoß von 20
 > Ereignissen wird zu einem Schreibvorgang". **Offen (Etappe 6):** die 11 Restdateien, die 19
 > Steuerelemente, `org.openjfx` aus Build und Versionskatalog.
-> Plan: `docs/superpowers/plans/2026-10-03-javafx-entfernen-teil4-dispatcher-lebenszyklus.md`.
+> Behoben in Etappe 4/5; der Plan ist nach seiner Ausführung entfernt worden, die
+> Begründung steht in der Commit-Nachricht und hier.
 
 > **Etappe 6 abgeschlossen am 2026-10-04 — JavaFX ist raus.** Nachgewiesen, nicht
 > geschlussfolgert: `grep -rl "javafx\." core/src/main app-desktop/src/main` ist leer, es
@@ -153,7 +154,8 @@ Erhoben am 1. Oktober 2026 auf Linux, Branch `nextMajorRelease/version1_50`.
 > `OperatorProfilePickerWindow` (eigener Faden plus `CountDownLatch`) würde dort verklemmen,
 > weil es genau den Faden blockiert, auf dem das neue Fenster zeichnen will. Der
 > Einzelkonstruktor `ComposeDialog(Dialog.ModalityType)` existiert und wird benutzt.
-> Plan: `docs/superpowers/plans/2026-10-03-javafx-entfernen-teil4-dispatcher-lebenszyklus.md`.
+> Behoben in Etappe 4/5; der Plan ist nach seiner Ausführung entfernt worden, die
+> Begründung steht in der Commit-Nachricht und hier.
 
 > **Teil 3 abgeschlossen am 2026-10-02.** Der gesamte durchsetzte JavaFX-Aufbau in
 > `Kst4ContestApplication` ist gelöscht; die Klasse ist von 11.179 auf ~5.100 Zeilen
