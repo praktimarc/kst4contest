@@ -70,7 +70,7 @@ A batch of changes belongs in one `SimpleRoster.mutate(...)`, not one call per e
 
 ## Operator Profiles and Per-Profile Persistence
 
-- One operator profile owns one `preferences.xml`, one worked-station database and, since release 1.50, its own pair of stylesheets. Everything else under `~/.praktiKST/` stays global: audio files, DEM and terrain packages, the error log and the version-info feed.
+- One operator profile owns one `preferences.xml`, one worked-station database, its own pair of stylesheets and its own interface language (all since release 1.50). Everything else under `~/.praktiKST/` stays global: audio files, DEM and terrain packages, the error log and the version-info feed.
 - The **root profile** is the historic flat installation: `preferences.xml` and `praktiKST.db` directly below the application directory. It is never moved, and it always uses the common station database, because that database is the installation's own.
 - Additional profiles live under `profiles/<profileId>/`. `profileId` is a stable, file-system-safe slug assigned once; renaming a profile changes only its display name and never moves a directory.
 - The registry `profiles.xml` is created lazily. An installation that has only the flat layout gets no registry and no `profiles/` directory; the root profile is synthesised in memory. Startup with no or exactly one profile therefore asks nothing and writes nothing, and a downgrade to an older release is a no-op.
@@ -269,6 +269,30 @@ section records only the durable architecture and operational boundaries.
 - The combined GoAccess 1.8.1 report remains unchanged. A finer Country-level graphic under `/combined/` is deliberately deferred; no decision has been made between a later GoAccess upgrade and a custom report integration.
 
 ## Important Decisions and Workarounds
+
+- **The interface language has four kinds of text, and the rule is the addressee** (release
+  1.50): interface text is translated; protocol text (the pipe-framed opcodes in
+  `On4KstProtocol`, and the `/`-prefixed chat commands) and amateur shorthand (the
+  `ChatPreferences` defaults, snippets, shortcuts, and QRA/QRG/QTF/LOS/Fresnel in labels) are
+  not; and diagnostic text -- the `println` calls in `core` -- is not either, because a German
+  stack trace is worse for whoever reads the bug report. Ask who reads it, not what it looks
+  like.
+- **`core` produces no display text.** It returns a key or an enum and `app-desktop` turns it
+  into words. That is the language half of "core stays toolkit-free", and it also means no
+  German string can reach a protocol or a log line by construction. Two violations predate the
+  rule and are named in the stage 9 spec: `PathPropagationAssessment` and `PriorityCalculator`.
+- **Incompleteness is allowed in a translation, incorrectness is not.** A missing key warns and
+  falls back to English at runtime, so a partial contributed language can be submitted; an
+  orphan key, a placeholder mismatch, a duplicate key or an unreadable file fail the build. The
+  argument count always comes from the English base.
+- **Anything built outside a composition needs its text read inside one.** Window titles, tab
+  titles and column headers are all built once at startup -- the columns from Java -- so each
+  holds a function rather than a string. A stored string freezes at whatever was true when the
+  window opened, which is how the main window's title said "KST4Contest (Compose)" for a whole
+  session and the tab strip stayed English while its contents switched.
+- **A column's `id` is never translated.** It is what the remembered column widths and order
+  are keyed on; translating it would read an operator's stored layout under names that no
+  longer match.
 
 - **The palette has three sources, and the later one wins role by role** (release 1.50): the
   shipped stylesheet from the classpath, then the profile's own stylesheet file if present,

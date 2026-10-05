@@ -1269,7 +1269,7 @@ denselben vier Pfaden, nicht `git add -A`.
 > | Text im Feld | 21,0 | **≈2,9** |
 > | Akzent auf Fläche | **2,86** | **2,26** |
 >
-> Eine absolute Grenze würde also ab dem ersten Start in beiden Entwürfen warnen, ohne daß
+> Eine absolute Grenze würde also ab dem ersten Start in beiden Entwürfen warnen, ohne dass
 > der Operateur etwas getan hätte — und eine Warnung, die immer leuchtet, bringt ihm bei,
 > Warnungen zu übersehen. Die Grenze bis zum Durchkommen der Vorlagen zu senken (auf etwa
 > 2,2) macht sie wertlos.

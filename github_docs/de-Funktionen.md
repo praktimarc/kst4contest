@@ -1106,3 +1106,60 @@ Die Prüfung verwendet immer den **primären Bildschirm**. Sie stellt nicht die 
 Die automatische Größenbegrenzung gilt derzeit außerdem nur für das Hauptfenster. Das Einstellungsfenster, das separate Cluster- und QSO-Monitorfenster sowie weitere Zusatzfenster verwenden weiterhin ihre jeweils gespeicherten Größen, ohne dieselbe zusätzliche Prüfung gegen den primären Bildschirm.
 
 Im Klartext: Die Schutzfunktion verhindert vor allem, dass das zentrale Hauptfenster nach einem Wechsel auf einen kleineren Bildschirm unbenutzbar startet. Sie ist keine vollständige Verwaltung aller Fensterpositionen in einem wechselnden Mehrmonitor-Setup.
+
+---
+
+## Sprache der Oberfläche (ab v1.50)
+
+Die Oberfläche spricht Deutsch oder Englisch. Die Wahl sitzt im Einstellungsfenster im Reiter
+**GUI**, im letzten Abschnitt **Language**, und gilt **pro Operatorprofil** — an einer
+Mehrmann-Station können zwei Operateure zwei Sprachen haben.
+
+Drei Werte stehen zur Wahl:
+
+| Wert | Bedeutung |
+|---|---|
+| **Systemsprache** | die Sprache des Betriebssystems; ist das keine, für die Texte vorliegen, dann Englisch |
+| **DE** | Deutsch |
+| **EN** | Englisch |
+
+**Ein Wechsel wirkt sofort in allen offenen Fenstern** — Hauptfenster, Einstellungen, Karte und
+Monitor zugleich, ohne Neustart und ohne ein Fenster zu schließen. Dauerhaft wird die Wahl wie
+jede andere Einstellung mit **Einstellungen speichern**.
+
+### Was nicht übersetzt wird, und warum
+
+Drei Sorten Text bleiben unverändert, in jeder Sprache:
+
+- **Alles, was an den ON4KST-Server geht.** Protokollbefehle und Chat-Befehle wie `/CQ` oder
+  `/AWAY` würden übersetzt die Verbindung brechen oder vom Server nicht verstanden.
+- **Alles, was an andere Funker geht.** Deine Bakentexte, Antworttexte, Textbausteine und
+  Kurztasten bleiben so, wie du sie eingetragen hast. Sie stehen in der gespeicherten
+  Konfiguration deines Profils; sie zu übersetzen würde bestehende Profile verändern.
+- **Funkerkürzel in der Oberfläche.** QRA, QRG, QTF, QRB, Tropo, LOC, wkd, NOT QRV, LOS,
+  Fresnel, Sked — die sind international und lesen sich in beiden Sprachen gleich.
+
+Drei Tests wachen darüber, und zwar an der Ausgabe statt an der Textdatei: die Protokollrahmen
+werden unter drei Locales gebaut und verglichen, sämtliche Vorgabewerte der Konfiguration
+werden über Reflexion verglichen, und kein Wert in einer Übersetzungsdatei darf ein
+Protokollbefehl sein.
+
+### Eine Sprache beitragen
+
+Die Texte liegen als gewöhnliche Textdateien unter `app-desktop/src/main/i18n/`, eine je
+Sprache. Wer eine weitere beitragen will, kopiert `strings_en.properties` nach
+`strings_<code>.properties` und übersetzt die Werte rechts vom Gleichheitszeichen. Kein Kotlin,
+kein Gradle.
+
+**Eine unvollständige Übersetzung ist willkommen** — ein nicht übersetzter Schlüssel erscheint
+englisch statt zu fehlen. Eine *fehlerhafte* bricht dagegen den Bau ab: ein Schlüssel, den die
+englische Grundlage nicht kennt, oder ein Platzhalter wie `{0}`, der in der Übersetzung fehlt
+und damit stillschweigend Daten verschluckt.
+
+`./gradlew :app-desktop:classes` baut und meldet jeden Fehler mit dem Dateinamen. Was noch
+fehlt, schreibt der Bau als Arbeitsblatt nach
+`app-desktop/build/generated/i18n/todo/strings_<code>.todo.properties` — die fehlenden
+Schlüssel mit dem englischen Text als Wert, zum Ausfüllen.
+
+Deutsch wird durch einen Test auf Vollständigkeit gehalten, weil es ausgeliefert wird. Eine
+beigetragene Sprache nicht.

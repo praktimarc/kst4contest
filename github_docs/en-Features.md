@@ -1085,3 +1085,57 @@ The check always uses the **primary screen**. It does not restore the previous p
 The automatic size restriction currently applies to the main window only. The settings window, the separate cluster and QSO monitor window and other auxiliary windows continue to use their stored sizes without the same additional check against the primary screen.
 
 In plain terms: the protection mainly prevents the central main window from becoming unusable after moving to a smaller display. It is not a complete window-position manager for a changing multi-monitor setup.
+
+---
+
+## Interface Language (from v1.50)
+
+The interface speaks English or German. The choice sits in the settings window on the **GUI**
+tab, in the last section **Language**, and applies **per operator profile** — at a multi
+operator station two operators can have two languages.
+
+Three values are offered:
+
+| Value | Meaning |
+|---|---|
+| **System language** | the operating system's language; English when no texts exist for it |
+| **DE** | German |
+| **EN** | English |
+
+**A change applies at once in every open window** — main window, settings, map and monitor
+together, with no restart and without closing anything. The choice is kept permanently the
+same way as every other setting, with **Save settings**.
+
+### What is not translated, and why
+
+Three kinds of text stay as they are, in every language:
+
+- **Anything that goes to the ON4KST server.** Protocol frames and chat commands such as
+  `/CQ` or `/AWAY` would break the connection or not be understood if they were translated.
+- **Anything that goes to other radio amateurs.** Your beacon texts, auto answers, snippets
+  and shortcuts stay exactly as you entered them. They live in your profile's stored
+  configuration; translating them would alter existing profiles.
+- **Amateur radio shorthand in the interface.** QRA, QRG, QTF, QRB, Tropo, LOC, wkd, NOT QRV,
+  LOS, Fresnel, Sked — these are international and read the same either way.
+
+Three tests guard this, and they check the output rather than the text files: the protocol
+frames are built under three locales and compared, every configuration default is compared by
+reflection, and no value in a translation file may be a protocol command.
+
+### Contributing a language
+
+The texts are ordinary text files under `app-desktop/src/main/i18n/`, one per language. To
+contribute another, copy `strings_en.properties` to `strings_<code>.properties` and translate
+the values to the right of the equals sign. No Kotlin, no Gradle.
+
+**A partial translation is welcome** — an untranslated key appears in English rather than
+going missing. An *incorrect* one fails the build instead: a key the English base does not
+know, or a placeholder such as `{0}` missing from the translation, which would silently drop
+whatever it was carrying.
+
+`./gradlew :app-desktop:classes` builds and reports every mistake by file name. What is still
+missing is written as a worksheet to
+`app-desktop/build/generated/i18n/todo/strings_<code>.todo.properties` — the missing keys with
+the English text as the value, ready to fill in.
+
+German is held complete by a test because it is shipped. A contributed language is not.

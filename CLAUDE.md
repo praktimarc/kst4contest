@@ -22,8 +22,19 @@ neue Subagent die Codebasis von null und kostet mehr, als er beiträgt.
 ## Build
 
 Gradle, nicht Maven. `./gradlew clean build`, Java 21. Das Projekt besteht aus
-zwei Modulen: `core` (Fachlichkeit) und `app-desktop` (Oberfläche). Paketnamen
-sind über beide Module hinweg dieselben.
+drei Modulen: `core` (Fachlichkeit), `app-desktop` (Oberfläche) und
+`i18n-generator` (reines Bauwerkzeug, das aus den Übersetzungsdateien Kotlin
+erzeugt und **nicht ausgeliefert** wird). Paketnamen sind über `core` und
+`app-desktop` hinweg dieselben.
+
+## Sprache
+
+Kommunikation mit Marc auf Deutsch, in **neuer Rechtschreibung** — `muss` und `dass`,
+nicht `muß` und `daß`. Quelltextkommentare und Javadoc bleiben ausschließlich Englisch.
+
+Oberflächentexte stehen seit Etappe 9 in `app-desktop/src/main/i18n/strings_<code>.properties`
+und nicht mehr im Quelltext. Wer dort etwas ändert: der Erzeuger prüft beim Bau, und die
+Regel, was übersetzt wird, steht in `docs/PROJECT_CONTEXT.md` unter „Important Decisions".
 
 ## Laufende Arbeit
 
