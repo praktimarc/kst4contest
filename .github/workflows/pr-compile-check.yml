@@ -32,9 +32,67 @@ jobs:
       # --dry-run: the Kotlin plugin makes compileTestJava depend on compileTestKotlin,
       # because Java has to see the Kotlin output. But that is the plugin's wiring and not
       # this job's statement of intent, and it covered no resources. These two aggregates
-      # say "compile everything in both modules" and do not depend on knowing that.
+      # say "compile everything in all three modules" and do not depend on knowing that.
+      #
+      # They also run the translation generator, which app-desktop's compileKotlin depends
+      # on. That is why a pull request contributing a language needs no workflow of its own:
+      # an orphan key, a dropped placeholder or a duplicate fails here, with the generator's
+      # own message naming the file.
       - name: Compile
         run: ./gradlew -S classes testClasses
+
+      # What a translation PR is actually about, put where its author will look. The counts
+      # come from the files rather than from Gradle's output, so an up-to-date task cannot
+      # make the table disappear.
+      - name: Summarise the interface texts
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          base="app-desktop/src/main/i18n/strings_en.properties"
+          if [ ! -f "$base" ]; then
+            echo "no base translation file at $base" >&2
+            exit 1
+          fi
+
+          count_keys() { grep -cE '^[^#!][^=]*=' "$1" || true; }
+
+          total=$(count_keys "$base")
+
+          {
+            echo "### Interface texts"
+            echo ""
+            echo "| language | translated | of | missing |"
+            echo "|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for file in app-desktop/src/main/i18n/strings_*.properties; do
+            lang=$(basename "$file" .properties); lang=${lang#strings_}
+            have=$(count_keys "$file")
+            missing=$(( total - have ))
+            [ "$missing" -lt 0 ] && missing=0
+            echo "| \`$lang\` | $have | $total | $missing |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          {
+            echo ""
+            echo "A language may be incomplete: a key it leaves out falls back to English,"
+            echo "which is what lets a translation be contributed a piece at a time. German is"
+            echo "held complete by a test, because it ships."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          worksheets=(app-desktop/build/generated/i18n/todo/*.todo.properties)
+          if [ ${#worksheets[@]} -gt 0 ]; then
+            {
+              echo ""
+              echo "The build wrote a worksheet of what is still missing for:"
+              echo ""
+            } >> "$GITHUB_STEP_SUMMARY"
+            for w in "${worksheets[@]}"; do
+              echo "- \`$(basename "$w")\`" >> "$GITHUB_STEP_SUMMARY"
+            done
+          fi
 
   test:
     name: Test (Java 21, headless)
@@ -75,6 +133,11 @@ jobs:
       # Software GL under Xvfb was considered and rejected: a missing Skia GL context is
       # the hardest failure in this codebase to read, and importing that class of flake
       # into CI would cost more than the few window tests are worth here.
+
+      # All three modules. The translation generator is a Gradle module and not buildSrc
+      # precisely so that its 42 tests run here: buildSrc tests do not run on `./gradlew
+      # build` -- measured, not assumed. The summary below globs */build/test-results, so
+      # the module was counted the moment it existed.
       - name: Test
         run: ./gradlew -S test
 
