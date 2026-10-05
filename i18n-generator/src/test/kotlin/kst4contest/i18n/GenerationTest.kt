@@ -93,6 +93,32 @@ class GenerationTest {
     }
 
     @Test
+    fun aKeyCarryingKotlinSyntaxBreaksTheBuildRatherThanInjectingCode() {
+        /*
+         * The key, not the value, becomes the member name, and only . _ - are stripped from
+         * it. A \uXXXX escape lets a contributed .properties file carry a key that, dropped
+         * into `val <name>: String get() = ...`, closes the template and opens a property
+         * initializer -- Kotlin that runs when Strings is built in every client. The base
+         * file is the vector: only base keys become members. This must fail the build the way
+         * an orphan or a collision does, not ship.
+         *
+         * The escapes below decode to the key `inject: Int = run{ pwn() }`.
+         */
+        val (input, output) = directories()
+        write(
+            input,
+            "strings_en.properties",
+            "ok=fine\n" +
+                "inject\\u003a\\u0020Int\\u0020\\u003d\\u0020run\\u007b\\u0020pwn()\\u0020\\u007d=value\n",
+        )
+
+        val failure = assertThrows(TranslationException::class.java) { generate(input, output) }
+
+        assertTrue(failure.message!!.contains("inject"), failure.message)
+        assertFalse(generated(output).exists(), "source was written despite an unusable key")
+    }
+
+    @Test
     fun aMissingBaseFileBreaksTheBuild() {
         val (input, output) = directories()
         write(input, "strings_de.properties", "a=eins\n")

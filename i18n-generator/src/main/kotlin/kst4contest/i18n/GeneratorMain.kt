@@ -50,6 +50,7 @@ fun generate(inputDirectory: File, outputDirectory: File): GenerationResult {
                     + "language is where every key and every argument count comes from"
         )
 
+    refuseIllegalIdentifiers(base)
     refuseIdentifierCollisions(base)
 
     val others = translations.filter { it.language != BASE_LANGUAGE }
@@ -77,6 +78,21 @@ fun generate(inputDirectory: File, outputDirectory: File): GenerationResult {
     return GenerationResult(
         warnings = warnings,
         coverage = translations.map { "${it.language}: ${it.entries.size}/${base.entries.size}" },
+    )
+}
+
+private fun refuseIllegalIdentifiers(base: Translation) {
+    val illegal = illegalIdentifierKeys(base.entries.keys)
+
+    if (illegal.isEmpty()) {
+        return
+    }
+
+    throw TranslationException(
+        "strings_$BASE_LANGUAGE.properties has keys that do not form a usable name -- a key is "
+                + "letters and digits with . _ - between words, nothing else. A key carrying "
+                + "anything more would be written into the generated source as code: "
+                + illegal.sorted().joinToString(", ")
     )
 }
 

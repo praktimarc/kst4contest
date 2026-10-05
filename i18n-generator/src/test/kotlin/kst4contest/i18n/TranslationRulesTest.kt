@@ -103,4 +103,32 @@ class TranslationRulesTest {
     fun distinctKeysReportNoCollision() {
         assertTrue(identifierCollisions(listOf("a.b", "c.d")).isEmpty())
     }
+
+    @Test
+    fun aKeyThatWouldNotFormALegalIdentifierIsRejected() {
+        /*
+         * identifierFor strips only . _ -, so every other character a Properties file can
+         * carry in a key -- a space, a brace, a quote, a newline decoded from a \uXXXX escape
+         * -- would reach identifier position verbatim. Emitted there it does not merely fail
+         * to compile: it breaks out of `val <name>: String get() = ...` into whatever the key
+         * says, which is Kotlin that then runs. So the generated name is held to the shape of
+         * an identifier before it is ever written.
+         */
+        val illegal = illegalIdentifierKeys(
+            listOf("settings.save", "a b", "x\": String get() = \"\"", "init { pwn() }\n    val")
+        )
+
+        assertEquals(
+            listOf("a b", "init { pwn() }\n    val", "x\": String get() = \"\""),
+            illegal.sorted(),
+        )
+    }
+
+    @Test
+    fun ordinaryKeysFormLegalIdentifiersAndAreNotRejected() {
+        // A digit-leading key is fine: identifierFor prefixes it, which is a letter again.
+        assertTrue(
+            illegalIdentifierKeys(listOf("settings.save", "gui.startup_design", "2.metres")).isEmpty()
+        )
+    }
 }
