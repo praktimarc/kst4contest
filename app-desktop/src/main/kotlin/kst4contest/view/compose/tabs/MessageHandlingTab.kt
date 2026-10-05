@@ -3,6 +3,8 @@ package kst4contest.view.compose.tabs
 import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -28,6 +30,17 @@ fun MessageHandlingTab(state: MessageHandlingTabState) {
                 strings.messageHandlingQrgAnswerEnabled,
                 state.autoAnswerToQRGRequestEnabled,
             ) { state.autoAnswerToQRGRequestEnabled = it }
+        }
+
+        Form.section(strings.messageHandlingDiagnosticsSection) {
+            Form.check(
+                strings.messageHandlingDebugToFileEnabled,
+                state.debugModeToFileEnabled,
+            ) { state.debugModeToFileEnabled = it }
+            Text(
+                strings.messageHandlingDebugToFileHint,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }

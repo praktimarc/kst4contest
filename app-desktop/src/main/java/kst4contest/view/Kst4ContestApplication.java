@@ -3947,6 +3947,23 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		// intentionally empty: no JavaFX text field left to follow
 	}
 
+	@Override
+	public void applyDebugModeToFile(boolean enabled) {
+		/*
+		 * The preference itself is written by the settings tab. What only the application
+		 * can do is open and close the error-log file handler and the recorder, in the
+		 * order the JavaFX checkbox kept: on the way up the log opens before the recorder
+		 * starts, on the way down the recorder stops before the log closes.
+		 */
+		if (enabled) {
+			setDebugFileLoggingEnabled(true);
+			chatcontroller.setMessageHistoryRecordingEnabled(true);
+		} else {
+			chatcontroller.setMessageHistoryRecordingEnabled(false);
+			setDebugFileLoggingEnabled(false);
+		}
+	}
+
 	/**
 	 * The worked-stations rows are a snapshot the tab takes from the roster itself, so
 	 * there is nothing for this class to redraw. The JavaFX table needed an explicit

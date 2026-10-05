@@ -11,7 +11,10 @@ import kst4contest.model.ChatPreferences
  * that: a tab that wrote only the main category would leave the second chat on its
  * previous value, which no part of the window ever displayed.
  */
-class MessageHandlingTabState(private val prefs: ChatPreferences) {
+class MessageHandlingTabState(
+    private val prefs: ChatPreferences,
+    private val applyDebugModeToFile: (Boolean) -> Unit = {},
+) {
 
     /** Drives both category flags, as the single JavaFX checkbox did. */
     var autoAnswerEnabled: Boolean
@@ -33,4 +36,16 @@ class MessageHandlingTabState(private val prefs: ChatPreferences) {
     var autoAnswerToQRGRequestEnabled: Boolean
         get() = prefs.isMessageHandling_autoAnswerToQRGRequestEnabled()
         set(value) { prefs.setMessageHandling_autoAnswerToQRGRequestEnabled(value) }
+
+    /**
+     * Records the whole session to file. Beyond the preference it opens or closes the
+     * error-log handler and the history recorder, which only the application can sequence;
+     * [applyDebugModeToFile] carries that out in the order the JavaFX checkbox kept.
+     */
+    var debugModeToFileEnabled: Boolean
+        get() = prefs.isMessageHandling_debugModeToFileEnabled()
+        set(value) {
+            prefs.setMessageHandling_debugModeToFileEnabled(value)
+            applyDebugModeToFile(value)
+        }
 }

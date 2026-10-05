@@ -65,6 +65,15 @@ interface SettingsHost {
     /** Attaches or detaches the follower that mirrors the own QRG into the station field. */
     fun applyOwnQrgFollower(enabled: Boolean)
 
+    /**
+     * Turns file recording of the whole session on or off, with the history recorder.
+     *
+     * Lives here and not on the controller because enabling it opens the error-log file
+     * handler, which the application owns. The order — log before recorder when enabling,
+     * recorder before log when disabling — is the one the JavaFX checkbox kept.
+     */
+    fun applyDebugModeToFile(enabled: Boolean)
+
     /** Re-reads the worked-stations table for display. */
     fun refreshWorkedStationsView()
 
@@ -202,7 +211,7 @@ fun buildSettingsTabs(
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabNotification }) { NotificationTab(notificationState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabShortcuts }) { ShortcutsTab(shortcutsState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabBeacon }) { BeaconTab(beaconState, reportRefusal) },
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabMessageHandling }) { MessageHandlingTab(MessageHandlingTabState(prefs)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabMessageHandling }) { MessageHandlingTab(MessageHandlingTabState(prefs, host::applyDebugModeToFile)) },
         /*
          * Selecting this tab re-read the database in the JavaFX window; the list is a
          * snapshot and would otherwise show what was true when the window opened.
