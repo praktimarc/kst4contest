@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
+import java.io.IOException
+import java.nio.file.Files
 import javax.imageio.ImageIO
 import kotlin.math.abs
 
@@ -42,6 +44,16 @@ class ComposeStationMapDrawingTest {
 
     private val darkMapBackground = 0x23282D
 
+    /*
+     * An empty cache and a source that always fails, so that "tiles never arrive" holds by
+     * construction. The default fetcher read the user's disk cache and the real tile
+     * server, and on CI a tile now and then made it in before the frame was rendered.
+     */
+    private val offlineTileFetcher = TileFetcher(
+        Files.createTempDirectory("kst4contest-tile-cache-test"),
+        { throw IOException("no tile source in this test") },
+    )
+
     private fun station(call: String, locator: String, lat: Double, lon: Double) =
         MapCallsignRawSnapshot(
             call, call, locator, lat, lon, "", emptyMap(),
@@ -56,7 +68,7 @@ class ComposeStationMapDrawingTest {
         val scene = ImageComposeScene(canvasWidth, canvasHeight, Density(1f)) {
             ComposeStationMap(
                 markers = markers,
-                tileFetcher = TileFetcher(),
+                tileFetcher = offlineTileFetcher,
                 mapState = MapState(zoom = zoom, centerLon = 10.0, centerLat = 51.0),
                 groupingEnabled = false,
                 selectedMarkerCallsign = null,
