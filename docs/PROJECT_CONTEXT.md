@@ -6,16 +6,16 @@ This file is the durable technical project context for KST4Contest. It is not a 
 
 ## Purpose
 
-KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/microwave contest workflows. It combines chat handling with contest-oriented station prioritisation, sked/timeline workflows and integrations with logging, aircraft-scatter, rotor and DX-cluster tooling.
+KST4Contest is a Java/Kotlin desktop client for ON4KST chat, with a Compose Multiplatform user interface, focused on VHF/UHF/microwave contest workflows. It combines chat handling with contest-oriented station prioritisation, sked/timeline workflows and integrations with logging, aircraft-scatter, rotor and DX-cluster tooling.
 
 ## Current Architecture
 
-- Java 21 / JavaFX desktop application built with Maven.
-- Main code is under `src/main/java/kst4contest/`.
+- Java 21 desktop application built with Gradle in the modules `core` (domain, free of user-interface technology) and `app-desktop` (the Compose Multiplatform user interface).
+- Domain, controller and network code is under `core/src/main/java/kst4contest/`, the user interface under `app-desktop/src/main/java/kst4contest/`. Package names are shared across both modules.
 - Responsibilities are separated across controller, service, logic, model, utility and view areas.
 - Network/parser/service/controller/UI boundaries should remain explicit.
 - Long-running network/message processing must tolerate malformed or incomplete external input without terminating processing threads.
-- JavaFX `ObservableList` state is a UI projection, not the canonical worker-thread domain store.
+- `ObservableRoster` state in `core` is the canonical store; the `ObservableList` a `TableView` is bound to is a mirror of it, not the store.
 
 ## Important Invariants
 
@@ -36,23 +36,30 @@ KST4Contest is a Java/JavaFX desktop client for ON4KST chat focused on VHF/UHF/m
 - Features that depend on frequency should use the current/actual QRG according to current implemented rules; do not silently revert to a fixed 144 MHz default.
 - Complete digit-only frequencies use their final three digits as the kHz part and are accepted only when the resulting MHz value lies within a supported `Band` range. The same full-frequency parser is used for station names and public or directed chat messages. Relative QRG rules and bare three-digit context handling remain separate.
 
-### JavaFX/threading
+### Threading
 
 Conceptually:
 
 ```text
-thread-safe canonical domain state
+thread-safe canonical domain state in core
+        |   kst4contest.observe: ObservableRoster / ObservableValue
         |
-        | projection on JavaFX Application Thread
+        | hand-off via UiDispatcher
         v
-JavaFX ObservableList / UI state
+mirror on the user-interface thread (FxRosterBinding -> ObservableList)
 ```
 
-`MessageBusManagementThread` must not directly iterate or mutate UI-bound JavaFX collections. UI-visible changes should cross the controller/UI boundary and run on the JavaFX Application Thread.
+`core` contains no user-interface technology. It observes through `kst4contest.observe` and hands UI-visible work over through `UiDispatcher`, whose implementation is `AwtUiDispatcher` in `app-desktop`. It delivers to the AWT event dispatch thread, which is the thread Compose composes on. The former `JavaFxUiDispatcher` was deleted with the JavaFX lifecycle.
+
+`MessageBusManagementThread` must not directly iterate or mutate a UI-bound collection; it works on snapshots. UI-visible changes cross the controller/UI boundary through the dispatcher.
+
+A roster hands out immutable snapshots and has no incremental change protocol: listeners receive the whole new content. `FxRosterBinding` mirrors a roster into the `ObservableList` a `TableView` holds, and must be disposed when its owner goes away — `shutdownRuntime()` releases all of them, which is what keeps a discarded runtime from surviving an operator profile switch.
+
+A batch of changes belongs in one `SimpleRoster.mutate(...)`, not one call per element: with several thousand ON4KST users the difference is not cosmetic.
 
 ## Configuration and Layout Persistence
 
-- The current `preferences.xml` configuration version is 8. Version 8 adds the default-enabled `messageHandling_debugModeToFileEnabled` setting. Missing entries in older files retain the enabled default. Version 6 introduced optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
+- Configuration and layout live in the `preferences.xml` of the **active operator profile**; see "Operator Profiles and Per-Profile Persistence" below. The current `preferences.xml` configuration version is 8. Version 8 adds the default-enabled `messageHandling_debugModeToFileEnabled` setting. Missing entries in older files retain the enabled default. Version 6 introduced optional managed leaf-column widths below `guiOptions`, identified by stable table and column IDs. Parent-column widths remain derived from their leaf columns.
 - `GUIstationMapClusteringEnabled` is a layout preference below `guiOptions`. It defaults to `true`, is selectively autosaved and controls only screen-based clustering of nearby map markers. Missing or malformed values retain the enabled default for backward compatibility.
 - Stored widths take precedence. Without a usable entry, a managed column is sized once when meaningful table data first becomes available. Message and similar free-text columns use a flexible initial width instead of following the longest value.
 - Main-window and separate-monitor DXCluster/QSO tables use distinct layout IDs even though they share the underlying message stores.
@@ -60,6 +67,27 @@ JavaFX ObservableList / UI state
 - Selective layout writes update the XML already on disk, preserve unknown XML nodes and must not persist unconfirmed functional settings from the current UI. **Save Settings** remains the full settings writer and includes the current layout.
 - Full and selective writes are synchronized and replace `preferences.xml` atomically. Missing, unknown or malformed width entries do not prevent loading and fall back to initial sizing.
 - Older configuration files require no migration. Older KST4Contest versions can ignore the additional elements; a complete rewrite by such a version may discard column widths without invalidating the remaining file.
+
+## Operator Profiles and Per-Profile Persistence
+
+- One operator profile owns one `preferences.xml`, one worked-station database, its own pair of stylesheets and its own interface language (all since release 1.50). Everything else under `~/.praktiKST/` stays global: audio files, DEM and terrain packages, the error log and the version-info feed.
+- The **root profile** is the historic flat installation: `preferences.xml` and `praktiKST.db` directly below the application directory. It is never moved, and it always uses the common station database, because that database is the installation's own.
+- Additional profiles live under `profiles/<profileId>/`. `profileId` is a stable, file-system-safe slug assigned once; renaming a profile changes only its display name and never moves a directory.
+- The registry `profiles.xml` is created lazily. An installation that has only the flat layout gets no registry and no `profiles/` directory; the root profile is synthesised in memory. Startup with no or exactly one profile therefore asks nothing and writes nothing, and a downgrade to an older release is a no-op.
+- The registry stores `profileId`, `displayName`, `rootProfile` and `sharedWorkedDatabase`, never a path. Both file names are derived in `OperatorProfilePaths` alone, so a stored path cannot drift apart from the flag that produced it.
+- `sharedWorkedDatabase` resolves to a path, not to a schema change: a sharing profile points at the flat `praktiKST.db`, an owning profile at its own file. There is no owner column, and no SQL statement in `DBController` knows about profiles.
+- A profile database is created **empty**. The bundled `/praktiKST.db` resource carries several thousand foreign callsigns and `user_version = 0`; seeding an additional profile from it would show a new operator foreign data and trigger the full callsign-normalization rebuild. Only the root installation is seeded from the resource. `preferences.xml` of a new profile *is* seeded from `/praktiKSTpreferences.xml`, because its defaults are what a first installation gets.
+- Worked-state semantics are unchanged and now apply per database file: normalized base callsign as key, worked state shared across suffix variants, three-day expiry, manual reset.
+- `stn_loginCallSign` and `stn_loginCallSignRaw` default to empty. The preferences reader treats an empty element as "not set" and falls back to the field default, so a non-empty default would make a profile created without credentials come up carrying a compiled-in callsign.
+- Passwords remain plaintext per profile. Profiles separate configuration; they are explicitly not an access-control boundary. This is documented in both manuals.
+
+### Runtime profile switching
+
+- A switch tears the current runtime down through `Kst4ContestApplication.shutdownRuntime()` and builds a **new** `Kst4ContestApplication` instance. Reusing the instance is not possible: many controls are inline-initialised instance fields, so a second `start()` would re-parent mounted nodes and register every listener twice. The approach is only sound because the class holds no mutable static state.
+- All exits run through `ApplicationRuntimeLauncher.exitApplication()`, including the main window's close request: a profile switch closes every window of the old runtime before the new one exists, so a window close must never be what ends the process. The former `Platform.setImplicitExit(false)` and `Application.stop()` are gone with JavaFX; a shutdown hook on `shutdownRuntime()` covers a SIGTERM instead, and the guard is atomic because the hook runs on its own thread.
+- `shutdownRuntime()` is idempotent and must release everything that outlives a disconnect: the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler, the station-list coalescing trigger, both view timers and every Compose window. Several of these were real leaks before; they only became visible once a second runtime could exist.
+- `ApplicationConstants.sessionRuntimeUniqueId` must not be regenerated during a switch, so UDP readers started earlier still recognise their own poison pill.
+- The layout autosave is flushed and then cancelled before a switch, so a pending debounced write cannot land after the profile changed.
 
 ## External Interfaces
 
@@ -98,7 +126,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - Automatic QRG updates require both an enabled source and valid incoming `RadioInfo` or Win-Test `STATUS` data. Merely enabling a source does not provide or validate a current QRG.
 - UCXLog-compatible QSO packets and Win-Test `ADDQSO` packets are converted into one validated external-QSO state. Logger-specific numeric, metre and centimetre values and Win-Test band IDs are normalised once; the resolved band is then the sole source for per-band Worked and worked-grid state.
 - A missing or unknown logger band sets only the global Worked state. Worked-grid state requires both a recognised project band and a valid locator; no band or locator is inferred. Packets without a usable callsign are discarded without terminating the listener.
-- External logger threads do not read or mutate the JavaFX user-list projection. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the JavaFX Application Thread before evaluating a band-upgrade notice.
+- External logger threads do not read or mutate the user-list mirror. `ChatController` applies global and per-band Worked state to every active variant of the base callsign on the user-interface thread, through `UiDispatcher`, before evaluating a band-upgrade notice.
 - The established Win-Test handling for 24, 47 and 76 GHz remains unchanged. Their Worked flags are retained, while only frequencies represented by the project `Band` model can create worked-grid state.
 
 ### Win-Test log recovery
@@ -114,6 +142,8 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 ### Terrain data providers
 
 - The active terrain profile provider is Open-Meteo using Copernicus GLO-90 data.
+- The terrain profile cache lives in its own global database `~/.praktiKST/terrainprofilecache.db`. It is deliberately not part of an operator profile: terrain profiles are pure geometry derived from two locators and a sample count, and at a multi operator station both operators share one location, so a per-profile copy would only double the traffic against the terrain service.
+- Cached entries are separated by owner identity through the primary key (`owner_callsign_raw` + `owner_locator6`). Earlier versions stored a single owner identity in a meta table and dropped the whole cache whenever the configured callsign or locator changed; with several operator profiles that would discard every computed profile on each switch. The old `TerrainProfileCache*` tables inside `praktiKST.db` are left in place and are still readable by older releases; the new file starts empty and refills itself.
 - `OfflineDemImportService` only prepares a local directory and copies manually selected Copernicus GLO-30 GeoTIFF files into it. Importing files does not activate an offline provider or change the active calculation chain.
 
 ### ON4KST session and authentication
@@ -166,8 +196,8 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 
 ## Build / Verification
 
-- Use the repository Maven wrapper (`.\mvnw.cmd` on Windows).
-- The project uses Java 21 / JavaFX 21.x at this context snapshot.
+- Use the repository Gradle wrapper (`.\gradlew.bat` on Windows).
+- The project uses Java 21, Kotlin 2.2 and Compose Multiplatform 1.8.x at this context snapshot. JavaFX has been removed; no `org.openjfx` dependency remains.
 - JUnit 5/Mockito, PMD and SpotBugs are part of the verification environment.
 - Build/test configuration has historically allowed some test/static-analysis failures not to fail the process exit code. Always read actual summaries/reports.
 
@@ -240,9 +270,76 @@ section records only the durable architecture and operational boundaries.
 
 ## Important Decisions and Workarounds
 
+- **The interface language has four kinds of text, and the rule is the addressee** (release
+  1.50): interface text is translated; protocol text (the pipe-framed opcodes in
+  `On4KstProtocol`, and the `/`-prefixed chat commands) and amateur shorthand (the
+  `ChatPreferences` defaults, snippets, shortcuts, and QRA/QRG/QTF/LOS/Fresnel in labels) are
+  not; and diagnostic text -- the `println` calls in `core` -- is not either, because a German
+  stack trace is worse for whoever reads the bug report. Ask who reads it, not what it looks
+  like.
+- **`core` produces no display text.** It returns a key or an enum and `app-desktop` turns it
+  into words. That is the language half of "core stays toolkit-free", and it also means no
+  German string can reach a protocol or a log line by construction. Two violations predate the
+  rule and are named in the stage 9 spec: `PathPropagationAssessment` and `PriorityCalculator`.
+- **Incompleteness is allowed in a translation, incorrectness is not.** A missing key warns and
+  falls back to English at runtime, so a partial contributed language can be submitted; an
+  orphan key, a placeholder mismatch, a duplicate key or an unreadable file fail the build. The
+  argument count always comes from the English base.
+- **Anything built outside a composition needs its text read inside one.** Window titles, tab
+  titles and column headers are all built once at startup -- the columns from Java -- so each
+  holds a function rather than a string. A stored string freezes at whatever was true when the
+  window opened, which is how the main window's title said "KST4Contest (Compose)" for a whole
+  session and the tab strip stayed English while its contents switched.
+- **A column's `id` is never translated.** It is what the remembered column widths and order
+  are keyed on; translating it would read an operator's stored layout under names that no
+  longer match.
+
+- **The palette has three sources, and the later one wins role by role** (release 1.50): the
+  shipped stylesheet from the classpath, then the profile's own stylesheet file if present,
+  then the six role overrides stored in that profile's preferences. `resolvePalette` is a pure
+  function and reports the provenance of every role, which the colours tab shows per field --
+  with two sources able to decide the same colour, that is the only thing that keeps "why is
+  this colour what it is" answerable, and it is not optional.
+- **A role is a selector and a property, not a property alone.** Three of the six are stated
+  outside `.root` (text on `.label`, the separator on `.separator *.line`), and
+  `-fx-background-color` alone appears a dozen times in the evening sheet. `JavaFxStylesheet.read`
+  returns a complete palette with Modena fallbacks and is right for layer 1;
+  `declaredRoles` returns only what a sheet actually names and is the only thing correct for
+  layer 2. Measured: the shipped daylight sheet states no colour at all, the evening sheet five.
+- **The root profile's layer 2 always exists, and that is not a bug.** `copyResourceIfRequired`
+  writes `KST4ContestDefaultDay.css` and `…Evening.css` at every startup, and those are exactly
+  the paths `paletteRelativeFileName(rootProfile, …)` resolves to — reading them is what fixes
+  the long-standing defect that the copies were written and never read. Consequence to keep in
+  mind: on the default installation most roles report *from file*, not *shipped*, with the same
+  values. Anything keyed on provenance rather than on a colour's value will therefore misfire
+  there; `textAccent` did, and repainted the evening accent on upgrade.
+- **A file stating `-fx-base` and no `-fx-background` states the derived window surface too**,
+  because that is what JavaFX does with it. The settings tab keeps the two roles independent —
+  the spec separates them so an operator can set one without the other — but a hand-edited
+  sheet follows the stylesheet language, or `-fx-base: #303030` would leave every window the
+  shipped light grey.
+- **The contrast guard's pairs come from `Theme.kt`'s Material mapping, not from the role
+  names.** `background` and `surface` are both `windowBackground` with `labelTextFill` on them,
+  and `primary` is `textAccent`, not `accent`; `base` reaches the screen only through the menu
+  strip and the selection tint. Measuring text against `base` alone let an operator black out
+  every window and hear nothing.
+- **`Kst4ContestTheme` must read the palette from the `PaletteStore`'s state, never from
+  `remember`.** That read is what makes a colour change recompose every open window;
+  `remember(darkMode)` held the palette until someone toggled day/evening, so a change reached
+  nothing. `ThemeReadsPaletteStoreTest` pins it.
+- **The contrast guard is relative to the shipped sheet, not an absolute WCAG floor.** Measured:
+  the shipped sheets have three pairs under 4.5 themselves (daylight accent 2.86, evening accent
+  2.26, evening text-in-field about 2.9), so an absolute rule would warn on an untouched client
+  and teach the operator to ignore warnings. It reports a pair only when it is both under the
+  floor and worse than shipped, so the shipped state and any improvement never warn.
+- **The "reset to the shipped colours" button never takes the active palette.** It receives the
+  shipped palette as a required parameter and reads no composition local, so it has no path to
+  the resolved one. An operator who sets text and surface to the same black cannot see any
+  other control, this one included, unless it refuses their palette.
+
 - Preserve full callsign/category identity while applying base-call normalisation only to specifically defined features.
-- Keep canonical worker-thread domain state separate from JavaFX UI projections.
-- Preserve the established JavaFX WebView/Leaflet workaround that avoids problematic CSS 3D transforms unless the original rendering/flicker issue has been reproduced and the replacement is validated.
+- Keep canonical worker-thread domain state separate from the row lists the user interface draws from.
+- The station map is a Compose canvas that fetches its own tiles. The JavaFX WebView, the bundled Leaflet resources, the CSS-3D-transform workaround and the `TileProxyServer` were removed with JavaFX; offline DEM, terrain packages and the profile cache are unaffected and must stay that way.
 - Deliberate test data, comments and Easter eggs are preserved unless explicitly changed.
 
 ## Planned Technical Direction

@@ -318,9 +318,98 @@ KST4Contest meldet sich mit einem lokalen Login-Rufzeichen und Passwort einmal b
 
 ## Dark Mode (ab v1.26)
 
-Aktivierbar über **Windows → Use dark mode design**. Mit **Windows → Use default mode design** wird wieder auf das normale helle Farbschema umgeschaltet.
+Welches Farbschema beim Start gilt, wird pro Operator-Profil im Reiter **GUI** unter **Design** festgelegt. Über **Windows → Use dark mode design** und **Windows → Use default mode design** lässt sich für die laufende Sitzung schnell umschalten.
 
 Die grüne Altersskala der Privatnachrichten bleibt in beiden Darstellungen erhalten. Textfarbe, normale Tabellenfarbe und die separate Hervorhebung eigener Nachrichten folgen dem jeweils geladenen Standarddesign.
+
+---
+
+## Eigene Farben (ab v1.50)
+
+Der Reiter **Colours** im Einstellungsfenster setzt sechs Farben pro Entwurf und **pro
+Operator-Profil**: Fläche, Fensterfläche, Feldinneres, Text, Akzent und Trennlinie. Tag und
+Abend sind getrennt — eine Änderung am Abendentwurf lässt den Tagentwurf unberührt.
+
+Eine Farbe wird als sechsstellige Hexzahl mit führendem Rautezeichen eingetragen, etwa
+`#3C7A4B`, und gilt **sofort in allen offenen Fenstern**. Es gibt keinen „noch nicht
+gespeichert"-Zustand.
+
+**Sie überlebt den Neustart aber erst nach „Save settings".** Das ist derselbe Vertrag wie bei
+jeder anderen Einstellung — nur ist dies der einzige Reiter, dessen Wirkung man sofort in
+allen Fenstern sieht, und „es sah richtig aus, also ist es gespeichert" ist hier der
+naheliegende Fehlschluss. Der Reiter sagt es deshalb auch selbst.
+
+Was nicht als Farbe lesbar ist, wird abgelehnt und das Feld springt zurück; ein Hinweisfenster
+sagt, warum.
+
+### Die drei Wege zurück
+
+| Knopf | Wirkung |
+|---|---|
+| **Back to how it was** | die Palette, die beim Öffnen des Reiters galt — einschließlich einer damals schon vorhandenen Änderung |
+| **Discard my changes** | leert die eigenen Änderungen dieses Entwurfs; es gilt wieder die Datei oder die Auslieferung |
+| **Reset to the shipped colours** | setzt alle sechs Rollen auf die ausgelieferten Werte, auch wenn eine eigene Stilvorlage vorhanden ist |
+
+**Der Knopf „Reset to the shipped colours" ist immer in den ausgelieferten Farben gezeichnet,
+ganz gleich, was eingestellt ist.** Das ist Absicht: wer Text und Fläche auf dasselbe Schwarz
+stellt, sieht die übrigen Knöpfe nicht mehr — auch die nicht, mit denen er es zurücknehmen
+könnte. Dieser eine nimmt die kaputte Palette nicht an und bleibt deshalb lesbar. Dass er bei
+einer stark angepassten Palette fremd aussieht, macht ihn auffindbar.
+
+**Alle drei haben ein Tastenkürzel**, als zweite Absicherung für den Fall, dass gar nichts mehr
+zu lesen ist. Sie wirken, solange der Reiter offen ist, auch wenn der Schreibzeiger in einem
+der Farbfelder steht:
+
+| Taste | Rückweg |
+|---|---|
+| **Ctrl+Z** | Zurück zum Stand von vorher |
+| **Ctrl+D** | Meine Änderungen verwerfen |
+| **Ctrl+R** | Auf Auslieferung zurücksetzen |
+
+„Zurück zum Stand von vorher" stellt **beide** Entwürfe her, nicht nur den gerade
+sichtbaren — wer eine Farbe am Tag ändert, auf Abend umschaltet und dort noch eine ändert,
+nimmt mit diesem Knopf beides zurück.
+
+### Woher eine Farbe kommt
+
+Hinter jedem Feld steht, woher der geltende Wert stammt:
+
+| Angabe | Bedeutung |
+|---|---|
+| *shipped* | aus dem ausgelieferten Entwurf |
+| *from file* | aus der eigenen Stilvorlage im Profilverzeichnis |
+| *changed* | hier im Reiter gesetzt |
+
+Eine Einstellung im Reiter überstimmt immer die Datei, und die Datei überstimmt die
+Auslieferung — Rolle für Rolle.
+
+### Lesbarkeitshinweis
+
+Liegt ein Paar, das tatsächlich übereinanderliegt — Text auf Fläche, Text im Feld, Akzent auf
+Fläche — schlechter als im ausgelieferten Entwurf und unter dem WCAG-AA-Wert von 4,5, erscheint
+ein Hinweis mit beiden Verhältnissen. **Gespeichert wird trotzdem:** eine harte Kombination im
+Contest kann gewollt sein.
+
+### Die Stilvorlage von Hand bearbeiten
+
+Wer mehr als die sechs Rollen ändern will, lässt sich mit **Write this design's stylesheet into
+my profile** die ausgelieferte Vorlage ins Profilverzeichnis schreiben. Der Reiter nennt den
+Pfad. Für das Wurzelprofil ist das `~/.praktiKST/KST4ContestDefaultDay.css` beziehungsweise
+`…Evening.css`, für jedes weitere Profil `profiles/<Kennung>/` darunter.
+
+**Eine vorhandene Datei wird nie überschrieben** — der Knopf meldet dann nur, dass sie schon da
+ist. Änderungen an der Datei gelten nach einem Neustart. Eine unlesbare oder fehlerhafte Datei
+verhindert den Start nicht: die betroffene Rolle fällt auf die Auslieferung zurück.
+
+**Beim Wurzelprofil liegen diese beiden Dateien schon.** KST4Contest legt sie seit Jahren beim
+Start an; bis Version 1.50 hat sie nur niemand gelesen. Deshalb steht dort bei den meisten
+Rollen von Anfang an *from file* und nicht *shipped*, und der Knopf meldet, dass die Datei
+bereits da ist. Inhaltlich ist es die ausgelieferte Vorlage — es sieht also aus wie
+*shipped*, weil es dasselbe ist.
+
+Wer dort `-fx-base` ändert, bekommt auch die Fensterfläche mit: KST4Contest leitet sie daraus
+ab, genau wie JavaFX es getan hat. Wer beide getrennt haben will, nennt `-fx-background`
+ausdrücklich — oder setzt sie oben im Reiter, wo die beiden immer unabhängig bleiben.
 
 ---
 
@@ -993,11 +1082,11 @@ Sofern die gespeicherten Werte gültig sind, verwendet KST4Contest zunächst die
 - 1.234 Pixel Breite und
 - 768 Pixel Höhe.
 
-Als verfügbare Fläche verwendet KST4Contest nicht die vollständige Bildschirmauflösung, sondern den von JavaFX gemeldeten sichtbaren Bereich des primären Bildschirms. Taskleiste, Dock und vergleichbare Bereiche des Betriebssystems sind darin bereits ausgenommen.
+Als verfügbare Fläche verwendet KST4Contest nicht die vollständige Bildschirmauflösung, sondern den vom Betriebssystem gemeldeten nutzbaren Bereich des primären Bildschirms. Taskleiste, Dock und vergleichbare Bereiche des Betriebssystems sind darin bereits ausgenommen.
 
 Von dieser Fläche wird zusätzlich ein Sicherheitsabstand von 40 Pixeln abgezogen. Überschreitet die gespeicherte Breite oder Höhe den verbleibenden Platz, wird nur der betreffende Wert verkleinert.
 
-Nachdem die Oberfläche mit dieser Scene-Größe aufgebaut wurde, prüft KST4Contest zusätzlich das tatsächliche native Fenster einschließlich seiner vom Betriebssystem erzeugten Rahmen und Titelleiste. Das Fenster wird bei Bedarf noch einmal verkleinert oder in den sichtbaren Bereich verschoben.
+Das Fenster wird dann in dieser Größe geöffnet. Ein Fenstermanager kann sie überschreiben — ein Tiling-Fenstermanager tut das immer —, und KST4Contest speichert die Größe, die das Fenster tatsächlich erhält.
 
 Damit werden zwei unterschiedliche Fälle abgefangen:
 
@@ -1017,3 +1106,60 @@ Die Prüfung verwendet immer den **primären Bildschirm**. Sie stellt nicht die 
 Die automatische Größenbegrenzung gilt derzeit außerdem nur für das Hauptfenster. Das Einstellungsfenster, das separate Cluster- und QSO-Monitorfenster sowie weitere Zusatzfenster verwenden weiterhin ihre jeweils gespeicherten Größen, ohne dieselbe zusätzliche Prüfung gegen den primären Bildschirm.
 
 Im Klartext: Die Schutzfunktion verhindert vor allem, dass das zentrale Hauptfenster nach einem Wechsel auf einen kleineren Bildschirm unbenutzbar startet. Sie ist keine vollständige Verwaltung aller Fensterpositionen in einem wechselnden Mehrmonitor-Setup.
+
+---
+
+## Sprache der Oberfläche (ab v1.50)
+
+Die Oberfläche spricht Deutsch oder Englisch. Die Wahl sitzt im Einstellungsfenster im Reiter
+**GUI**, im letzten Abschnitt **Language**, und gilt **pro Operatorprofil** — an einer
+Mehrmann-Station können zwei Operateure zwei Sprachen haben.
+
+Drei Werte stehen zur Wahl:
+
+| Wert | Bedeutung |
+|---|---|
+| **Systemsprache** | die Sprache des Betriebssystems; ist das keine, für die Texte vorliegen, dann Englisch |
+| **DE** | Deutsch |
+| **EN** | Englisch |
+
+**Ein Wechsel wirkt sofort in allen offenen Fenstern** — Hauptfenster, Einstellungen, Karte und
+Monitor zugleich, ohne Neustart und ohne ein Fenster zu schließen. Dauerhaft wird die Wahl wie
+jede andere Einstellung mit **Einstellungen speichern**.
+
+### Was nicht übersetzt wird, und warum
+
+Drei Sorten Text bleiben unverändert, in jeder Sprache:
+
+- **Alles, was an den ON4KST-Server geht.** Protokollbefehle und Chat-Befehle wie `/CQ` oder
+  `/AWAY` würden übersetzt die Verbindung brechen oder vom Server nicht verstanden.
+- **Alles, was an andere Funker geht.** Deine Bakentexte, Antworttexte, Textbausteine und
+  Kurztasten bleiben so, wie du sie eingetragen hast. Sie stehen in der gespeicherten
+  Konfiguration deines Profils; sie zu übersetzen würde bestehende Profile verändern.
+- **Funkerkürzel in der Oberfläche.** QRA, QRG, QTF, QRB, Tropo, LOC, wkd, NOT QRV, LOS,
+  Fresnel, Sked — die sind international und lesen sich in beiden Sprachen gleich.
+
+Drei Tests wachen darüber, und zwar an der Ausgabe statt an der Textdatei: die Protokollrahmen
+werden unter drei Locales gebaut und verglichen, sämtliche Vorgabewerte der Konfiguration
+werden über Reflexion verglichen, und kein Wert in einer Übersetzungsdatei darf ein
+Protokollbefehl sein.
+
+### Eine Sprache beitragen
+
+Die Texte liegen als gewöhnliche Textdateien unter `app-desktop/src/main/i18n/`, eine je
+Sprache. Wer eine weitere beitragen will, kopiert `strings_en.properties` nach
+`strings_<code>.properties` und übersetzt die Werte rechts vom Gleichheitszeichen. Kein Kotlin,
+kein Gradle.
+
+**Eine unvollständige Übersetzung ist willkommen** — ein nicht übersetzter Schlüssel erscheint
+englisch statt zu fehlen. Eine *fehlerhafte* bricht dagegen den Bau ab: ein Schlüssel, den die
+englische Grundlage nicht kennt, oder ein Platzhalter wie `{0}`, der in der Übersetzung fehlt
+und damit stillschweigend Daten verschluckt.
+
+`./gradlew :app-desktop:classes` baut und meldet jeden Fehler mit dem Dateinamen. Was noch
+fehlt, schreibt der Bau als Arbeitsblatt nach
+`app-desktop/build/generated/i18n/todo/strings_<code>.todo.properties` — die fehlenden
+Schlüssel mit dem englischen Text als Wert, zum Ausfüllen.
+
+Deutsch wird durch einen Test auf Vollständigkeit gehalten, weil es ausgeliefert wird. Eine
+beigetragene Sprache nicht.

@@ -107,9 +107,9 @@ jobs:
           sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/kst4contest-bin/PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" packaging/aur/kst4contest/PKGBUILD
 
-          # kst4contest-git: Basis aus pom.xml, Suffix aus git
-          BASE_VER=$(grep -m1 '<version>' pom.xml \
-            | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | sed 's/[-.]nightly//')
+          # kst4contest-git: Basis aus gradle.properties, Suffix aus git
+          BASE_VER=$(grep -m1 '^version=' gradle.properties \
+            | cut -d= -f2 | sed 's/[-.]nightly//')
           GIT_PKGVER="${BASE_VER}.r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
           sed -i "s/^pkgver=.*/pkgver=${GIT_PKGVER}/" packaging/aur/kst4contest-git/PKGBUILD
 

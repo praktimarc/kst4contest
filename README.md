@@ -57,26 +57,24 @@ Changes to operating behaviour should be documented together with their purpose 
 
 ## Building from source
 
-Building KST4Contest requires JDK 21. The Maven Wrapper included in the repository should be used, so a separate Maven installation is not required.
+Building KST4Contest requires JDK 21. The Gradle Wrapper included in the repository should be used, so a separate Gradle installation is not required.
 
 Linux and macOS:
 
 ```bash
-./mvnw clean test
-./mvnw -B -DskipTests compile
+./gradlew clean build
 ```
 
 Windows:
 
 ```powershell
-mvnw.cmd clean test
-mvnw.cmd -B -DskipTests compile
+.\gradlew.bat clean build
 ```
 
 ## Repository structure
 
-- `src/main/java/` – application source code
-- `src/test/` – automated tests
+- `core/` – domain, controller and network code, free of user-interface technology
+- `app-desktop/` – the Compose Multiplatform user interface and the packaging tasks
 - `github_docs/` – German and English manual sources
 - `website/` – project website sources
 - `packaging/` – platform-specific packaging files

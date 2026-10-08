@@ -32,7 +32,7 @@ jobs:
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             VERSION="${{ github.ref_name }}"
           else
-            VERSION="$(grep -m1 '<version>' pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')-${GITHUB_SHA::7}"
+            VERSION="$(grep -m1 '^version=' gradle.properties | cut -d= -f2)-${GITHUB_SHA::7}"
           fi
           echo "DOC_VERSION=$VERSION" >> "$GITHUB_ENV"
 

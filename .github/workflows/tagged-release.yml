@@ -34,40 +34,23 @@ jobs:
         shell: pwsh
         run: choco install wixtoolset --no-progress -y
 
-      - name: Build JAR and copy runtime dependencies
+      - name: Build app-image
         shell: pwsh
         run: |
-          .\mvnw.cmd -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          $jar = Get-ChildItem -Path target -Filter 'praktiKST-*.jar' | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-          if (-not $jar) {
-            throw "No project JAR produced"
-          }
-          Copy-Item $jar.FullName target/dist-libs/app.jar
-
-      - name: Build app-image with jpackage
-        shell: pwsh
-        run: |
+          .\gradlew.bat -S :app-desktop:createDistributable
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          $addModules = & java packaging/AddModules.java
-          if ($LASTEXITCODE -ne 0) { throw "Failed to resolve --add-modules from module-info.java" }
-          jpackage `
-            --type app-image `
-            --name praktiKST `
-            --icon packaging/icons/kst4contest.ico `
-            --input target/dist-libs `
-            --main-jar app.jar `
-            --main-class kst4contest.view.Kst4ContestApplication `
-            --module-path target/dist-libs `
-            --add-modules $addModules `
-            --dest dist
+          # The next step reads dist/KST4Contest, so the Compose output goes
+          # there. The module list now lives in app-desktop/build.gradle.kts.
+          if (Test-Path dist/KST4Contest) { Remove-Item -Recurse -Force dist/KST4Contest }
+          Copy-Item -Recurse app-desktop/build/compose/binaries/main/app/KST4Contest dist/KST4Contest
 
       - name: Create Windows ZIP
         shell: pwsh
         run: |
-          if (-not (Test-Path dist/praktiKST)) {
-            throw "No Windows app-image produced by jpackage"
+          if (-not (Test-Path dist/KST4Contest)) {
+            throw "No Windows app-image produced by createDistributable"
           }
-          Compress-Archive -Path dist/praktiKST -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
+          Compress-Archive -Path dist/KST4Contest -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4.3.4
@@ -89,31 +72,21 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
-      - name: Build JAR and copy runtime dependencies
+      - name: Build app-image
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
-
-      - name: Build app-image with jpackage
-        run: |
+          ./gradlew -S :app-desktop:createDistributable
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
-          jpackage \
-            --type app-image \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
-            --add-modules "$ADD_MODULES" \
-            --dest dist
+          # The following steps read dist/KST4Contest, so the Compose output goes
+          # there. The module list now lives in app-desktop/build.gradle.kts.
+          rm -rf dist/KST4Contest
+          cp -a app-desktop/build/compose/binaries/main/app/KST4Contest dist/
 
       - name: Create AppDir metadata
         run: |
+          mkdir -p target
           rm -rf target/KST4Contest.AppDir
           cp -a dist/KST4Contest target/KST4Contest.AppDir
 
@@ -140,6 +113,7 @@ jobs:
 
       - name: Build AppImage
         run: |
+          mkdir -p target
           wget -q -O target/appimagetool.AppImage https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x target/appimagetool.AppImage
           APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/KST4Contest.AppDir dist/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage
@@ -169,32 +143,16 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends fakeroot
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
-
-      - name: Build JAR and copy runtime dependencies
-        run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build Debian package
         run: |
+          ./gradlew -S :app-desktop:packageDeb
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
-          jpackage \
-            --type deb \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
-            --add-modules "$ADD_MODULES" \
-            --linux-package-deps "libgstreamer1.0-0,libgstreamer-plugins-base1.0-0,gstreamer1.0-plugins-good" \
-            --dest dist
-          DEB="$(ls dist/*.deb | head -n 1)"
+          DEB="$(ls app-desktop/build/compose/binaries/main/deb/*.deb | head -n 1)"
           if [ -z "$DEB" ]; then
-            echo "No DEB produced by jpackage" && exit 1
+            echo "No DEB produced by packageDeb" && exit 1
           fi
           mv "$DEB" "dist/KST4Contest-${{ github.ref_name }}-debian-amd64.deb"
 
@@ -223,32 +181,16 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends rpm
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
-
-      - name: Build JAR and copy runtime dependencies
-        run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Build Fedora package
         run: |
+          ./gradlew -S :app-desktop:packageRpm
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
-          jpackage \
-            --type rpm \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
-            --add-modules "$ADD_MODULES" \
-            --linux-package-deps "gstreamer1,gstreamer1-plugins-base,gstreamer1-plugins-good" \
-            --dest dist
-          RPM="$(ls dist/*.rpm | head -n 1)"
+          RPM="$(ls app-desktop/build/compose/binaries/main/rpm/*.rpm | head -n 1)"
           if [ -z "$RPM" ]; then
-            echo "No RPM produced by jpackage" && exit 1
+            echo "No RPM produced by packageRpm" && exit 1
           fi
           mv "$RPM" "dist/KST4Contest-${{ github.ref_name }}-fedora-x86_64.rpm"
 
@@ -277,31 +219,21 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends zstd
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
-      - name: Build JAR and copy runtime dependencies
+      - name: Build app-image
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
-
-      - name: Build app-image with jpackage
-        run: |
+          ./gradlew -S :app-desktop:createDistributable
           mkdir -p dist
-          ADD_MODULES="$(java packaging/AddModules.java)"
-          jpackage \
-            --type app-image \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
-            --add-modules "$ADD_MODULES" \
-            --dest dist
+          # The following steps read dist/KST4Contest, so the Compose output goes
+          # there. The module list now lives in app-desktop/build.gradle.kts.
+          rm -rf dist/KST4Contest
+          cp -a app-desktop/build/compose/binaries/main/app/KST4Contest dist/
 
       - name: Build Arch Linux package artifact
         run: |
+          mkdir -p target
           ARCH=$(uname -m)
           PKGVER=$(printf '%s' "${{ github.ref_name }}" | sed 's/[^[:alnum:].+_]/_/g')
           PKGROOT="target/archpkg"
@@ -384,8 +316,8 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Install Flatpak tooling
         run: |
@@ -394,25 +326,17 @@ jobs:
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak --user install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
 
-      - name: Build app-image with jpackage
+      - name: Build app-image
         run: |
-          ./mvnw -B -DskipTests package dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-          cp "$(ls -t target/praktiKST-*.jar | head -n 1)" target/dist-libs/app.jar
+          ./gradlew -S :app-desktop:createDistributable
           mkdir -p target/flatpak-src
-          ADD_MODULES="$(java packaging/AddModules.java)"
-          jpackage \
-            --type app-image \
-            --name KST4Contest \
-            --icon packaging/icons/kst4contest.png \
-            --input target/dist-libs \
-            --main-jar app.jar \
-            --main-class kst4contest.view.Kst4ContestApplication \
-            --module-path target/dist-libs \
-            --add-modules "$ADD_MODULES" \
-            --dest target/flatpak-src
+          # The manifest's source is flatpak-src/KST4Contest.
+          rm -rf target/flatpak-src/KST4Contest
+          cp -a app-desktop/build/compose/binaries/main/app/KST4Contest target/flatpak-src/
 
       - name: Create Flatpak manifest
         run: |
+          mkdir -p target
           mkdir -p dist
           cat > target/de.x08.KST4Contest.yml << 'EOF'
           app-id: de.x08.KST4Contest
@@ -470,6 +394,7 @@ jobs:
 
       - name: Build Flatpak repo
         run: |
+          mkdir -p target
           flatpak-builder --force-clean target/flatpak-build target/de.x08.KST4Contest.yml
           flatpak build-export --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo target/flatpak-build "$OSTREE_BRANCH"
           flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" target/flatpak-repo
@@ -520,8 +445,8 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Ensure mvnw is executable
-        run: chmod +x mvnw
+      - name: Ensure gradlew is executable
+        run: chmod +x gradlew
 
       - name: Import signing certificate
         env:
@@ -718,6 +643,90 @@ jobs:
     steps:
       - name: Checkout release source
         uses: actions/checkout@v4.1.7
+        with:
+          # Full history and tags, needed to list the commits since the previous release.
+          fetch-depth: 0
+
+      # GitHub's generated release notes list merged pull requests only. Commits
+      # pushed directly to main are added here as their own section:
+      #   ## What's Changed
+      #   ### Commits on main   (first-parent commits, no merges, no bots)
+      #   ### Merged PRs        (GitHub's generated PR list)
+      # The body also feeds the in-app update feed (website/src/_data/versionInfo.js,
+      # cleanReleaseBody), which drops headings and keeps the "* ..." lines.
+      - name: Build release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # Stable releases compare against the previous stable release, betas
+          # against the previous tag of any kind.
+          if [[ "$TAG" == beta-* ]]; then
+            PREVIOUS_TAG="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)"
+          else
+            PREVIOUS_TAG="$(git describe --tags --abbrev=0 --exclude 'beta-*' "${TAG}^" 2>/dev/null || true)"
+          fi
+          echo "Previous tag: ${PREVIOUS_TAG:-<none>}"
+
+          RANGE="$TAG"
+          [ -n "$PREVIOUS_TAG" ] && RANGE="${PREVIOUS_TAG}..${TAG}"
+
+          # --first-parent keeps the commits made directly on main; commits inside
+          # pull requests are covered by the PR list. Squash-merged PRs end in
+          # "(#123)" and are listed by GitHub as well.
+          git log --first-parent --no-merges --format='%an%x09%s' "$RANGE" \
+            | awk -F '\t' '$1 != "github-actions[bot]" { print $2 }' \
+            | grep -Ev '\(#[0-9]+\)$' \
+            | sed 's/^/* /' > direct-commits.md || true
+
+          # Let GitHub generate the PR part for the same range.
+          if [ -n "$PREVIOUS_TAG" ]; then
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$TAG" -f previous_tag_name="$PREVIOUS_TAG" --jq .body > generated-notes.md
+          else
+            gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="$TAG" --jq .body > generated-notes.md
+          fi
+
+          python3 - <<'PY'
+          import re
+
+          commits = open("direct-commits.md", encoding="utf-8").read().strip()
+          generated = open("generated-notes.md", encoding="utf-8").read()
+
+          # GitHub's body: "## What's Changed" with the PR list, optionally
+          # "## New Contributors", and a closing "**Full Changelog**" line.
+          prs, rest = [], []
+          section = None
+          for line in generated.splitlines():
+              if re.match(r"^##\s+What's Changed", line):
+                  section = "prs"
+                  continue
+              if line.startswith("## ") or line.startswith("**Full Changelog**"):
+                  section = "rest"
+              if section == "prs":
+                  if line.strip():
+                      prs.append(line)
+              elif line.strip() or rest:
+                  rest.append(line)
+
+          parts = []
+          if commits or prs:
+              parts.append("## What's Changed")
+              if commits:
+                  parts.append("### Commits on main\n" + commits)
+              if prs:
+                  parts.append("### Merged PRs\n" + "\n".join(prs))
+          if rest:
+              parts.append("\n".join(rest).strip())
+
+          with open("release-notes.md", "w", encoding="utf-8") as out:
+              out.write("\n\n".join(parts) + "\n")
+          PY
+
+          cat release-notes.md
 
       - name: Download Windows artifact
         uses: actions/download-artifact@v4.1.3
@@ -778,7 +787,8 @@ jobs:
           allowUpdates: false
           replacesArtifacts: false
           makeLatest: ${{ !startsWith(github.ref_name, 'beta-') }}
-          generateReleaseNotes: true
+          bodyFile: release-notes.md
+          generateReleaseNotes: false
           artifacts: >-
             release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
             release-assets/linux/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage,

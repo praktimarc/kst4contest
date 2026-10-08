@@ -4,8 +4,9 @@
 #
 # jpackage cannot sign the app itself: it ad-hoc signs the embedded runtime and
 # then re-runs codesign on the same files without --force, which codesign
-# rejects with "is already signed". So this builds an unsigned app-image, signs
-# it from the inside out ourselves, and only then wraps it into a DMG.
+# rejects with "is already signed". So this takes the unsigned bundle from
+# :app-desktop:createDistributable, signs it from the inside out ourselves, and
+# only then wraps it into a DMG.
 #
 # Required:
 #   SIGNING_IDENTITY   The name part of the Developer ID Application certificate,
@@ -49,42 +50,29 @@ elif [ -n "${NOTARY_PROFILE:-}" ]; then
     NOTARY_ARGS=(--keychain-profile "$NOTARY_PROFILE")
 fi
 
-echo "==> Building JAR and collecting runtime dependencies"
-chmod +x mvnw
-./mvnw -B -DskipTests package \
-    dependency:copy-dependencies -DincludeScope=runtime -DoutputDirectory=target/dist-libs
-JAR="$(ls -t target/praktiKST-*.jar | head -n 1)"
-cp "$JAR" target/dist-libs/app.jar
+# The DMG carries the same version the Compose packaging stamps into the
+# bundle. gradle.properties keeps that value free of a qualifier, because the
+# DMG and MSI formats reject one.
+APP_VERSION="$(grep -m1 '^composePackageVersion=' gradle.properties | cut -d= -f2)"
+[ -n "$APP_VERSION" ] || { echo "composePackageVersion missing from gradle.properties" >&2; exit 1; }
+echo "==> Bundle version: $APP_VERSION"
 
-# jpackage only accepts a numeric major[.minor[.patch]] as the macOS bundle
-# version, so a Maven qualifier like "-nightly" has to be trimmed off.
-POM_VERSION="${JAR##*/praktiKST-}"
-POM_VERSION="${POM_VERSION%.jar}"
-APP_VERSION="$(printf '%s' "$POM_VERSION" | sed -e 's/[^0-9.].*$//' -e 's/\.*$//')"
-[ -n "$APP_VERSION" ] || { echo "Could not derive app version from $JAR" >&2; exit 1; }
-echo "==> Version: $POM_VERSION -> bundle version $APP_VERSION"
+echo "==> Step 1/4: building the unsigned app bundle"
+chmod +x gradlew
+# createDistributable builds the bundle including its jlinked runtime. Name,
+# icon, bundle identifier and the JDK module list all come from
+# app-desktop/build.gradle.kts, so this script cannot drift from the CI build.
+MACOSX_DEPLOYMENT_TARGET="13.0" ./gradlew -S :app-desktop:createDistributable
 
-echo "==> Step 1/4: jpackage app-image (unsigned)"
 rm -rf dist
-mkdir -p dist
-ADD_MODULES="$(java packaging/AddModules.java)"
-
-MACOSX_DEPLOYMENT_TARGET="13.0" jpackage \
-    --type app-image \
-    --name KST4Contest \
-    --app-version "$APP_VERSION" \
-    --icon packaging/icons/kst4contest.icns \
-    --input target/dist-libs \
-    --main-jar app.jar \
-    --main-class kst4contest.view.Kst4ContestApplication \
-    --module-path target/dist-libs \
-    --add-modules "$ADD_MODULES" \
-    --mac-package-identifier "$BUNDLE_ID" \
-    --mac-package-name KST4Contest \
-    --dest dist/appimage
+mkdir -p dist/appimage
+# ditto and not cp -R: the signing steps below depend on extended attributes,
+# and only ditto preserves them.
+ditto app-desktop/build/compose/binaries/main/app/KST4Contest.app \
+    dist/appimage/KST4Contest.app
 
 APP="dist/appimage/KST4Contest.app"
-[ -d "$APP" ] || { echo "jpackage produced no app image" >&2; exit 1; }
+[ -d "$APP" ] || { echo "createDistributable produced no app bundle" >&2; exit 1; }
 
 echo "==> Step 2/4: signing bundle contents (this takes a few minutes)"
 
@@ -208,8 +196,92 @@ STAGE="$(mktemp -d)"
 ditto "$APP" "$STAGE/KST4Contest.app"
 ln -s /Applications "$STAGE/Applications"
 
-hdiutil create -volname "KST4Contest" -srcfolder "$STAGE" \
-    -ov -format UDZO -quiet "$DMG"
+# The installer window shows a background with an arrow from the app to the
+# Applications folder. Finder only stores that layout (.DS_Store) when it has
+# arranged a mounted, writable image itself, so this drives Finder through
+# AppleScript. That can fail, e.g. without automation permission for Finder or
+# on a headless CI runner; the DMG is then built without the layout and only a
+# warning is printed. Window size and icon positions must match
+# packaging/macos/dmg/render-background.swift.
+DMG_BACKGROUND="packaging/macos/dmg/background.tiff"
+VOLUME_NAME="KST4Contest"
+
+build_dmg_with_layout() {
+    local mount_point="/Volumes/$VOLUME_NAME"
+    local rw_dir rw_dmg size_mb
+
+    if [ ! -f "$DMG_BACKGROUND" ]; then
+        echo "    $DMG_BACKGROUND is missing" >&2
+        return 1
+    fi
+    # Finder addresses the disk by its name; a second mounted volume of the same
+    # name would get another name and break the stored background reference.
+    if [ -e "$mount_point" ]; then
+        echo "    $mount_point is already mounted, eject it first" >&2
+        return 1
+    fi
+
+    rw_dir="$(mktemp -d)"
+    rw_dmg="$rw_dir/KST4Contest-rw.dmg"
+    # Some headroom for the background picture and the .DS_Store Finder writes.
+    size_mb=$(( $(du -sm "$STAGE" | cut -f1) + 20 ))
+
+    hdiutil create -volname "$VOLUME_NAME" -srcfolder "$STAGE" -fs HFS+ \
+        -format UDRW -size "${size_mb}m" -ov -quiet "$rw_dmg" || { rm -rf "$rw_dir"; return 1; }
+    hdiutil attach "$rw_dmg" -readwrite -noverify -noautoopen -quiet || { rm -rf "$rw_dir"; return 1; }
+
+    local layout_ok=0
+    mkdir -p "$mount_point/.background" \
+        && cp "$DMG_BACKGROUND" "$mount_point/.background/background.tiff" \
+        && osascript <<APPLESCRIPT || layout_ok=1
+tell application "Finder"
+    tell disk "$VOLUME_NAME"
+        open
+        set current view of container window to icon view
+        set toolbar visible of container window to false
+        set statusbar visible of container window to false
+        set the bounds of container window to {200, 120, 840, 520}
+        set viewOptions to the icon view options of container window
+        set arrangement of viewOptions to not arranged
+        set icon size of viewOptions to 128
+        set text size of viewOptions to 13
+        set background picture of viewOptions to file ".background:background.tiff"
+        set position of item "KST4Contest.app" of container window to {170, 180}
+        set position of item "Applications" of container window to {470, 180}
+        close
+        open
+        update without registering applications
+        delay 2
+        close
+    end tell
+end tell
+APPLESCRIPT
+
+    # Give Finder time to write .DS_Store before the image is detached.
+    sync
+    sleep 2
+    rm -rf "$mount_point/.fseventsd"
+    hdiutil detach "$mount_point" -quiet \
+        || hdiutil detach "$mount_point" -force -quiet \
+        || { rm -rf "$rw_dir"; return 1; }
+
+    if [ "$layout_ok" -ne 0 ]; then
+        rm -rf "$rw_dir"
+        return 1
+    fi
+
+    hdiutil convert "$rw_dmg" -format UDZO -ov -quiet -o "$DMG" || { rm -rf "$rw_dir"; return 1; }
+    rm -rf "$rw_dir"
+}
+
+if build_dmg_with_layout; then
+    echo "    installer window layout applied"
+else
+    echo "WARNING: could not apply the DMG window layout, building a plain DMG instead" >&2
+    rm -f "$DMG"
+    hdiutil create -volname "$VOLUME_NAME" -srcfolder "$STAGE" \
+        -ov -format UDZO -quiet "$DMG"
+fi
 rm -rf "$STAGE"
 [ -f "$DMG" ] || { echo "hdiutil produced no DMG" >&2; exit 1; }
 

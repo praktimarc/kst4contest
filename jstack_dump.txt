@@ -1,0 +1,198 @@
+2026-09-28 22:09:12
+Full thread dump OpenJDK 64-Bit Server VM (21.0.12.1+1-LTS mixed mode, sharing):
+
+Threads class SMR info:
+_java_thread_list=0x00000078070997c0, length=17, elements={
+0x0000000102ba9020, 0x0000007807110000, 0x0000007807110700, 0x0000007807110e00,
+0x0000007807111500, 0x0000007806d6c000, 0x0000007806d6c800, 0x0000007807111c00,
+0x0000007807112300, 0x0000007807113800, 0x0000007807468000, 0x0000007807469500,
+0x000000780746a300, 0x000000780746b100, 0x0000007807794000, 0x0000007807797800,
+0x0000007807c22300
+}
+
+"Reference Handler" #9 [29699] daemon prio=10 os_prio=31 cpu=0,18ms elapsed=71,66s tid=0x0000000102ba9020 nid=29699 waiting on condition  [0x000000016edea000]
+   java.lang.Thread.State: RUNNABLE
+	at java.lang.ref.Reference.waitForReferencePendingList(java.base@21.0.12.1/Native Method)
+	at java.lang.ref.Reference.processPendingReferences(java.base@21.0.12.1/Reference.java:246)
+	at java.lang.ref.Reference$ReferenceHandler.run(java.base@21.0.12.1/Reference.java:208)
+
+"Finalizer" #10 [24579] daemon prio=8 os_prio=31 cpu=0,04ms elapsed=71,66s tid=0x0000007807110000 nid=24579 in Object.wait()  [0x000000016eff6000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x0000007017008078> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at java.lang.ref.NativeReferenceQueue.await(java.base@21.0.12.1/NativeReferenceQueue.java:48)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.12.1/ReferenceQueue.java:158)
+	at java.lang.ref.NativeReferenceQueue.remove(java.base@21.0.12.1/NativeReferenceQueue.java:89)
+	- locked <0x0000007017008078> (a java.lang.ref.NativeReferenceQueue$Lock)
+	at java.lang.ref.Finalizer$FinalizerThread.run(java.base@21.0.12.1/Finalizer.java:173)
+
+"Signal Dispatcher" #11 [29187] daemon prio=9 os_prio=31 cpu=0,16ms elapsed=71,66s tid=0x0000007807110700 nid=29187 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Service Thread" #12 [25091] daemon prio=9 os_prio=31 cpu=0,07ms elapsed=71,66s tid=0x0000007807110e00 nid=25091 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Monitor Deflation Thread" #13 [28675] daemon prio=9 os_prio=31 cpu=4,73ms elapsed=71,66s tid=0x0000007807111500 nid=28675 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"C2 CompilerThread0" #14 [25603] daemon prio=9 os_prio=31 cpu=94,63ms elapsed=71,66s tid=0x0000007806d6c000 nid=25603 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"C1 CompilerThread0" #17 [26115] daemon prio=9 os_prio=31 cpu=99,66ms elapsed=71,66s tid=0x0000007806d6c800 nid=26115 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"Notification Thread" #18 [28163] daemon prio=9 os_prio=31 cpu=0,02ms elapsed=71,66s tid=0x0000007807111c00 nid=28163 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Common-Cleaner" #19 [26371] daemon prio=8 os_prio=31 cpu=0,28ms elapsed=71,66s tid=0x0000007807112300 nid=26371 waiting on condition  [0x000000016fe4a000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x0000007017020078> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.12.1/LockSupport.java:269)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1886)
+	at java.lang.ref.ReferenceQueue.await(java.base@21.0.12.1/ReferenceQueue.java:71)
+	at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.12.1/ReferenceQueue.java:143)
+	at java.lang.ref.ReferenceQueue.remove(java.base@21.0.12.1/ReferenceQueue.java:218)
+	at jdk.internal.ref.CleanerImpl.run(java.base@21.0.12.1/CleanerImpl.java:140)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+	at jdk.internal.misc.InnocuousThread.run(java.base@21.0.12.1/InnocuousThread.java:186)
+
+"JavaFX Application Thread" #21 [259] daemon prio=5 os_prio=31 cpu=156,80ms elapsed=71,59s tid=0x0000007807113800 nid=259 waiting on condition  [0x000000016d9dc000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x00000070178d17f0> (a java.util.concurrent.CountDownLatch$Sync)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.12.1/LockSupport.java:221)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer.acquire(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:788)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer.acquireSharedInterruptibly(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1133)
+	at java.util.concurrent.CountDownLatch.await(java.base@21.0.12.1/CountDownLatch.java:230)
+	at kst4contest.view.compose.OperatorProfilePickerWindow.showAndSelect(OperatorProfilePickerWindow.kt:132)
+	at kst4contest.view.Kst4ContestApplication$$Lambda/0x000000c0011c5fb0.requestProfileChoice(Unknown Source)
+	at kst4contest.view.OperatorProfileBootstrap.resolveAtStartup(OperatorProfileBootstrap.java:69)
+	at kst4contest.view.Kst4ContestApplication.resolveOperatorProfileIfRequired(Kst4ContestApplication.java:6642)
+	at kst4contest.view.Kst4ContestApplication.start(Kst4ContestApplication.java:7319)
+	at kst4contest.view.Kst4ContestApplication.lambda$main$84(Kst4ContestApplication.java:9777)
+	at kst4contest.view.Kst4ContestApplication$$Lambda/0x000000c00109e388.run(Unknown Source)
+	at com.sun.javafx.application.PlatformImpl.lambda$runLater$10(PlatformImpl.java:456)
+	at com.sun.javafx.application.PlatformImpl$$Lambda/0x000000c00109fc68.run(Unknown Source)
+	at java.security.AccessController.executePrivileged(java.base@21.0.12.1/AccessController.java:778)
+	at java.security.AccessController.doPrivileged(java.base@21.0.12.1/AccessController.java:400)
+	at com.sun.javafx.application.PlatformImpl.lambda$runLater$11(PlatformImpl.java:455)
+	at com.sun.javafx.application.PlatformImpl$$Lambda/0x000000c00109ebd8.run(Unknown Source)
+	at com.sun.glass.ui.InvokeLaterDispatcher$Future.run(InvokeLaterDispatcher.java:95)
+
+"AWT-Shutdown" #22 [60947] prio=5 os_prio=31 cpu=0,33ms elapsed=71,56s tid=0x0000007807468000 nid=60947 in Object.wait()  [0x000000017037a000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x0000007017030078> (a java.lang.Object)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at sun.awt.AWTAutoShutdown.run(java.desktop@21.0.12.1/AWTAutoShutdown.java:291)
+	- locked <0x0000007017030078> (a java.lang.Object)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"QuantumRenderer-0" #23 [78875] daemon prio=5 os_prio=31 cpu=31,70ms elapsed=71,45s tid=0x0000007807469500 nid=78875 waiting on condition  [0x0000000170792000]
+   java.lang.Thread.State: WAITING (parking)
+	at jdk.internal.misc.Unsafe.park(java.base@21.0.12.1/Native Method)
+	- parking to wait for  <0x0000007017000120> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+	at java.util.concurrent.locks.LockSupport.park(java.base@21.0.12.1/LockSupport.java:371)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionNode.block(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:519)
+	at java.util.concurrent.ForkJoinPool.unmanagedBlock(java.base@21.0.12.1/ForkJoinPool.java:3780)
+	at java.util.concurrent.ForkJoinPool.managedBlock(java.base@21.0.12.1/ForkJoinPool.java:3725)
+	at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.12.1/AbstractQueuedSynchronizer.java:1746)
+	at java.util.concurrent.LinkedBlockingQueue.take(java.base@21.0.12.1/LinkedBlockingQueue.java:435)
+	at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.12.1/ThreadPoolExecutor.java:1070)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.12.1/ThreadPoolExecutor.java:1130)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.12.1/ThreadPoolExecutor.java:642)
+	at com.sun.javafx.tk.quantum.QuantumRenderer$PipelineRunnable.run(QuantumRenderer.java:126)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"InvokeLaterDispatcher" #25 [77323] daemon prio=5 os_prio=31 cpu=0,20ms elapsed=71,42s tid=0x000000780746a300 nid=77323 in Object.wait()  [0x000000017099e000]
+   java.lang.Thread.State: WAITING (on object monitor)
+	at java.lang.Object.wait0(java.base@21.0.12.1/Native Method)
+	- waiting on <0x00000070170100e0> (a java.lang.StringBuilder)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:366)
+	at java.lang.Object.wait(java.base@21.0.12.1/Object.java:339)
+	at com.sun.glass.ui.InvokeLaterDispatcher.run(InvokeLaterDispatcher.java:126)
+	- locked <0x00000070170100e0> (a java.lang.StringBuilder)
+
+"DestroyJavaVM" #26 [5123] prio=5 os_prio=31 cpu=115,75ms elapsed=71,40s tid=0x000000780746b100 nid=5123 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"PulseTimer-CVDisplayLink thread" #27 [76291] daemon prio=5 os_prio=31 cpu=220,70ms elapsed=71,40s tid=0x0000007807794000 nid=76291 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"operator-profile-picker" #36 [88579] daemon prio=5 os_prio=31 cpu=16,50ms elapsed=71,31s tid=0x0000007807797800 nid=88579 runnable  [0x0000000171e15000]
+   java.lang.Thread.State: RUNNABLE
+	at sun.lwawt.macosx.LWCToolkit.loadNativeColors(java.desktop@21.0.12.1/Native Method)
+	at sun.lwawt.macosx.LWCToolkit.loadSystemColors(java.desktop@21.0.12.1/LWCToolkit.java:232)
+	at java.awt.SystemColor.updateSystemColors(java.desktop@21.0.12.1/SystemColor.java:475)
+	at java.awt.SystemColor.<clinit>(java.desktop@21.0.12.1/SystemColor.java:467)
+	at jdk.internal.misc.Unsafe.ensureClassInitialized0(java.base@21.0.12.1/Native Method)
+	at jdk.internal.misc.Unsafe.ensureClassInitialized(java.base@21.0.12.1/Unsafe.java:1160)
+	at jdk.internal.reflect.MethodHandleAccessorFactory.ensureClassInitialized(java.base@21.0.12.1/MethodHandleAccessorFactory.java:301)
+	at jdk.internal.reflect.MethodHandleAccessorFactory.newFieldAccessor(java.base@21.0.12.1/MethodHandleAccessorFactory.java:141)
+	at jdk.internal.reflect.ReflectionFactory.newFieldAccessor(java.base@21.0.12.1/ReflectionFactory.java:145)
+	at java.lang.reflect.Field.acquireFieldAccessor(java.base@21.0.12.1/Field.java:1185)
+	at java.lang.reflect.Field.getFieldAccessor(java.base@21.0.12.1/Field.java:1164)
+	at java.lang.reflect.Field.get(java.base@21.0.12.1/Field.java:442)
+	at javax.swing.plaf.basic.BasicLookAndFeel.loadSystemColors(java.desktop@21.0.12.1/BasicLookAndFeel.java:427)
+	at javax.swing.plaf.basic.BasicLookAndFeel.initSystemColorDefaults(java.desktop@21.0.12.1/BasicLookAndFeel.java:367)
+	at com.apple.laf.AquaLookAndFeel.getDefaults(java.desktop@21.0.12.1/AquaLookAndFeel.java:252)
+	at javax.swing.UIManager.setLookAndFeel(java.desktop@21.0.12.1/UIManager.java:591)
+	at javax.swing.UIManager.setLookAndFeel(java.desktop@21.0.12.1/UIManager.java:637)
+	at org.jetbrains.skiko.Actuals_awtKt.setSystemLookAndFeel(Actuals.awt.kt:15)
+	at org.jetbrains.skiko.Setup.init(Setup.kt:25)
+	at org.jetbrains.skiko.Setup.init$default(Setup.kt:6)
+	at org.jetbrains.skiko.Library.load(Library.kt:59)
+	- locked <0x0000007017969990> (a org.jetbrains.skiko.Library)
+	at org.jetbrains.skia.impl.Library$Companion.staticLoad(Library.jvm.kt:12)
+	at androidx.compose.ui.ConfigureSwingGlobalsForCompose_desktopKt.configureSwingGlobalsForCompose(ConfigureSwingGlobalsForCompose.desktop.kt:49)
+	at androidx.compose.ui.ConfigureSwingGlobalsForCompose_desktopKt.configureSwingGlobalsForCompose$default(ConfigureSwingGlobalsForCompose.desktop.kt:37)
+	at androidx.compose.ui.window.Application_desktopKt.application(Application.desktop.kt:112)
+	at kst4contest.view.compose.OperatorProfilePickerWindow.showAndSelect$lambda$6(OperatorProfilePickerWindow.kt:110)
+	at kst4contest.view.compose.OperatorProfilePickerWindow$$Lambda/0x000000c0011c6850.run(Unknown Source)
+	at java.lang.Thread.runWith(java.base@21.0.12.1/Thread.java:1596)
+	at java.lang.Thread.run(java.base@21.0.12.1/Thread.java:1583)
+
+"Attach Listener" #37 [44883] daemon prio=9 os_prio=31 cpu=0,84ms elapsed=0,10s tid=0x0000007807c22300 nid=44883 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"GC Thread#8" os_prio=31 cpu=0,66ms elapsed=71,39s tid=0x00000078077a4400 nid=88067 runnable  
+
+"GC Thread#7" os_prio=31 cpu=0,83ms elapsed=71,39s tid=0x000000780775bc00 nid=87555 runnable  
+
+"GC Thread#6" os_prio=31 cpu=0,65ms elapsed=71,39s tid=0x000000780775b800 nid=74755 runnable  
+
+"GC Thread#5" os_prio=31 cpu=0,60ms elapsed=71,39s tid=0x000000780775b400 nid=75267 runnable  
+
+"GC Thread#4" os_prio=31 cpu=0,85ms elapsed=71,39s tid=0x000000780775b000 nid=74243 runnable  
+
+"GC Thread#3" os_prio=31 cpu=0,64ms elapsed=71,39s tid=0x000000780775ac00 nid=75779 runnable  
+
+"GC Thread#2" os_prio=31 cpu=0,75ms elapsed=71,39s tid=0x000000780775a800 nid=73731 runnable  
+
+"GC Thread#1" os_prio=31 cpu=0,54ms elapsed=71,39s tid=0x000000780775a400 nid=73475 runnable  
+
+"VM Thread" os_prio=31 cpu=2,69ms elapsed=71,67s tid=0x00000078070bd400 nid=20227 runnable  
+
+"VM Periodic Task Thread" os_prio=31 cpu=27,45ms elapsed=71,67s tid=0x0000000102b9d350 nid=17411 waiting on condition  
+
+"G1 Service" os_prio=31 cpu=1,35ms elapsed=71,67s tid=0x00000078070bc000 nid=16643 runnable  
+
+"G1 Refine#0" os_prio=31 cpu=0,01ms elapsed=71,67s tid=0x0000000102b99870 nid=14595 runnable  
+
+"G1 Conc#0" os_prio=31 cpu=0,01ms elapsed=71,67s tid=0x0000000102b96d90 nid=14851 runnable  
+
+"G1 Main Marker" os_prio=31 cpu=0,02ms elapsed=71,67s tid=0x0000000102b962e0 nid=13571 runnable  
+
+"GC Thread#0" os_prio=31 cpu=0,85ms elapsed=71,67s tid=0x0000000102b95450 nid=13059 runnable  
+
+JNI global refs: 24, weak refs: 0
+

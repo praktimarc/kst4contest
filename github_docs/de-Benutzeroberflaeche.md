@@ -482,8 +482,9 @@ Die serverbezogenen Funktionen sind nur bei vollständig aufgebauter ON4KST-Verb
 
 - **Hide cluster / stranger QSOs** beziehungsweise **Show cluster / stranger QSOs** blendet das zusätzliche Cluster- und QSO-Monitorfenster aus oder wieder ein.
 - **hide options** beziehungsweise **show options** blendet das Einstellungsfenster aus oder wieder ein.
-- **Use dark mode design** aktiviert das dunkle Farbschema.
-- **Use default mode design** aktiviert das normale helle Farbschema.
+- **Use dark mode design** aktiviert das dunkle Farbschema für die laufende Sitzung.
+- **Use default mode design** aktiviert das normale helle Farbschema für die laufende Sitzung.
+  Das Farbschema beim Start wird pro Profil im Einstellungsreiter **GUI** unter **Design** festgelegt.
 - **Show / hide station map** öffnet beziehungsweise schließt das separate Fenster mit Stationskarte und Streckenanalyse.
 
 ---

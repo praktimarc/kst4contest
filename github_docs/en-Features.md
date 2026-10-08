@@ -317,9 +317,96 @@ KST4Contest signs in to ON4KST once with one local login callsign and password. 
 
 ## Dark Mode (from v1.26)
 
-Enable it through **Windows → Use dark mode design**. Use **Windows → Use default mode design** to return to the normal light colour scheme.
+Each operator profile sets its startup colour scheme on the **GUI** tab under **Design**. **Windows → Use dark mode design** and **Windows → Use default mode design** switch quickly for the running session.
 
 The green private-message age scale remains available in both designs. Text colour, normal table colour and the separate highlight for locally sent messages follow the selected built-in design.
+
+---
+
+## Own Colours (from v1.50)
+
+The **Colours** tab in the settings window sets six colours per design and **per operator
+profile**: surface, window surface, field interior, text, accent and separator line. Daylight
+and evening are separate — a change to the evening design leaves the daylight one untouched.
+
+A colour is entered as six hexadecimal digits with a leading hash, for example `#3C7A4B`, and
+applies **immediately in every open window**. There is no "not yet applied" state.
+
+**It survives a restart only after Save settings.** That is the same contract as every other
+setting — but this is the only tab whose effect is visible at once in every window, and "it
+looked right, so it must be stored" is the easy wrong conclusion here. The tab says so itself
+for that reason.
+
+Anything that cannot be read as a colour is refused and the field snaps back; a notice window
+says why.
+
+### The three ways back
+
+| Button | What it does |
+|---|---|
+| **Back to how it was** | the palette in force when the tab was opened, including a change already present then |
+| **Discard my changes** | empties this design's own changes, so the file or the shipped design applies again |
+| **Reset to the shipped colours** | sets all six roles to the shipped values, even when an own stylesheet is present |
+
+**The "Reset to the shipped colours" button is always drawn in the shipped colours, whatever
+has been set.** This is deliberate: an operator who sets text and surface to the same black can
+no longer see any other button — including the ones that would undo it. This one does not take
+the broken palette and therefore stays readable. That it looks out of place under a heavily
+customised palette is what makes it findable.
+
+**All three have a keyboard shortcut**, as a second safety net for when nothing can be read at
+all. They work while the tab is open, including when the caret sits in one of the colour
+fields:
+
+| Key | Way back |
+|---|---|
+| **Ctrl+Z** | Back to how it was |
+| **Ctrl+D** | Discard my changes |
+| **Ctrl+R** | Reset to the shipped colours |
+
+"Back to how it was" restores **both** designs, not only the one on screen — change a colour
+in daylight, switch to evening, change one there, and this button undoes both.
+
+### Where a colour comes from
+
+Each field says where its value in force came from:
+
+| Label | Meaning |
+|---|---|
+| *shipped* | from the shipped design |
+| *from file* | from the own stylesheet in the profile directory |
+| *changed* | set here in the tab |
+
+A setting in the tab always overrides the file, and the file overrides the shipped design —
+role by role.
+
+### Readability notice
+
+When a pair that actually sits on top of each other — text on the surface, text inside a field,
+accent on the surface — reads worse than the shipped design makes it and below the WCAG AA
+value of 4.5, a notice appears with both ratios. **It is saved anyway:** a hard combination can
+be deliberate in a contest.
+
+### Editing the stylesheet by hand
+
+To change more than the six roles, **Write this design's stylesheet into my profile** writes
+the shipped template into the profile directory. The tab names the path. For the root profile
+that is `~/.praktiKST/KST4ContestDefaultDay.css` or `…Evening.css`; every other profile gets it
+under `profiles/<id>/`.
+
+**An existing file is never overwritten** — the button then only reports that it is already
+there. Changes to the file take effect after a restart. An unreadable or faulty file does not
+prevent startup: the role concerned falls back to the shipped design.
+
+**For the root profile these two files are already present.** KST4Contest has been writing
+them at startup for years; until release 1.50 nothing read them. So most roles there show
+*from file* rather than *shipped* from the outset, and the button reports that the file is
+already there. Its content is the shipped template — so it looks like *shipped* because it is
+the same thing.
+
+Changing `-fx-base` there also changes the window surface: KST4Contest derives it from the
+base, exactly as JavaFX did. To keep the two apart, name `-fx-background` explicitly — or set
+them in the tab above, where the two roles always stay independent.
 
 ---
 
@@ -913,7 +1000,7 @@ The **Mechanisms** indication lists propagation mechanisms which may be consiste
 
 Aircraft Scatter information is not currently coupled to the terrain-profile calculation. AirScout data and the path analysis may both describe the same remote station, but they remain separate assessments.
 
-OpenStreetMap tiles and the active elevation provider require an Internet connection. Leaflet and the map application itself are bundled locally, and tile requests pass through a local proxy, but this proxy is not a permanent offline map store.
+OpenStreetMap tiles and the active elevation provider require an Internet connection. Tiles are fetched directly and cached only for the running session, so this is not a permanent offline map store. Offline elevation data (DEM) is a separate matter and does work without a connection.
 
 In plain terms: the analysis helps to identify plausible paths, obvious obstructions and incorrect assumptions. It does not replace propagation experience or a real signal.
 
@@ -974,11 +1061,11 @@ If the stored values are valid, KST4Contest initially uses the last saved height
 - 1,234 pixels wide and
 - 768 pixels high.
 
-KST4Contest does not use the complete screen resolution as the available area. It uses the visual bounds reported by JavaFX for the primary screen. Taskbars, docks and similar operating-system areas are already excluded from these bounds.
+KST4Contest does not use the complete screen resolution as the available area. It uses the usable bounds the operating system reports for the primary screen. Taskbars, docks and similar operating-system areas are already excluded from these bounds.
 
 An additional safety margin of 40 pixels is subtracted. If the stored width or height exceeds the remaining space, only the affected value is reduced.
 
-After the user interface has been built with this content size, KST4Contest checks the complete native operating-system window, including its title bar and borders. The window is reduced or moved into the visible area again if necessary.
+The window is then opened at that size. A window manager may override it — a tiling window manager always does — and the size KST4Contest stores is the one the window actually ends up with.
 
 This catches two different cases:
 
@@ -998,3 +1085,57 @@ The check always uses the **primary screen**. It does not restore the previous p
 The automatic size restriction currently applies to the main window only. The settings window, the separate cluster and QSO monitor window and other auxiliary windows continue to use their stored sizes without the same additional check against the primary screen.
 
 In plain terms: the protection mainly prevents the central main window from becoming unusable after moving to a smaller display. It is not a complete window-position manager for a changing multi-monitor setup.
+
+---
+
+## Interface Language (from v1.50)
+
+The interface speaks English or German. The choice sits in the settings window on the **GUI**
+tab, in the last section **Language**, and applies **per operator profile** — at a multi
+operator station two operators can have two languages.
+
+Three values are offered:
+
+| Value | Meaning |
+|---|---|
+| **System language** | the operating system's language; English when no texts exist for it |
+| **DE** | German |
+| **EN** | English |
+
+**A change applies at once in every open window** — main window, settings, map and monitor
+together, with no restart and without closing anything. The choice is kept permanently the
+same way as every other setting, with **Save settings**.
+
+### What is not translated, and why
+
+Three kinds of text stay as they are, in every language:
+
+- **Anything that goes to the ON4KST server.** Protocol frames and chat commands such as
+  `/CQ` or `/AWAY` would break the connection or not be understood if they were translated.
+- **Anything that goes to other radio amateurs.** Your beacon texts, auto answers, snippets
+  and shortcuts stay exactly as you entered them. They live in your profile's stored
+  configuration; translating them would alter existing profiles.
+- **Amateur radio shorthand in the interface.** QRA, QRG, QTF, QRB, Tropo, LOC, wkd, NOT QRV,
+  LOS, Fresnel, Sked — these are international and read the same either way.
+
+Three tests guard this, and they check the output rather than the text files: the protocol
+frames are built under three locales and compared, every configuration default is compared by
+reflection, and no value in a translation file may be a protocol command.
+
+### Contributing a language
+
+The texts are ordinary text files under `app-desktop/src/main/i18n/`, one per language. To
+contribute another, copy `strings_en.properties` to `strings_<code>.properties` and translate
+the values to the right of the equals sign. No Kotlin, no Gradle.
+
+**A partial translation is welcome** — an untranslated key appears in English rather than
+going missing. An *incorrect* one fails the build instead: a key the English base does not
+know, or a placeholder such as `{0}` missing from the translation, which would silently drop
+whatever it was carrying.
+
+`./gradlew :app-desktop:classes` builds and reports every mistake by file name. What is still
+missing is written as a worksheet to
+`app-desktop/build/generated/i18n/todo/strings_<code>.todo.properties` — the missing keys with
+the English text as the value, ready to fill in.
+
+German is held complete by a test because it is shipped. A contributed language is not.
