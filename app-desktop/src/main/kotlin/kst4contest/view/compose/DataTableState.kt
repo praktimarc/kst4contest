@@ -318,12 +318,12 @@ class DataTableState<T>(
                  * rows jump.
                  */
                 val order = column.comparator
-                    ?: compareBy(currentRows.associateWith { column.value(it) }::getValue)
+                    ?: compareBy(filteredRows.associateWith { column.value(it) }::getValue)
 
                 if (ascending) {
-                    currentRows.sortedWith(order)
+                    filteredRows.sortedWith(order)
                 } else {
-                    currentRows.sortedWith(order.reversed())
+                    filteredRows.sortedWith(order.reversed())
                 }
             }
 

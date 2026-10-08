@@ -62,6 +62,13 @@ class MainWindowState(
 ) {
 
     /** The shortcut buttons above the send line. */
+    /**
+     * The one path that selects a station for the whole application (panel, table, score
+     * service, send line). Set by the host after construction; other windows, such as the
+     * map, go through it instead of touching [selectedStation] alone. Null clears.
+     */
+    var stationSelector: ((ChatMember?) -> Unit)? = null
+
     val shortcuts = RosterMirror(prefs.getLst_txtShortCutBtnList())
 
     /** The snippets behind Ctrl+1..Ctrl+0 and the right-click menus. */

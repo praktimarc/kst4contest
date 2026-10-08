@@ -217,7 +217,8 @@ object StationMapWindow {
                     }
 
                     kst4contest.view.compose.Form.button(strings.mapResetView) {
-                        mainWindowState.selectedStation.select(null)
+                        mainWindowState.stationSelector?.invoke(null)
+                            ?: mainWindowState.selectedStation.select(null)
                         val home = runCatching {
                             kst4contest.locatorUtils.Location(ownLocator6)
                         }.getOrNull()
@@ -277,10 +278,22 @@ object StationMapWindow {
                             darkMode = isDarkTheme,
                             onMarkerClicked = { snapshot ->
                                 val chatController = ApplicationRuntimeLauncher.getCurrent()?.chatController
-                                val member = chatController?.lst_chatMemberList?.snapshot()?.find { it.callSignRaw == snapshot.callSignRaw() }
+                                val variants = chatController?.lst_chatMemberList?.snapshot()
+                                    ?.filter { it.callSignRaw == snapshot.callSignRaw() }
+                                    .orEmpty()
+                                /*
+                                 * A marker stands for a raw callsign, not a category. Keep the
+                                 * category already selected when it is one of the variants.
+                                 */
+                                val member = variants.firstOrNull { it === mainWindowState.selectedStation.selected }
+                                    ?: variants.firstOrNull()
                                 if (member != null) {
-                                    mainWindowState.selectedStation.select(member)
-                                    
+                                    val selector = mainWindowState.stationSelector
+                                    if (selector != null) {
+                                        selector(member)
+                                    } else {
+                                        mainWindowState.selectedStation.select(member)
+                                    }
                                     // Mirror old JavaFX handleMapCallsignSelection logic: prefill /cq
                                     mainWindowState.chatInput.prepareCq(member.callSign ?: "", forceOverwrite = true)
                                 }

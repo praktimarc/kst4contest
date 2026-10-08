@@ -3034,7 +3034,8 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 						member -> parseTableDouble(formatPriorityScore(member)),
 						(member, band, worked) -> formatBandCellStatus(member, band, worked),
 						BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences())),
-				RowKeys.INSTANCE.byValue(ChatMember::getCallSign),
+				RowKeys.INSTANCE.byValue(member -> member.getCallSign() + "|"
+						+ (member.getChatCategory() == null ? "" : member.getChatCategory().getCategoryNumber())),
 				"compose-stations",
 				widths);
 
@@ -3221,6 +3222,11 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		 */
 		composeMemberListener = rows -> uiDispatcher.runOnUi(() -> stations.replaceRows(rows));
 		chatcontroller.getLst_chatMemberList().addListener(composeMemberListener);
+
+		composeMainWindowState.setStationSelector(member -> {
+			selectStationInCompose(selectedStation, stations, member);
+			return kotlin.Unit.INSTANCE;
+		});
 
 		composeChatListener = rows -> uiDispatcher.runOnUi(() -> {
 			directed.replaceRows(chatcontroller.toMeMessages());
