@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Gradle dependencies, including the version catalog in gradle/libs.versions.toml
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    target-branch: "main"
+    ignore:
+      # Kotlin and Compose Multiplatform are coupled; bump them manually together
+      - dependency-name: "org.jetbrains.kotlin*"
+      - dependency-name: "org.jetbrains.compose*"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Actions used in .github/workflows
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    target-branch: "main"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
