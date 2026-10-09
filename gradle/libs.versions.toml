@@ -1,13 +1,13 @@
 [versions]
-sqliteJdbc = "3.43.2.2"
+sqliteJdbc = "3.53.4.0"
 jlayer = "1.0.1"
 junit = "5.10.1"
-mockito = "5.7.0"
-mockitoCompile = "5.17.0"
+mockito = "5.24.0"
+mockitoCompile = "5.24.0"
 jetbrainsAnnotations = "24.0.1"
 kotlin = "2.2.0"
 composeMultiplatform = "1.8.2"
-spotbugsPlugin = "6.0.26"
+spotbugsPlugin = "6.5.12"
 spotbugs = "4.9.8"
 pmd = "7.17.0"
 
