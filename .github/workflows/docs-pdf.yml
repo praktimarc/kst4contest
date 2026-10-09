@@ -102,7 +102,7 @@ jobs:
             github_docs/de-Changelog.md
 
       - name: Upload PDF artifacts
-        uses: actions/upload-artifact@v4.3.4
+        uses: actions/upload-artifact@v6
         with:
           name: docs-pdf
           path: dist/KST4Contest-*-manual-*.pdf
