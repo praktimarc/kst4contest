@@ -39,7 +39,7 @@ jobs:
           useradd -m builder
 
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.WEBSITE_DEPLOY_KEY }}
