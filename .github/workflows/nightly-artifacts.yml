@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         shell: pwsh
@@ -83,7 +83,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         run: |
@@ -156,7 +156,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         run: |
@@ -201,7 +201,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         run: |
@@ -246,7 +246,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         run: |
@@ -357,7 +357,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         run: |
@@ -500,7 +500,7 @@ jobs:
           path: flatpak-ostree-repo/
 
       - name: Checkout existing flatpak-repo branch
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
         with:
           ref: flatpak-repo
           path: existing-flatpak-repo
@@ -545,7 +545,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Resolve nightly version info
         run: |
