@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -64,7 +64,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -130,7 +130,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -168,7 +168,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -206,7 +206,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -308,7 +308,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -437,7 +437,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Set up Java 21
         uses: actions/setup-java@v4.1.0
@@ -496,7 +496,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Install pandoc and LaTeX toolchain
         run: |
@@ -593,7 +593,7 @@ jobs:
           path: flatpak-ostree-repo/
 
       - name: Checkout existing flatpak-repo branch
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
         with:
           ref: flatpak-repo
           path: existing-flatpak-repo
@@ -642,7 +642,7 @@ jobs:
 
     steps:
       - name: Checkout release source
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
         with:
           # Full history and tags, needed to list the commits since the previous release.
           fetch-depth: 0
