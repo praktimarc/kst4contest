@@ -6,6 +6,7 @@ import kst4contest.model.ChatCategory
 import kst4contest.model.ChatMember
 import kst4contest.model.ChatMessage
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -96,6 +97,33 @@ class DirectedMessageColumnsTest {
             }
         }
         assertEquals("7 (85%)", cell("airscout", message(sender = sender)))
+    }
+
+    /**
+     * Issue #87: the AP column had no comparator and fell back to its text, so "13 (75%)"
+     * sorted before "9 (75%)". Same shape as DataTableStateTest's "a column with a
+     * comparator sorts by it, not by its text", with the real columns.
+     */
+    @Test
+    fun `airscout sorts numerically`() {
+        assertNotNull(columns.single { it.id == "airscout" }.comparator, "the AP column sorts by its own key")
+
+        val table = DataTableState(columns = columns, rowKey = RowKeys.byReference<ChatMessage>())
+        table.replaceRows(listOf(
+            message(sender = memberWithAeroplane("DL13ABC", minutes = 13)),
+            message(sender = memberWithAeroplane("DL9ABC", minutes = 9)),
+        ))
+
+        table.toggleSort("airscout")
+
+        assertEquals(listOf("DL9ABC", "DL13ABC"), table.visibleRows.map { it.sender?.callSign },
+            "9 before 13 numerically; by text it would be the other way round")
+    }
+
+    private fun memberWithAeroplane(call: String, minutes: Int): ChatMember = member(call).apply {
+        airPlaneReflectInfo = AirPlaneReflectionInfo().apply {
+            risingAirplanes = mutableListOf(AirPlane().apply { arrivingDurationMinutes = minutes; potential = 75 })
+        }
     }
 
     @Test

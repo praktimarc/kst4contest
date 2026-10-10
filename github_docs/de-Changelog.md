@@ -40,6 +40,8 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **Freigegebene Hintergrundressourcen:** Der ON4KST-Überwachungsthread, der Sked-Erinnerungs-Scheduler, der Reachability-Executor, der PSTRotator-Wiederholungs-Scheduler und der Kachel-Proxy der Karte werden beim Schließen des Chatcontrollers freigegeben. Bisher liefen sie bis zum Programmende weiter.
 
+- **AP-Spalte sortiert numerisch:** Die Spalte **AP [minutes / pot%]** in der Benutzerliste und bei den gerichteten Nachrichten wurde nach ihrem Text sortiert, sodass `13 (75%)` vor `3 (50%)` stand. Jetzt sortiert sie nach den Minuten des ersten Flugzeugs und bei gleichen Minuten nach dem besseren Potenzial; leere und `nil`-Zellen stehen aufsteigend am Ende. Damit ist [Issue #87](https://github.com/praktimarc/kst4contest/issues/87) behoben.
+
 ### Hinweise zur Aktualisierung
 
 - Bestehende Installationen werden **nicht** verändert: `preferences.xml` und `praktiKST.db` bleiben genau dort liegen, wo sie sind, und werden zum Profil **Default**. Es wird keine Datei verschoben oder kopiert.

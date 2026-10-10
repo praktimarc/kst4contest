@@ -1,9 +1,12 @@
 package kst4contest.view.compose
 
+import kst4contest.model.AirPlane
+import kst4contest.model.AirPlaneReflectionInfo
 import kst4contest.model.ChatMember
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 
@@ -118,6 +121,32 @@ class StationColumnsTest {
     @Test
     fun `a station on every band has an empty NOT QRV column`() {
         assertEquals("", columns().first { it.id == "not-qrv" }.value(ChatMember()))
+    }
+
+    /**
+     * Issue #87: the AP column had no comparator and fell back to its text, so "13 (75%)"
+     * sorted before "9 (75%)". Same shape as DataTableStateTest's "a column with a
+     * comparator sorts by it, not by its text", with the real columns.
+     */
+    @Test
+    fun `airscout sorts numerically`() {
+        val columns = columns()
+        assertNotNull(columns.first { it.id == "airscout" }.comparator, "the AP column sorts by its own key")
+
+        val table = DataTableState(columns = columns, rowKey = RowKeys.byValue<ChatMember> { it.callSign.orEmpty() })
+        table.replaceRows(listOf(stationWithAeroplane("DL13ABC", minutes = 13), stationWithAeroplane("DL9ABC", minutes = 9)))
+
+        table.toggleSort("airscout")
+
+        assertEquals(listOf("DL9ABC", "DL13ABC"), table.visibleRows.map { it.callSign },
+            "9 before 13 numerically; by text it would be the other way round")
+    }
+
+    private fun stationWithAeroplane(call: String, minutes: Int): ChatMember = ChatMember().apply {
+        setCallSign(call)
+        airPlaneReflectInfo = AirPlaneReflectionInfo().apply {
+            risingAirplanes = mutableListOf(AirPlane().apply { arrivingDurationMinutes = minutes; potential = 75 })
+        }
     }
 
     @Test

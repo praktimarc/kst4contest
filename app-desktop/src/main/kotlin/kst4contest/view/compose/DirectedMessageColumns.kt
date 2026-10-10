@@ -57,6 +57,7 @@ object DirectedMessageColumns {
             title = "AP [minutes / pot%]",
             value = { AirplaneCell.format(it.sender?.airPlaneReflectInfo) },
             accent = { _, rendered -> AirplaneCell.accentFor(rendered) },
+            comparator = compareBy(AirplaneCell.order) { it.sender?.airPlaneReflectInfo },
             weight = 1.4f,
         ),
         DataColumn(

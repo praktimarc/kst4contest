@@ -55,6 +55,7 @@ object StationColumns {
             title = "AP [minutes / pot%]",
             value = { AirplaneCell.format(it.airPlaneReflectInfo) },
             accent = { _, rendered -> AirplaneCell.accentFor(rendered) },
+            comparator = compareBy(AirplaneCell.order) { it.airPlaneReflectInfo },
             weight = 1.4f,
         ))
         add(DataColumn(id = "tropo", title = "Tropo", value = tropoOf, weight = 0.7f))

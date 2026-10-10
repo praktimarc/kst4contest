@@ -1,6 +1,7 @@
 package kst4contest.view.compose
 
 import androidx.compose.ui.graphics.Color
+import kst4contest.model.AirPlane
 import kst4contest.model.AirPlaneReflectionInfo
 
 /**
@@ -33,6 +34,27 @@ object AirplaneCell {
      * "nothing has been computed for this station yet".
      */
     private const val NOTHING_COMING = "nil"
+
+    // ---- the order ----------------------------------------------------------
+
+    /** Unknown or no aeroplane sorts after every real one. */
+    private const val NO_PLANE = Int.MAX_VALUE
+
+    /** The aeroplane the cell shows first; the parser already put the best one there. */
+    private fun first(info: AirPlaneReflectionInfo?): AirPlane? = info?.risingAirplanes?.firstOrNull()
+
+    /**
+     * Ascending: the minutes the operator reads first, then the better potential first.
+     *
+     * Issue #87: without a comparator the table fell back to the rendered text, which put
+     * "13 (75%)" above "3 (50%)". Only the first aeroplane counts, as it is the one the
+     * operator reads and the one the colour marks; the second is in the cell for context.
+     * Empty and "nil" cells carry [NO_PLANE]: like qrb and qtf, an absent value gets a
+     * sentinel instead of a null check, here the maximum so the cell sorts last ascending.
+     */
+    val order: Comparator<AirPlaneReflectionInfo?> =
+        compareBy<AirPlaneReflectionInfo?> { first(it)?.arrivingDurationMinutes ?: NO_PLANE }
+            .thenByDescending { first(it)?.potential ?: 0 }
 
     /** `.table-cell-100PercentAP`, identical in both stylesheets: a certain path. */
     val PURPLE_100 = Color(0xFFF98AFF)
