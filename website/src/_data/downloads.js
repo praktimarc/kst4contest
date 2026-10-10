@@ -2,7 +2,11 @@ const REPO = "praktimarc/kst4contest";
 const API = `https://api.github.com/repos/${REPO}`;
 const LATEST_RELEASE_URL = `https://github.com/${REPO}/releases/latest`;
 
-async function fetchLatestReleaseTag() {
+/**
+ * Loads the latest Stable release: its tag and the names of its assets.
+ * Returns null if the GitHub API was unavailable.
+ */
+async function fetchLatestRelease() {
     const headers = { Accept: "application/vnd.github+json" };
 
     if (process.env.GITHUB_TOKEN) {
@@ -26,7 +30,10 @@ async function fetchLatestReleaseTag() {
             );
         }
 
-        return release.tag_name;
+        return {
+            tag: release.tag_name,
+            assetNames: (release.assets || []).map((asset) => asset.name)
+        };
     } catch (err) {
         console.warn(
             `[downloads] Could not load the latest release tag. ` +
@@ -61,9 +68,35 @@ function createAssetUrl(latestTag, filenameTemplate) {
  * .github/workflows/tagged-release.yml.
  */
 module.exports = async function () {
-    const latestTag = await fetchLatestReleaseTag();
+    const release = await fetchLatestRelease();
+    const latestTag = release ? release.tag : null;
     const assetUrl = (filenameTemplate) =>
         createAssetUrl(latestTag, filenameTemplate);
+
+    /*
+     * The MSI installer exists for tagged releases from version 1.50 onwards
+     * (issue #61). Until a Stable release carries one, its card is omitted
+     * rather than pointing at a file that does not exist. Without API data
+     * the card is kept: its link then opens the release page like all others.
+     */
+    const hasAsset = (filenameTemplate) =>
+        !release ||
+        release.assetNames.includes(
+            filenameTemplate.replace(/\{tag\}/g, release.tag)
+        );
+
+    const windowsMsi = hasAsset("KST4Contest-{tag}-windows-x64.msi")
+        ? [
+            {
+                os: "Windows",
+                format: "MSI installer x64",
+                icon: "🪟",
+                recommended: false,
+                note: "Installs for the current user without administrator rights, with a Start menu entry and a desktop shortcut. Settings are shared with the ZIP version.",
+                url: assetUrl("KST4Contest-{tag}-windows-x64.msi")
+            }
+        ]
+        : [];
 
     return [
         {
@@ -74,6 +107,7 @@ module.exports = async function () {
             note: "Extract the complete archive, then start praktiKST.exe. No separate Java installation is required.",
             url: assetUrl("praktiKST-{tag}-windows-x64.zip")
         },
+        ...windowsMsi,
         {
             os: "Linux",
             format: "Flatpak (.flatpakref)",
