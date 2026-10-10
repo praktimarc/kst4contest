@@ -6,10 +6,8 @@ plugins {
 // kst4contest.observe and hands UI work over via UiDispatcher.
 
 dependencies {
-    // Test classes live under src/main/java in this project, so JUnit and Mockito
-    // are needed on the main compile classpath. This mirrored pom.xml before Gradle.
-    implementation(libs.junit.jupiter.api)
-    implementation(libs.mockito.core.compile)
+    // JUnit and Mockito are test-only. Until #62 a handful of test classes sat under
+    // src/main/java and dragged both onto the runtime classpath of the shipped app.
     implementation(libs.jetbrains.annotations)
     implementation(libs.sqlite.jdbc)
     implementation(libs.jlayer)
