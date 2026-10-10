@@ -43,7 +43,8 @@ Ein DX-Cluster-Spot wird nur erzeugt, wenn alle folgenden Bedingungen erfüllt s
 3. Der Absender liegt innerhalb des konfigurierten maximalen QRB zur eigenen Station.
 4. Die eigene Station liegt aus Sicht des Absenders innerhalb des angenommenen Antennenkorridors.
 5. Für den Absender ist eine verwertbare Frequenz bekannt oder in der aktuellen Nachricht erkannt worden.
-6. Der lokale DX-Cluster-Server ist aktiviert.
+6. Der Absender ist auf dem Band der erkannten Frequenz noch nicht gearbeitet. Liegt kein bandbezogener Worked-Status vor, etwa aus dem Simplelogfile, zählt der allgemeine Worked-Status.
+7. Der lokale DX-Cluster-Server ist aktiviert.
 
 Treffen die Bedingungen zu, wird der Spot unmittelbar beim Verarbeiten der Nachricht erzeugt. Die parallel angezeigte grüne Richtungsmarkierung bleibt dagegen fünf Minuten sichtbar und kann durch spätere Nachrichten verlängert oder vorzeitig entfernt werden.
 

@@ -43,7 +43,8 @@ An automatic DX Cluster spot is created only when all of the following condition
 3. The sender is within the configured **Default Maximum QRB** from the local station.
 4. The local station lies inside the assumed antenna corridor as seen from the sender.
 5. A usable frequency is known for the sender or detected in the current message.
-6. The local DX Cluster server is enabled.
+6. The sender has not yet been worked on the band of the detected frequency. When no per-band worked state exists, for example from the Simplelogfile, the global worked state counts.
+7. The local DX Cluster server is enabled.
 
 When these conditions are met, the spot is created while the message is processed. The green directional highlight shown in parallel remains visible for five minutes and may be extended or removed by later messages.
 

@@ -64,7 +64,7 @@ Konfiguration:
 
 ## Weitergabe als DX-Cluster-Spot
 
-Seit Version 1.23 kann KST4Contest eine erkannte Richtungsgelegenheit an den DX-Cluster-Client eines Logprogramms weitergeben. Dafür muss der lokale DX-Cluster-Server aktiviert und für den Absender eine verwertbare Frequenz bekannt sein.
+Seit Version 1.23 kann KST4Contest eine erkannte Richtungsgelegenheit an den DX-Cluster-Client eines Logprogramms weitergeben. Dafür muss der lokale DX-Cluster-Server aktiviert und für den Absender eine verwertbare Frequenz bekannt sein. Stationen, die auf dem Band dieser Frequenz bereits gearbeitet sind, werden nicht automatisch gespottet.
 
 Die Frequenz kann bereits aus einer früheren Nachricht stammen oder erstmals in der aktuell auslösenden Nachricht stehen. In beiden Fällen steht sie der Spot-Prüfung zur Verfügung. KST4Contest überträgt damit nicht jede im Chat gefundene QRG, sondern nur Frequenzen, die mit einer geometrisch passenden gerichteten Nachricht zusammenfallen.
 

@@ -41,6 +41,7 @@ Several operators sharing one computer can now use their own callsigns, locators
 - **Background resources are released:** the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler and the map tile proxy are released when the chat controller is closed. They used to keep running until the program ended.
 
 - **AP column sorts numerically:** the **AP [minutes / pot%]** column in the user list and in the directed messages was sorted by its text, which put `13 (75%)` above `3 (50%)`. It now sorts by the minutes of the first aeroplane and, for equal minutes, by the better potential first; empty and `nil` cells go to the bottom in ascending order. This fixes [Issue #87](https://github.com/praktimarc/kst4contest/issues/87).
+- **No automatic cluster spots for worked stations:** the local DX Cluster server generated spots from directional opportunities without checking the worked state. A spot is no longer created when the station has already been worked on the band of the detected frequency; without per-band information the global worked state counts. Manual spots from the map and the test spot in the settings are unchanged. This fixes [Issue #91](https://github.com/praktimarc/kst4contest/issues/91).
 
 ### Upgrade notes
 

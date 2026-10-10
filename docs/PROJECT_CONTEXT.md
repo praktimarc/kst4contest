@@ -113,6 +113,7 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 - Comments are padded or truncated to exactly 30 characters. Automatic AirScout comments retain the locator first and use the compact form `JO51HK AP 1m/100%;4m/75%`.
 - A DX callsign longer than 12 characters is rejected and logged rather than truncated.
 - Trigger conditions, QRG recognition and normalisation, login, keepalive, multi-client delivery and the local-only trust boundary remain separate from line formatting.
+- Automatic spots are suppressed for stations already worked on the band of the sender's known frequency (`MessageBusManagementThread.isAlreadyWorkedForDxClusterSpot`); when only the global Worked flag exists without any per-band flag (Simplelogfile source), the global flag counts, an unknown band keeps the previous behaviour, and manual spots from the map window and the settings test spot are not affected (#91).
 
 ### Logging and Worked-state persistence
 

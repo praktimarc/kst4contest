@@ -64,7 +64,7 @@ Configuration:
 
 ## Forwarding as a DX Cluster Spot
 
-Since version 1.23, KST4Contest can forward a detected directional opportunity to the DX Cluster client of a logging programme. The local DX Cluster server must be enabled and a usable frequency must be known for the sender.
+Since version 1.23, KST4Contest can forward a detected directional opportunity to the DX Cluster client of a logging programme. The local DX Cluster server must be enabled and a usable frequency must be known for the sender. Stations already worked on the band of that frequency are not spotted automatically.
 
 The frequency may come from an earlier message or may be detected for the first time in the message which triggers the opportunity. In both cases it is available when KST4Contest checks whether it can create a spot. The programme therefore does not forward every QRG found in the chat. Automatic spots require a geometrically matching directed message.
 
