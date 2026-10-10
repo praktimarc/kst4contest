@@ -141,6 +141,14 @@ jobs:
       - name: Test
         run: ./gradlew -S test
 
+      # Coverage is a report, not a gate: no threshold, nothing in it can fail on a
+      # percentage. Deliberately not `if: always()` -- without a completed test run the
+      # report would be partial, and after a failed test the result XML below is what matters.
+      # jacocoTestReport writes the per-module XML the summary reads; the aggregate merges
+      # core and app-desktop (i18n-generator is build tooling and stays out).
+      - name: Coverage report
+        run: ./gradlew -S jacocoTestReport jacocoAggregatedReport
+
       - name: Summarise the test results
         if: always()
         run: |
@@ -172,6 +180,50 @@ jobs:
             echo "The result XML reports failures or errors." >&2
             exit 1
           fi
+
+      - name: Summarise the coverage
+        if: always()
+        run: |
+          set -euo pipefail
+          # The last LINE/BRANCH counter in a JaCoCo XML is the report-level total; the
+          # per-package and per-class counters come before it.
+          percent() {
+            local file="$1" type="$2"
+            { grep -o "<counter type=\"$type\"[^>]*/>" "$file" || true; } | tail -1 \
+              | sed 's/.*missed="\([0-9]*\)".*covered="\([0-9]*\)".*/\1 \2/' \
+              | awk 'NF == 2 { t=$1+$2; if (t==0) print "n/a"; else printf "%.1f%% (%d/%d)", 100*$2/t, $2, t }'
+          }
+          row() {
+            local label="$1" file="$2"
+            if [ -f "$file" ]; then
+              echo "| $label | $(percent "$file" LINE) | $(percent "$file" BRANCH) |"
+            else
+              echo "| $label | no report | no report |"
+            fi
+          }
+          {
+            echo ""
+            echo "### Coverage"
+            echo ""
+            echo "| module | lines | branches |"
+            echo "|---|---|---|"
+            row "core" core/build/reports/jacoco/test/jacocoTestReport.xml
+            row "app-desktop" app-desktop/build/reports/jacoco/test/jacocoTestReport.xml
+            row "core + app-desktop" build/reports/jacoco/aggregated/jacoco.xml
+            echo ""
+            echo "Report only: nothing fails on a percentage. The aggregated HTML report is the"
+            echo "coverage-report artifact of this run. i18n-generator is build tooling and is"
+            echo "not counted."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: build/reports/jacoco/aggregated/html/
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Keep the test reports on a failure
         if: failure()
