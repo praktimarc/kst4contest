@@ -9,6 +9,7 @@ composeMultiplatform = "1.8.2"
 spotbugsPlugin = "6.5.12"
 spotbugs = "4.9.8"
 pmd = "7.17.0"
+jacoco = "0.8.13"
 
 [libraries]
 sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqliteJdbc" }
