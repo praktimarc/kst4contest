@@ -24,6 +24,8 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **Profilwechsel im laufenden Betrieb:** **File → Switch operator profile...** trennt die Verbindung und baut die Oberfläche mit den Einstellungen des gewählten Profils neu auf, ohne Programmneustart.
 
+- **Windows-Installer:** Neben dem portablen ZIP-Paket gibt es für Windows jetzt einen MSI-Installer (`KST4Contest-v<Version>-windows-x64.msi`). Er installiert KST4Contest ohne Administratorrechte für das aktuelle Benutzerkonto, legt einen Startmenü-Eintrag und eine Desktop-Verknüpfung an und ersetzt bei einem Update die vorhandene Installation. Einstellungen und Datenbank bleiben unter `%USERPROFILE%\.praktiKST` und werden mit einer portablen Kopie geteilt. Damit ist die erste Stufe von [Issue #61](https://github.com/praktimarc/kst4contest/issues/61) umgesetzt.
+
 ### Geändert
 
 - **Zwischenspeicher der Geländeprofile getrennt:** Berechnete Geländeprofile liegen jetzt in der eigenen, gemeinsam genutzten Datei `terrainprofilecache.db` und werden nach Besitzer getrennt gespeichert. Bisher wurde der gesamte Zwischenspeicher gelöscht, sobald sich Rufzeichen oder Locator änderten; bei einem Profilwechsel wäre damit jedes berechnete Profil verloren gegangen.

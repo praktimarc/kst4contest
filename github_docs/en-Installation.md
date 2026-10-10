@@ -65,7 +65,8 @@ The release page contains the application packages as well as the English and Ge
 
 | Operating system | Package | Typical filename |
 |---|---|---|
-| Windows x64 | ZIP package | `praktiKST-v<version>-windows-x64.zip` |
+| Windows x64 | MSI installer | `KST4Contest-v<version>-windows-x64.msi` |
+| Windows x64 | ZIP package (portable) | `praktiKST-v<version>-windows-x64.zip` |
 | Linux x86_64 | AppImage | `KST4Contest-v<version>-linux-x86_64.AppImage` |
 | Debian/Ubuntu amd64 | DEB package | `KST4Contest-v<version>-debian-amd64.deb` |
 | Fedora/RPM x86_64 | RPM package | `KST4Contest-v<version>-fedora-x86_64.rpm` |
@@ -80,7 +81,25 @@ Only download application packages from the official GitHub Releases, the KST4Co
 
 ## Installing on Windows
 
-KST4Contest is distributed as a ZIP package for Windows. A conventional installer is not required.
+KST4Contest is distributed for Windows in two forms: as an MSI installer and as a portable ZIP package. Both contain the same application with the same bundled runtime; they differ only in how the application gets onto the computer.
+
+| Form | Useful when … |
+|---|---|
+| **MSI installer** | KST4Contest should be installed and updated like an ordinary Windows application, with a Start menu entry |
+| **ZIP package** | KST4Contest should run from any folder without installation, for example from a USB stick |
+
+### MSI installer
+
+1. Download `KST4Contest-v<version>-windows-x64.msi` from the latest release.
+2. Start the downloaded file.
+3. Keep the suggested installation folder or choose a different one, then finish the installer.
+4. Start KST4Contest from the Start menu entry in the **KST4Contest** group or from the desktop shortcut.
+
+The installer sets up KST4Contest for the current Windows user account only. Administrator rights are not required, and User Account Control does not ask for confirmation. A newer version is simply installed over the existing one: the installer replaces the previous installation, so there is no need to uninstall first. KST4Contest is removed like any other application through the Windows settings under **Apps → Installed apps**.
+
+The installer is not signed with a code-signing certificate. If Windows shows a warning when it starts, the notes under [Windows reports an unknown application](#windows-reports-an-unknown-application) apply.
+
+### ZIP package
 
 1. Download `praktiKST-v<version>-windows-x64.zip` from the latest release.
 2. Extract the ZIP file completely into a dedicated folder.
@@ -89,13 +108,15 @@ KST4Contest is distributed as a ZIP package for Windows. A conventional installe
 
 Do not start the application directly from the compressed ZIP file. KST4Contest consists of several files and a bundled runtime. Windows can only use this structure reliably after the archive has been extracted completely.
 
-The application settings are not stored in the extracted program directory. They are stored in your user profile:
+### Settings and data
+
+With both forms, the application settings and the worked-stations database are not stored in the program directory. They are stored in your user profile:
 
 ```text
-%USERPROFILE%\.praktiKST\preferences.xml
+%USERPROFILE%\.praktiKST\
 ```
 
-This allows a new application version to be extracted into a different directory without losing the existing settings.
+This allows a new application version to be installed or extracted into a different directory without losing the existing settings. An installed copy and a portable copy on the same computer use the same settings and the same database.
 
 ---
 
@@ -325,6 +346,15 @@ The update checker does not install anything. It reports the new version and ope
 
 ### Updating Windows
 
+**MSI installer**
+
+1. Close KST4Contest.
+2. Download the new MSI file and start it.
+3. The installer replaces the existing installation; the Start menu entry and the desktop shortcut are kept.
+4. Start the new version and check that the existing settings have been loaded.
+
+**ZIP package**
+
 1. Close KST4Contest.
 2. Download the new Windows ZIP package.
 3. Extract it into a new or empty directory.
@@ -332,7 +362,7 @@ The update checker does not install anything. It reports the new version and ope
 5. Check that the existing settings have been loaded.
 6. Remove the old application directory only after that.
 
-The settings are preserved because they are stored under `%USERPROFILE%\.praktiKST`, not in the application directory.
+In both cases the settings are preserved because they are stored under `%USERPROFILE%\.praktiKST`, not in the application directory.
 
 ### Updating an AppImage
 

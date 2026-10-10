@@ -24,6 +24,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Switching profiles while running:** **File > Switch operator profile...** closes the connection and rebuilds the user interface with the settings of the selected profile, without restarting the program.
 
+- **Windows installer:** next to the portable ZIP package, Windows now also gets an MSI installer (`KST4Contest-v<version>-windows-x64.msi`). It installs KST4Contest for the current user account without administrator rights, adds a Start menu entry and a desktop shortcut, and replaces the existing installation on an update. Settings and database stay under `%USERPROFILE%\.praktiKST` and are shared with a portable copy. This implements the first stage of [Issue #61](https://github.com/praktimarc/kst4contest/issues/61).
+
 ### Changed
 
 - **The terrain profile cache is separate:** computed terrain profiles now live in their own shared file `terrainprofilecache.db` and are stored per owner. Previously the whole cache was dropped whenever the callsign or locator changed, which would have discarded every computed profile on each profile switch.

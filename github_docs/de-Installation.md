@@ -65,7 +65,8 @@ Die Release-Seite enthält die Programmpakete sowie die deutschen und englischen
 
 | Betriebssystem | Paket | Typischer Dateiname |
 |---|---|---|
-| Windows x64 | ZIP-Paket | `praktiKST-v<Version>-windows-x64.zip` |
+| Windows x64 | MSI-Installer | `KST4Contest-v<Version>-windows-x64.msi` |
+| Windows x64 | ZIP-Paket (portabel) | `praktiKST-v<Version>-windows-x64.zip` |
 | Linux x86_64 | AppImage | `KST4Contest-v<Version>-linux-x86_64.AppImage` |
 | Debian/Ubuntu amd64 | DEB-Paket | `KST4Contest-v<Version>-debian-amd64.deb` |
 | Fedora/RPM x86_64 | RPM-Paket | `KST4Contest-v<Version>-fedora-x86_64.rpm` |
@@ -80,7 +81,25 @@ Lade Programmpakete nur aus den offiziellen GitHub Releases, dem KST4Contest-Fla
 
 ## Installation unter Windows
 
-KST4Contest wird unter Windows als ZIP-Paket bereitgestellt. Ein klassischer Installer ist nicht erforderlich.
+KST4Contest wird unter Windows in zwei Formen bereitgestellt: als MSI-Installer und als portables ZIP-Paket. Beide enthalten dasselbe Programm mit derselben Laufzeitumgebung; sie unterscheiden sich nur darin, wie das Programm auf den Rechner kommt.
+
+| Form | Sinnvoll, wenn … |
+|---|---|
+| **MSI-Installer** | KST4Contest wie ein gewöhnliches Windows-Programm mit Startmenü-Eintrag installiert und aktualisiert werden soll |
+| **ZIP-Paket** | KST4Contest ohne Installation aus einem beliebigen Ordner gestartet werden soll, etwa von einem USB-Stick |
+
+### MSI-Installer
+
+1. Lade `KST4Contest-v<Version>-windows-x64.msi` aus dem aktuellen Release herunter.
+2. Starte die heruntergeladene Datei.
+3. Behalte den vorgeschlagenen Installationsordner oder wähle einen anderen und schließe den Installer ab.
+4. Starte KST4Contest über den Startmenü-Eintrag in der Gruppe **KST4Contest** oder über die Desktop-Verknüpfung.
+
+Der Installer richtet KST4Contest nur für das aktuelle Windows-Benutzerkonto ein. Administratorrechte sind nicht erforderlich, und die Benutzerkontensteuerung fragt nicht nach. Eine neuere Version wird einfach über die vorhandene installiert: Der Installer ersetzt die bisherige Installation, eine vorherige Deinstallation ist nicht nötig. Entfernt wird KST4Contest wie jedes andere Programm über die Windows-Einstellungen unter **Apps → Installierte Apps**.
+
+Der Installer ist nicht mit einem Code-Signing-Zertifikat signiert. Zeigt Windows beim Start eine Warnung, gelten die Hinweise unter [Windows meldet eine unbekannte Anwendung](#windows-meldet-eine-unbekannte-anwendung).
+
+### ZIP-Paket
 
 1. Lade `praktiKST-v<Version>-windows-x64.zip` aus dem aktuellen Release herunter.
 2. Entpacke die ZIP-Datei vollständig in einen eigenen Ordner.
@@ -89,13 +108,15 @@ KST4Contest wird unter Windows als ZIP-Paket bereitgestellt. Ein klassischer Ins
 
 Starte das Programm nicht direkt aus der noch komprimierten ZIP-Datei. KST4Contest besteht aus mehreren Dateien und einer mitgelieferten Laufzeitumgebung. Windows kann diese Struktur nur zuverlässig verwenden, wenn das Archiv vorher vollständig entpackt wurde.
 
-Die Programmeinstellungen befinden sich nicht im entpackten Programmordner, sondern im Benutzerverzeichnis:
+### Einstellungen und Daten
+
+Die Programmeinstellungen und die Datenbank der gearbeiteten Stationen befinden sich bei beiden Formen nicht im Programmordner, sondern im Benutzerverzeichnis:
 
 ```text
-%USERPROFILE%\.praktiKST\preferences.xml
+%USERPROFILE%\.praktiKST\
 ```
 
-Dadurch können neue Programmversionen in einen anderen Ordner entpackt werden, ohne dass die vorhandenen Einstellungen verloren gehen.
+Dadurch können neue Programmversionen installiert oder in einen anderen Ordner entpackt werden, ohne dass die vorhandenen Einstellungen verloren gehen. Eine installierte und eine portable Kopie auf demselben Rechner verwenden dieselben Einstellungen und dieselbe Datenbank.
 
 ---
 
@@ -325,6 +346,15 @@ Der Update-Checker installiert nichts selbst. Er informiert über die neue Versi
 
 ### Windows aktualisieren
 
+**MSI-Installer**
+
+1. Beende KST4Contest.
+2. Lade die neue MSI-Datei herunter und starte sie.
+3. Der Installer ersetzt die vorhandene Installation; Startmenü-Eintrag und Desktop-Verknüpfung bleiben erhalten.
+4. Starte die neue Version und prüfe, ob die bisherigen Einstellungen geladen wurden.
+
+**ZIP-Paket**
+
 1. Beende KST4Contest.
 2. Lade das neue Windows-ZIP herunter.
 3. Entpacke es in einen neuen oder leeren Ordner.
@@ -332,7 +362,7 @@ Der Update-Checker installiert nichts selbst. Er informiert über die neue Versi
 5. Prüfe, ob die bisherigen Einstellungen geladen wurden.
 6. Entferne den alten Programmordner erst danach.
 
-Die Einstellungen bleiben erhalten, weil sie unter `%USERPROFILE%\.praktiKST` und nicht im Programmordner gespeichert werden.
+Die Einstellungen bleiben in beiden Fällen erhalten, weil sie unter `%USERPROFILE%\.praktiKST` und nicht im Programmordner gespeichert werden.
 
 ### AppImage aktualisieren
 

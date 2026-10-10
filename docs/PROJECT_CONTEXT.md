@@ -223,6 +223,7 @@ Current website/deployment scripts and update-feed behaviour must be inspected b
 
 - `APPLICATION_CURRENT_VERSION` is the user-visible semantic version and must use the dotted `major.minor.patch` form. `APPLICATION_CURRENTVERSIONNUMBER` is retained only for older feeds and encodes patch releases by appending the patch digit, for example `1.43.1` as `1.431`.
 - The tagged-release workflow creates the GitHub Release before building the website update feed. This ordering is required because `versionInfo.js` reads the published release body through the GitHub Releases API.
+- Tagged releases ship a Windows MSI installer (`KST4Contest-<tag>-windows-x64.msi`, Compose `packageMsi`, jpackage with WiX 3) next to the unchanged portable ZIP (issue #61). It installs per user without UAC and carries the fixed `upgradeUuid` in `app-desktop/build.gradle.kts`, which must never change because Windows Installer uses it to replace the installed version. Nightlies stay ZIP-only: an MSI always carries `composePackageVersion`, so nightly MSIs could not be told apart. Installed and portable copies share `~/.praktiKST`. The website download data (`downloads.js`, `beta.js`) lists the MSI only when the release actually has that asset.
 - After publication, the workflow tests and builds the website, validates the expected Stable version, attaches `kst4ContestVersionInfo.xml` to the release and uploads the complete website build as a workflow artifact.
 
 ### Server-side website statistics
