@@ -529,6 +529,76 @@ public class ChatMember {
 		return worked;
 	}
 
+	/**
+	 * Returns the per-band worked flag that belongs to the given band.
+	 *
+	 * <p>The flag names historically differ from the {@link Band} names:
+	 * {@code B_1296} maps to {@link #isWorked1240()}, {@code B_2320} to
+	 * {@link #isWorked2300()} and {@code B_5760} to {@link #isWorked5600()}.
+	 * This is the same mapping that the worked gross-field cache and the
+	 * external-log band mapping use. The global {@link #isWorked()} flag is
+	 * deliberately not consulted here.</p>
+	 *
+	 * @param band band to check, may be {@code null}
+	 * @return {@code true} when the station is marked worked on that band;
+	 *         {@code false} for {@code null} or a band without a flag
+	 */
+	public boolean isWorkedOnBand(Band band) {
+		if (band == null) {
+			return false;
+		}
+
+		switch (band) {
+			case B_50:
+				return isWorked50();
+			case B_70:
+				return isWorked70();
+			case B_144:
+				return isWorked144();
+			case B_432:
+				return isWorked432();
+			case B_1296:
+				return isWorked1240();
+			case B_2320:
+				return isWorked2300();
+			case B_3400:
+				return isWorked3400();
+			case B_5760:
+				return isWorked5600();
+			case B_10G:
+				return isWorked10G();
+			case B_24G:
+				return isWorked24G();
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Tells whether any per-band worked flag is set.
+	 *
+	 * <p>Sources without band information (for example the Simplelogfile
+	 * interpreter) only set the global {@link #isWorked()} flag. A caller can
+	 * use this method to distinguish such a station from one whose per-band
+	 * state is known. The global flag itself is not part of the result.</p>
+	 *
+	 * @return {@code true} when at least one per-band flag is set
+	 */
+	public boolean hasAnyBandWorkedFlag() {
+		return isWorked50()
+				|| isWorked70()
+				|| isWorked144()
+				|| isWorked432()
+				|| isWorked1240()
+				|| isWorked2300()
+				|| isWorked3400()
+				|| isWorked5600()
+				|| isWorked10G()
+				|| isWorked24G()
+				|| isWorked47G()
+				|| isWorked76G();
+	}
+
     public boolean isWorked50() {
         return Worked50;
     }

@@ -1310,7 +1310,8 @@ public class MessageBusManagementThread extends Thread {
 																? null
 																: sender.getFrequency().get();
 
-														if (detectedFrequency != null && !detectedFrequency.isBlank()) {
+														if (detectedFrequency != null && !detectedFrequency.isBlank()
+																&& !isAlreadyWorkedForDxClusterSpot(sender)) {
 															/*
 															 * The DX Cluster spot must not depend on AirScout data. A known
 															 * frequency and a valid directional opportunity are sufficient.
@@ -1329,6 +1330,10 @@ public class MessageBusManagementThread extends Thread {
 																			onlyForSpottingObject
 																	);
 
+														} else if (detectedFrequency != null && !detectedFrequency.isBlank()) {
+															// Only reached when the worked check was the reason (issue #91).
+															LOGGER.fine("DX Cluster spot suppressed, station already worked on this band: "
+																	+ sender.getCallSign());
 														}
 													} catch (Exception exception) {
 												LOGGER.log(Level.WARNING,
@@ -1851,6 +1856,51 @@ public class MessageBusManagementThread extends Thread {
 		}
 	}
 
+
+	/**
+	 * Decides whether an automatic DX Cluster spot must be suppressed because
+	 * the sender has already been worked on the band of its known frequency.
+	 *
+	 * <p>Rules (issue #91):</p>
+	 * <ul>
+	 *   <li>No sender, no frequency or a frequency outside the supported
+	 *       bands: the existing behaviour is kept and the spot is allowed.</li>
+	 *   <li>The per-band worked flag of the detected band is set: suppress.</li>
+	 *   <li>Only the global worked flag is set and no per-band flag exists
+	 *       (Simplelogfile source without band information): suppress, because
+	 *       the band cannot be told apart.</li>
+	 *   <li>The global flag is set together with per-band flags for other
+	 *       bands: allow, because the per-band information is authoritative.</li>
+	 * </ul>
+	 *
+	 * <p>Manual spots from the map window and the settings test spot do not
+	 * use this check.</p>
+	 *
+	 * @param sender station that triggered the directional opportunity
+	 * @return {@code true} when the automatic spot has to be suppressed
+	 */
+	static boolean isAlreadyWorkedForDxClusterSpot(ChatMember sender) {
+		if (sender == null || sender.getFrequency() == null) {
+			return false;
+		}
+
+		FrequencyTextParser.DetectedFrequency detectedFrequency =
+				FrequencyTextParser.parseExplicitFrequency(
+						sender.getFrequency().get()
+				);
+
+		if (detectedFrequency == null) {
+			// Unknown band: keep the existing behaviour and allow the spot.
+			return false;
+		}
+
+		if (sender.isWorkedOnBand(detectedFrequency.getBand())) {
+			return true;
+		}
+
+		// Worked source without band information (Simplelogfile): global flag only.
+		return sender.isWorked() && !sender.hasAnyBandWorkedFlag();
+	}
 
 	/**
 	 * Builds the comment transmitted with a local DX Cluster spot.
