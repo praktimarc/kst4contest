@@ -199,8 +199,9 @@ CR/LF framing, XML framing, ports/transports, callsign normalization and frequen
 
 - Use the repository Gradle wrapper (`.\gradlew.bat` on Windows).
 - The project uses Java 21, Kotlin 2.2 and Compose Multiplatform 1.8.x at this context snapshot. JavaFX has been removed; no `org.openjfx` dependency remains.
-- JUnit 5/Mockito, PMD and SpotBugs are part of the verification environment.
-- Build/test configuration has historically allowed some test/static-analysis failures not to fail the process exit code. Always read actual summaries/reports.
+- JUnit 5/Mockito, PMD and SpotBugs are part of the verification environment. JUnit and Mockito are test-only dependencies; nothing of them reaches the shipped app image.
+- Test classes live under `src/test` only. Until #62 a few JUnit classes sat under `src/main`, compiled on every build and were never executed; that is the historical reason the two modules once declared JUnit and Mockito as `implementation` dependencies.
+- A test failure fails the build. Only PMD and SpotBugs run with `ignoreFailures`, so their findings do not. Still read the test-result XML under `*/build/test-results/test/` rather than inferring a pass from the exit code.
 
 ## Documentation Surfaces
 
