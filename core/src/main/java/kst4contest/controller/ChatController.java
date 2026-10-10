@@ -22,7 +22,6 @@ import kst4contest.locatorUtils.DirectionUtils;
 import kst4contest.logic.BandOpportunityResolver;
 import kst4contest.logic.PriorityCalculator;
 import kst4contest.model.*;
-import kst4contest.test.MockKstServer;
 import kst4contest.utils.ApplicationFileUtils;
 import kst4contest.utils.PlayAudioUtils;
 import kst4contest.locatorUtils.Location;
