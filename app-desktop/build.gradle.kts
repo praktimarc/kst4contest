@@ -146,7 +146,27 @@ compose.desktop {
             )
 
             linux { iconFile.set(rootProject.file("packaging/icons/kst4contest.png")) }
-            windows { iconFile.set(rootProject.file("packaging/icons/kst4contest.ico")) }
+            windows {
+                iconFile.set(rootProject.file("packaging/icons/kst4contest.ico"))
+                /*
+                 * The MSI installer is built for tagged releases only; nightlies ship
+                 * the portable ZIP alone, because an MSI always carries the plain
+                 * composePackageVersion and two nightly MSIs could not be told apart.
+                 * It installs per user, so it needs neither administrator rights nor
+                 * a UAC prompt, and it adds a Start menu group and a desktop shortcut.
+                 *
+                 * upgradeUuid must NEVER change: Windows Installer uses it to
+                 * recognise an installed KST4Contest and replace it in place when a
+                 * newer MSI runs. A different value would install the new release
+                 * side by side with the old one instead of upgrading it.
+                 */
+                upgradeUuid = "3375071a-25ba-468e-9ae5-8296bc535462"
+                menu = true
+                menuGroup = "KST4Contest"
+                shortcut = true
+                perUserInstall = true
+                dirChooser = true
+            }
             macOS {
                 iconFile.set(rootProject.file("packaging/icons/kst4contest.icns"))
                 // Must stay de.x08.KST4Contest: build-signed-dmg.sh signs against it.
