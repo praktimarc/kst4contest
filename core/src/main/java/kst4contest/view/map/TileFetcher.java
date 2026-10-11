@@ -19,6 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.LongSupplier;
 
 /**
  * Supplies map tiles, from memory, from disk, or from OpenStreetMap, in that order.
@@ -81,6 +82,9 @@ public final class TileFetcher {
      */
     private final Duration retryPause;
 
+    /** Monotonic clock the retry pause is measured against. */
+    private final LongSupplier nanoClock;
+
     /** When each recently failed tile may be asked for again. */
     private final Map<String, Long> retryNotBeforeNanos = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -97,9 +101,19 @@ public final class TileFetcher {
     }
 
     public TileFetcher(Path cacheDirectory, TileSource source, Duration retryPause) {
+        this(cacheDirectory, source, retryPause, System::nanoTime);
+    }
+
+    /**
+     * Test seam: the clock the retry pause is measured against.
+     *
+     * @param nanoClock monotonic time in nanoseconds, {@link System#nanoTime()} in production
+     */
+    TileFetcher(Path cacheDirectory, TileSource source, Duration retryPause, LongSupplier nanoClock) {
         this.cacheDirectory = cacheDirectory;
         this.source = source;
         this.retryPause = retryPause;
+        this.nanoClock = nanoClock;
         this.executor = Executors.newFixedThreadPool(MAX_CONCURRENT_REQUESTS, runnable -> {
             Thread thread = new Thread(runnable, "map-tile-fetch");
             thread.setDaemon(true);
@@ -150,7 +164,7 @@ public final class TileFetcher {
         }
 
         Long notBefore = retryNotBeforeNanos.get(key);
-        if (notBefore != null && System.nanoTime() < notBefore) {
+        if (notBefore != null && nanoClock.getAsLong() < notBefore) {
             /* Still inside the pause after a failure; do not ask again yet. */
             return null;
         }
@@ -236,7 +250,7 @@ public final class TileFetcher {
 
     private void recordFailure(String key) {
         failedRequests.incrementAndGet();
-        retryNotBeforeNanos.put(key, System.nanoTime() + retryPause.toNanos());
+        retryNotBeforeNanos.put(key, nanoClock.getAsLong() + retryPause.toNanos());
     }
 
     private void recordArrival() {

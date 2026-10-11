@@ -1,6 +1,5 @@
 package kst4contest.view;
 
-import javax.swing.Timer;
 import java.util.Objects;
 
 /**
@@ -14,16 +13,24 @@ import java.util.Objects;
  */
 public final class CoalescingTrigger {
 
-    private final Timer timer;
+    private final DelayTimer timer;
 
     /**
      * @param delayMs how long to wait after the last request
      * @param action  runs on the user-interface thread once the delay elapses
      */
     public CoalescingTrigger(final int delayMs, final Runnable action) {
+        this(delayMs, action, DelayTimer.SWING);
+    }
+
+    /**
+     * Test seam: the same trigger on a timer whose firing the caller controls.
+     *
+     * @param timers creates the one-shot timer; {@link DelayTimer#SWING} in production
+     */
+    CoalescingTrigger(final int delayMs, final Runnable action, final DelayTimer.Factory timers) {
         Objects.requireNonNull(action, "action");
-        this.timer = new Timer(delayMs, event -> action.run());
-        this.timer.setRepeats(false);
+        this.timer = timers.create(delayMs, action);
     }
 
     /** Requests a run, restarting the delay. */

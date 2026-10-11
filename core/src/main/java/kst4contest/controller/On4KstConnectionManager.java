@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.LongSupplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,6 +55,7 @@ final class On4KstConnectionManager {
 
     private final ChatController controller;
     private final ScheduledExecutorService scheduler;
+    private final LongSupplier millisClock;
     private final AtomicLong generation = new AtomicLong();
     private final AtomicLong lastReceivedMessageTimestamp = new AtomicLong();
 
@@ -64,12 +66,35 @@ final class On4KstConnectionManager {
     private int reconnectAttempt;
 
     On4KstConnectionManager(ChatController controller) {
+        this(controller,
+                Executors.newSingleThreadScheduledExecutor(runnable -> {
+                    Thread thread = new Thread(runnable, "On4KstConnectionSupervisor");
+                    thread.setDaemon(true);
+                    return thread;
+                }),
+                System::currentTimeMillis);
+    }
+
+    /**
+     * Test seam: the supervisor executor and the clock the idle and handshake timeouts
+     * are measured against.
+     *
+     * <p>Everything the manager schedules, including the five-second session monitor,
+     * goes through {@code scheduler}, so a test can run the tick and the reconnect
+     * backoff on demand instead of waiting for them.</p>
+     *
+     * @param scheduler   runs all supervisor work; single-threaded in production
+     * @param millisClock wall-clock milliseconds, {@link System#currentTimeMillis()}
+     *                    in production
+     */
+    On4KstConnectionManager(
+            ChatController controller,
+            ScheduledExecutorService scheduler,
+            LongSupplier millisClock
+    ) {
         this.controller = controller;
-        this.scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
-            Thread thread = new Thread(runnable, "On4KstConnectionSupervisor");
-            thread.setDaemon(true);
-            return thread;
-        });
+        this.scheduler = scheduler;
+        this.millisClock = millisClock;
         this.scheduler.scheduleAtFixedRate(
                 this::monitorActiveSession, 5L, 5L, TimeUnit.SECONDS);
         LOGGER.fine("ON4KST connection supervisor initialized");
@@ -188,7 +213,7 @@ final class On4KstConnectionManager {
             return;
         }
 
-        long now = System.currentTimeMillis();
+        long now = millisClock.getAsLong();
         session.lastInboundMillis.set(now);
         session.lastProgressMillis.set(now);
 
@@ -236,7 +261,7 @@ final class On4KstConnectionManager {
         session.initialMembers
                 .computeIfAbsent(category, ignored -> new ConcurrentHashMap<>())
                 .put(member.getCallSign().trim().toUpperCase(Locale.ROOT), member);
-        session.lastProgressMillis.set(System.currentTimeMillis());
+        session.lastProgressMillis.set(millisClock.getAsLong());
     }
 
     void onInitialUserListCompleted(long sessionId, ChatCategory category) {
@@ -277,7 +302,8 @@ final class On4KstConnectionManager {
                     token,
                     socket,
                     receiveQueue,
-                    transmitQueue);
+                    transmitQueue,
+                    millisClock.getAsLong());
 
             MessageHistoryRecorder historyRecorder =
                     controller.getMessageHistoryRecorder();
@@ -360,7 +386,7 @@ final class On4KstConnectionManager {
                     historyFrom);
 
             session.loginSent = true;
-            session.lastProgressMillis.set(System.currentTimeMillis());
+            session.lastProgressMillis.set(millisClock.getAsLong());
             LOGGER.log(Level.INFO,
                     "Sending ON4KST login for session {0}, main category {1}",
                     new Object[] {sessionId, mainCategory});
@@ -392,7 +418,7 @@ final class On4KstConnectionManager {
             return;
         }
         session.authenticated = true;
-        session.lastProgressMillis.set(System.currentTimeMillis());
+        session.lastProgressMillis.set(millisClock.getAsLong());
         LOGGER.log(Level.INFO,
                 "ON4KST login accepted for session {0}", sessionId);
 
@@ -528,7 +554,7 @@ final class On4KstConnectionManager {
         }
         reconnectAttempt = 0;
         session.online = true;
-        session.lastProgressMillis.set(System.currentTimeMillis());
+        session.lastProgressMillis.set(millisClock.getAsLong());
         LOGGER.log(Level.INFO,
                 "ON4KST session {0} is authenticated and synchronized",
                 session.id);
@@ -668,7 +694,7 @@ final class On4KstConnectionManager {
                 return;
             }
 
-            long now = System.currentTimeMillis();
+            long now = millisClock.getAsLong();
             if (!session.online
                     && now - session.lastProgressMillis.get()
                     > HANDSHAKE_TIMEOUT_MILLIS) {
@@ -890,11 +916,8 @@ final class On4KstConnectionManager {
         private final Socket socket;
         private final LinkedBlockingQueue<ChatMessage> receiveQueue;
         private final LinkedBlockingQueue<ChatMessage> transmitQueue;
-        private final long connectedMillis = System.currentTimeMillis();
-        private final AtomicLong lastInboundMillis =
-                new AtomicLong(connectedMillis);
-        private final AtomicLong lastProgressMillis =
-                new AtomicLong(connectedMillis);
+        private final AtomicLong lastInboundMillis;
+        private final AtomicLong lastProgressMillis;
         private final ClientLivenessProbeState clientLivenessProbe =
                 new ClientLivenessProbeState();
         private final Map<Integer, Map<String, ChatMember>> initialMembers =
@@ -910,16 +933,23 @@ final class On4KstConnectionManager {
         private volatile boolean online;
         private volatile boolean closed;
 
+        /**
+         * @param connectedMillis the manager's clock at connect time; both idle clocks
+         *                        start from it
+         */
         private Session(
                 long id,
                 Socket socket,
                 LinkedBlockingQueue<ChatMessage> receiveQueue,
-                LinkedBlockingQueue<ChatMessage> transmitQueue
+                LinkedBlockingQueue<ChatMessage> transmitQueue,
+                long connectedMillis
         ) {
             this.id = id;
             this.socket = socket;
             this.receiveQueue = receiveQueue;
             this.transmitQueue = transmitQueue;
+            this.lastInboundMillis = new AtomicLong(connectedMillis);
+            this.lastProgressMillis = new AtomicLong(connectedMillis);
         }
     }
 
