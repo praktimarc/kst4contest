@@ -66,12 +66,7 @@ class ChatPreferencesRoundTripTest {
                             + "main-category flag wins after every read"),
             Map.entry("setBcn_contestScoreSum",
                     "DEAD FIELD: declared with accessors only, no caller in core or app-desktop, "
-                            + "never written nor read"),
-            Map.entry("setStn_loginLocatorSecondCat",
-                    "BUG: never written by writePreferencesToXmlFile and never read by "
-                            + "readPreferencesFromXmlFile, so the compiled-in default 'jn49fk' is "
-                            + "what On4KstConnectionManager.configureMainChat compares against "
-                            + "the main locator")
+                            + "never written nor read")
     );
 
     /**

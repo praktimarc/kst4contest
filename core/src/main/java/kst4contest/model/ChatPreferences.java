@@ -218,7 +218,6 @@ public class ChatPreferences {
 	String stn_loginNameMainCat = "KST4Contest";
 	String stn_loginNameSecondCat = "KST4ContestSHF";
 	String stn_loginLocatorMainCat = "jn49fk";
-	String stn_loginLocatorSecondCat = "jn49fk";
 
 	double stn_antennaBeamWidthDeg = 50;
 	double stn_maxQRBDefault = 900;
@@ -648,14 +647,6 @@ public class ChatPreferences {
 
 	public void setLogsynch_wintestUsePassQrg(boolean logsynch_wintestUsePassQrg) {
 		this.logsynch_wintestUsePassQrg = logsynch_wintestUsePassQrg;
-	}
-
-	public String getStn_loginLocatorSecondCat() {
-		return stn_loginLocatorSecondCat;
-	}
-
-	public void setStn_loginLocatorSecondCat(String stn_loginLocatorSecondCat) {
-		this.stn_loginLocatorSecondCat = stn_loginLocatorSecondCat;
 	}
 
 	public boolean isBcn_beaconsEnabledSecondCat() {
