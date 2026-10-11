@@ -221,6 +221,8 @@ sudo apt install ./KST4Contest-v<Version>-debian-amd64.deb
 
 Alternativ kann die Datei in einer grafischen Paketverwaltung geöffnet werden.
 
+Beta-Pakete tragen hinter der Version eine Vorab-Release-Nummer (`1.50.0-0.beta.001`), die unter der des stabilen Pakets (`1.50.0-1`) liegt; das stabile Paket installiert sich daher als Aktualisierung über eine Beta.
+
 ### Fedora und kompatible RPM-Systeme
 
 Installiere das RPM-Paket mit:
@@ -228,6 +230,8 @@ Installiere das RPM-Paket mit:
 ```bash
 sudo dnf install ./KST4Contest-v<Version>-fedora-x86_64.rpm
 ```
+
+Beta-Pakete tragen hinter der Version eine Vorab-Release-Nummer (`1.50.0-0.beta.001`), die unter der des stabilen Pakets (`1.50.0-1`) liegt; das stabile Paket installiert sich daher als Aktualisierung über eine Beta.
 
 ### Arch Linux: fertiges Release-Paket
 
