@@ -71,12 +71,7 @@ class ChatPreferencesRoundTripTest {
                     "BUG: never written by writePreferencesToXmlFile and never read by "
                             + "readPreferencesFromXmlFile, so the compiled-in default 'jn49fk' is "
                             + "what On4KstConnectionManager.configureMainChat compares against "
-                            + "the main locator"),
-            Map.entry("setLstNotify_QSOSniffer_sniffedWordsList",
-                    "BUG: written as <snifferWords><w>, but the <snifferWords> reader block in "
-                            + "readPreferencesFromXmlFile clears this list and then adds the "
-                            + "entries (normalised as callsigns) to "
-                            + "lstNotify_QSOSniffer_sniffedCallSignList instead")
+                            + "the main locator")
     );
 
     /**

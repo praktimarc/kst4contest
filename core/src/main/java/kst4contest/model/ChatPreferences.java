@@ -323,7 +323,6 @@ public class ChatPreferences {
 			lstNotify_QSOSniffer_sniffedCallSignList =
 			new SimpleRoster<>();
 	//    SimpleRoster<String> lstNotify_QSOSniffer_sniffedCallSignList = new SimpleRoster<>();
-	SimpleRoster<String> lstNotify_QSOSniffer_sniffedWordsList = new SimpleRoster<>();
 	SimpleRoster<String> lstNotify_QSOSniffer_sniffedPrefixLocList = new SimpleRoster<>();
 
 	// Scoring / interaction metrics
@@ -552,15 +551,6 @@ public class ChatPreferences {
 	public SimpleRoster<String>
 	getLstNotify_QSOSniffer_sniffedCallSignList() {
 		return lstNotify_QSOSniffer_sniffedCallSignList;
-	}
-
-	public SimpleRoster<String> getLstNotify_QSOSniffer_sniffedWordsList() {
-		return lstNotify_QSOSniffer_sniffedWordsList;
-	}
-
-	public void setLstNotify_QSOSniffer_sniffedWordsList(java.util.Collection<String> lstNotify_QSOSniffer_sniffedWordsList) {
-		// Fill the existing roster: replacing the field would orphan its listeners.
-		this.lstNotify_QSOSniffer_sniffedWordsList.setAll(lstNotify_QSOSniffer_sniffedWordsList);
 	}
 
 	public SimpleRoster<String> getLstNotify_QSOSniffer_sniffedPrefixLocList() {
@@ -1962,15 +1952,6 @@ public class ChatPreferences {
 			/**
 			 * QSO Sniffer Lists
 			 */
-			Element snifferWords = doc.createElement("snifferWords");
-			rootElement.appendChild(snifferWords);
-
-			for (String word : lstNotify_QSOSniffer_sniffedWordsList.snapshot()) {
-				Element temp = doc.createElement("w");
-				temp.setTextContent(word);
-				snifferWords.appendChild(temp);
-			}
-
 			Element snifferCallSigns =
 					doc.createElement("snifferCallSigns");
 			rootElement.appendChild(snifferCallSigns);
@@ -2924,47 +2905,6 @@ public class ChatPreferences {
 											);
 
 									if (!lstNotify_QSOSniffer_sniffedCallSignList.snapshot()
-											.contains(normalizedCallSign)) {
-										lstNotify_QSOSniffer_sniffedCallSignList
-												.add(normalizedCallSign);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			list = doc.getElementsByTagName("snifferWords");
-			if (list != null && list.getLength() != 0) {
-				// reset to avoid duplicates when reloading
-				lstNotify_QSOSniffer_sniffedWordsList.clear();
-				for (int temp = 0; temp < list.getLength(); temp++) {
-					Node node = list.item(temp);
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-						Element element = (Element) node;
-						NodeList children = element.getChildNodes();
-						for (int i = 0; i < children.getLength(); i++) {
-							Node child = children.item(i);
-							if (child.getNodeType() == Node.ELEMENT_NODE) {
-								String callSign = child.getTextContent();
-
-								if (callSign != null
-										&& !callSign.isBlank()) {
-
-									/*
-									 * Older preference files may contain complete KST callsigns
-									 * such as DN9APW-2. QSO monitoring is stored by base callsign,
-									 * so one entry covers every suffix of the same station.
-									 */
-									String normalizedCallSign =
-											ChatMember.normalizeCallSignToBaseCallSign(
-													callSign
-											);
-
-									if (normalizedCallSign != null
-											&& !normalizedCallSign.isBlank()
-											&& !lstNotify_QSOSniffer_sniffedCallSignList.snapshot()
 											.contains(normalizedCallSign)) {
 										lstNotify_QSOSniffer_sniffedCallSignList
 												.add(normalizedCallSign);

@@ -42,6 +42,7 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **AP-Spalte sortiert numerisch:** Die Spalte **AP [minutes / pot%]** in der Benutzerliste und bei den gerichteten Nachrichten wurde nach ihrem Text sortiert, sodass `13 (75%)` vor `3 (50%)` stand. Jetzt sortiert sie nach den Minuten des ersten Flugzeugs und bei gleichen Minuten nach dem besseren Potenzial; leere und `nil`-Zellen stehen aufsteigend am Ende. Damit ist [Issue #87](https://github.com/praktimarc/kst4contest/issues/87) behoben.
 - **Keine automatischen Cluster-Spots für gearbeitete Stationen:** Der lokale DX-Cluster-Server erzeugte Spots aus Richtungsgelegenheiten, ohne den Worked-Status zu prüfen. Jetzt wird kein Spot mehr erzeugt, wenn die Station auf dem Band der erkannten Frequenz bereits gearbeitet ist; ohne bandbezogene Information zählt der allgemeine Worked-Status. Manuelle Spots aus der Karte und der Test-Spot in den Einstellungen bleiben unverändert. Damit ist [Issue #91](https://github.com/praktimarc/kst4contest/issues/91) behoben.
+- **QSO-Monitoring übernimmt keine Fremdeinträge mehr:** Die `preferences.xml` enthielt neben der Liste der überwachten Rufzeichen eine zweite Liste `snifferWords`, die nirgends in der Oberfläche erschien. Beim Laden wurden ihre Einträge trotzdem als Rufzeichen in das QSO-Monitoring übernommen. Die tote Liste ist entfernt; ein vorhandenes `snifferWords`-Element in alten Dateien wird ignoriert. Damit ist [Issue #103](https://github.com/praktimarc/kst4contest/issues/103) behoben.
 
 ### Hinweise zur Aktualisierung
 
