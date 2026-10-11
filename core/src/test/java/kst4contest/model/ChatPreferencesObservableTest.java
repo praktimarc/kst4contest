@@ -31,7 +31,7 @@ class ChatPreferencesObservableTest {
     void theListSettingsStartEmpty() {
         ChatPreferences prefs = new ChatPreferences();
 
-        assertTrue(prefs.getLstNotify_QSOSniffer_sniffedWordsList().snapshot().isEmpty());
+        assertTrue(prefs.getLstNotify_QSOSniffer_sniffedCallSignList().snapshot().isEmpty());
         assertTrue(prefs.getLstNotify_QSOSniffer_sniffedPrefixLocList().snapshot().isEmpty());
         assertTrue(prefs.getLst_txtSnipList().snapshot().isEmpty());
         assertTrue(prefs.getLst_txtShortCutBtnList().snapshot().isEmpty());

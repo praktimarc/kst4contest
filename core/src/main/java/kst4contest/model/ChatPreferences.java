@@ -218,7 +218,6 @@ public class ChatPreferences {
 	String stn_loginNameMainCat = "KST4Contest";
 	String stn_loginNameSecondCat = "KST4ContestSHF";
 	String stn_loginLocatorMainCat = "jn49fk";
-	String stn_loginLocatorSecondCat = "jn49fk";
 
 	double stn_antennaBeamWidthDeg = 50;
 	double stn_maxQRBDefault = 900;
@@ -323,7 +322,6 @@ public class ChatPreferences {
 			lstNotify_QSOSniffer_sniffedCallSignList =
 			new SimpleRoster<>();
 	//    SimpleRoster<String> lstNotify_QSOSniffer_sniffedCallSignList = new SimpleRoster<>();
-	SimpleRoster<String> lstNotify_QSOSniffer_sniffedWordsList = new SimpleRoster<>();
 	SimpleRoster<String> lstNotify_QSOSniffer_sniffedPrefixLocList = new SimpleRoster<>();
 
 	// Scoring / interaction metrics
@@ -554,15 +552,6 @@ public class ChatPreferences {
 		return lstNotify_QSOSniffer_sniffedCallSignList;
 	}
 
-	public SimpleRoster<String> getLstNotify_QSOSniffer_sniffedWordsList() {
-		return lstNotify_QSOSniffer_sniffedWordsList;
-	}
-
-	public void setLstNotify_QSOSniffer_sniffedWordsList(java.util.Collection<String> lstNotify_QSOSniffer_sniffedWordsList) {
-		// Fill the existing roster: replacing the field would orphan its listeners.
-		this.lstNotify_QSOSniffer_sniffedWordsList.setAll(lstNotify_QSOSniffer_sniffedWordsList);
-	}
-
 	public SimpleRoster<String> getLstNotify_QSOSniffer_sniffedPrefixLocList() {
 		return lstNotify_QSOSniffer_sniffedPrefixLocList;
 	}
@@ -658,14 +647,6 @@ public class ChatPreferences {
 
 	public void setLogsynch_wintestUsePassQrg(boolean logsynch_wintestUsePassQrg) {
 		this.logsynch_wintestUsePassQrg = logsynch_wintestUsePassQrg;
-	}
-
-	public String getStn_loginLocatorSecondCat() {
-		return stn_loginLocatorSecondCat;
-	}
-
-	public void setStn_loginLocatorSecondCat(String stn_loginLocatorSecondCat) {
-		this.stn_loginLocatorSecondCat = stn_loginLocatorSecondCat;
 	}
 
 	public boolean isBcn_beaconsEnabledSecondCat() {
@@ -1962,15 +1943,6 @@ public class ChatPreferences {
 			/**
 			 * QSO Sniffer Lists
 			 */
-			Element snifferWords = doc.createElement("snifferWords");
-			rootElement.appendChild(snifferWords);
-
-			for (String word : lstNotify_QSOSniffer_sniffedWordsList.snapshot()) {
-				Element temp = doc.createElement("w");
-				temp.setTextContent(word);
-				snifferWords.appendChild(temp);
-			}
-
 			Element snifferCallSigns =
 					doc.createElement("snifferCallSigns");
 			rootElement.appendChild(snifferCallSigns);
@@ -2924,47 +2896,6 @@ public class ChatPreferences {
 											);
 
 									if (!lstNotify_QSOSniffer_sniffedCallSignList.snapshot()
-											.contains(normalizedCallSign)) {
-										lstNotify_QSOSniffer_sniffedCallSignList
-												.add(normalizedCallSign);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			list = doc.getElementsByTagName("snifferWords");
-			if (list != null && list.getLength() != 0) {
-				// reset to avoid duplicates when reloading
-				lstNotify_QSOSniffer_sniffedWordsList.clear();
-				for (int temp = 0; temp < list.getLength(); temp++) {
-					Node node = list.item(temp);
-					if (node.getNodeType() == Node.ELEMENT_NODE) {
-						Element element = (Element) node;
-						NodeList children = element.getChildNodes();
-						for (int i = 0; i < children.getLength(); i++) {
-							Node child = children.item(i);
-							if (child.getNodeType() == Node.ELEMENT_NODE) {
-								String callSign = child.getTextContent();
-
-								if (callSign != null
-										&& !callSign.isBlank()) {
-
-									/*
-									 * Older preference files may contain complete KST callsigns
-									 * such as DN9APW-2. QSO monitoring is stored by base callsign,
-									 * so one entry covers every suffix of the same station.
-									 */
-									String normalizedCallSign =
-											ChatMember.normalizeCallSignToBaseCallSign(
-													callSign
-											);
-
-									if (normalizedCallSign != null
-											&& !normalizedCallSign.isBlank()
-											&& !lstNotify_QSOSniffer_sniffedCallSignList.snapshot()
 											.contains(normalizedCallSign)) {
 										lstNotify_QSOSniffer_sniffedCallSignList
 												.add(normalizedCallSign);

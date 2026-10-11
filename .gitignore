@@ -65,3 +65,6 @@ scratch/
 
 # Kotlin incremental build data
 .kotlin/
+
+# JVM crash reports
+hs_err_pid*.log

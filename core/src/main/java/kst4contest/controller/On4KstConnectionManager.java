@@ -509,16 +509,6 @@ final class On4KstConnectionManager {
                     category, preferences.getStn_loginNameMainCat()));
         }
         sendControl(session, On4KstProtocol.back(category));
-
-        String secondLocator = preferences.getStn_loginLocatorSecondCat();
-        String mainLocator = preferences.getStn_loginLocatorMainCat();
-        if (preferences.isLoginToSecondChatEnabled()
-                && secondLocator != null && !secondLocator.isBlank()
-                && !secondLocator.equalsIgnoreCase(mainLocator)) {
-            controller.onOn4KstConnectionWarning(
-                    "ON4KST uses one locator per TCP session. The second-chat locator '"
-                            + secondLocator + "' is ignored; using '" + mainLocator + "'.");
-        }
     }
 
     private void configureSecondChat(Session session) {

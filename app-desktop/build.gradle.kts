@@ -10,10 +10,8 @@ kotlin {
 }
 
 dependencies {
-    // Mirrors the compile-scope entries in pom.xml: a few test classes still live under
-    // src/main/java and need JUnit and Mockito on the main compile classpath.
-    implementation(libs.junit.jupiter.api)
-    implementation(libs.mockito.core.compile)
+    // JUnit and Mockito are test-only. Until #62 a few test classes sat under src/main/java
+    // and dragged both -- plus byte-buddy and objenesis -- into lib/app of every app image.
     implementation(libs.jetbrains.annotations)
     implementation(project(":core"))
     implementation(compose.desktop.currentOs)

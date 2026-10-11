@@ -124,11 +124,11 @@ Read the current `gradle.properties` and `gradle/libs.versions.toml` before rely
 
 At this context snapshot the project uses Java 21, Kotlin 2.2 and Compose Multiplatform 1.8.x, with JUnit 5/Mockito, PMD and SpotBugs integrated. JavaFX is gone; there is no `org.openjfx` dependency left.
 
-Important: the build configuration has historically allowed test failures to be ignored, and static-analysis findings do not fail the build. Therefore:
+Important: a test failure fails the build, but PMD and SpotBugs run with `ignoreFailures`, so static-analysis findings do not. Test classes live under `src/test` only (since #62; before that a few sat under `src/main` and were never run), and JUnit/Mockito are test-only dependencies. Therefore:
 
 - inspect the Gradle test summary;
 - inspect the test-results XML under `*/build/test-results/` when needed;
-- do not infer "all tests passed" from exit code 0;
+- do not infer "all tests passed" from exit code 0 -- read the XML;
 - report PMD/SpotBugs findings that are visible in the relevant build.
 
 Run focused tests first, then normally the relevant broader test/build command for the scope.
