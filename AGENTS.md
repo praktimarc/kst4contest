@@ -129,7 +129,7 @@ Important: a test failure fails the build, but PMD and SpotBugs run with `ignore
 - inspect the Gradle test summary;
 - inspect the test-results XML under `*/build/test-results/` when needed;
 - do not infer "all tests passed" from exit code 0 -- read the XML;
-- report PMD/SpotBugs findings that are visible in the relevant build.
+- report PMD/SpotBugs findings that are visible in the relevant build. Both tools write XML and HTML: `<module>/build/reports/pmd/main.{xml,html}` and `<module>/build/reports/spotbugs/main.{xml,html}` (since #110; before that SpotBugs printed to the console only). Count from the XML (`<violation`, `<BugInstance`), not from the console. The PR workflow runs `pmdMain spotbugsMain`, prints the counts per module into the job summary and publishes the reports as the `static-analysis` artifact.
 
 Run focused tests first, then normally the relevant broader test/build command for the scope.
 
