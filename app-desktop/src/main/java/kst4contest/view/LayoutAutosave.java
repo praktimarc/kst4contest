@@ -2,7 +2,6 @@ package kst4contest.view;
 
 import kst4contest.observe.UiDispatcher;
 
-import javax.swing.Timer;
 import java.util.Objects;
 
 /**
@@ -22,7 +21,7 @@ public final class LayoutAutosave {
 
     private final Runnable writeLayout;
     private final UiDispatcher uiDispatcher;
-    private final Timer saveDelay;
+    private final DelayTimer saveDelay;
     private boolean pending;
 
     /**
@@ -30,16 +29,28 @@ public final class LayoutAutosave {
      * @param uiDispatcher confines the pending state to one thread
      */
     public LayoutAutosave(final Runnable writeLayout, final UiDispatcher uiDispatcher) {
-        this.writeLayout = Objects.requireNonNull(writeLayout, "writeLayout");
-        this.uiDispatcher = Objects.requireNonNull(uiDispatcher, "uiDispatcher");
         /*
          * A javax.swing.Timer and not the former JavaFX PauseTransition: it fires on the
          * AWT event thread, which is where the user interface lives now, and restart()
          * has the same meaning playFromStart() had. A PauseTransition would need the
          * JavaFX toolkit to be running, which it no longer is.
          */
-        this.saveDelay = new Timer(SAVE_DELAY_MS, event -> flushPending());
-        this.saveDelay.setRepeats(false);
+        this(writeLayout, uiDispatcher, DelayTimer.SWING);
+    }
+
+    /**
+     * Test seam: the same debounce on a timer whose firing the caller controls.
+     *
+     * @param timers creates the one-shot timer; {@link DelayTimer#SWING} in production
+     */
+    LayoutAutosave(
+            final Runnable writeLayout,
+            final UiDispatcher uiDispatcher,
+            final DelayTimer.Factory timers
+    ) {
+        this.writeLayout = Objects.requireNonNull(writeLayout, "writeLayout");
+        this.uiDispatcher = Objects.requireNonNull(uiDispatcher, "uiDispatcher");
+        this.saveDelay = timers.create(SAVE_DELAY_MS, this::flushPending);
     }
 
     /** Asks for a save, restarting the delay. Safe to call from any thread. */
