@@ -2,6 +2,7 @@ package kst4contest.testing;
 
 import java.time.Duration;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /**
  * Bounded polling for tests that wait on another thread.
@@ -37,19 +38,32 @@ public final class Await {
      * @throws AssertionError when the timeout elapses first
      */
     public static void awaitUntil(Duration timeout, String message, BooleanSupplier condition) {
+        awaitUntil(timeout, () -> message, condition);
+    }
+
+    /**
+     * Polls {@code condition} every 10 ms until it is true.
+     *
+     * @param timeout   how long to keep polling before failing
+     * @param message   builds the failure message at the moment of failure, so it can
+     *                  describe the state that was actually seen
+     * @param condition what must become true
+     * @throws AssertionError when the timeout elapses first
+     */
+    public static void awaitUntil(Duration timeout, Supplier<String> message, BooleanSupplier condition) {
         long deadline = System.nanoTime() + timeout.toNanos();
         while (true) {
             if (condition.getAsBoolean()) {
                 return;
             }
             if (System.nanoTime() >= deadline) {
-                throw new AssertionError(message);
+                throw new AssertionError(message.get());
             }
             try {
                 Thread.sleep(POLL_INTERVAL_MS);
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
-                throw new AssertionError("interrupted while waiting: " + message, interrupted);
+                throw new AssertionError("interrupted while waiting: " + message.get(), interrupted);
             }
         }
     }

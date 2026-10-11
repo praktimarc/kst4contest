@@ -1,13 +1,15 @@
 package kst4contest.controller;
 
+import static kst4contest.testing.Await.awaitUntil;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +27,7 @@ import org.junit.jupiter.api.Timeout;
 import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ChatPreferences;
+import kst4contest.testing.ManualScheduler;
 
 class On4KstConnectionProbeTest {
 
@@ -143,7 +146,8 @@ class On4KstConnectionProbeTest {
                              accepted.getOutputStream(), StandardCharsets.UTF_8)) {
                     out.write("OK|\r\n");
                     out.flush();
-                    releaseChatFrame.await(2, TimeUnit.SECONDS);
+                    assertTrue(releaseChatFrame.await(2, TimeUnit.SECONDS),
+                            "the test never released the chat frame");
                     out.write(chatFrame + "\r\n");
                     out.flush();
                 } catch (Exception exception) {
@@ -191,7 +195,8 @@ class On4KstConnectionProbeTest {
                 try (Socket accepted = server.accept();
                      OutputStreamWriter out = new OutputStreamWriter(
                              accepted.getOutputStream(), StandardCharsets.UTF_8)) {
-                    releaseOldResponse.await(2, TimeUnit.SECONDS);
+                    assertTrue(releaseOldResponse.await(2, TimeUnit.SECONDS),
+                            "the test never released the old session's response");
                     out.write("OK\r\n");
                     out.flush();
                 } catch (Exception exception) {
@@ -223,6 +228,16 @@ class On4KstConnectionProbeTest {
         }
     }
 
+    /**
+     * The whole idle flow against a server that never answers: the CK probe goes out
+     * after 90 s of silence, the 210 s stale timeout fails the session while the probe
+     * is still outstanding, and the reconnect backoff opens a second connection.
+     *
+     * <p>Time and the supervisor's schedule are the test's: the clock is advanced and the
+     * five-second monitor tick and the backoff are run on demand, so the test takes
+     * milliseconds and does not depend on the machine's speed. The session state itself
+     * is reached the way production reaches it, not set up by reflection.</p>
+     */
     @Test
     @Timeout(15)
     void unansweredProbeUsesExistingReconnectFlow() throws Exception {
@@ -236,37 +251,91 @@ class On4KstConnectionProbeTest {
         org.mockito.Mockito.when(controller.getChatCategorySecondChat())
                 .thenReturn(preferences.getLoginChatCategorySecond());
 
+        AtomicLong clock = new AtomicLong(1_700_000_000_000L);
+        ManualScheduler scheduler = new ManualScheduler();
+
         try (ServerSocket server = new ServerSocket(0)) {
             preferences.setStn_on4kstServersPort(server.getLocalPort());
-            CompletableFuture<Integer> acceptedConnections =
-                    CompletableFuture.supplyAsync(() -> {
-                        try (Socket first = server.accept();
-                             Socket second = server.accept()) {
-                            return 2;
-                        } catch (Exception exception) {
-                            throw new RuntimeException(exception);
-                        }
-                    });
+            CompletableFuture<Socket> firstConnection =
+                    CompletableFuture.supplyAsync(() -> accept(server));
 
-            On4KstConnectionManager manager =
-                    new On4KstConnectionManager(controller);
+            On4KstConnectionManager manager = new On4KstConnectionManager(
+                    controller, scheduler, clock::get);
             try {
                 manager.start();
-                awaitState(manager, On4KstConnectionState.AUTHENTICATING);
-                manager.onLogstat(1L, new String[] {"LOGSTAT", "100"});
-                awaitState(manager, On4KstConnectionState.SYNCING_MAIN_CHAT);
-                manager.onInitialUserListCompleted(1L,
-                        preferences.getLoginChatCategoryMain());
-                awaitState(manager, On4KstConnectionState.ONLINE);
+                try (Socket first = firstConnection.get(2, TimeUnit.SECONDS)) {
+                    first.setSoTimeout(2_000);
+                    awaitState(manager,
+                            On4KstConnectionState.WAITING_FOR_LOGIN_PROMPT);
 
-                setTimedOutProbe(manager, System.currentTimeMillis());
+                    // The server stays silent, so the login goes out on the fallback delay.
+                    awaitUntil(Duration.ofSeconds(2),
+                            "the login fallback was never scheduled",
+                            scheduler::hasDelayedTasks);
+                    scheduler.runDelayedTasks();
+                    assertEquals(On4KstConnectionState.AUTHENTICATING,
+                            manager.getState());
 
-                awaitState(manager, On4KstConnectionState.RECONNECT_WAIT);
-                assertEquals(2, acceptedConnections.get(7, TimeUnit.SECONDS));
+                    manager.onLogstat(1L, new String[] {"LOGSTAT", "100"});
+                    awaitState(manager, On4KstConnectionState.SYNCING_MAIN_CHAT);
+                    manager.onInitialUserListCompleted(1L,
+                            preferences.getLoginChatCategoryMain());
+                    awaitState(manager, On4KstConnectionState.ONLINE);
+
+                    // 90 s of silence: the monitor sends the client liveness probe.
+                    clock.addAndGet(
+                            On4KstConnectionManager.CLIENT_LIVENESS_PROBE_AFTER_MILLIS + 1L);
+                    scheduler.runPeriodicTask();
+                    assertTrue(readUntil(first, "CK|\r\n").contains("CK|\r\n"),
+                            "the probe must have been written to the socket");
+                    assertEquals(On4KstConnectionState.ONLINE, manager.getState(),
+                            "an outstanding probe alone is not a failure");
+
+                    // 210 s of silence with the probe unanswered: the session is failed.
+                    CompletableFuture<Socket> secondConnection =
+                            CompletableFuture.supplyAsync(() -> accept(server));
+                    clock.addAndGet(
+                            On4KstConnectionManager.INBOUND_STALE_AFTER_MILLIS
+                                    - On4KstConnectionManager.CLIENT_LIVENESS_PROBE_AFTER_MILLIS);
+                    scheduler.runPeriodicTask();
+                    assertEquals(On4KstConnectionState.RECONNECT_WAIT, manager.getState());
+                    assertTrue(scheduler.hasDelayedTasks(), "a reconnect must be scheduled");
+
+                    // The backoff elapses: the existing reconnect flow opens a new socket.
+                    scheduler.runDelayedTasks();
+                    try (Socket second = secondConnection.get(2, TimeUnit.SECONDS)) {
+                        assertTrue(second.isConnected());
+                    }
+                    awaitState(manager, On4KstConnectionState.WAITING_FOR_LOGIN_PROMPT);
+                }
             } finally {
                 manager.stopByUser();
+                manager.shutdown();
             }
         }
+    }
+
+    private static Socket accept(ServerSocket server) {
+        try {
+            return server.accept();
+        } catch (IOException exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+
+    /** Reads from the socket until {@code marker} has arrived, or its 2 s read timeout fires. */
+    private static String readUntil(Socket socket, String marker) throws IOException {
+        StringBuilder text = new StringBuilder();
+        InputStream in = socket.getInputStream();
+        byte[] buffer = new byte[256];
+        while (!text.toString().contains(marker)) {
+            int read = in.read(buffer);
+            if (read < 0) {
+                break;
+            }
+            text.append(new String(buffer, 0, read, StandardCharsets.UTF_8));
+        }
+        return text.toString();
     }
 
     private On4KstConnectionManager.IdleAction idleAction(
@@ -303,38 +372,9 @@ class On4KstConnectionProbeTest {
     private void awaitState(
             On4KstConnectionManager manager,
             On4KstConnectionState expected
-    ) throws InterruptedException {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(7L);
-        while (System.nanoTime() < deadline) {
-            if (manager.getState() == expected) {
-                return;
-            }
-            TimeUnit.MILLISECONDS.sleep(25L);
-        }
-        assertEquals(expected, manager.getState());
-    }
-
-    private void setTimedOutProbe(
-            On4KstConnectionManager manager,
-            long now
-    ) throws ReflectiveOperationException {
-        Field activeSession = On4KstConnectionManager.class
-                .getDeclaredField("activeSession");
-        activeSession.setAccessible(true);
-        Object session = activeSession.get(manager);
-
-        Field lastInboundMillis = session.getClass()
-                .getDeclaredField("lastInboundMillis");
-        lastInboundMillis.setAccessible(true);
-        ((AtomicLong) lastInboundMillis.get(session)).set(
-                now - On4KstConnectionManager.INBOUND_STALE_AFTER_MILLIS - 1L);
-
-        Field clientLivenessProbe = session.getClass()
-                .getDeclaredField("clientLivenessProbe");
-        clientLivenessProbe.setAccessible(true);
-        ((On4KstConnectionManager.ClientLivenessProbeState)
-                clientLivenessProbe.get(session)).tryStart(
-                        now - On4KstConnectionManager
-                                .CLIENT_LIVENESS_PROBE_AFTER_MILLIS);
+    ) {
+        awaitUntil(Duration.ofSeconds(5),
+                () -> "expected state " + expected + " but was " + manager.getState(),
+                () -> manager.getState() == expected);
     }
 }
