@@ -41,6 +41,64 @@ jobs:
       - name: Compile
         run: ./gradlew -S classes testClasses
 
+      # Report only: both tools run with ignoreFailures, so a finding cannot fail this step
+      # -- a crash of the tool itself still does, which is wanted. The findings used to exist
+      # only in the console log; since #110 they are files, and the table and the artifact
+      # below are what makes them readable from a pull request.
+      - name: Static analysis (report only)
+        run: ./gradlew -S pmdMain spotbugsMain
+
+      # Counted from the report XML, never from Gradle's output or exit code. A missing
+      # report prints "no report" and does not fail the step: that case is already visible
+      # in the step above.
+      - name: Summarise the static analysis
+        if: always()
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          count() {
+            local file="$1" element="$2"
+            if [ -f "$file" ]; then
+              # grep exits 1 on zero matches, which pipefail would turn into a failed step.
+              { grep -o "<$element " "$file" || true; } | wc -l | tr -d ' '
+            else
+              echo "no report"
+            fi
+          }
+
+          {
+            echo "### Static analysis"
+            echo ""
+            echo "| module | PMD violations | SpotBugs bugs |"
+            echo "|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for module in core app-desktop i18n-generator; do
+            pmd=$(count "$module/build/reports/pmd/main.xml" violation)
+            spotbugs=$(count "$module/build/reports/spotbugs/main.xml" BugInstance)
+            echo "$module: pmd=$pmd spotbugs=$spotbugs"
+            echo "| \`$module\` | $pmd | $spotbugs |" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+          {
+            echo ""
+            echo "Report only: nothing fails on a finding. The XML and HTML reports are the"
+            echo "static-analysis artifact of this run. i18n-generator is Kotlin only, so PMD"
+            echo "has no Java source there and writes no report."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the static analysis reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: static-analysis
+          path: |
+            */build/reports/pmd/
+            */build/reports/spotbugs/
+          if-no-files-found: ignore
+          retention-days: 14
+
       # What a translation PR is actually about, put where its author will look. The counts
       # come from the files rather than from Gradle's output, so an up-to-date task cannot
       # make the table disappear.

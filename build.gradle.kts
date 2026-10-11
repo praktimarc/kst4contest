@@ -41,6 +41,16 @@ subprojects {
         ignoreFailures.set(true)
     }
 
+    // Without a configured report SpotBugs prints its findings to stdout only and leaves
+    // no file behind; with ignoreFailures they then scroll past unread. AGENTS.md asks for
+    // the findings visible in a build to be reported, which needs something to read them
+    // from: XML for CI to count, HTML for people. Default location, which the plugin names
+    // after the source set: <module>/build/reports/spotbugs/main.{xml,html} (#110).
+    tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
+        reports.create("xml") { required.set(true) }
+        reports.create("html") { required.set(true) }
+    }
+
     /*
      * Coverage is a report, not a gate: there is no jacocoTestCoverageVerification and no
      * minimum percentage. A threshold set at today's number would trip on the next unrelated
