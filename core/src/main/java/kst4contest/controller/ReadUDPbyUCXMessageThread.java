@@ -187,6 +187,12 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //			packet = new DatagramPacket(buf, buf.length); //TODO: Changed that due to memory leak, check if all works (seems like that)
 //    		 DatagramPacket packet  = new DatagramPacket(SRPDefinitions.BYTE_BUFFER_MAX_LENGTH); //TODO: Changed that due to memory leak, check if all works (seems like that)
 			try {
+				/*
+				 * A DatagramPacket remembers the length of the last datagram it
+				 * received; without this reset a long packet after a short one is
+				 * truncated to the short one's length (#115).
+				 */
+				packet.setLength(packet.getData().length);
 				socket.receive(packet);
 
 			} catch (SocketTimeoutException e2) {
@@ -217,6 +223,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						socket = new DatagramSocket(null);
 						socket.setReuseAddress(true);
 						socket.bind(new InetSocketAddress(client.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort()));
+						packet.setLength(packet.getData().length);
 						socket.receive(packet);
 						socket.setSoTimeout(3000);
 					} catch (Exception ex) {
