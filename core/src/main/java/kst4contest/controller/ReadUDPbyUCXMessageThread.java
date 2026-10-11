@@ -32,7 +32,12 @@ import kst4contest.model.Band;
  */
 public class ReadUDPbyUCXMessageThread extends Thread {
 	private BufferedReader reader;
-	private Socket socket;
+	/**
+	 * The listening socket. It is owned by this thread: {@link #run()} binds it
+	 * (unless a pre-bound socket was handed in) and {@link #interrupt()} closes
+	 * it, which is the only way to wake a blocking {@code receive()}.
+	 */
+	private volatile DatagramSocket socket;
 	private ChatController client;
     private int udpPortNr = 12060;
     private ThreadStatusCallback callBackToController;
@@ -47,6 +52,22 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 		this.udpPortNr = localPort;
         this.client = client;
         this.callBackToController = callback;
+	}
+
+	/**
+	 * Creates a listener on a socket that is already bound. Tests use this to
+	 * listen on an ephemeral loopback port; the application binds the configured
+	 * port itself through the public constructor.
+	 *
+	 * @param boundSocket bound datagram socket this thread takes ownership of
+	 * @param client controller that receives the parsed packets
+	 * @param callback thread-status sink
+	 */
+	ReadUDPbyUCXMessageThread(DatagramSocket boundSocket, ChatController client, ThreadStatusCallback callback) {
+		this.socket = boundSocket;
+		this.udpPortNr = boundSocket.getLocalPort();
+		this.client = client;
+		this.callBackToController = callback;
 	}
 
 	@Override
@@ -138,27 +159,31 @@ public class ReadUDPbyUCXMessageThread extends Thread {
         ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
         callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
-		DatagramSocket socket = null;
-
         boolean running;
 		byte[] buf = new byte[1777];
 		DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
 		try {
 //			socket = new DatagramSocket(12060);
-            socket = new DatagramSocket(udpPortNr);
+			if (socket == null) {
+				socket = new DatagramSocket(udpPortNr);
+			}
 			socket.setSoTimeout(2000); //TODO try for end properly
 		}
-		
+
 		catch (SocketException e) {
 			//this will catch the repeating Sockettimeoutexception...nothing to do
 //			e.printStackTrace();
 		}
 
-		while (true) {
-			
+		/*
+		 * interrupt() sets the flag and closes the socket; the closed socket makes
+		 * the blocking receive() throw, and the flag ends the loop.
+		 */
+		while (!isInterrupted()) {
+
 			boolean timeOutIndicator = false;
-			
+
 //			packet = new DatagramPacket(buf, buf.length); //TODO: Changed that due to memory leak, check if all works (seems like that)
 //    		 DatagramPacket packet  = new DatagramPacket(SRPDefinitions.BYTE_BUFFER_MAX_LENGTH); //TODO: Changed that due to memory leak, check if all works (seems like that)
 			try {
@@ -171,6 +196,9 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //				e2.printStackTrace();
 			}
 			catch (IOException e) {
+				if (isInterrupted() || socket == null || socket.isClosed()) {
+					break;
+				}
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (NullPointerException nE) {
@@ -234,6 +262,12 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 			buf = new byte[1777]; // reset buffer for future smaller packets
 
+		}
+
+		// Covers an interrupt() that arrived before the socket was bound.
+		DatagramSocket listeningSocket = socket;
+		if (listeningSocket != null && !listeningSocket.isClosed()) {
+			listeningSocket.close();
 		}
 
 	}
@@ -563,7 +597,10 @@ public class ReadUDPbyUCXMessageThread extends Thread {
         ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, false, "terminated", false);
         callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
-		this.socket.close();
+		DatagramSocket listeningSocket = this.socket;
+		if (listeningSocket != null && !listeningSocket.isClosed()) {
+			listeningSocket.close();
+		}
 
 		return true;
 
