@@ -58,11 +58,16 @@ jobs:
           name: windows-zip
           path: dist/praktiKST-${{ github.ref_name }}-windows-x64.zip
 
-      # Tagged releases only (issue #61): the MSI carries composePackageVersion
-      # from gradle.properties, so every nightly MSI would be the same version
-      # and nightly-artifacts.yml deliberately stays ZIP-only. jpackage needs
-      # WiX 3.x, installed above. The ZIP is unchanged and stays alongside.
+      # Stable tags only (issue #61): the MSI carries composePackageVersion
+      # from gradle.properties, so a nightly or beta MSI would have the same
+      # version as the following stable one. Windows Installer refuses to
+      # install an equal version over the installed one (jpackage's upgrade
+      # table only accepts strictly higher versions), so a beta tester could
+      # not move to the stable without uninstalling first. Betas and nightlies
+      # therefore stay ZIP-only. jpackage needs WiX 3.x, installed above. The
+      # ZIP is unchanged and stays alongside.
       - name: Build Windows MSI installer
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
         shell: pwsh
         run: |
           .\gradlew.bat -S :app-desktop:packageMsi
@@ -73,6 +78,7 @@ jobs:
           Copy-Item $msi.FullName dist/KST4Contest-${{ github.ref_name }}-windows-x64.msi
 
       - name: Upload Windows MSI artifact
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
         uses: actions/upload-artifact@v6
         with:
           name: windows-msi
@@ -755,6 +761,7 @@ jobs:
           path: release-assets/windows
 
       - name: Download Windows MSI artifact
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
         uses: actions/download-artifact@v8.0.1
         with:
           name: windows-msi
@@ -815,6 +822,9 @@ jobs:
           makeLatest: ${{ !startsWith(github.ref_name, 'beta-') }}
           bodyFile: release-notes.md
           generateReleaseNotes: false
+          # The MSI entry is absent for beta tags (the Windows job skips it);
+          # artifactErrorsFailBuild is left at its default, so a missing path
+          # only warns and the release still gets every other asset.
           artifacts: >-
             release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
             release-assets/windows/KST4Contest-${{ github.ref_name }}-windows-x64.msi,

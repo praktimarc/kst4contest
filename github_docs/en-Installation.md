@@ -81,7 +81,7 @@ Only download application packages from the official GitHub Releases, the KST4Co
 
 ## Installing on Windows
 
-KST4Contest is distributed for Windows in two forms: as an MSI installer and as a portable ZIP package. Both contain the same application with the same bundled runtime; they differ only in how the application gets onto the computer.
+KST4Contest is distributed for Windows in two forms: as an MSI installer and as a portable ZIP package. Both contain the same application with the same bundled runtime; they differ only in how the application gets onto the computer. The MSI installer is built for stable releases only: a beta installer would carry the same version number as the following stable release, and Windows Installer refuses to install an equal version over an installed one. Beta and nightly builds for Windows are therefore provided as the ZIP package only.
 
 | Form | Useful when … |
 |---|---|

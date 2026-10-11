@@ -81,7 +81,7 @@ Lade Programmpakete nur aus den offiziellen GitHub Releases, dem KST4Contest-Fla
 
 ## Installation unter Windows
 
-KST4Contest wird unter Windows in zwei Formen bereitgestellt: als MSI-Installer und als portables ZIP-Paket. Beide enthalten dasselbe Programm mit derselben Laufzeitumgebung; sie unterscheiden sich nur darin, wie das Programm auf den Rechner kommt.
+KST4Contest wird unter Windows in zwei Formen bereitgestellt: als MSI-Installer und als portables ZIP-Paket. Beide enthalten dasselbe Programm mit derselben Laufzeitumgebung; sie unterscheiden sich nur darin, wie das Programm auf den Rechner kommt. Der MSI-Installer wird nur für Stable-Releases gebaut: Ein Beta-Installer trüge dieselbe Versionsnummer wie das folgende Stable-Release, und Windows Installer verweigert die Installation einer gleichen Version über eine vorhandene. Beta- und Nightly-Versionen gibt es für Windows deshalb nur als ZIP-Paket.
 
 | Form | Sinnvoll, wenn … |
 |---|---|
