@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -51,6 +52,22 @@ class TileFetcherTest {
 
     private TileFetcher fetcherWith(Path cacheDirectory, RecordingSource source) {
         return new TileFetcher(cacheDirectory, source);
+    }
+
+    /**
+     * The clock the retry pause is measured against, advanced by the test instead of
+     * waited for. The pause itself is 1 ms; what matters is only "before" and "after".
+     */
+    private static final Duration SHORT_PAUSE = Duration.ofMillis(1);
+
+    private final AtomicLong nanoClock = new AtomicLong();
+
+    private TileFetcher fetcherWithPause(Path cacheDirectory, RecordingSource source) {
+        return new TileFetcher(cacheDirectory, source, SHORT_PAUSE, nanoClock::get);
+    }
+
+    private void letThePauseElapse() {
+        nanoClock.addAndGet(SHORT_PAUSE.toNanos() * 20);
     }
 
     @Test
@@ -120,10 +137,10 @@ class TileFetcherTest {
     @Test
     void a_failure_is_not_remembered_as_an_answer(@TempDir Path cache) throws Exception {
         RecordingSource source = new RecordingSource(null, true);
-        TileFetcher fetcher = new TileFetcher(cache, source, Duration.ofMillis(1));
+        TileFetcher fetcher = fetcherWithPause(cache, source);
 
         fetcher.fetchTileAsync(6, 33, 21).get();
-        Thread.sleep(20);
+        letThePauseElapse();
         fetcher.fetchTileAsync(6, 33, 21).get();
 
         assertEquals(2, source.requestedUrls.size());
@@ -255,10 +272,10 @@ class TileFetcherTest {
     @Test
     void a_tile_is_asked_for_again_once_the_pause_is_over(@TempDir Path cache) throws Exception {
         RecordingSource source = new RecordingSource(null, true);
-        TileFetcher fetcher = new TileFetcher(cache, source, Duration.ofMillis(1));
+        TileFetcher fetcher = fetcherWithPause(cache, source);
 
         fetcher.fetchTileAsync(6, 33, 21).get();
-        Thread.sleep(20);
+        letThePauseElapse();
         fetcher.fetchTileAsync(6, 33, 21).get();
 
         assertEquals(2, source.requestedUrls.size());
@@ -267,12 +284,12 @@ class TileFetcherTest {
     /** A tile that arrives after a failure is not held back by the old failure. */
     @Test
     void a_pause_does_not_outlive_a_successful_fetch(@TempDir Path cache) throws Exception {
-        TileFetcher failing = new TileFetcher(cache, new RecordingSource(null, true), Duration.ofMillis(1));
+        TileFetcher failing = fetcherWithPause(cache, new RecordingSource(null, true));
         failing.fetchTileAsync(6, 33, 21).get();
-        Thread.sleep(20);
+        letThePauseElapse();
 
         RecordingSource working = new RecordingSource(new byte[]{3}, false);
-        TileFetcher recovered = new TileFetcher(cache, working, Duration.ofMillis(1));
+        TileFetcher recovered = fetcherWithPause(cache, working);
 
         assertArrayEquals(new byte[]{3}, recovered.fetchTileAsync(6, 33, 21).get());
     }
