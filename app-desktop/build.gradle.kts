@@ -143,7 +143,28 @@ compose.desktop {
                 "jdk.xml.dom", "jdk.unsupported",
             )
 
-            linux { iconFile.set(rootProject.file("packaging/icons/kst4contest.png")) }
+            linux {
+                iconFile.set(rootProject.file("packaging/icons/kst4contest.png"))
+                /*
+                 * Package release number behind the version (1.50.0-<release>).
+                 * The version itself is composePackageVersion for every target
+                 * format, so a beta DEB/RPM would otherwise carry exactly the
+                 * version of the following stable one -- and dnf, rpm -U and
+                 * dpkg refuse to replace a package by one of equal version, so
+                 * a beta user could not move to the stable (#113). The tagged
+                 * release workflow therefore passes -PlinuxAppRelease following
+                 * the Fedora pre-release convention:
+                 *
+                 *   beta-v1.50.0-beta-001  ->  1.50.0-0.beta.001
+                 *   beta-v1.50.0-rc02      ->  1.50.0-0.rc02
+                 *   v1.50.0                ->  1.50.0-1
+                 *
+                 * Everything starting with "0." sorts below "1" for both rpm
+                 * and dpkg. Nightlies and local builds do not set the property
+                 * and keep release 1.
+                 */
+                appRelease = providers.gradleProperty("linuxAppRelease").orElse("1").get()
+            }
             windows {
                 iconFile.set(rootProject.file("packaging/icons/kst4contest.ico"))
                 /*
