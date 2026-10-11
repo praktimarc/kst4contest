@@ -111,7 +111,7 @@ jobs:
           retention-days: 7
 
   build-windows-zip:
-    name: Build Windows ZIP
+    name: Build Windows ZIP and MSI
     runs-on: windows-latest
     needs: test
 
@@ -152,6 +152,32 @@ jobs:
         with:
           name: windows-zip
           path: dist/praktiKST-${{ github.ref_name }}-windows-x64.zip
+
+      # Stable tags only (issue #61): the MSI carries composePackageVersion
+      # from gradle.properties, so a nightly or beta MSI would have the same
+      # version as the following stable one. Windows Installer refuses to
+      # install an equal version over the installed one (jpackage's upgrade
+      # table only accepts strictly higher versions), so a beta tester could
+      # not move to the stable without uninstalling first. Betas and nightlies
+      # therefore stay ZIP-only. jpackage needs WiX 3.x, installed above. The
+      # ZIP is unchanged and stays alongside.
+      - name: Build Windows MSI installer
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
+        shell: pwsh
+        run: |
+          .\gradlew.bat -S :app-desktop:packageMsi
+          $msi = Get-ChildItem -Path app-desktop/build/compose/binaries/main/msi -Filter *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $msi) {
+            throw "No Windows MSI produced by packageMsi"
+          }
+          Copy-Item $msi.FullName dist/KST4Contest-${{ github.ref_name }}-windows-x64.msi
+
+      - name: Upload Windows MSI artifact
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-msi
+          path: dist/KST4Contest-${{ github.ref_name }}-windows-x64.msi
 
   build-linux-appimage:
     name: Build Linux AppImage
@@ -835,6 +861,13 @@ jobs:
           name: windows-zip
           path: release-assets/windows
 
+      - name: Download Windows MSI artifact
+        if: ${{ !startsWith(github.ref_name, 'beta-') }}
+        uses: actions/download-artifact@v8.0.1
+        with:
+          name: windows-msi
+          path: release-assets/windows
+
       - name: Download Linux artifact
         uses: actions/download-artifact@v8.0.1
         with:
@@ -890,8 +923,12 @@ jobs:
           makeLatest: ${{ !startsWith(github.ref_name, 'beta-') }}
           bodyFile: release-notes.md
           generateReleaseNotes: false
+          # The MSI entry is absent for beta tags (the Windows job skips it);
+          # artifactErrorsFailBuild is left at its default, so a missing path
+          # only warns and the release still gets every other asset.
           artifacts: >-
             release-assets/windows/praktiKST-${{ github.ref_name }}-windows-x64.zip,
+            release-assets/windows/KST4Contest-${{ github.ref_name }}-windows-x64.msi,
             release-assets/linux/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage,
             release-assets/debian/KST4Contest-${{ github.ref_name }}-debian-amd64.deb,
             release-assets/fedora/KST4Contest-${{ github.ref_name }}-fedora-x86_64.rpm,

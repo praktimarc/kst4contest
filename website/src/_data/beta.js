@@ -82,6 +82,21 @@ module.exports = async function () {
     const assetUrl = (filenameTemplate) =>
         `https://github.com/${REPO}/releases/download/${tag}/${filenameTemplate.replace(/\{tag\}/g, tag)}`;
 
+    // The MSI installer exists for tags from version 1.50 onwards (issue #61);
+    // an older beta release has no such asset and gets no dead link.
+    const assetNames = (release.assets || []).map((asset) => asset.name);
+    const windowsMsi = assetNames.includes(`KST4Contest-${tag}-windows-x64.msi`)
+        ? [
+            {
+                os: "Windows",
+                format: "MSI installer x64",
+                icon: "🪟",
+                note: "Installs for the current user without administrator rights, with a Start menu entry and a desktop shortcut. Settings are shared with the ZIP version.",
+                url: assetUrl("KST4Contest-{tag}-windows-x64.msi")
+            }
+        ]
+        : [];
+
     const items = [
         {
             os: "Windows",
@@ -90,6 +105,7 @@ module.exports = async function () {
             note: "Extract the archive, then start praktiKST.exe. No separate Java installation is required.",
             url: assetUrl("praktiKST-{tag}-windows-x64.zip")
         },
+        ...windowsMsi,
         {
             os: "Linux",
             format: "Flatpak (.flatpakref)",
