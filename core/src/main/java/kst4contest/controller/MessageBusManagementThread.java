@@ -6,10 +6,10 @@ import java.sql.SQLException;
 //import java.net.Socket;
 //import java.util.ArrayList;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Hashtable;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.logging.Level;
@@ -22,6 +22,7 @@ import kst4contest.model.*;
 import kst4contest.logic.FrequencyTextParser;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.LongPredicate;
+import java.util.function.LongSupplier;
 import kst4contest.observe.SimpleValue;
 
 /**
@@ -104,10 +105,25 @@ public class MessageBusManagementThread extends Thread {
 
 	// ==== Auto-answer flood/ping-pong protection ====
 	private static final String AUTOANSWER_PREFIX = ApplicationConstants.AUTOANSWER_PREFIX;
-	private static final long AUTOANSWER_COOLDOWN_MS = 120_000L; // two minutes
+	static final long AUTOANSWER_COOLDOWN_MS = 120_000L; // two minutes
+
+	/*
+	 * Lower-case fragments that identify a question for the local QRG. An incoming
+	 * private message is matched case-insensitively against each of them.
+	 */
+	static final Set<String> QRG_QUESTION_TEXTS = Set.of(
+			"ur qrg?",
+			"your qrg?",
+			"qrg?",
+			"freq?",
+			"pse qrg"
+	);
 
 	// Cooldown per remote station and chat category; updated only after this client sends.
 	private final Hashtable<String, Long> lastLocalAutoAnswerPerRemoteMs = new Hashtable<>();
+
+	// Wall clock for the autoanswer cooldown; injectable for tests.
+	private final LongSupplier millisClock;
 //	BufferedWriter bufwrtrDBGMSGOut;
 
 //	    private String text;
@@ -139,12 +155,32 @@ public class MessageBusManagementThread extends Thread {
 			LinkedBlockingQueue<ChatMessage> receiveQueue,
 			LongPredicate connectionSessionIsActive
 	) {
+		this(client, callBack, connectionSessionId, receiveQueue,
+				connectionSessionIsActive, System::currentTimeMillis);
+	}
+
+	/**
+	 * Full constructor with an explicit wall clock.
+	 *
+	 * @param millisClock source of the current time in epoch milliseconds, used for
+	 *                    the autoanswer cooldown; production code passes
+	 *                    {@code System::currentTimeMillis}
+	 */
+	MessageBusManagementThread(
+			ChatController client,
+			ThreadStatusCallback callBack,
+			long connectionSessionId,
+			LinkedBlockingQueue<ChatMessage> receiveQueue,
+			LongPredicate connectionSessionIsActive,
+			LongSupplier millisClock
+	) {
 
 		this.callBackToController = callBack;
 		this.client = client;
 		this.connectionSessionId = connectionSessionId;
 		this.receiveQueue = receiveQueue;
 		this.connectionSessionIsActive = connectionSessionIsActive;
+		this.millisClock = millisClock;
 
 		ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
 		callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
@@ -867,22 +903,6 @@ public class MessageBusManagementThread extends Thread {
 		final String SRVR_LOGINWRONGCALLSYNTAX = "103";
 		final String SRVR_LOGINWRONGCALLUNKNOWN = "101";
 
-		/**
-		 * here we have a helper Set for identifying questions for my qrg which can be autoanswered later // TODO: move to an extra method
-		 */
-		final HashSet<String> qrgQuestionTexts = new HashSet<String>();
-//		final ArrayList<String> qrgQuestionTexts = new ArrayList<String>();
-		qrgQuestionTexts.add("ur qrg?");
-		qrgQuestionTexts.add("your qrg?");
-		qrgQuestionTexts.add("qrg?");
-		qrgQuestionTexts.add("freq?");
-		qrgQuestionTexts.add("pse qrg");
-
-
-		/**
-		 * here we have a helper list for identifying questions for my qrg which can be autoanswered later
-		 */
-
 		if (messageToProcess.getMessageText() == null
 				|| messageToProcess.getMessageText().isEmpty()) {
 			// No processable data.
@@ -1185,35 +1205,34 @@ public class MessageBusManagementThread extends Thread {
 										// ==== Unified auto-answer (generic + QRG) with ping-pong guard
 //      and per-remote cooldown ====
 										final String incomingText = newMessageArrived.getMessageText();
-										final String incomingLower =
-												(incomingText == null)
-														? ""
-														: incomingText.toLowerCase(Locale.ROOT);
 
 // Never answer another automatically generated message.
-										if (!isAutoMessage(newMessageArrived)) {
+										if (!isAutoMessage(incomingText)) {
 
-											boolean qrgRequested = false;
+											ChatPreferences autoAnswerPrefs =
+													this.client.getChatPreferences();
 
-											if (this.client.getChatPreferences()
-													.isMessageHandling_autoAnswerToQRGRequestEnabled()) {
-
-												for (String lookForQRGString : qrgQuestionTexts) {
-													if (incomingLower.contains(lookForQRGString)) {
-														qrgRequested = true;
-														break;
-													}
-												}
-											}
+											boolean qrgRequested =
+													autoAnswerPrefs.isMessageHandling_autoAnswerToQRGRequestEnabled()
+															&& matchesQrgQuestion(incomingText, QRG_QUESTION_TEXTS);
 
 											boolean genericEnabled =
-													this.client.getChatPreferences()
-															.isMsgHandling_autoAnswerEnabled();
+													autoAnswerPrefs.isMsgHandling_autoAnswerEnabled();
+
+											ChatMember incomingSender = newMessageArrived.getSender();
 
 											String automaticAnswerText = buildAutoAnswerMessageText(
-													newMessageArrived,
+													incomingSender == null ? null : incomingSender.getCallSign(),
+													newMessageArrived.getChatCategory(),
 													qrgRequested,
-													genericEnabled
+													selectAutoAnswerQrg(
+															newMessageArrived.getChatCategory(),
+															this.client.getChatCategorySecondChat(),
+															autoAnswerPrefs.getMYQRGFirstCat().get(),
+															autoAnswerPrefs.getMYQRGSecondCat().get()
+													),
+													genericEnabled,
+													autoAnswerPrefs.getMessageHandling_autoAnswerTextMainCat()
 											);
 
 											/*
@@ -1995,6 +2014,71 @@ public class MessageBusManagementThread extends Thread {
 
 
 	/**
+	 * Returns whether a private message asks for the local QRG.
+	 *
+	 * <p>The comparison is a case-insensitive substring match against each of the
+	 * given fragments, so {@code "GM, PSE QRG for a sked"} matches {@code "pse qrg"}.</p>
+	 *
+	 * @param text incoming message text, may be {@code null}
+	 * @param questionTexts lower-case fragments that identify a QRG question
+	 * @return {@code true} when any fragment occurs in the text
+	 */
+	static boolean matchesQrgQuestion(String text, Set<String> questionTexts) {
+		if (text == null || questionTexts == null) {
+			return false;
+		}
+
+		String lower = text.toLowerCase(Locale.ROOT);
+
+		for (String questionText : questionTexts) {
+			if (lower.contains(questionText)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Returns whether a message carries the fixed marker used for automatic replies.
+	 * Such a message must never be answered automatically (ping-pong guard).
+	 *
+	 * @param text message text, may be {@code null}
+	 * @return {@code true} when the marker occurs anywhere in the text
+	 */
+	static boolean isAutoMessage(String text) {
+		return text != null && text.contains(AUTOANSWER_PREFIX);
+	}
+
+	/**
+	 * Selects the configured QRG for the category in which a request was received.
+	 *
+	 * <p>Only a request from the second chat category is answered with the second
+	 * QRG. Any other category, including an unresolved one, falls back to the first
+	 * QRG. Categories are compared by number, not by identity.</p>
+	 *
+	 * @param incomingCategory category of the incoming message, may be {@code null}
+	 * @param secondCategory configured second chat category, may be {@code null}
+	 * @param firstCategoryQrg QRG configured for the main category, may be {@code null}
+	 * @param secondCategoryQrg QRG configured for the second category, may be {@code null}
+	 * @return the QRG belonging to the incoming category
+	 */
+	static String selectAutoAnswerQrg(
+			ChatCategory incomingCategory,
+			ChatCategory secondCategory,
+			String firstCategoryQrg,
+			String secondCategoryQrg
+	) {
+		if (incomingCategory != null
+				&& secondCategory != null
+				&& incomingCategory.getCategoryNumber() == secondCategory.getCategoryNumber()) {
+			return secondCategoryQrg;
+		}
+
+		return firstCategoryQrg;
+	}
+
+	/**
 	 * Builds and validates one automatic private reply.
 	 *
 	 * <p>A QRG request is answered only when the QRG belonging to the
@@ -2006,21 +2090,24 @@ public class MessageBusManagementThread extends Thread {
 	 * queue. Invalid configuration values must neither produce an empty
 	 * automatic reply nor start the cooldown.</p>
 	 *
-	 * @param incoming incoming private message
+	 * @param senderCallSign callsign of the station that sent the private message
+	 * @param category chat category of the incoming message, used for diagnostics only
 	 * @param qrgRequested whether the message contains a recognised QRG request
+	 * @param categoryQrg the QRG configured for that category, see
+	 *                    {@link #selectAutoAnswerQrg(ChatCategory, ChatCategory, String, String)}
 	 * @param genericEnabled whether the general automatic reply is enabled
+	 * @param genericAnswerText the configured general reply text
 	 * @return validated message text or {@code null} when no reply may be sent
 	 */
-	private String buildAutoAnswerMessageText(
-			ChatMessage incoming,
+	static String buildAutoAnswerMessageText(
+			String senderCallSign,
+			ChatCategory category,
 			boolean qrgRequested,
-			boolean genericEnabled
+			String categoryQrg,
+			boolean genericEnabled,
+			String genericAnswerText
 	) {
-		if (incoming == null
-				|| incoming.getSender() == null
-				|| incoming.getSender().getCallSign() == null
-				|| incoming.getSender().getCallSign().isBlank()) {
-
+		if (senderCallSign == null || senderCallSign.isBlank()) {
 			LOGGER.warning(
 					"KST4Contest auto-answer skipped: "
 							+ "incoming message has no valid sender callsign."
@@ -2031,37 +2118,32 @@ public class MessageBusManagementThread extends Thread {
 		String payload;
 
 		if (qrgRequested) {
-			String qrg = getAutoAnswerQrgForCategory(
-					incoming.getChatCategory()
-			);
-
-			if (qrg == null || qrg.isBlank()) {
+			if (categoryQrg == null || categoryQrg.isBlank()) {
 				LOGGER.warning(
 						"KST4Contest QRG auto-answer skipped for "
-								+ incoming.getSender().getCallSign()
+								+ senderCallSign
 								+ ": no QRG is available for chat category "
-								+ autoAnswerCooldownKey(incoming)
+								+ senderCallSign.toUpperCase()
+								+ "|"
+								+ (category == null ? 0 : category.getCategoryNumber())
 								+ "."
 				);
 				return null;
 			}
 
-			payload = "QRG is: " + qrg.trim();
+			payload = "QRG is: " + categoryQrg.trim();
 
 		} else if (genericEnabled) {
-			payload = this.client.getChatPreferences()
-					.getMessageHandling_autoAnswerTextMainCat();
-
-			if (payload == null || payload.isBlank()) {
+			if (genericAnswerText == null || genericAnswerText.isBlank()) {
 				LOGGER.warning(
 						"KST4Contest generic auto-answer skipped for "
-								+ incoming.getSender().getCallSign()
+								+ senderCallSign
 								+ ": the configured answer text is empty."
 				);
 				return null;
 			}
 
-			payload = payload.trim();
+			payload = genericAnswerText.trim();
 
 		} else {
 			return null;
@@ -2069,7 +2151,7 @@ public class MessageBusManagementThread extends Thread {
 
 		String messageText =
 				"/CQ "
-						+ incoming.getSender().getCallSign().trim()
+						+ senderCallSign.trim()
 						+ " "
 						+ AUTOANSWER_PREFIX
 						+ " "
@@ -2081,7 +2163,7 @@ public class MessageBusManagementThread extends Thread {
 		} catch (IllegalArgumentException invalidMessage) {
 			LOGGER.warning(
 					"KST4Contest auto-answer skipped for "
-							+ incoming.getSender().getCallSign()
+							+ senderCallSign
 							+ ": "
 							+ invalidMessage.getMessage()
 			);
@@ -2090,31 +2172,16 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	/**
-	 * Returns whether a message carries the fixed marker used for automatic replies.
+	 * Builds the cooldown identity of an incoming private message: the upper-cased
+	 * remote callsign and the category number, separated by {@code |}.
+	 *
+	 * <p>The message category wins; the sender's category is only a fallback. A
+	 * missing callsign yields {@code UNKNOWN}, a missing category {@code 0}.</p>
+	 *
+	 * @param incoming incoming private message, may be {@code null}
+	 * @return key such as {@code DL1ABC|2}
 	 */
-	private boolean isAutoMessage(ChatMessage msg) {
-		return msg != null
-				&& msg.getMessageText() != null
-				&& msg.getMessageText().contains(AUTOANSWER_PREFIX);
-	}
-
-	/**
-	 * Returns the configured QRG for the category in which the request was received.
-	 * If the category cannot be resolved, the main category remains the safe fallback.
-	 */
-	private String getAutoAnswerQrgForCategory(ChatCategory incomingCategory) {
-		ChatCategory secondCategory = this.client.getChatCategorySecondChat();
-
-		if (incomingCategory != null
-				&& secondCategory != null
-				&& incomingCategory.getCategoryNumber() == secondCategory.getCategoryNumber()) {
-			return this.client.getChatPreferences().getMYQRGSecondCat().get();
-		}
-
-		return this.client.getChatPreferences().getMYQRGFirstCat().get();
-	}
-
-	private String autoAnswerCooldownKey(ChatMessage incoming) {
+	static String autoAnswerCooldownKey(ChatMessage incoming) {
 
 		String remoteCall = "UNKNOWN";
 		if (incoming != null && incoming.getSender() != null && incoming.getSender().getCallSign() != null) {
@@ -2133,17 +2200,25 @@ public class MessageBusManagementThread extends Thread {
 		return remoteCall + "|" + categoryNumber;
 	}
 
+	/**
+	 * Returns whether the cooldown has elapsed since the last local automatic reply.
+	 *
+	 * @param lastSentMillis epoch milliseconds of the last reply, {@code null} if none
+	 * @param nowMillis current epoch milliseconds
+	 * @return {@code true} when no reply was sent yet or at least
+	 *         {@link #AUTOANSWER_COOLDOWN_MS} have passed
+	 */
+	static boolean isCooldownElapsed(Long lastSentMillis, long nowMillis) {
+		return lastSentMillis == null || (nowMillis - lastSentMillis) >= AUTOANSWER_COOLDOWN_MS;
+	}
+
 	private boolean isAutoAnswerAllowedNow(ChatMessage incoming) {
-
-		String key = autoAnswerCooldownKey(incoming);
-		Long last = lastLocalAutoAnswerPerRemoteMs.get(key);
-
-		long now = System.currentTimeMillis();
-		return last == null || (now - last) >= AUTOANSWER_COOLDOWN_MS;
+		Long last = lastLocalAutoAnswerPerRemoteMs.get(autoAnswerCooldownKey(incoming));
+		return isCooldownElapsed(last, millisClock.getAsLong());
 	}
 
 	private void markLocalAutoAnswerSent(ChatMessage incoming) {
-		lastLocalAutoAnswerPerRemoteMs.put(autoAnswerCooldownKey(incoming), System.currentTimeMillis());
+		lastLocalAutoAnswerPerRemoteMs.put(autoAnswerCooldownKey(incoming), millisClock.getAsLong());
 	}
 
 
