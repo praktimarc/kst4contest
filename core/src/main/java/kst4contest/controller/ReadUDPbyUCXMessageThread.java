@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import java.io.*;
 import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.Arrays;
 
@@ -224,8 +225,8 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						socket.setReuseAddress(true);
 						socket.bind(new InetSocketAddress(client.getChatPreferences().getLogsynch_ucxUDPWkdCallListenerPort()));
 						packet.setLength(packet.getData().length);
-						socket.receive(packet);
 						socket.setSoTimeout(3000);
+						socket.receive(packet);
 					} catch (Exception ex) {
 						System.out.println("ReadUDPByUCXMsgTh: Could not solve that. Program Restart needed.");
 						throw new RuntimeException(ex);
@@ -238,7 +239,7 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			InetAddress address = packet.getAddress();
 			int port = packet.getPort();
 //			packet = new DatagramPacket(buf, buf.length, address, port);
-			String received = new String(packet.getData(), packet.getOffset(), packet.getLength());
+			String received = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.UTF_8);
 			received = received.trim();
 
 

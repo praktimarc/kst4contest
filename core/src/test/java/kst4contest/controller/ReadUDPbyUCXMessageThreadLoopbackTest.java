@@ -21,8 +21,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Loopback tests for the UCXLog/DXLog UDP listener. Every socket is bound to
- * port 0 on the loopback interface, so the tests neither collide with a running
- * logger nor send anything to a broadcast address.
+ * port 0 and every datagram goes to the loopback address, so the tests neither
+ * collide with a running logger nor send anything to a broadcast address.
  */
 class ReadUDPbyUCXMessageThreadLoopbackTest {
 
@@ -31,7 +31,7 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 	private final ThreadStatusCallback statusCallback = (threadName, message) -> { };
 
 	@Test
-	void interruptEndsTheReceiveLoopWithinTwoSeconds() throws Exception {
+	void interruptEndsTheReceiveLoopBeforeTheReceiveTimeout() throws Exception {
 		when(controller.getChatPreferences()).thenReturn(preferences);
 		ReadUDPbyUCXMessageThread listener = new ReadUDPbyUCXMessageThread(0, controller, statusCallback);
 		listener.setDaemon(true);
@@ -39,8 +39,12 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 		// Let the thread bind its socket and block in receive() before interrupting it.
 		Thread.sleep(200);
 
+		/*
+		 * The receive timeout is 2 s. Waiting only 1 s proves that interrupt()
+		 * closed the socket, rather than the loop ending on the next timeout.
+		 */
 		listener.interrupt();
-		listener.join(2_000);
+		listener.join(1_000);
 
 		assertFalse(listener.isAlive(), "listener must stop once interrupted");
 	}
@@ -60,10 +64,10 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 		SimpleValue<String> qrg = new SimpleValue<>("");
 		when(preferences.getMYQRGFirstCat()).thenReturn(qrg);
 		CountDownLatch firstQrg = new CountDownLatch(1);
-		CountDownLatch secondQrg = new CountDownLatch(2);
+		CountDownLatch secondQrg = new CountDownLatch(1);
 		qrg.addListener(value -> {
-			firstQrg.countDown();
-			secondQrg.countDown();
+			if (value.equals("144.200.00")) firstQrg.countDown();
+			if (value.equals("432.200.00")) secondQrg.countDown();
 		});
 
 		String shortPacket = "<RadioInfo><Freq>14420000</Freq><Mode>CW</Mode></RadioInfo>";
