@@ -275,7 +275,13 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 					exception.printStackTrace();
 					ThreadStateMessage droppedPacketMessage = new ThreadStateMessage(this.ThreadNickName, true,
 							"packet dropped after error: " + exception, false);
-					callBackToController.onThreadStatus(ThreadNickName, droppedPacketMessage);
+					try {
+						callBackToController.onThreadStatus(ThreadNickName, droppedPacketMessage);
+					} catch (RuntimeException callbackException) {
+						// A failing status callback must not end the listener either.
+						System.out.println("[ReadUDPFromUCX, warning]: status callback failed: "
+								+ callbackException);
+					}
 				}
 			} else {
 				//dont process the empty message

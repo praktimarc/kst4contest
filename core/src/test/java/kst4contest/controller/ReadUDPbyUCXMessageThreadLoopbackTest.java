@@ -46,7 +46,19 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 	private final ChatController controller = mock(ChatController.class);
 	private final ChatPreferences preferences = mock(ChatPreferences.class);
 	private final BlockingQueue<ThreadStateMessage> statusMessages = new LinkedBlockingQueue<>();
-	private final ThreadStatusCallback statusCallback = (threadName, message) -> statusMessages.add(message);
+	/**
+	 * Makes {@link #statusCallback} throw after recording the safety net's
+	 * dropped-packet report, to simulate a failing controller there. Other
+	 * reports pass, so the ordering marker can still be processed.
+	 */
+	private volatile boolean statusCallbackThrows;
+	private final ThreadStatusCallback statusCallback = (threadName, message) -> {
+		statusMessages.add(message);
+		if (statusCallbackThrows
+				&& message.getRunningInformation().startsWith("packet dropped after error")) {
+			throw new IllegalStateException("callback boom");
+		}
+	};
 	/** First-category QRG that the RadioInfo ordering marker sets. */
 	private final SimpleValue<String> markerQrg = new SimpleValue<>("");
 
@@ -208,7 +220,7 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 	 * database, and the following packet is still processed.
 	 */
 	@Test
-	void unwritableBackupFileSkipsTheBackupAndKeepsTheListenerAlive(@TempDir Path tempDir) throws Exception {
+	void unwritableBackupFileDoesNotStopQsoProcessingOrTheListener(@TempDir Path tempDir) throws Exception {
 		DBController database = givenQsoProcessingEnabled(tempDir);
 		when(database.updateWkdInfoOnChatMember(any())).thenReturn(false);
 
@@ -274,6 +286,22 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 		when(controller.uiDispatcher()).thenReturn(new DirectUiDispatcher());
 		when(preferences.isTrxSynch_ucxLogUDPListenerEnabled()).thenReturn(true);
 		when(preferences.getMYQRGFirstCat()).thenReturn(markerQrg);
+	}
+
+	/**
+	 * The safety net reports a dropped packet through the status callback. If
+	 * that callback throws as well, the listener must still keep running.
+	 */
+	@Test
+	void failingStatusCallbackDoesNotEndTheListener(@TempDir Path tempDir) throws Exception {
+		givenQsoProcessingEnabled(tempDir.resolve("udp-backup.txt"));
+		doThrow(new IllegalStateException("boom")).when(controller).applyExternalLoggedQso(any());
+		statusCallbackThrows = true;
+
+		sendThenAwaitMarker("<contactinfo><band>144</band><call>OK1ABC</call></contactinfo>");
+
+		assertTrue(statusMessages.stream()
+				.anyMatch(message -> message.getRunningInformation().startsWith("packet dropped after error")));
 	}
 
 	private CountDownLatch markerLatch() {
