@@ -54,12 +54,6 @@ public class MessageBusManagementThread extends Thread {
 	//	private File fileLogRAW;
 //	private TimerTask userActualizationTask; // Is used as a temporary userout-print
 //	private TimerTask userActualizationTask; //kst4contest.test 4 23001
-	// private boolean serverReady = false; //kst4contest.test 4 23001
-	private boolean serverReady = true;
-	private Hashtable<String, ChatMember> chatMemberTable;
-	private final String PTRN_USERLISTENTRY = "([a-zA-Z0-9]{2}/{1})?([a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z]{0,3})(/p)? [a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2} [ -~]{1,20}";
-	private final String PTRN_QRG_CAT2 = "(([0-9]{3,4}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
-	private final String PTRN_QRG_CAT3 = "(([0-9]{3,5}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
 
 	/*
 	 * Frequency formats handled by the smart parser:
@@ -138,14 +132,6 @@ public class MessageBusManagementThread extends Thread {
 //		this.bufwrtrDBGMSGOut = bufwrtrDBGMSGOut;
 //	}
 
-	public boolean isServerready() {
-		return serverReady;
-	}
-
-	public void setServerready(boolean serverReady) {
-		this.serverReady = serverReady;
-	}
-
 	public MessageBusManagementThread(ChatController client, ThreadStatusCallback callBack) {
 		this(client, callBack, 0L, client.getMessageRXBus(), ignored -> true);
 	}
@@ -187,122 +173,6 @@ public class MessageBusManagementThread extends Thread {
 		ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
 		callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
-	}
-
-	/**
-	 * check if a chatmessage is part of the userlist via telnet 23000 port<br/>
-	 * <b>Updates userlist!</b>
-	 *
-	 */
-	private void checkIfItsUserListEntry(ChatMessage messageToProcess) {
-
-		Pattern pattern = Pattern.compile(PTRN_USERLISTENTRY);
-		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
-		/**
-		 * "([a-zA-Z0-9]{1,2}\/)?[a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z](\/(p|m))?(
-		 * )[a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2}[ -~]{0,30}" Thats a line of the show users
-		 * list
-		 */
-
-		while (matcher.find()) {
-//			System.out.println("Chatmember detected: "+ matcher.group() + " " + matcher.start());
-
-			ChatMember member = new ChatMember();
-			String matchedString = matcher.group();
-
-			String[] splittedUserString;
-			splittedUserString = matchedString.split(" ");
-
-			member.setCallSign(splittedUserString[0]);
-			member.setQra(splittedUserString[1]);
-
-			String stringAggregation = "";
-			for (int i = 2; i < splittedUserString.length; i++) {
-				stringAggregation += splittedUserString[i] + " ";
-			}
-			member.setName(stringAggregation);
-
-//			this.client.getChatMemberTable().put(member.getCallSign(), member);//deleted cause change if list type
-
-//			if (member.getName().)
-
-//			System.out.println("Processed Userlist Entry [" + this.client.getChatMemberTable().size() + "]: Call: "
-//					+ member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
-		}
-	}
-
-	/**
-	 * check if a chatmessage is part of the userlist via telnet 23000 port<br/>
-	 * <b>This method updates the userlist!</b>
-	 */
-	private void checkIfItsUserListEntry23001(ChatMessage messageToProcess) {
-
-		Pattern pattern = Pattern.compile(PTRN_USERLISTENTRY);
-		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
-		/**
-		 * "([a-zA-Z0-9]{1,2}\/)?[a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z](\/(p|m))?(
-		 * )[a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2}[ -~]{0,30}" Thats a line of the show users
-		 * list
-		 */
-
-		while (matcher.find()) {
-//			System.out.println("Chatmember detected: "+ matcher.group() + " " + matcher.start());
-
-			ChatMember member = new ChatMember();
-			String matchedString = matcher.group();
-
-			String[] splittedUserString;
-			splittedUserString = matchedString.split(" ");
-
-			member.setCallSign(splittedUserString[0]);
-			member.setQra(splittedUserString[1]);
-
-			String stringAggregation = "";
-			for (int i = 2; i < splittedUserString.length; i++) {
-				stringAggregation += splittedUserString[i] + " ";
-			}
-			member.setName(stringAggregation);
-
-//			this.client.getChatMemberTable().put(member.getCallSign(), member);
-
-//			if (member.getName().)
-
-//			System.out.println("[MSGBUSMGT:] Processed Userlist Entry [" + this.client.getChatMemberTable().size()
-//					+ "]: Call: " + member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
-		}
-	}
-
-	/**
-	 * check if a chatmessage or a name of a chatmember contains a frequency<br/>
-	 * <b>returns String = "" if no frequency found</b>
-	 *
-
-	 */
-	private String checkIfMessageInhibitsFrequency(ChatMessage messageToProcess) {
-
-		Pattern pattern = Pattern.compile(PTRN_QRG_CAT2); // TODO: PTRN should depend to category-selection of own stn, it´s not the case now
-		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
-		String[] splittedQRGString;
-//		splittedQRGString[0] = "0";
-
-		String stringAggregation = "";
-
-
-		while (matcher.find()) {
-			String matchedString = matcher.group();
-
-			splittedQRGString = matchedString.split(" ");
-
-			for (String s : splittedQRGString) {
-				stringAggregation += s + " ";
-			}
-
-			LOGGER.log(Level.FINE, "Processed QRG info: {0}", stringAggregation);
-
-//			System.out.println("Processed QRG Entry [" + this.client.getChatMemberTable().size() + "]: Call: "
-//					+ member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
-		}
-		return stringAggregation;
 	}
 
 	/**
@@ -641,122 +511,6 @@ public class MessageBusManagementThread extends Thread {
 //		return rawInput;
 //	}
 
-
-	/**
-	 * Builds UserList and gets meta informations out of the chat, as far as it is
-	 * possible. \n This is the only place where the Chatmember-List will be written
-	 *
-	 * Old Method for port 23000, raw text interface without any comfort, no longer used
-	 * @param messageToProcess
-	 */
-	private void processRXMessage23000(ChatMessage messageToProcess) {
-
-		String reduce;
-
-		reduce = new String(messageToProcess.getMessageText());
-		reduce = reduce.replaceAll("\\s+", " "); // reduce bursts of spaces to one space sign
-
-		messageToProcess.setMessageText(reduce);
-
-		if (messageToProcess.getMessageText() == null
-				|| messageToProcess.getMessageText().isEmpty()) {
-//			System.out.println("[MSGBUSMGTT:] ###################### no processable data");
-		} else {
-
-			if (reduce.length() >= 14 && reduce.length() <= 40) {
-				checkIfItsUserListEntry(messageToProcess); // 23001 kst4contest.test unneccessary
-			}
-
-			checkIfMessageInhibitsFrequency(messageToProcess);
-		}
-	}
-
-//	private boolean isUserInTheUserTable(String chatMemberCallsign) {
-//
-//		String checkThisCallsign = chatMemberCallsign;
-//
-//		if (this.client.getChatMemberTable().containsKey(checkThisCallsign)) {
-//			return true;
-//		} else
-//			return false;
-//
-//	}
-
-	/**
-	 * checks if the callsign-String of a given chatmember instance and a given list
-	 * instance is in the list. If yes, returns the index in the List, <b>if not,
-	 * returns -1.</b>
-	 *
-	 * @param lookForThis
-	 * @return Integer (index), -1 for not found
-	 */
-	private int checkListForChatMemberIndexByCallSign(List<ChatMember> list, ChatMember lookForThis) {
-
-		if (lookForThis == null) {
-
-			LOGGER.warning(
-					"[ChecklistForChatMemberIndexByCallsign] ERROR: null Value for Chatmember detected! Member cannot be in the list!");
-			return -1;
-		} else if (lookForThis.getCallSign() == null) {
-			LOGGER.warning(
-					"[ChecklistForChatMemberIndexByCallsign] ERROR: null Value in Callsign detected! Member cannot be in the list!");
-			return -1;
-		}
-		/***
-		 * Old mechanic for index search, new one implemented due concurrentmodificationexc, which works - start
-		 *
-		 */
-//		for (Iterator iterator = list.iterator(); iterator.hasNext();) {
-//			ChatMember chatMember = (ChatMember) iterator.next();
-//			if (chatMember.getCallSign().equals(lookForThis.getCallSign())) {
-////				System.out
-////						.println("MSGBUSHELBER: Found " + chatMember.getCallSign() + " at " + list.indexOf(chatMember));
-//
-//				return list.indexOf(chatMember);
-//			} else {
-//
-//			}
-//		}
-//
-//		System.out.println("[MsgBusMgr, ERROR:] ChecklistForChatMemberIndexByCallsign, not found: "
-//				+ lookForThis.getCallSign() + "\n ");
-		/***
-		 * /Old mechanic for index search,new one implemented due concurrentmodificationexc which works - end
-		 *
-		 */
-
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i).getCallSign().equals(lookForThis.getCallSign())) {
-				//TODO: New since 1.26! Check against category!
-
-				LOGGER.fine("Checking chat categories for list member "
-						+ list.get(i).getCallSign() + " / "
-						+ list.get(i).getChatCategory() + " against "
-						+ lookForThis.getCallSign() + " / "
-						+ lookForThis.getChatCategory());
-
-//				System.out
-//						.println("MSGBUSHELBER: Found " + chatMember.getCallSign() + " at " + list.indexOf(chatMember));
-
-				if (list.get(i).getChatCategory().equals(lookForThis.getChatCategory())) { //new 1.26
-
-					return list.indexOf(list.get(i));
-				} //new 1.26
-				else {
-					LOGGER.fine("Chat-member category does not match");
-
-				}
-
-//				System.out.println("--------------------------- chatcategory of list.get(i) = " + list.get(i).getChatCategory().getCategoryNumber());
-				LOGGER.log(Level.FINE,
-						"Requested chat-member category is {0}",
-						lookForThis.getChatCategory().getCategoryNumber());
-			}
-//				return list.indexOf(list.get(i)); //if no category found, return entry //TODO: ERROR detected here! Should work now, needs some proof
-//				return -1; //if category dont match, return: member not found
-		}
-		return -1; // if it´s not found, the method will always end here and return -1
-	}
 
 	/**
 	 * Creates a minimal receiver object for ON4KST broadcast messages.
@@ -1931,7 +1685,6 @@ public class MessageBusManagementThread extends Thread {
 //			this.client.getLst_chatMemberList().remove(thisMemberActualizesUserListForRefreshingIntheGuy);
 			// ******************************************************************QUICKNDIRTY........
 
-//			checkIfMessageInhibitsFrequency(messageToProcess);
 		}
 	}
 
