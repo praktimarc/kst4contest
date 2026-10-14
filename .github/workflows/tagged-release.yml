@@ -1034,7 +1034,7 @@ jobs:
       # release. Otherwise the Releases API cannot return the release notes
       # belonging to the tag which triggered this workflow.
       - name: Set up Node.js for website build
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
