@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,8 +60,6 @@ object StationMapWindow {
             heightDp = heightDp,
             onResized = onResized,
         ) { _ ->
-            val strings = LocalStrings.current
-
             val window = this.window
             androidx.compose.runtime.LaunchedEffect(window) { window?.minimumSize = java.awt.Dimension(900, 600) }
             val tileFetcher = remember { TileFetcher() }
@@ -73,6 +72,33 @@ object StationMapWindow {
             androidx.compose.runtime.DisposableEffect(tileFetcher) {
                 onDispose { tileFetcher.close() }
             }
+
+            Content(mainWindowState = mainWindowState, tileFetcher = tileFetcher)
+        } // host.show content
+    }
+
+    /**
+     * The window's body, without the window.
+     *
+     * Split out of [show] so it can be drawn headless in a test, with a tile fetcher that
+     * stays off the network and the user's tile cache, a roster that is not the running
+     * application's, and a [MapState] the test can read. The defaults are exactly what
+     * [show] used inline before the split.
+     *
+     * @param chatMembers the roster a marker click looks its station up in; a marker stands
+     *        for a raw callsign, and this is where its category variants come from
+     * @param mapState where the map is looking
+     */
+    @Composable
+    internal fun Content(
+        mainWindowState: MainWindowState,
+        tileFetcher: TileFetcher,
+        chatMembers: () -> List<kst4contest.model.ChatMember> = {
+            ApplicationRuntimeLauncher.getCurrent()?.chatController?.lst_chatMemberList?.snapshot().orEmpty()
+        },
+        mapState: MapState = remember { MapState() },
+    ) {
+            val strings = LocalStrings.current
 
             /*
              * The fetcher is plain Java state, so nothing about it recomposes on its
@@ -118,7 +144,6 @@ object StationMapWindow {
             }
 
             var pathAnalysisResult by remember { mutableStateOf<PathAnalysisResult?>(null) }
-            val mapState = remember { MapState() }
 
             LaunchedEffect(selectedMember) {
                 if (selectedMember == null) {
@@ -277,10 +302,8 @@ object StationMapWindow {
                             maxQrbKm = maxQrbKm,
                             darkMode = isDarkTheme,
                             onMarkerClicked = { snapshot ->
-                                val chatController = ApplicationRuntimeLauncher.getCurrent()?.chatController
-                                val variants = chatController?.lst_chatMemberList?.snapshot()
-                                    ?.filter { it.callSignRaw == snapshot.callSignRaw() }
-                                    .orEmpty()
+                                val variants = chatMembers()
+                                    .filter { it.callSignRaw == snapshot.callSignRaw() }
                                 /*
                                  * A marker stands for a raw callsign, not a category. Keep the
                                  * category already selected when it is one of the variants.
@@ -298,7 +321,7 @@ object StationMapWindow {
                                     mainWindowState.chatInput.prepareCq(member.callSign ?: "", forceOverwrite = true)
                                 }
                             },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize().testTag(MAP_CANVAS_TAG)
                         )
 
                         MapOverlayControls(
@@ -361,8 +384,10 @@ object StationMapWindow {
                 } // main layout column
             } // window column
             } // Surface
-        } // host.show content
-    }
+    } // Content
+
+    /** Marks the map canvas so a test can click a marker on it. */
+    internal const val MAP_CANVAS_TAG = "station-map-canvas"
 
     @JvmStatic
     fun applyDarkMode(darkMode: Boolean) {
