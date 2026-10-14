@@ -1053,7 +1053,10 @@ public class MessageBusManagementThread extends Thread {
 
 											String automaticAnswerText = buildAutoAnswerMessageText(
 													incomingSender == null ? null : incomingSender.getCallSign(),
-													newMessageArrived.getChatCategory(),
+													// Diagnostics only: same fallback as autoAnswerCooldownKey.
+													newMessageArrived.getChatCategory() != null || incomingSender == null
+															? newMessageArrived.getChatCategory()
+															: incomingSender.getChatCategory(),
 													qrgRequested,
 													selectAutoAnswerQrg(
 															newMessageArrived.getChatCategory(),
