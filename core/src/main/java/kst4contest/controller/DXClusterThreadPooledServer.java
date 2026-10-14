@@ -77,7 +77,11 @@ public class DXClusterThreadPooledServer implements Runnable {
         Thread.currentThread().setName("DXCluster-thread-pooled-server");
 
         try {
-            if (serverSocket == null) {
+            /*
+             * A pre-bound socket is used once; any later run() binds the
+             * configured port again, as it always did.
+             */
+            if (serverSocket == null || serverSocket.isClosed()) {
                 serverSocket = new ServerSocket(serverPort);
             }
 
