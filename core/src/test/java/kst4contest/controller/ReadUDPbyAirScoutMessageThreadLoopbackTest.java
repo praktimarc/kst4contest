@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,6 +47,9 @@ class ReadUDPbyAirScoutMessageThreadLoopbackTest {
 	private static final String SERVER = "AS";
 	private static final String PLANES = "2023-04-01 21:33:42Z,DO5AMF,JN49GL,G4CLA,IO92JL,2,"
 			+ "BAW809,M,250,50,18,KLM1678,L,313,75,22";
+	/** Same response for receiver PA0XYZ, so a wrongly processed copy is detectable. */
+	private static final String OTHER_RECEIVER_PLANES = "2023-04-01 21:33:42Z,DO5AMF,JN49GL,PA0XYZ,JO22AB,1,"
+			+ "BAW809,M,250,50,18";
 
 	private final ChatController controller = mock(ChatController.class);
 	private final ChatPreferences preferences = mock(ChatPreferences.class);
@@ -108,12 +112,13 @@ class ReadUDPbyAirScoutMessageThreadLoopbackTest {
 	}
 
 	/**
-	 * The parser strips every space from the datagram, including the one
-	 * between date and time. The date is only shown in toString(), so this is
-	 * pinned as current behaviour rather than fixed here.
+	 * KNOWN DEFECT, pinned on purpose: the parser strips every space from the
+	 * datagram, including the one between date and time. The date is only
+	 * shown in toString(), so it was left as it is. Whoever fixes the parser
+	 * flips this expectation to {@code 2023-04-01 21:33:42Z}.
 	 */
 	@Test
-	void dateLosesTheSpaceBetweenDayAndTimeBecauseTheParserStripsAllSpaces() throws Exception {
+	void pinsKnownDefectDateLosesTheSpaceBetweenDayAndTime() throws Exception {
 		ChatMember member = new ChatMember();
 		when(controller.findActiveChatMembersByRawCall("G4CLA")).thenReturn(List.of(member));
 		listener.start();
@@ -125,36 +130,52 @@ class ReadUDPbyAirScoutMessageThreadLoopbackTest {
 	}
 
 	/**
-	 * The poison pill and the ignored responses travel the same loopback path
-	 * in order, so once the listener has ended on the pill, the earlier
-	 * datagrams have been read and discarded.
+	 * The ignored responses name another receiver than the sentinel that
+	 * follows them. Once the sentinel has been processed, the earlier
+	 * datagrams have been read, assuming in-order delivery from one socket to
+	 * one socket on loopback, which UDP does not promise but loopback provides
+	 * in practice.
 	 */
 	@Test
 	void responsesForAnotherClientOrServerAreIgnored() throws Exception {
+		when(controller.findActiveChatMembersByRawCall("G4CLA")).thenReturn(List.of(new ChatMember()));
 		listener.start();
 
-		send(response(SERVER, "KST-A", PLANES));
-		send(response("AS2", CLIENT, PLANES));
-		send(response(SERVER, "kst-ä", PLANES));
-		send(ApplicationConstants.DISCONNECT_RDR_POISONPILL);
+		send(response(SERVER, "KST-A", OTHER_RECEIVER_PLANES));
+		send(response("AS2", CLIENT, OTHER_RECEIVER_PLANES));
+		send(response(SERVER, "kst-ä", OTHER_RECEIVER_PLANES));
+		send(response(SERVER, CLIENT, PLANES));
 
+		awaitResponseProcessed();
+		send(ApplicationConstants.DISCONNECT_RDR_POISONPILL);
 		listener.join(5_000);
 		assertFalse(listener.isAlive(), "the poison pill must end the listener");
-		verify(controller, never()).findActiveChatMembersByRawCall(anyString());
-		assertTrue(statusMessages.isEmpty());
+		verify(controller, never()).findActiveChatMembersByRawCall("PA0XYZ");
+		verify(controller).findActiveChatMembersByRawCall("G4CLA");
+		assertTrue(statusMessages.isEmpty(), "only the sentinel may be reported");
 	}
 
+	/**
+	 * The first response arrives while the listener is disabled; the switch is
+	 * then turned on, so the sentinel is processed. Asking the switch once per
+	 * response shows that the first one was received and then discarded.
+	 */
 	@Test
 	void disabledListenerDiscardsResponsesButStillHonoursThePoisonPill() throws Exception {
-		when(preferences.isAirScout_asUDPListenerEnabled()).thenReturn(false);
+		when(preferences.isAirScout_asUDPListenerEnabled()).thenReturn(false, true);
+		when(controller.findActiveChatMembersByRawCall("G4CLA")).thenReturn(List.of(new ChatMember()));
 		listener.start();
 
+		send(response(SERVER, CLIENT, OTHER_RECEIVER_PLANES));
 		send(response(SERVER, CLIENT, PLANES));
-		send(ApplicationConstants.DISCONNECT_RDR_POISONPILL);
 
+		awaitResponseProcessed();
+		send(ApplicationConstants.DISCONNECT_RDR_POISONPILL);
 		listener.join(5_000);
 		assertFalse(listener.isAlive(), "the poison pill must end the listener");
-		verify(controller, never()).findActiveChatMembersByRawCall(anyString());
+		verify(preferences, times(2)).isAirScout_asUDPListenerEnabled();
+		verify(controller, never()).findActiveChatMembersByRawCall("PA0XYZ");
+		verify(controller).findActiveChatMembersByRawCall("G4CLA");
 	}
 
 	/** A malformed response is dropped; the next valid one is still processed. */
