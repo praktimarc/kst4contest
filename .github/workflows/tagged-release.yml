@@ -129,7 +129,7 @@ jobs:
 
       - name: Keep the test reports on a failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: |
@@ -176,7 +176,7 @@ jobs:
           Compress-Archive -Path dist/KST4Contest -DestinationPath dist/praktiKST-${{ github.ref_name }}-windows-x64.zip -Force
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: windows-zip
           path: dist/praktiKST-${{ github.ref_name }}-windows-x64.zip
@@ -202,7 +202,7 @@ jobs:
 
       - name: Upload Windows MSI artifact
         if: ${{ !startsWith(github.ref_name, 'beta-') }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: windows-msi
           path: dist/KST4Contest-${{ github.ref_name }}-windows-x64.msi
@@ -269,7 +269,7 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/KST4Contest.AppDir dist/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-appimage
           path: dist/KST4Contest-${{ github.ref_name }}-linux-x86_64.AppImage
@@ -340,7 +340,7 @@ jobs:
           mv "$DEB" "dist/KST4Contest-${{ github.ref_name }}-debian-amd64.deb"
 
       - name: Upload Debian artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-debian
           path: dist/KST4Contest-${{ github.ref_name }}-debian-amd64.deb
@@ -411,7 +411,7 @@ jobs:
           mv "$RPM" "dist/KST4Contest-${{ github.ref_name }}-fedora-x86_64.rpm"
 
       - name: Upload Fedora artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-fedora
           path: dist/KST4Contest-${{ github.ref_name }}-fedora-x86_64.rpm
@@ -514,7 +514,7 @@ jobs:
           tar --zstd --transform 's|^\./||' -cf "dist/KST4Contest-${{ github.ref_name }}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
 
       - name: Upload Arch Linux artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arch
           path: dist/KST4Contest-${{ github.ref_name }}-archlinux-*.pkg.tar.zst
@@ -634,13 +634,13 @@ jobs:
           EOF
 
       - name: Upload flatpakref
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: flatpakref
           path: dist/*.flatpakref
 
       - name: Upload Flatpak OSTree repo
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: flatpak-ostree-repo
           path: target/flatpak-repo/
@@ -704,7 +704,7 @@ jobs:
           mv "$DMG" "dist/KST4Contest-${{ github.ref_name }}-macos-${ARCH}.dmg"
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: macos-dmg-${{ matrix.os }}
           path: dist/KST4Contest-${{ github.ref_name }}-macos-*.dmg
@@ -781,7 +781,7 @@ jobs:
             github_docs/de-Changelog.md
 
       - name: Upload PDF artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: docs-pdf
           path: dist/KST4Contest-${{ github.ref_name }}-manual-*.pdf
@@ -1065,7 +1065,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload verified website artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: kst4contest-website-${{ github.ref_name }}
           path: website/_site/

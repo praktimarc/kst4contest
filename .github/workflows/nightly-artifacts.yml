@@ -110,7 +110,7 @@ jobs:
 
       - name: Keep the test reports on a failure
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: |
@@ -166,7 +166,7 @@ jobs:
           Compress-Archive -Path dist/KST4Contest -DestinationPath "dist/$env:ASSET_BASENAME-windows-x64.zip" -Force
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: windows-zip
           path: dist/praktiKST-*-windows-x64.zip
@@ -240,7 +240,7 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN=1 ARCH=x86_64 target/appimagetool.AppImage target/KST4Contest.AppDir "dist/${ASSET_BASENAME}-linux-x86_64.AppImage"
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-appimage
           path: dist/KST4Contest-*-linux-x86_64.AppImage
@@ -286,7 +286,7 @@ jobs:
           mv "$DEB" "dist/${ASSET_BASENAME}-debian-amd64.deb"
 
       - name: Upload Debian artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-debian
           path: dist/KST4Contest-*-debian-amd64.deb
@@ -332,7 +332,7 @@ jobs:
           mv "$RPM" "dist/${ASSET_BASENAME}-fedora-x86_64.rpm"
 
       - name: Upload Fedora artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-fedora
           path: dist/KST4Contest-*-fedora-x86_64.rpm
@@ -444,7 +444,7 @@ jobs:
           tar --zstd --transform 's|^\./||' -cf "dist/${ASSET_BASENAME}-archlinux-${ARCH}.pkg.tar.zst" -C "$PKGROOT" .
 
       - name: Upload Arch Linux artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: linux-arch
           path: dist/KST4Contest-*-archlinux-*.pkg.tar.zst
@@ -563,13 +563,13 @@ jobs:
           EOF
 
       - name: Upload flatpakref
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: flatpakref
           path: dist/de.x08.KST4Contest.nightly.flatpakref
 
       - name: Upload Flatpak OSTree repo
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: flatpak-ostree-repo
           path: target/flatpak-repo/
@@ -703,7 +703,7 @@ jobs:
           mv "$DMG" "dist/${ASSET_BASENAME}-macos-${ARCH}.dmg"
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: macos-dmg-${{ matrix.os }}
           path: dist/KST4Contest-*-macos-*.dmg
