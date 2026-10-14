@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -17,12 +18,15 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import kst4contest.model.Band;
 import kst4contest.model.ChatMember;
 import kst4contest.model.ChatPreferences;
+import kst4contest.model.ThreadStateMessage;
 import kst4contest.observe.DirectUiDispatcher;
 import kst4contest.observe.SimpleValue;
 import org.junit.jupiter.api.Test;
@@ -36,25 +40,38 @@ import org.mockito.ArgumentCaptor;
  */
 class ReadUDPbyUCXMessageThreadLoopbackTest {
 
+	/** RadioInfo that sets the first-category QRG to 1296.200.00; used as an ordering marker. */
+	private static final String MARKER_PACKET = "<RadioInfo><Freq>129620000</Freq><Mode>CW</Mode></RadioInfo>";
+
 	private final ChatController controller = mock(ChatController.class);
 	private final ChatPreferences preferences = mock(ChatPreferences.class);
-	private final ThreadStatusCallback statusCallback = (threadName, message) -> { };
+	private final BlockingQueue<ThreadStateMessage> statusMessages = new LinkedBlockingQueue<>();
+	private final ThreadStatusCallback statusCallback = (threadName, message) -> statusMessages.add(message);
 	/** First-category QRG that the RadioInfo ordering marker sets. */
 	private final SimpleValue<String> markerQrg = new SimpleValue<>("");
 
+	/**
+	 * A processed RadioInfo packet shows that the receive loop is running,
+	 * instead of a sleep. The receive timeout is 2 s, so ending within 1 s
+	 * shows that interrupt() does not wait for the next timeout. Whether the
+	 * thread sat inside receive() or between two receives at that moment is
+	 * not observable; the closed socket and the interrupt flag end the loop
+	 * in either case.
+	 */
 	@Test
 	void interruptEndsTheReceiveLoopBeforeTheReceiveTimeout() throws Exception {
-		when(controller.getChatPreferences()).thenReturn(preferences);
-		ReadUDPbyUCXMessageThread listener = new ReadUDPbyUCXMessageThread(0, controller, statusCallback);
+		givenRadioInfoMarkerEnabled();
+		CountDownLatch marker = markerLatch();
+		InetAddress loopback = InetAddress.getLoopbackAddress();
+		DatagramSocket bound = new DatagramSocket(new InetSocketAddress(loopback, 0));
+		ReadUDPbyUCXMessageThread listener = new ReadUDPbyUCXMessageThread(bound, controller, statusCallback);
 		listener.setDaemon(true);
 		listener.start();
-		// Let the thread bind its socket and block in receive() before interrupting it.
-		Thread.sleep(200);
+		try (DatagramSocket sender = new DatagramSocket(new InetSocketAddress(loopback, 0))) {
+			send(sender, new InetSocketAddress(loopback, bound.getLocalPort()), MARKER_PACKET);
+			assertTrue(marker.await(5, TimeUnit.SECONDS), "marker packet must be processed");
+		}
 
-		/*
-		 * The receive timeout is 2 s. Waiting only 1 s proves that interrupt()
-		 * closed the socket, rather than the loop ending on the next timeout.
-		 */
 		listener.interrupt();
 		listener.join(1_000);
 
@@ -185,29 +202,96 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 	}
 
 	/**
-	 * Wires the mocks for QSO processing. TRX sync is enabled as well, so a
-	 * RadioInfo packet can serve as an ordering marker: the listener handles
-	 * datagrams one by one, so once the marker's QRG is set, every packet sent
-	 * before it has been processed completely.
+	 * An unwritable backup path (here: a directory) used to throw a
+	 * NullPointerException that ended the listener for good. The backup write
+	 * is skipped now; the QSO has already reached the controller and the
+	 * database, and the following packet is still processed.
+	 */
+	@Test
+	void unwritableBackupFileSkipsTheBackupAndKeepsTheListenerAlive(@TempDir Path tempDir) throws Exception {
+		DBController database = givenQsoProcessingEnabled(tempDir);
+		when(database.updateWkdInfoOnChatMember(any())).thenReturn(false);
+
+		sendThenAwaitMarker("<contactinfo><band>144</band><call>OK1ABC</call>"
+				+ "<gridsquare>JO70FD</gridsquare></contactinfo>");
+
+		verify(controller).applyExternalLoggedQso(any());
+		verify(database).storeChatMember(any());
+	}
+
+	/** A RadioInfo without Freq used to end the listener with a NullPointerException. */
+	@Test
+	void radioInfoWithoutFrequencyIsSkippedAndTheListenerKeepsRunning(@TempDir Path tempDir) throws Exception {
+		givenQsoProcessingEnabled(tempDir.resolve("udp-backup.txt"));
+
+		sendThenAwaitMarker("<RadioInfo><Mode>CW</Mode></RadioInfo>");
+
+		assertEquals("1296.200.00", markerQrg.get());
+	}
+
+	/**
+	 * Any runtime exception while processing one packet drops that packet,
+	 * reports a non-critical status and leaves the receive loop running.
+	 */
+	@Test
+	void runtimeExceptionWhileProcessingDropsOnlyThatPacket(@TempDir Path tempDir) throws Exception {
+		givenQsoProcessingEnabled(tempDir.resolve("udp-backup.txt"));
+		doThrow(new IllegalStateException("boom")).when(controller).applyExternalLoggedQso(any());
+
+		sendThenAwaitMarker("<contactinfo><band>144</band><call>OK1ABC</call></contactinfo>");
+
+		ThreadStateMessage dropped = statusMessages.stream()
+				.filter(message -> message.getRunningInformation().startsWith("packet dropped after error"))
+				.findFirst()
+				.orElseThrow();
+		assertTrue(dropped.getRunningInformation().contains("boom"));
+		assertTrue(dropped.isRunning());
+		assertFalse(dropped.isCriticalState());
+	}
+
+	/**
+	 * Wires the mocks for QSO processing, including the RadioInfo ordering
+	 * marker of {@link #givenRadioInfoMarkerEnabled()}.
 	 */
 	private DBController givenQsoProcessingEnabled(Path backupFile) {
 		DBController database = mock(DBController.class);
-		when(controller.getChatPreferences()).thenReturn(preferences);
-		when(controller.uiDispatcher()).thenReturn(new DirectUiDispatcher());
+		givenRadioInfoMarkerEnabled();
 		when(controller.getDbHandler()).thenReturn(database);
 		when(preferences.isLogsynch_ucxUDPWkdCallListenerEnabled()).thenReturn(true);
-		when(preferences.isTrxSynch_ucxLogUDPListenerEnabled()).thenReturn(true);
 		when(preferences.getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup())
 				.thenReturn(backupFile.toString());
-		when(preferences.getMYQRGFirstCat()).thenReturn(markerQrg);
 		return database;
 	}
 
-	private void sendThenAwaitMarker(String packet) throws Exception {
+	/**
+	 * Enables TRX sync so that {@link #MARKER_PACKET} sets {@link #markerQrg}.
+	 * The listener handles datagrams one at a time on a single thread, so once
+	 * the marker's QRG is set, every datagram it received before the marker
+	 * has been processed completely.
+	 */
+	private void givenRadioInfoMarkerEnabled() {
+		when(controller.getChatPreferences()).thenReturn(preferences);
+		when(controller.uiDispatcher()).thenReturn(new DirectUiDispatcher());
+		when(preferences.isTrxSynch_ucxLogUDPListenerEnabled()).thenReturn(true);
+		when(preferences.getMYQRGFirstCat()).thenReturn(markerQrg);
+	}
+
+	private CountDownLatch markerLatch() {
 		CountDownLatch marker = new CountDownLatch(1);
 		markerQrg.addListener(value -> {
 			if (value.equals("1296.200.00")) marker.countDown();
 		});
+		return marker;
+	}
+
+	/**
+	 * Sends the packet and then the marker, and waits for the marker. This
+	 * relies on the two datagrams arriving in the order they were sent. UDP
+	 * does not guarantee that in general, but on the loopback interface, from
+	 * one socket to one socket, they are delivered in order in practice.
+	 */
+	private void sendThenAwaitMarker(String packet) throws Exception {
+		CountDownLatch marker = markerLatch();
 
 		InetAddress loopback = InetAddress.getLoopbackAddress();
 		DatagramSocket bound = new DatagramSocket(new InetSocketAddress(loopback, 0));
@@ -217,7 +301,7 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 		try (DatagramSocket sender = new DatagramSocket(new InetSocketAddress(loopback, 0))) {
 			InetSocketAddress target = new InetSocketAddress(loopback, bound.getLocalPort());
 			send(sender, target, packet);
-			send(sender, target, "<RadioInfo><Freq>129620000</Freq><Mode>CW</Mode></RadioInfo>");
+			send(sender, target, MARKER_PACKET);
 			assertTrue(marker.await(5, TimeUnit.SECONDS), "marker packet must be processed");
 		} finally {
 			listener.interrupt();

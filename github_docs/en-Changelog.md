@@ -50,6 +50,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **UCXLog packets are no longer cut off:** after a short UDP packet, the listener for UCXLog-compatible loggers read every longer following packet only up to the length of the short one, so log entries could arrive incomplete. In addition, disconnecting now closes the listener's socket immediately instead of waiting for the next timeout. UCXLog packets and AirScout replies are now always decoded as UTF-8 instead of the system default, so umlauts in station names and operator callsigns no longer turn into garbage on Windows. This fixes [Issue #115](https://github.com/praktimarc/kst4contest/issues/115).
 
+- **UCXLog/DXLog listener keeps running:** an unwritable backup file for received QSOs or a RadioInfo packet without frequency or mode used to stop the listener for UCXLog-compatible loggers until the next restart, so neither worked stations nor QRG updates arrived any more. The backup entry or the incomplete packet is now skipped, and the listener keeps receiving.
+
 ### Upgrade notes
 
 - Existing installations are **not** modified: `preferences.xml` and `praktiKST.db` stay exactly where they are and become the **Default** profile. No file is moved or copied.
