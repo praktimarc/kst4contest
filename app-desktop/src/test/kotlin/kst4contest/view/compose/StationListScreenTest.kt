@@ -109,7 +109,10 @@ class StationListScreenTest {
             "the second category's row did not reach the screen",
         )
 
-        onAllNodesWithText("DL1ABC")[1].performClick()
+        // Unsorted, the rows keep their arrival order: the second category is the lower row.
+        val rows = onAllNodesWithText("DL1ABC")
+        val lower = rows.fetchSemanticsNodes().withIndex().maxBy { it.value.positionInRoot.y }.index
+        rows[lower].performClick()
         waitForIdle()
 
         assertSame(inSecond, clicked.single(), "the click reached the other category's row")

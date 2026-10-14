@@ -162,4 +162,27 @@ class StationColumnsTest {
             "reachability is computed by the controller, not carried by the row")
         assertEquals("250", columns.first { it.id == "score" }.value(member))
     }
+
+    /**
+     * The key Kst4ContestApplication binds the station list to (#107). The category is part
+     * of the chat identity, so the same callsign in two categories is two keys; keyed by the
+     * callsign alone the two rows collided (21251377). The exact text is pinned because it
+     * was moved out of an inline Java lambda and must read the same as that lambda did.
+     */
+    @Test
+    fun `the row key separates the categories of one callsign`() {
+        fun member(call: String?, category: Int?) = ChatMember().apply {
+            callSign = call
+            chatCategory = category?.let { kst4contest.model.ChatCategory(it) }
+        }
+
+        assertEquals("DL1ABC|2", StationColumns.rowKey(member("DL1ABC", 2)))
+        assertEquals("DL1ABC|3", StationColumns.rowKey(member("DL1ABC", 3)))
+        assertTrue(
+            StationColumns.rowKey(member("DL1ABC", 2)) != StationColumns.rowKey(member("DL1ABC", 3)),
+            "two categories of one callsign share a key",
+        )
+        assertEquals("DL1ABC|", StationColumns.rowKey(member("DL1ABC", null)))
+        assertEquals("null|2", StationColumns.rowKey(member(null, 2)))
+    }
 }

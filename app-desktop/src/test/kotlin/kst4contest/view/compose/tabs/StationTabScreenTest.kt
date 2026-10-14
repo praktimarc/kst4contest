@@ -16,7 +16,13 @@ import kst4contest.model.ChatPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import kst4contest.view.compose.awaitNode
+import kst4contest.view.compose.awaitGone
+import kst4contest.view.compose.inDialog
+import kst4contest.view.compose.inPopup
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * The Station tab, drawn (#107).
@@ -28,8 +34,18 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalTestApi::class)
 class StationTabScreenTest {
 
-    private class Session {
-        val prefs = ChatPreferences().apply {
+    /*
+     * Never the no-argument ChatPreferences: it resolves the operator's real profile and
+     * seeds preferences.xml there when it is missing. A file in a temporary directory is
+     * never read or written by these tests, it only gives the preferences a home.
+     */
+    @TempDir
+    lateinit var directory: Path
+
+    private fun preferences(): ChatPreferences = ChatPreferences(directory.resolve("preferences.xml"))
+
+    private class Session(isolated: ChatPreferences) {
+        val prefs = isolated.apply {
             stn_loginCallSign = "DN9APW"
             stn_on4kstServersPort = 23001
             isStn_bandActive144 = true
@@ -41,7 +57,7 @@ class StationTabScreenTest {
 
     @Test
     fun theTabShowsItsSectionsAndWhatTheProfileHolds() = runComposeUiTest {
-        val s = Session()
+        val s = Session(preferences())
         showTab { StationTab(s.state) }
 
         listOf("Own station", "Chat category", "ON4KST server", "Active bands", "Defaults",
@@ -55,7 +71,7 @@ class StationTabScreenTest {
 
     @Test
     fun editingTheTextFieldsWritesThroughToThePreferences() = runComposeUiTest {
-        val s = Session()
+        val s = Session(preferences())
         showTab { StationTab(s.state) }
 
         type("Callsign", "DO5AMF")
@@ -71,7 +87,7 @@ class StationTabScreenTest {
     /** A number field writes only what parses; a half-typed entry leaves the stored value. */
     @Test
     fun theNumberFieldsWriteOnlyWhatParses() = runComposeUiTest {
-        val s = Session()
+        val s = Session(preferences())
         showTab { StationTab(s.state) }
 
         type("Server port", "23000")
@@ -86,7 +102,7 @@ class StationTabScreenTest {
 
     @Test
     fun aBandCheckboxWritesThrough() = runComposeUiTest {
-        val s = Session()
+        val s = Session(preferences())
         showTab { StationTab(s.state) }
 
         toggle("10 GHz")
@@ -99,7 +115,7 @@ class StationTabScreenTest {
 
     @Test
     fun choosingTheMainCategoryWritesAndAppliesIt() = runComposeUiTest {
-        val s = Session()
+        val s = Session(preferences())
         s.prefs.loginChatCategoryMain = ChatCategory(2)
         showTab { StationTab(s.state) }
 
@@ -108,8 +124,7 @@ class StationTabScreenTest {
         // The main category is the upper of the two pickers; the second may show the same name.
         onAllNodesWithText(current).onFirst().performScrollTo().performClick()
         waitForIdle()
-        // The dropdown is drawn last, above everything else.
-        onAllNodesWithText(s.state.describeCategory(target)).onLast().performClick()
+        awaitNode(inPopup(s.state.describeCategory(target))).performClick()
         waitForIdle()
 
         assertEquals(3, s.prefs.loginChatCategoryMain?.categoryNumber)

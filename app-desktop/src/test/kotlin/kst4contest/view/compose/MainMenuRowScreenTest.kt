@@ -108,8 +108,9 @@ class MainMenuRowScreenTest {
         val rowState = MainMenuRowState()
         showRow(state, actions, rowState)
 
+        // Online, so Disconnect is usable and Connect is not; Connect has its own test below.
         val expected = listOf(
-            Triple("File", "Disconnect", null),
+            Triple("File", "Disconnect", "disconnect"),
             Triple("File", "Switch operator profile...", "switchOperatorProfile"),
             Triple("File", "Exit + disconnect", "exitApplication"),
             Triple("Options", "Set QRG as name in Chat (main category)", "setQrgAsNameInChat"),
@@ -127,24 +128,23 @@ class MainMenuRowScreenTest {
             Triple("Info", "About...", "showAbout"),
         )
 
-        expected.filter { it.third != null }.forEach { (menu, item, action) ->
+        expected.forEach { (menu, item, action) ->
             onNodeWithText(menu).performClick()
-            waitForIdle()
-            onNodeWithText(item).performClick()
-            waitForIdle()
+            awaitNode(inPopup(item)).performClick()
+            awaitGone(inPopup(item))
 
             assertEquals(action, actions.calls.lastOrNull(), "'$menu > $item' ran the wrong action")
             assertEquals(null, rowState.openMenu, "'$menu' stayed down after '$item' was picked")
         }
 
         assertEquals(
-            expected.count { it.third != null },
+            expected.size,
             actions.calls.size,
             "an item ran more than one action, or one ran none",
         )
     }
 
-    /** Connected: Connect is greyed out and Disconnect works; the drawn row says so. */
+    /** Offline, Connect works; once an attempt runs it is greyed out and Disconnect works. */
     @Test
     fun theConnectItemsFollowTheConnectionStateWhileTheMenuIsDown() = runComposeUiTest {
         val actions = RecordingActions()
@@ -152,10 +152,15 @@ class MainMenuRowScreenTest {
         showRow(state, actions)
 
         onNodeWithText("File").performClick()
-        waitForIdle()
+        awaitNode(inPopup("Connect to 144/432 MHz")).assertIsEnabled()
+        onNode(inPopup("Disconnect")).assertIsNotEnabled()
 
-        onNodeWithText("Connect to 144/432 MHz").assertIsEnabled()
-        onNodeWithText("Disconnect").assertIsNotEnabled()
+        onNode(inPopup("Connect to 144/432 MHz")).performClick()
+        awaitGone(inPopup("Connect to 144/432 MHz"))
+        assertEquals(listOf("connect"), actions.calls, "Connect did not run while offline")
+
+        onNodeWithText("File").performClick()
+        awaitNode(inPopup("Connect to 144/432 MHz"))
 
         // The state changes from elsewhere -- the connection callback -- with the menu down.
         runOnIdle { state.connectionState = On4KstConnectionState.CONNECTING }
@@ -166,7 +171,7 @@ class MainMenuRowScreenTest {
 
         onNodeWithText("Connect to 144/432 MHz").performClick()
         waitForIdle()
-        assertTrue(actions.calls.isEmpty(), "a disabled item ran its action: ${actions.calls}")
+        assertEquals(listOf("connect"), actions.calls, "a disabled item ran its action")
     }
 
     /**
@@ -272,7 +277,8 @@ class MainMenuRowScreenTest {
 
     private fun ComposeUiTest.rightEdgeColour(): Color {
         val pixels = onNodeWithTag(rowTag).captureToImage().toPixelMap()
-        return pixels[pixels.width - 2, pixels.height / 2]
+        // Well inside the row's right end, clear of any edge antialiasing.
+        return pixels[pixels.width - 12, pixels.height / 2]
     }
 
     /** A language picked after the first draw reaches the titles and the items. */
@@ -311,7 +317,7 @@ class MainMenuRowScreenTest {
             onNodeWithText("File").assertDoesNotExist()
         } finally {
             // use() also sets the JVM-wide CurrentStrings; leave the next test the base language.
-            languages.use("en")
+            runOnIdle { languages.use("en") }
         }
     }
 }

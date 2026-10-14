@@ -33,12 +33,18 @@ import kst4contest.view.compose.StationFilterState
 import kst4contest.view.compose.ThreadStatusButtons
 import kst4contest.view.compose.TimelineState
 import kst4contest.view.compose.TopPriorityState
+import kst4contest.view.map.StationMapClusterer
+import kst4contest.view.map.MapCallsignRawSnapshot
+import kst4contest.view.map.PathAnalysisResult
 import kst4contest.view.map.TileFetcher
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 import java.io.IOException
-import java.nio.file.Files
 import java.util.EnumSet
 
 /**
@@ -57,18 +63,52 @@ import java.util.EnumSet
  *
  * Tiles never arrive: an empty temporary cache and a source that always fails, the
  * arrangement `3dd2cf10` gave the drawing test after the default fetcher read the user's
- * disk cache and the real tile server. No running application exists, so the path analysis,
- * which needs the controller, is never started.
+ * disk cache and the real tile server. No running application exists: the path analysis is
+ * either absent, as it is before a runtime exists, or a recording stand-in passed through the
+ * window's [MapPathAnalysis] seam, which is what lets the zoom rule on selection run here.
  *
  * Headless: [StationMapWindow.Content] is drawn on its own, no window is opened.
  */
 @OptIn(ExperimentalTestApi::class)
 class StationMapWindowScreenTest {
 
-    private val offlineTileFetcher = TileFetcher(
-        Files.createTempDirectory("kst4contest-map-window-test"),
-        { throw IOException("no tile source in this test") },
-    )
+    /*
+     * Never the no-argument ChatPreferences: it resolves the operator's real profile and
+     * seeds preferences.xml there when it is missing. A file in a temporary directory is
+     * never read or written by these tests, it only gives the preferences a home.
+     */
+    @TempDir
+    lateinit var directory: Path
+
+    private fun preferences(): ChatPreferences = ChatPreferences(directory.resolve("preferences.xml"))
+
+    private lateinit var offlineTileFetcher: TileFetcher
+
+    @BeforeEach
+    fun openTileFetcher() {
+        offlineTileFetcher = TileFetcher(
+            directory.resolve("tile-cache"),
+            { throw IOException("no tile source in this test") },
+        )
+    }
+
+    /** The fetcher owns a thread pool; the window closes it on dispose, and so does this. */
+    @AfterEach
+    fun closeTileFetcher() {
+        offlineTileFetcher.close()
+    }
+
+    /** Records what the window asks the path analysis for, instead of a running application. */
+    private class RecordingPathAnalysis : MapPathAnalysis {
+        val requested = mutableListOf<ChatMember>()
+        override fun request(
+            member: ChatMember,
+            snapshot: MapCallsignRawSnapshot?,
+            onResult: (PathAnalysisResult) -> Unit,
+        ) {
+            requested += member
+        }
+    }
 
     private val ownLocator = "JO40HA"
 
@@ -131,7 +171,7 @@ class StationMapWindowScreenTest {
         )
     }
 
-    private fun prefs(pathAnalysisVisible: Boolean = false) = ChatPreferences().apply {
+    private fun prefs(pathAnalysisVisible: Boolean = false) = preferences().apply {
         stn_loginLocatorMainCat = ownLocator
         isGUIstationMapPathAnalysisVisible = pathAnalysisVisible
         isGUIstationMapClusteringEnabled = false
@@ -141,6 +181,7 @@ class StationMapWindowScreenTest {
         state: MainWindowState,
         members: List<ChatMember>,
         mapState: MapState,
+        pathAnalysis: MapPathAnalysis? = null,
     ) {
         state.stations.replaceRows(members)
         setContent {
@@ -150,6 +191,7 @@ class StationMapWindowScreenTest {
                     tileFetcher = offlineTileFetcher,
                     chatMembers = { members },
                     mapState = mapState,
+                    pathAnalysis = { pathAnalysis },
                 )
             }
         }
@@ -249,6 +291,65 @@ class StationMapWindowScreenTest {
         waitForIdle()
 
         assertSame(inMain, selectorCalls.single())
+    }
+
+    /**
+     * The cc8c9020 rule: selecting a station pans the map to it and leaves the zoom alone.
+     * The earlier Compose version recomputed the zoom here and threw zoom 15 out to about 7.
+     */
+    @Test
+    fun selectingAStationPansToItAndKeepsTheZoom() = runComposeUiTest {
+        val state = windowState(prefs())
+        val dl1abc = station("DL1ABC", 2, locator = "JO50JP")
+        val analysis = RecordingPathAnalysis()
+        val mapState = mapLookingAt(ownLocator, zoom = 15f)
+
+        show(state, listOf(dl1abc), mapState, analysis)
+
+        runOnIdle { state.selectedStation.select(dl1abc) }
+        waitForIdle()
+
+        val target = Location("JO50JP")
+        assertEquals(target.longitude.toDegrees(), mapState.centerLon, 1e-9, "the map did not pan")
+        assertEquals(target.latitude.toDegrees(), mapState.centerLat, 1e-9, "the map did not pan")
+        assertEquals(15f, mapState.zoom, "selecting a station changed the zoom")
+        assertEquals(listOf(dl1abc), analysis.requested, "the path analysis was not asked")
+    }
+
+    /**
+     * With grouping on, a selection zooms in only as far as it takes to break the station out
+     * of its bubble, and never out: StationMapClusterer.zoomToRevealStations.
+     */
+    @Test
+    fun withGroupingOnASelectionOnlyZoomsInFarEnoughToRevealTheStation() = runComposeUiTest {
+        val prefs = prefs().apply { isGUIstationMapClusteringEnabled = true }
+        val state = windowState(prefs)
+        val dl1abc = station("DL1ABC", 2, locator = "JO50JP")
+        val far = mapLookingAt(ownLocator, zoom = 5f)
+
+        show(state, listOf(dl1abc), far, RecordingPathAnalysis())
+
+        runOnIdle { state.selectedStation.select(dl1abc) }
+        waitForIdle()
+
+        assertEquals(StationMapClusterer.DISABLE_AT_ZOOM.toFloat(), far.zoom)
+    }
+
+    /** Without a running application there is nothing to ask, and the map stays put. */
+    @Test
+    fun withoutAPathAnalysisASelectionLeavesTheMapWhereItIs() = runComposeUiTest {
+        val state = windowState(prefs())
+        val dl1abc = station("DL1ABC", 2, locator = "JO50JP")
+        val mapState = mapLookingAt(ownLocator, zoom = 15f)
+        val home = Location(ownLocator)
+
+        show(state, listOf(dl1abc), mapState, pathAnalysis = null)
+
+        runOnIdle { state.selectedStation.select(dl1abc) }
+        waitForIdle()
+
+        assertEquals(home.longitude.toDegrees(), mapState.centerLon, 1e-9)
+        assertEquals(15f, mapState.zoom)
     }
 
     /** The two header switches write the profile, so the map opens the same way next time. */

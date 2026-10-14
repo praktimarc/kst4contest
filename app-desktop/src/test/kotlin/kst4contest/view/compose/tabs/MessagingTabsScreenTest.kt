@@ -19,7 +19,14 @@ import kst4contest.view.i18n.LanguageStore
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import kst4contest.view.compose.awaitNode
+import kst4contest.view.compose.awaitGone
+import kst4contest.view.compose.inDialog
+import kst4contest.view.compose.inPopup
+import androidx.compose.ui.test.onNodeWithTag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 import java.util.Locale
 
 /**
@@ -33,11 +40,21 @@ import java.util.Locale
 @OptIn(ExperimentalTestApi::class)
 class MessagingTabsScreenTest {
 
+    /*
+     * Never the no-argument ChatPreferences: it resolves the operator's real profile and
+     * seeds preferences.xml there when it is missing. A file in a temporary directory is
+     * never read or written by these tests, it only gives the preferences a home.
+     */
+    @TempDir
+    lateinit var directory: Path
+
+    private fun preferences(): ChatPreferences = ChatPreferences(directory.resolve("preferences.xml"))
+
     // ------------------------------------------------------------------ Message handling
 
     @Test
     fun messageHandlingWritesBothCategoriesAndAppliesTheFileRecording() = runComposeUiTest {
-        val prefs = ChatPreferences().apply {
+        val prefs = preferences().apply {
             isMessageHandling_autoAnswerEnabled = false
             isMessageHandling_debugModeToFileEnabled = false
         }
@@ -66,7 +83,7 @@ class MessagingTabsScreenTest {
 
     @Test
     fun guiOptionsWritesTheStartupChoicesAndTheLanguage() = runComposeUiTest {
-        val prefs = ChatPreferences().apply { isGUI_darkModeActiveByDefault = false }
+        val prefs = preferences().apply { isGUI_darkModeActiveByDefault = false }
         var storedLanguage = "en"
         val languages = LanguageStore({ storedLanguage }, { storedLanguage = it }, Locale.UK)
         val state = GuiOptionsTabState(prefs, languages)
@@ -86,21 +103,20 @@ class MessagingTabsScreenTest {
         try {
             onNodeWithText("EN").performScrollTo().performClick()
             waitForIdle()
-            onAllNodesWithText("DE").onLast().performClick()
+            awaitNode(inPopup("DE")).performClick()
             waitForIdle()
 
             assertEquals("de", storedLanguage, "the picked language was not stored")
             assertEquals("de", languages.language)
         } finally {
             // use() also sets the JVM-wide CurrentStrings; leave the next test the base language.
-            languages.use("en")
+            runOnIdle { languages.use("en") }
         }
     }
 
     // ------------------------------------------------------------------ Beacon
 
-    private class Beacon(val refuse: Boolean = false) {
-        val prefs = ChatPreferences()
+    private class Beacon(val prefs: ChatPreferences, val refuse: Boolean = false) {
         var restarts = 0
         val refusals = mutableListOf<String>()
         val state = BeaconTabState(
@@ -114,7 +130,7 @@ class MessagingTabsScreenTest {
 
     @Test
     fun beaconShowsOneSectionPerCategoryAndCommitsOnEnter() = runComposeUiTest {
-        val s = Beacon()
+        val s = Beacon(preferences())
         showTab { BeaconTab(s.state) { s.refusals += it } }
 
         onNodeWithText("CQ beacon for Microwave").assertExists()
@@ -132,7 +148,7 @@ class MessagingTabsScreenTest {
     /** A refused template is reported, not stored, and the field goes back to what is stored. */
     @Test
     fun beaconRefusesAnInvalidTemplateAndPutsTheFieldBack() = runComposeUiTest {
-        val s = Beacon(refuse = true)
+        val s = Beacon(preferences(), refuse = true)
         s.prefs.bcn_beaconTextMainCat = "cq cq"
         showTab { BeaconTab(s.state) { s.refusals += it } }
         /*
@@ -151,8 +167,10 @@ class MessagingTabsScreenTest {
 
     // ------------------------------------------------------------------ Notification
 
-    private class Notification {
-        val prefs = ChatPreferences().apply { isNotify_dxClusterServerEnabled = false }
+    private class Notification(val prefs: ChatPreferences) {
+        init {
+            prefs.isNotify_dxClusterServerEnabled = false
+        }
         val monitored = SimpleRoster<String>()
         val serverEnabled = mutableListOf<Boolean>()
         val ports = mutableListOf<Int>()
@@ -169,7 +187,7 @@ class MessagingTabsScreenTest {
 
     @Test
     fun notificationWritesThroughAndStartsTheClusterServer() = runComposeUiTest {
-        val s = Notification()
+        val s = Notification(preferences())
         showTab { NotificationTab(s.state) { s.refusals += it } }
 
         listOf("Sounds", "Band upgrade hints", "Local DX Cluster server", "QSO monitoring")
@@ -195,14 +213,14 @@ class MessagingTabsScreenTest {
 
     @Test
     fun theFallbackBandAndTheTestSpotReachTheirTargets() = runComposeUiTest {
-        val s = Notification()
+        val s = Notification(preferences())
         showTab { NotificationTab(s.state) { s.refusals += it } }
 
         val current = s.state.notify_optionalFrequencyPrefix
         onNodeWithText(current.prefix + " MHz").performScrollTo().performClick()
         waitForIdle()
         val other = Band.entries.first { it != current }
-        onAllNodesWithText(other.prefix + " MHz").onLast().performClick()
+        awaitNode(inPopup(other.prefix + " MHz")).performClick()
         waitForIdle()
         assertEquals(other.prefix, s.prefs.notify_optionalFrequencyPrefix.get())
 
@@ -215,18 +233,17 @@ class MessagingTabsScreenTest {
     /** The add button asks for the callsign first; what is confirmed reaches the roster. */
     @Test
     fun aMonitoredCallsignAddedThroughTheDialogReachesTheRoster() = runComposeUiTest {
-        val s = Notification()
+        val s = Notification(preferences())
         showTab { NotificationTab(s.state) { s.refusals += it } }
 
         onNodeWithText("Add monitored callsign").performScrollTo().performClick()
         waitForIdle()
-        onNodeWithText("Add a callsign to the monitoring list").assertExists()
+        awaitNode(inDialog("Add a callsign to the monitoring list"))
 
-        // The dialog's field is the last text input on screen.
-        onAllNodes(hasSetTextAction()).onLast().performTextReplacement("DL1ABC")
+        onNodeWithTag(MONITORED_CALLSIGN_FIELD_TAG).performTextReplacement("DL1ABC")
         waitForIdle()
-        onNodeWithText("OK").performClick()
-        waitForIdle()
+        awaitNode(inDialog("OK")).performClick()
+        awaitGone(inDialog("OK"))
 
         assertEquals(listOf("DL1ABC"), s.monitored.snapshot())
         assertFalse(s.refusals.isNotEmpty(), "the callsign was refused: ${s.refusals}")

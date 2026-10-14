@@ -10,6 +10,8 @@ import kst4contest.model.ChatPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * The three integration tabs, drawn: Log synch, TRX synch and Airscout (#107).
@@ -24,10 +26,20 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalTestApi::class)
 class SynchTabsScreenTest {
 
+    /*
+     * Never the no-argument ChatPreferences: it resolves the operator's real profile and
+     * seeds preferences.xml there when it is missing. A file in a temporary directory is
+     * never read or written by these tests, it only gives the preferences a home.
+     */
+    @TempDir
+    lateinit var directory: Path
+
+    private fun preferences(): ChatPreferences = ChatPreferences(directory.resolve("preferences.xml"))
+
     // ------------------------------------------------------------------ Log synch
 
-    private class LogSynch(detected: String? = "192.168.1.255") {
-        val prefs = ChatPreferences().apply {
+    private class LogSynch(isolated: ChatPreferences, detected: String? = "192.168.1.255") {
+        val prefs = isolated.apply {
             // Both listeners default to on; start from off so a tick is a visible change.
             isLogsynch_ucxUDPWkdCallListenerEnabled = false
             isLogsynch_wintestNetworkListenerEnabled = false
@@ -39,7 +51,7 @@ class SynchTabsScreenTest {
 
     @Test
     fun logSynchShowsItsSectionsAndTheDetectedBroadcastAddress() = runComposeUiTest {
-        val s = LogSynch()
+        val s = LogSynch(preferences())
         showTab { LogSynchTab(s.state) }
 
         onNodeWithText("File polling for worked callsigns").assertExists()
@@ -52,7 +64,7 @@ class SynchTabsScreenTest {
 
     @Test
     fun logSynchWritesThroughAndStartsTheWinTestListener() = runComposeUiTest {
-        val s = LogSynch()
+        val s = LogSynch(preferences())
         showTab { LogSynchTab(s.state) }
 
         toggle("Process QSO messages from N1MM+, QARTEST, UCXLog and DXLog.net")
@@ -86,7 +98,7 @@ class SynchTabsScreenTest {
 
     @Test
     fun trxSynchWritesThroughAndSwitchesTheQrgFollower() = runComposeUiTest {
-        val prefs = ChatPreferences()
+        val prefs = preferences()
         val follower = mutableListOf<Boolean>()
         val state = TrxSynchTabState(prefs) { follower += it }
         showTab { TrxSynchTab(state) }
@@ -110,7 +122,7 @@ class SynchTabsScreenTest {
     @Test
     fun airscoutWritesValidEntriesAndKeepsAnInvalidOneOffThePreferences() = runComposeUiTest {
         // The link defaults to on; start from off so a tick is a visible change.
-        val prefs = ChatPreferences().apply { isAirScout_asUDPListenerEnabled = false }
+        val prefs = preferences().apply { isAirScout_asUDPListenerEnabled = false }
         val state = AirscoutTabState(prefs)
         showTab { AirscoutTab(state) }
 

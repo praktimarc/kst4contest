@@ -16,7 +16,13 @@ import kst4contest.model.ChatPreferences
 import kst4contest.observe.SimpleRoster
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import kst4contest.view.compose.awaitNode
+import kst4contest.view.compose.awaitGone
+import kst4contest.view.compose.inDialog
+import kst4contest.view.compose.inPopup
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * The two tabs built around a list, drawn: Shortcuts and the worked-station database (#107).
@@ -29,10 +35,20 @@ import org.junit.jupiter.api.Test
 @OptIn(ExperimentalTestApi::class)
 class ListTabsScreenTest {
 
+    /*
+     * Never the no-argument ChatPreferences: it resolves the operator's real profile and
+     * seeds preferences.xml there when it is missing. A file in a temporary directory is
+     * never read or written by these tests, it only gives the preferences a home.
+     */
+    @TempDir
+    lateinit var directory: Path
+
+    private fun preferences(): ChatPreferences = ChatPreferences(directory.resolve("preferences.xml"))
+
     // ------------------------------------------------------------------ Shortcuts
 
-    private class Shortcuts {
-        val prefs = ChatPreferences().apply {
+    private class Shortcuts(isolated: ChatPreferences) {
+        val prefs = isolated.apply {
             lst_txtShortCutBtnList.setAll(listOf("MYQRG", "pse sked"))
             lst_txtSnipList.setAll(listOf("tnx qso 73"))
         }
@@ -43,7 +59,7 @@ class ListTabsScreenTest {
 
     @Test
     fun shortcutsShowsBothListsWithWhatTheProfileHolds() = runComposeUiTest {
-        val s = Shortcuts()
+        val s = Shortcuts(preferences())
         showTab { ShortcutsTab(s.state) { } }
 
         onNodeWithText("Shortcut buttons above the message field").assertExists()
@@ -56,7 +72,7 @@ class ListTabsScreenTest {
 
     @Test
     fun anEditedShortcutIsWrittenAndTheButtonsAreRefreshed() = runComposeUiTest {
-        val s = Shortcuts()
+        val s = Shortcuts(preferences())
         showTab { ShortcutsTab(s.state) { } }
 
         val row = onNode(hasSetTextAction() and hasText("pse sked"))
@@ -71,7 +87,7 @@ class ListTabsScreenTest {
 
     @Test
     fun addingASnippetPutsTheTemplateOnTopAndWritesIt() = runComposeUiTest {
-        val s = Shortcuts()
+        val s = Shortcuts(preferences())
         showTab { ShortcutsTab(s.state) { } }
 
         onNodeWithText("Add new snippet").performScrollTo().performClick()
@@ -117,7 +133,7 @@ class ListTabsScreenTest {
         val w = Worked()
         showTab { WorkedDatabaseTab(w.state) }
 
-        w.roster.setAll(listOf(ChatMember().apply { callSign = "OK1XYZ" }))
+        runOnIdle { w.roster.setAll(listOf(ChatMember().apply { callSign = "OK1XYZ" })) }
         onNodeWithText("Refresh worked database").performScrollTo().performClick()
         waitForIdle()
 
@@ -134,17 +150,17 @@ class ListTabsScreenTest {
 
         onNodeWithText("Reset worked, NOT-QRV and grid data...").performScrollTo().performClick()
         waitForIdle()
-        onNodeWithText("Reset contest data").assertExists()
+        awaitNode(inDialog("Reset contest data"))
         assertEquals(0, w.resets, "the reset ran before it was confirmed")
 
-        onNodeWithText("Cancel").performClick()
-        waitForIdle()
+        onNode(inDialog("Cancel")).performClick()
+        awaitGone(inDialog("Reset contest data"))
         assertEquals(0, w.resets)
 
         onNodeWithText("Reset worked, NOT-QRV and grid data...").performClick()
         waitForIdle()
-        onNodeWithText("Reset data").performClick()
-        waitForIdle()
+        awaitNode(inDialog("Reset data")).performClick()
+        awaitGone(inDialog("Reset data"))
 
         assertEquals(1, w.resets)
         assertEquals(1, w.guiRefreshes)
@@ -158,13 +174,15 @@ class ListTabsScreenTest {
 
         onNodeWithText("Reset worked, NOT-QRV and grid data...").performScrollTo().performClick()
         waitForIdle()
-        onNodeWithText("Reset data").performClick()
-        waitForIdle()
+        awaitNode(inDialog("Reset data")).performClick()
+        awaitGone(inDialog("Reset data"))
 
-        onNodeWithText(
-            "The contest data could not be reset. The internal database may be unavailable or " +
-                "inconsistent. No successful reset was confirmed.",
-        ).assertExists()
+        awaitNode(
+            inDialog(
+                "The contest data could not be reset. The internal database may be unavailable or " +
+                    "inconsistent. No successful reset was confirmed.",
+            ),
+        )
         assertEquals(0, w.guiRefreshes, "the lists were cleared although the database was not")
     }
 }

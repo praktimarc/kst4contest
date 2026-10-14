@@ -18,6 +18,10 @@ import kst4contest.view.compose.PaletteSource
 import kst4contest.view.compose.PaletteStore
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import kst4contest.view.compose.awaitNode
+import kst4contest.view.compose.awaitGone
+import kst4contest.view.compose.inDialog
+import kst4contest.view.compose.inPopup
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -75,16 +79,14 @@ class ProfileTabsScreenTest {
         waitForIdle()
 
         // A selected profile is always asked about first; the refusal comes on confirmation.
-        onNodeWithText("Delete operator profile").assertExists()
-        onNodeWithText("Delete profile").performClick()
-        waitForIdle()
+        awaitNode(inDialog("Delete operator profile"))
+        onNode(inDialog("Delete profile")).performClick()
 
-        onNodeWithText(
-            "The default profile uses the files of the installation itself and cannot be deleted.",
-        ).assertExists()
-        onNodeWithText("OK").performClick()
-        waitForIdle()
-        onNodeWithText("Operator profiles").assertDoesNotExist()
+        awaitNode(
+            inDialog("The default profile uses the files of the installation itself and cannot be deleted."),
+        )
+        onNode(inDialog("OK")).performClick()
+        awaitGone(inDialog("Operator profiles"))
         assertEquals(1, state.profiles.size)
     }
 
@@ -108,11 +110,10 @@ class ProfileTabsScreenTest {
 
         onNodeWithText("New profile...").performScrollTo().performClick()
         waitForIdle()
-        onNodeWithText("New operator profile").assertExists()
+        awaitNode(inDialog("New operator profile"))
 
-        onNodeWithText("Cancel").performClick()
-        waitForIdle()
-        onNodeWithText("New operator profile").assertDoesNotExist()
+        onNode(inDialog("Cancel")).performClick()
+        awaitGone(inDialog("New operator profile"))
         assertEquals(1, state.profiles.size)
     }
 
