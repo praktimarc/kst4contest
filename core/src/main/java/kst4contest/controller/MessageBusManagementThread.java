@@ -6,7 +6,9 @@ import java.sql.SQLException;
 //import java.net.Socket;
 //import java.util.ArrayList;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Hashtable;
 import java.util.Locale;
 import java.util.Set;
@@ -329,7 +331,127 @@ public class MessageBusManagementThread extends Thread {
 			return;
 		}
 
-		String messageText = message.getMessageText();
+		Map<Band, Long> bandContextTimestamps = new EnumMap<>(Band.class);
+		if (sender.getKnownActiveBands() != null) {
+			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
+					: sender.getKnownActiveBands().entrySet()) {
+				if (entry.getKey() != null && entry.getValue() != null) {
+					bandContextTimestamps.put(entry.getKey(), entry.getValue().timestampEpoch);
+				}
+			}
+		}
+
+		String configuredPrefix = null;
+		if (prefs != null
+				&& prefs.getNotify_optionalFrequencyPrefix() != null) {
+			configuredPrefix =
+					prefs.getNotify_optionalFrequencyPrefix().get();
+		}
+
+		List<DetectedChatFrequency> detectedFrequencies = detectFrequencies(
+				message.getMessageText(),
+				bandContextTimestamps,
+				configuredPrefix,
+				millisClock.getAsLong()
+		);
+
+		for (DetectedChatFrequency detected : detectedFrequencies) {
+			/*
+			 * Store the result in the thread-safe active-member model. The existing
+			 * compatibility property used by the TableView and DX-Cluster code is
+			 * updated by applyDetectedFrequencyToActiveMembers(...), too.
+			 */
+			client.applyDetectedFrequencyToActiveMembers(
+					sender,
+					detected.band(),
+					detected.frequencyMHz()
+			);
+
+			LOGGER.log(Level.FINE,
+					"[SmartParser] Detected for "
+							+ sender.getCallSign()
+							+ ": "
+							+ detected.frequencyMHz()
+							+ " MHz ("
+							+ detected.band()
+							+ ") "
+							+ (detected.derivedFromShortForm()
+							? "[derived from " + detected.rawMatch() + "]"
+							: "[full match]")
+			);
+		}
+	}
+
+	/**
+	 * One frequency found in a chat message by
+	 * {@link #detectFrequencies(String, Map, String, long)}.
+	 *
+	 * @param band band the frequency belongs to
+	 * @param frequencyMHz frequency in MHz, always greater than zero
+	 * @param rawMatch matched text with commas replaced by dots and, for a relative
+	 *                 value, without its leading dot
+	 * @param derivedFromShortForm {@code true} when the value was relative
+	 *                             ({@code .210}) or bare ({@code 210}) and the band
+	 *                             had to be taken from context
+	 */
+	record DetectedChatFrequency(
+			Band band,
+			double frequencyMHz,
+			String rawMatch,
+			boolean derivedFromShortForm
+	) {
+	}
+
+	/**
+	 * Detects complete and relative frequencies in a chat message, in the order in
+	 * which they occur.
+	 *
+	 * <p>Complete frequencies determine their band directly. A relative or bare
+	 * value is completed with the band whose most recent observation is the newest
+	 * among those not older than 30 minutes ({@code nowMillis - timestamp <= 1_800_000})
+	 * and whose band range contains the completed frequency. Only when no such band
+	 * exists is the configured fallback prefix used; an unknown or missing prefix
+	 * falls back to 144 MHz.</p>
+	 *
+	 * <p>Every detection is fed back as band context with timestamp
+	 * {@code nowMillis} before the next match is examined. This reproduces the
+	 * production path, where storing a detection on the sender updates the very
+	 * map the next match reads: in {@code "10368.100 then .150"} the second value
+	 * becomes 10368.150, not 144.150.</p>
+	 *
+	 * <p>A bare three-digit value is accepted only with nearby frequency-related
+	 * text, see {@link #hasExplicitBareFrequencyContext(String, int, int)}.</p>
+	 *
+	 * @param messageText chat message text, may be {@code null}
+	 * @param bandContextTimestamps epoch milliseconds of the sender's most recent
+	 *                              observation per band; not modified; may be
+	 *                              {@code null}
+	 * @param fallbackPrefix configured fallback band prefix such as {@code "432"},
+	 *                       may be {@code null}
+	 * @param nowMillis current time in epoch milliseconds
+	 * @return detected frequencies; never {@code null}
+	 */
+	static List<DetectedChatFrequency> detectFrequencies(
+			String messageText,
+			Map<Band, Long> bandContextTimestamps,
+			String fallbackPrefix,
+			long nowMillis
+	) {
+		List<DetectedChatFrequency> result = new ArrayList<>();
+
+		if (messageText == null) {
+			return result;
+		}
+
+		Map<Band, Long> bandContext = new EnumMap<>(Band.class);
+		if (bandContextTimestamps != null) {
+			for (Map.Entry<Band, Long> entry : bandContextTimestamps.entrySet()) {
+				if (entry.getKey() != null && entry.getValue() != null) {
+					bandContext.put(entry.getKey(), entry.getValue());
+				}
+			}
+		}
+
 		Matcher matcher = SMART_FREQUENCY_PATTERN.matcher(messageText);
 
 		while (matcher.find()) {
@@ -363,49 +485,31 @@ public class MessageBusManagementThread extends Thread {
 				 */
 				long bestTimestamp = 0L;
 
-				if (sender.getKnownActiveBands() != null) {
-					for (java.util.Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
-							: sender.getKnownActiveBands().entrySet()) {
+				for (Map.Entry<Band, Long> entry : bandContext.entrySet()) {
+					Band candidateBand = entry.getKey();
+					long timestamp = entry.getValue();
 
-						Band candidateBand = entry.getKey();
-						ChatMember.ActiveFrequencyInfo info = entry.getValue();
+					if (nowMillis - timestamp > 1_800_000L) {
+						continue;
+					}
 
-						if (candidateBand == null || info == null) {
-							continue;
-						}
+					FrequencyTextParser.DetectedFrequency detectedFrequency =
+							FrequencyTextParser.parseExplicitFrequency(
+									candidateBand.getPrefix() + "." + foundRaw
+							);
 
-						if (System.currentTimeMillis() - info.timestampEpoch > 1_800_000L) {
-							continue;
-						}
+					if (detectedFrequency != null
+							&& detectedFrequency.getBand() == candidateBand
+							&& timestamp > bestTimestamp) {
 
-						try {
-							String reconstructed =
-									candidateBand.getPrefix()
-											+ "."
-											+ foundRaw;
+						finalDetectedFrequency =
+								detectedFrequency.getFrequencyMHz();
 
-							FrequencyTextParser.DetectedFrequency detectedFrequency =
-									FrequencyTextParser.parseExplicitFrequency(
-											reconstructed
-									);
+						finalDetectedBand =
+								candidateBand;
 
-							if (detectedFrequency != null
-									&& detectedFrequency.getBand() == candidateBand
-									&& info.timestampEpoch > bestTimestamp) {
-
-								finalDetectedFrequency =
-										detectedFrequency.getFrequencyMHz();
-
-								finalDetectedBand =
-										candidateBand;
-
-								bestTimestamp =
-										info.timestampEpoch;
-
-							}
-						} catch (NumberFormatException ignored) {
-							// Try the next known band.
-						}
+						bestTimestamp =
+								timestamp;
 					}
 				}
 
@@ -415,41 +519,24 @@ public class MessageBusManagementThread extends Thread {
 				 * The current UI itself offers only values from Band.values().
 				 */
 				if (finalDetectedBand == null) {
-					String configuredPrefix = null;
-
-					if (prefs != null
-							&& prefs.getNotify_optionalFrequencyPrefix() != null) {
-						configuredPrefix =
-								prefs.getNotify_optionalFrequencyPrefix().get();
-					}
-
-					Band fallbackBand = Band.fromPrefix(configuredPrefix);
+					Band fallbackBand = Band.fromPrefix(fallbackPrefix);
 					if (fallbackBand == null) {
 						fallbackBand = Band.B_144;
 					}
 
-					try {
-						String reconstructed =
-								fallbackBand.getPrefix()
-										+ "."
-										+ foundRaw;
+					FrequencyTextParser.DetectedFrequency detectedFrequency =
+							FrequencyTextParser.parseExplicitFrequency(
+									fallbackBand.getPrefix() + "." + foundRaw
+							);
 
-						FrequencyTextParser.DetectedFrequency detectedFrequency =
-								FrequencyTextParser.parseExplicitFrequency(
-										reconstructed
-								);
+					if (detectedFrequency != null
+							&& detectedFrequency.getBand() == fallbackBand) {
 
-						if (detectedFrequency != null
-								&& detectedFrequency.getBand() == fallbackBand) {
+						finalDetectedFrequency =
+								detectedFrequency.getFrequencyMHz();
 
-							finalDetectedFrequency =
-									detectedFrequency.getFrequencyMHz();
-
-							finalDetectedBand =
-									fallbackBand;
-						}
-					} catch (NumberFormatException ignored) {
-						// The matched value cannot be converted into a frequency.
+						finalDetectedBand =
+								fallbackBand;
 					}
 				}
 			} else {
@@ -471,30 +558,19 @@ public class MessageBusManagementThread extends Thread {
 				continue;
 			}
 
-			/*
-			 * Store the result in the thread-safe active-member model. The existing
-			 * compatibility property used by the TableView and DX-Cluster code is
-			 * updated by applyDetectedFrequencyToActiveMembers(...), too.
-			 */
-			client.applyDetectedFrequencyToActiveMembers(
-					sender,
+			result.add(new DetectedChatFrequency(
 					finalDetectedBand,
-					finalDetectedFrequency
-			);
+					finalDetectedFrequency,
+					foundRaw,
+					shortForm
+			));
 
-			LOGGER.log(Level.FINE,
-					"[SmartParser] Detected for "
-							+ sender.getCallSign()
-							+ ": "
-							+ finalDetectedFrequency
-							+ " MHz ("
-							+ finalDetectedBand
-							+ ") "
-							+ (shortForm
-							? "[derived from " + foundRaw + "]"
-							: "[full match]")
-			);
+			// The caller stores this detection on the sender, which makes it the
+			// newest context for the remaining matches of the same message.
+			bandContext.put(finalDetectedBand, nowMillis);
 		}
+
+		return result;
 	}
 
 
