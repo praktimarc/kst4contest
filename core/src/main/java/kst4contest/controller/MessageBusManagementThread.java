@@ -1376,23 +1376,21 @@ public class MessageBusManagementThread extends Thread {
 										 * In that case locators may be missing, so angle/range analysis and DX spotting
 										 * must be skipped while the chat message itself is still published.
 										 */
-										boolean senderHasLocator = newMessageArrived.getSender().getQra() != null
-												&& !newMessageArrived.getSender().getQra().isBlank();
-										boolean receiverHasLocator = newMessageArrived.getReceiver().getQra() != null
-												&& !newMessageArrived.getReceiver().getQra().isBlank();
+										DirectionalOpportunity opportunity = classifyDirectionalOpportunity(
+												client.getChatPreferences().getStn_loginLocatorMainCat(),
+												newMessageArrived.getSender().getQra(),
+												newMessageArrived.getReceiver().getQra(),
+												client.getChatPreferences().getStn_maxQRBDefault(),
+												client.getChatPreferences().getStn_antennaBeamWidthDeg());
 
-										if (senderHasLocator && receiverHasLocator) {
-											if (DirectionUtils.isInAngleAndRange(client.getChatPreferences().getStn_loginLocatorMainCat(),
-													newMessageArrived.getSender().getQra(),
-													newMessageArrived.getReceiver().getQra(),
-													client.getChatPreferences().getStn_maxQRBDefault(),
-													client.getChatPreferences().getStn_antennaBeamWidthDeg())) {
+										if (opportunity != DirectionalOpportunity.MISSING_LOCATOR) {
+											if (opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
 
-												if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
-													//play only tick sound if the sender was not set directedtome before
-													if (!newMessageArrived.getSender().isInAngleAndRange()) {
-														this.client.getPlayAudioUtils().playNoiseLauncher('-');
-													}
+												//play only tick sound if the sender was not set directedtome before
+												if (shouldPlayDirectionalTick(
+														this.client.getChatPreferences().isNotify_playSimpleSounds(),
+														newMessageArrived.getSender().isInAngleAndRange())) {
+													this.client.getPlayAudioUtils().playNoiseLauncher('-');
 												}
 
 												newMessageArrived.getSender().setInAngleAndRange(true);
@@ -1401,31 +1399,21 @@ public class MessageBusManagementThread extends Thread {
 													try {
 														ChatMember sender = newMessageArrived.getSender();
 
-														String detectedFrequency = sender.getFrequency() == null
-																? null
-																: sender.getFrequency().get();
+														DxClusterSpotDecision spotDecision = decideDxClusterSpot(sender);
 
-														if (detectedFrequency != null && !detectedFrequency.isBlank()
-																&& !isAlreadyWorkedForDxClusterSpot(sender)) {
+														if (spotDecision == DxClusterSpotDecision.SPOT) {
 															/*
 															 * The DX Cluster spot must not depend on AirScout data. A known
 															 * frequency and a valid directional opportunity are sufficient.
 															 * Available AP information is added only as an optional comment.
 															 */
-															ChatMember onlyForSpottingObject = new ChatMember();
-															onlyForSpottingObject.setCallSign(sender.getCallSign());
-															onlyForSpottingObject.setFrequency(sender.getFrequency());
-															onlyForSpottingObject.setQra(
-																	buildDxClusterSpotComment(sender)
-															);
-
 															this.client
 																	.getDxClusterServer()
 																	.broadcastSingleDXClusterEntryToLoggers(
-																			onlyForSpottingObject
+																			buildDxClusterSpotEntry(sender)
 																	);
 
-														} else if (detectedFrequency != null && !detectedFrequency.isBlank()) {
+														} else if (spotDecision == DxClusterSpotDecision.ALREADY_WORKED) {
 															// Only reached when the worked check was the reason (issue #91).
 															LOGGER.fine("DX Cluster spot suppressed, station already worked on this band: "
 																	+ sender.getCallSign());
@@ -1794,19 +1782,15 @@ public class MessageBusManagementThread extends Thread {
 																} else {
 																	//message sent to other user
 																	// message sent from one other station to another other station
-																	boolean senderHasLocator = newMessageArrived.getSender().getQra() != null
-																			&& !newMessageArrived.getSender().getQra().isBlank();
+																	DirectionalOpportunity opportunity = classifyDirectionalOpportunity(
+																			client.getChatPreferences().getStn_loginLocatorMainCat(),
+																			newMessageArrived.getSender().getQra(),
+																			newMessageArrived.getReceiver().getQra(),
+																			client.getChatPreferences().getStn_maxQRBDefault(),
+																			client.getChatPreferences().getStn_antennaBeamWidthDeg());
 
-																	boolean receiverHasLocator = newMessageArrived.getReceiver().getQra() != null
-																			&& !newMessageArrived.getReceiver().getQra().isBlank();
-
-																	if (senderHasLocator && receiverHasLocator) {
-																		if (DirectionUtils.isInAngleAndRange(
-																				client.getChatPreferences().getStn_loginLocatorMainCat(),
-																				newMessageArrived.getSender().getQra(),
-																				newMessageArrived.getReceiver().getQra(),
-																				client.getChatPreferences().getStn_maxQRBDefault(),
-																				client.getChatPreferences().getStn_antennaBeamWidthDeg())) {
+																	if (opportunity != DirectionalOpportunity.MISSING_LOCATOR) {
+																		if (opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
 
 																			newMessageArrived.getSender().setInAngleAndRange(true);
 
@@ -2058,6 +2042,133 @@ public class MessageBusManagementThread extends Thread {
 		return locator.isEmpty()
 				? apComment
 				: locator + " " + apComment;
+	}
+
+	/**
+	 * Outcome of the directional check for a message between two other stations.
+	 */
+	enum DirectionalOpportunity {
+		/** Sender or receiver locator is missing or blank; nothing was calculated. */
+		MISSING_LOCATOR,
+		/** The sender beams towards the receiver and the local station is covered. */
+		IN_ANGLE_AND_RANGE,
+		/** Both locators are known, but the local station is outside beam or range. */
+		OUT_OF_ANGLE_OR_RANGE
+	}
+
+	/**
+	 * Decides whether a message from one other station to another one is a
+	 * directional opportunity ("Richtungs-Chance") for the local station.
+	 *
+	 * <p>Without both a sender and a receiver locator the geometry is not
+	 * evaluated at all. Otherwise the decision is
+	 * {@link DirectionUtils#isInAngleAndRange(String, String, String, double, double)}:
+	 * the local station must be within {@code maxQrbKm} of the sender and inside
+	 * the sender's beam towards the receiver.</p>
+	 *
+	 * @param ownLocator locator of the local station
+	 * @param senderLocator locator of the sending station, may be {@code null}
+	 * @param receiverLocator locator of the receiving station, may be {@code null}
+	 * @param maxQrbKm maximum distance from the local station to the sender
+	 * @param beamWidthDeg assumed antenna beam width of the sender in degrees
+	 * @return the classification of the message
+	 */
+	static DirectionalOpportunity classifyDirectionalOpportunity(
+			String ownLocator,
+			String senderLocator,
+			String receiverLocator,
+			double maxQrbKm,
+			double beamWidthDeg
+	) {
+		boolean senderHasLocator = senderLocator != null && !senderLocator.isBlank();
+		boolean receiverHasLocator = receiverLocator != null && !receiverLocator.isBlank();
+
+		if (!senderHasLocator || !receiverHasLocator) {
+			return DirectionalOpportunity.MISSING_LOCATOR;
+		}
+
+		return DirectionUtils.isInAngleAndRange(
+				ownLocator,
+				senderLocator,
+				receiverLocator,
+				maxQrbKm,
+				beamWidthDeg)
+				? DirectionalOpportunity.IN_ANGLE_AND_RANGE
+				: DirectionalOpportunity.OUT_OF_ANGLE_OR_RANGE;
+	}
+
+	/**
+	 * Returns whether the short tick sound for a new directional opportunity is
+	 * played: only with simple sounds enabled and only on the transition into
+	 * the opportunity, not again while the sender is already marked.
+	 *
+	 * @param simpleSoundsEnabled whether simple notification sounds are enabled
+	 * @param senderAlreadyInAngleAndRange the sender's flag before this message
+	 * @return {@code true} when the tick is to be played
+	 */
+	static boolean shouldPlayDirectionalTick(
+			boolean simpleSoundsEnabled,
+			boolean senderAlreadyInAngleAndRange
+	) {
+		return simpleSoundsEnabled && !senderAlreadyInAngleAndRange;
+	}
+
+	/**
+	 * Outcome of the automatic DX Cluster spot decision for a directional opportunity.
+	 */
+	enum DxClusterSpotDecision {
+		/** The sender has no known frequency; nothing is spotted or logged. */
+		NO_FREQUENCY,
+		/** The sender is already worked on the band of its frequency (issue #91). */
+		ALREADY_WORKED,
+		/** The spot is to be sent. */
+		SPOT
+	}
+
+	/**
+	 * Decides whether an automatic DX Cluster spot is sent for the sender of a
+	 * directional opportunity. Whether the local DX Cluster server is enabled at
+	 * all is checked by the caller.
+	 *
+	 * <p>A frequency counts as known when its text is neither {@code null} nor
+	 * blank; it is not parsed here. A text that names no supported band therefore
+	 * still leads to {@link DxClusterSpotDecision#SPOT}, see
+	 * {@link #isAlreadyWorkedForDxClusterSpot(ChatMember)}.</p>
+	 *
+	 * @param sender station that triggered the directional opportunity, may be {@code null}
+	 * @return the decision
+	 */
+	static DxClusterSpotDecision decideDxClusterSpot(ChatMember sender) {
+		String detectedFrequency = sender == null || sender.getFrequency() == null
+				? null
+				: sender.getFrequency().get();
+
+		if (detectedFrequency == null || detectedFrequency.isBlank()) {
+			return DxClusterSpotDecision.NO_FREQUENCY;
+		}
+
+		return isAlreadyWorkedForDxClusterSpot(sender)
+				? DxClusterSpotDecision.ALREADY_WORKED
+				: DxClusterSpotDecision.SPOT;
+	}
+
+	/**
+	 * Builds the entry handed to the local DX Cluster server for an automatic spot:
+	 * the sender's callsign, the sender's frequency value (the same instance, not a
+	 * copy) and, in the locator field, the comment from
+	 * {@link #buildDxClusterSpotComment(ChatMember)}.
+	 *
+	 * @param sender station to spot
+	 * @return a new member object used only for spotting
+	 */
+	static ChatMember buildDxClusterSpotEntry(ChatMember sender) {
+		ChatMember onlyForSpottingObject = new ChatMember();
+		onlyForSpottingObject.setCallSign(sender.getCallSign());
+		onlyForSpottingObject.setFrequency(sender.getFrequency());
+		onlyForSpottingObject.setQra(
+				buildDxClusterSpotComment(sender)
+		);
+		return onlyForSpottingObject;
 	}
 
 	/**
