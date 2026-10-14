@@ -52,12 +52,34 @@ public class DXClusterThreadPooledServer implements Runnable {
         this.callBackToController = callback;
     }
 
+    /**
+     * Creates a server on a socket that is already bound. Tests use this to
+     * listen on an ephemeral loopback port; the application binds the
+     * configured port itself through the public constructor.
+     *
+     * @param boundServerSocket bound server socket this server takes ownership of
+     * @param chatController controller that provides the spot preferences
+     * @param callback thread-status sink
+     */
+    DXClusterThreadPooledServer(
+            ServerSocket boundServerSocket,
+            ChatController chatController,
+            ThreadStatusCallback callback
+    ) {
+        this.serverSocket = boundServerSocket;
+        this.serverPort = boundServerSocket.getLocalPort();
+        this.chatController = chatController;
+        this.callBackToController = callback;
+    }
+
     @Override
     public void run() {
         Thread.currentThread().setName("DXCluster-thread-pooled-server");
 
         try {
-            serverSocket = new ServerSocket(serverPort);
+            if (serverSocket == null) {
+                serverSocket = new ServerSocket(serverPort);
+            }
 
             if (stopped) {
                 return;
