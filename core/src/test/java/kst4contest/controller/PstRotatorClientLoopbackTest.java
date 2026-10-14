@@ -55,10 +55,27 @@ class PstRotatorClientLoopbackTest {
 		client.start();
 	}
 
+	/**
+	 * The client does not expose its listener thread, so it is found by the
+	 * name start() gives it, which contains the remote port of this test's
+	 * fake PSTRotator.
+	 */
 	@AfterEach
-	void stopClient() {
-		client.stop();
-		pstRotator.close();
+	void stopClient() throws Exception {
+		String listenerName = "PSTRotator-Listener-" + pstRotator.getLocalPort();
+		List<Thread> listeners = Thread.getAllStackTraces().keySet().stream()
+				.filter(thread -> thread.getName().equals(listenerName))
+				.toList();
+		try {
+			client.stop();
+			assertEquals(1, listeners.size(), "exactly one listener thread expected");
+			for (Thread listenerThread : listeners) {
+				listenerThread.join(2_000);
+				assertFalse(listenerThread.isAlive(), "listener thread must end after stop()");
+			}
+		} finally {
+			pstRotator.close();
+		}
 	}
 
 	/**
