@@ -99,7 +99,7 @@ Known integration areas include:
 - AirScout;
 - UCXLog / DXLog UDP XML (`contactinfo`, `contactreplace`);
 - Win-Test UDP;
-- PSTRotator TCP;
+- PSTRotator UDP;
 - DXCluster;
 - local SQLite persistence.
 

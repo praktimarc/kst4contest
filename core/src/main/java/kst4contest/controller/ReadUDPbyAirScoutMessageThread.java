@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 
@@ -136,7 +137,8 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 				String received = new String(
 						packet.getData(),
 						packet.getOffset(),
-						packet.getLength()
+						packet.getLength(),
+						StandardCharsets.UTF_8
 				).trim();
 
 				if (received.contains(

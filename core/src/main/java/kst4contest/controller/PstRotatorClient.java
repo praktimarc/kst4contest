@@ -37,19 +37,16 @@ public class PstRotatorClient implements Runnable {
      * @param listener Callback für den Chatcontroller
      */
     public PstRotatorClient(String host, int remotePort, PstRotatorEventListener listener, ThreadStatusCallback callBack) {
-        this.callBackToController = callBack;
-        this.host = host;
-        this.remotePort = remotePort;
         // Laut Manual antwortet PSTRotator oft auf Port+1.
         // Wir binden uns also standardmäßig auf remotePort + 1.
-        this.localPort = remotePort + 1;
-        this.listener = listener;
+        this(host, remotePort, remotePort + 1, listener, callBack);
     }
 
     /**
      * alternative constructor for seting the remote port explicitely
      */
-    public PstRotatorClient(String host, int remotePort, int localPort, PstRotatorEventListener listener) {
+    public PstRotatorClient(String host, int remotePort, int localPort, PstRotatorEventListener listener, ThreadStatusCallback callBack) {
+        this.callBackToController = callBack;
         this.host = host;
         this.remotePort = remotePort;
         this.localPort = localPort;
