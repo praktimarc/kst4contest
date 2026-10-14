@@ -182,6 +182,7 @@ class StationMapWindowScreenTest {
         members: List<ChatMember>,
         mapState: MapState,
         pathAnalysis: MapPathAnalysis? = null,
+        onPathAnalysisAsked: () -> Unit = {},
     ) {
         state.stations.replaceRows(members)
         setContent {
@@ -191,7 +192,7 @@ class StationMapWindowScreenTest {
                     tileFetcher = offlineTileFetcher,
                     chatMembers = { members },
                     mapState = mapState,
-                    pathAnalysis = { pathAnalysis },
+                    pathAnalysis = { onPathAnalysisAsked(); pathAnalysis },
                 )
             }
         }
@@ -342,12 +343,15 @@ class StationMapWindowScreenTest {
         val dl1abc = station("DL1ABC", 2, locator = "JO50JP")
         val mapState = mapLookingAt(ownLocator, zoom = 15f)
         val home = Location(ownLocator)
+        var asked = 0
 
-        show(state, listOf(dl1abc), mapState, pathAnalysis = null)
+        show(state, listOf(dl1abc), mapState, pathAnalysis = null, onPathAnalysisAsked = { asked++ })
 
         runOnIdle { state.selectedStation.select(dl1abc) }
         waitForIdle()
 
+        // Proves the selection effect ran, so the unchanged map is not a vacuous pass.
+        assertEquals(1, asked, "the selection effect did not ask for a path analysis")
         assertEquals(home.longitude.toDegrees(), mapState.centerLon, 1e-9)
         assertEquals(15f, mapState.zoom)
     }

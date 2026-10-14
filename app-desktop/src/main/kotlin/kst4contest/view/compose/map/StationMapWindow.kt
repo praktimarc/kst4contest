@@ -149,13 +149,16 @@ object StationMapWindow {
 
             var pathAnalysisResult by remember { mutableStateOf<PathAnalysisResult?>(null) }
 
+            // Read through updated state so a caller passing a new lambda is never served a stale one.
+            val currentPathAnalysis by rememberUpdatedState(pathAnalysis)
+
             LaunchedEffect(selectedMember) {
                 if (selectedMember == null) {
                     pathAnalysisResult = null
                     return@LaunchedEffect
                 }
                 
-                val analysis = pathAnalysis()
+                val analysis = currentPathAnalysis()
                 if (analysis != null) {
                     val selectedSnapshot = markers.find { it.callSignRaw() == selectedMember.callSignRaw }
                     
