@@ -94,3 +94,12 @@ Windows:
 ## License
 
 KST4Contest is distributed under the [GNU General Public License v3.0](LICENSE).
+
+## Supporters/Sponsor
+
+This Project is possible due to donations of the community. 
+
+You can sponsor KST4Contest here: [Support on Ko-Fi](https://ko-fi.com/praktimarc). If you add an Display Name there you will be mentioned here.
+
+The following people are sponsoring KST4Contest:
+- Marco (DJ5KW)
