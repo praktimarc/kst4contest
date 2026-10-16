@@ -68,8 +68,38 @@ subprojects {
         }
     }
 
+    /*
+     * Tests never see the operator's real home directory. ApplicationFileUtils resolves the
+     * application folder below user.home, and the no-argument ChatPreferences constructor
+     * seeds preferences.xml there when it is missing; a test that slipped through would
+     * create or rewrite files in ~/.praktiKST of whoever runs the build. The test JVM gets a
+     * scratch home under build/ instead, emptied before each run. Tests that need their own
+     * profile directory still set user.home themselves and restore it afterwards.
+     *
+     * The redirection alone would hide the mistake, so the task also fails if a test left a
+     * preferences.xml in the scratch home: tests are expected to use ChatPreferences(Path)
+     * with a @TempDir. The opt-in ON4KST practice tests, which deliberately read the real
+     * profile, need -Don4kst.live=true, which this task does not forward; they skip here
+     * either way and are meant to be run from an IDE.
+     */
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+
+        val testUserHome = layout.buildDirectory.dir("test-user-home").get().asFile
+        systemProperty("user.home", testUserHome.absolutePath)
+        doFirst {
+            testUserHome.deleteRecursively()
+            testUserHome.mkdirs()
+        }
+        doLast {
+            val strayPreferences = testUserHome.resolve(".praktiKST/preferences.xml")
+            if (strayPreferences.exists()) {
+                throw GradleException(
+                    "A test wrote $strayPreferences: it used the user profile instead of " +
+                        "ChatPreferences(Path) with a @TempDir"
+                )
+            }
+        }
     }
 
     // XML for CI to read, HTML for people. Gradle does not wire the report after the test

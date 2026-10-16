@@ -5,13 +5,19 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import kst4contest.model.ChatPreferences;
+import java.nio.file.Path;
 
 
 class On4KstProtocolTest {
+
+    @TempDir
+    Path tempDir;
+
     @Test
     void buildsLoginWithReplayOverlap() {
         assertEquals(
@@ -72,7 +78,7 @@ class On4KstProtocolTest {
 
     @Test
     void resolvesBeaconVariablesBeforeApplyingProtocolValidation() {
-        ChatPreferences preferences = new ChatPreferences();
+        ChatPreferences preferences = new ChatPreferences(tempDir.resolve("preferences.xml"));
         preferences.setMYQRGFirstCat("144.300");
 
         ChatController controller = new ChatController();
@@ -92,7 +98,7 @@ class On4KstProtocolTest {
 
     @Test
     void acceptsTemporarilyUnresolvedVariableOnlyBeaconTemplate() {
-        ChatPreferences preferences = new ChatPreferences();
+        ChatPreferences preferences = new ChatPreferences(tempDir.resolve("preferences.xml"));
         preferences.setMYQRGFirstCat("");
 
         ChatController controller = new ChatController();
@@ -110,7 +116,7 @@ class On4KstProtocolTest {
 
     @Test
     void rejectsEmptyOverlongAndProtocolBreakingBeaconText() {
-        ChatPreferences preferences = new ChatPreferences();
+        ChatPreferences preferences = new ChatPreferences(tempDir.resolve("preferences.xml"));
 
         ChatController controller = new ChatController();
         controller.setChatPreferences(preferences);

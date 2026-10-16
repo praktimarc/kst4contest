@@ -18,7 +18,8 @@ class ChatPreferencesStationMapVisibilityTest {
 
     @Test
     void pathAnalysisIsVisibleByDefault() {
-        ChatPreferences preferences = new ChatPreferences();
+        ChatPreferences preferences = new ChatPreferences(
+                temporaryDirectory.resolve("preferences.xml"));
 
         assertTrue(preferences.isGUIstationMapPathAnalysisVisible());
     }
@@ -27,9 +28,7 @@ class ChatPreferencesStationMapVisibilityTest {
     void hiddenPathAnalysisStateSurvivesXmlRoundTrip() throws IOException {
         Path preferencesFile = temporaryDirectory.resolve("preferences.xml");
 
-        ChatPreferences writtenPreferences = new ChatPreferences();
-        writtenPreferences.setStoreAndRestorePreferencesFileName(
-                preferencesFile.toString());
+        ChatPreferences writtenPreferences = new ChatPreferences(preferencesFile);
         writtenPreferences.setGUIstationMapPathAnalysisVisible(false);
         writtenPreferences.writePreferencesToXmlFile();
 
@@ -38,9 +37,7 @@ class ChatPreferencesStationMapVisibilityTest {
                 "<GUIstationMapPathAnalysisVisible>false"
                         + "</GUIstationMapPathAnalysisVisible>"));
 
-        ChatPreferences restoredPreferences = new ChatPreferences();
-        restoredPreferences.setStoreAndRestorePreferencesFileName(
-                preferencesFile.toString());
+        ChatPreferences restoredPreferences = new ChatPreferences(preferencesFile);
         restoredPreferences.readPreferencesFromXmlFile();
 
         assertFalse(restoredPreferences.isGUIstationMapPathAnalysisVisible());
@@ -63,9 +60,8 @@ class ChatPreferencesStationMapVisibilityTest {
                 </praktiKST>
                 """);
 
-        ChatPreferences restoredPreferences = new ChatPreferences();
-        restoredPreferences.setStoreAndRestorePreferencesFileName(
-                legacyPreferencesFile.toString());
+        ChatPreferences restoredPreferences =
+                new ChatPreferences(legacyPreferencesFile);
         restoredPreferences.readPreferencesFromXmlFile();
 
         assertTrue(restoredPreferences.isGUIstationMapPathAnalysisVisible());

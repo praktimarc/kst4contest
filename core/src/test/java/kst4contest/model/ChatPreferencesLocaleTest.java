@@ -1,6 +1,7 @@
 package kst4contest.model;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -10,6 +11,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.nio.file.Path;
 
 /**
  * No default that goes to another radio amateur changes with the interface language.
@@ -22,11 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ChatPreferencesLocaleTest {
 
+    @TempDir
+    Path tempDir;
+
     private Map<String, String> stringFieldsUnder(final Locale locale) throws Exception {
         Locale previous = Locale.getDefault();
         try {
             Locale.setDefault(locale);
-            ChatPreferences prefs = new ChatPreferences();
+            ChatPreferences prefs = new ChatPreferences(tempDir.resolve("preferences.xml"));
             Map<String, String> values = new LinkedHashMap<>();
 
             for (Field field : ChatPreferences.class.getDeclaredFields()) {

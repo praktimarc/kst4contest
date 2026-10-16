@@ -5,12 +5,14 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
-class MessageHandlingTabStateTest {
+class MessageHandlingTabStateTest(@TempDir private val tempDir: Path) {
 
     @Test
     fun `the state starts from the stored preferences`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.setMessageHandling_autoAnswerEnabled(true)
         prefs.setMessageHandling_autoAnswerToQRGRequestEnabled(true)
         prefs.setMessageHandling_autoAnswerTextMainCat("qrv 144.300")
@@ -26,7 +28,7 @@ class MessageHandlingTabStateTest {
     fun `one checkbox drives both category flags`() {
         // The JavaFX window offered a single checkbox and wrote both preferences from
         // it; keeping only the main one would leave the second chat on its old value.
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = MessageHandlingTabState(prefs)
 
         state.autoAnswerEnabled = true
@@ -42,7 +44,7 @@ class MessageHandlingTabStateTest {
 
     @Test
     fun `one text field drives both category texts`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = MessageHandlingTabState(prefs)
 
         state.autoAnswerText = "qrv 432.200"
@@ -53,7 +55,7 @@ class MessageHandlingTabStateTest {
 
     @Test
     fun `the QRG reply flag writes through on its own`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = MessageHandlingTabState(prefs)
 
         state.autoAnswerToQRGRequestEnabled = true

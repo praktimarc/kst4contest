@@ -22,14 +22,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Timeout;
 
 import kst4contest.model.ChatCategory;
 import kst4contest.model.ChatMessage;
 import kst4contest.model.ChatPreferences;
 import kst4contest.testing.ManualScheduler;
+import java.nio.file.Path;
 
 class On4KstConnectionProbeTest {
+
+    @TempDir
+    Path tempDir;
 
     @Test
     void separatesClientProbeServerProbeAndInternalResponses() {
@@ -357,7 +362,7 @@ class On4KstConnectionProbeTest {
     }
 
     private ChatPreferences localPreferences() {
-        ChatPreferences preferences = new ChatPreferences();
+        ChatPreferences preferences = new ChatPreferences(tempDir.resolve("preferences.xml"));
         preferences.setStn_on4kstServersDns("127.0.0.1");
         preferences.setStn_loginCallSign("DL1ABC");
         preferences.setStn_loginPassword("test-password");

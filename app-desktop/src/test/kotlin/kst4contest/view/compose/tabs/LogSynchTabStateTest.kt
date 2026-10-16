@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
-class LogSynchTabStateTest {
+class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
 
-    private class Session(detected: String? = null) {
-        val prefs = ChatPreferences()
+    private inner class Session(detected: String? = null) {
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         var restarts = 0
         var stops = 0
         val detectedBroadcast = detected

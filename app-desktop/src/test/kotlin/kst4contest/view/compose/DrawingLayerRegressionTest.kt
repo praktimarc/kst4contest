@@ -20,6 +20,8 @@ import kst4contest.view.compose.tabs.MessageHandlingTabState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * The four ways the drawing layer went wrong while the build was green.
@@ -41,7 +43,7 @@ import org.junit.jupiter.api.Test
  * these were written, because the spec left it open and a net that only works on a
  * developer's desk is worth saying so about.
  */
-class DrawingLayerRegressionTest {
+class DrawingLayerRegressionTest(@TempDir private val tempDir: Path) {
 
     private fun themed(content: @Composable () -> Unit): @Composable () -> Unit = {
         Kst4ContestTheme(darkMode = false, baseFontSizeSp = 12f) { content() }
@@ -52,7 +54,7 @@ class DrawingLayerRegressionTest {
     @OptIn(ExperimentalTestApi::class)
     @Test
     fun aTypedSettingAppearsOnScreenAndNotOnlyInThePreferences() = runComposeUiTest {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.setMessageHandling_autoAnswerTextMainCat("")
         val state = MessageHandlingTabState(prefs)
 

@@ -6,6 +6,8 @@ import kst4contest.model.ChatPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * The shortcut and snippet rosters are ChatPreferences.SimpleRoster, which notifies
@@ -13,11 +15,11 @@ import org.junit.jupiter.api.Test
  * above the send line follow the settings window — the reason ShortcutsTabState has been
  * calling refreshShortcutButtons into thin air since Etappe 3b.
  */
-class MainWindowStateRosterTest {
+class MainWindowStateRosterTest(@TempDir private val tempDir: Path) {
 
     @Test
     fun `the shortcuts start out as what the profile holds`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getLst_txtShortCutBtnList().setAll(listOf("MYQRG", "pse sked"))
 
         val mirror = RosterMirror(prefs.getLst_txtShortCutBtnList())
@@ -31,7 +33,7 @@ class MainWindowStateRosterTest {
      */
     @Test
     fun `a roster change reaches the mirror when it is refreshed`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getLst_txtShortCutBtnList().setAll(listOf("MYQRG"))
         val mirror = RosterMirror(prefs.getLst_txtShortCutBtnList())
 
@@ -44,7 +46,7 @@ class MainWindowStateRosterTest {
 
     @Test
     fun `an emptied roster empties the mirror`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getLst_txtShortCutBtnList().setAll(listOf("MYQRG"))
         val mirror = RosterMirror(prefs.getLst_txtShortCutBtnList())
 
@@ -60,7 +62,7 @@ class MainWindowStateRosterTest {
      */
     @Test
     fun `drawing the buttons subscribes to the mirror`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getLst_txtShortCutBtnList().setAll(listOf("MYQRG"))
         val mirror = RosterMirror(prefs.getLst_txtShortCutBtnList())
 
@@ -79,9 +81,9 @@ class MainWindowStateRosterTest {
  * A mismatch here is silent and total: SplitterState falls back to an even split, so
  * every operator would lose the layout they arranged without any error saying so.
  */
-class MainWindowSplitterDefaultsTest {
+class MainWindowSplitterDefaultsTest(@TempDir private val tempDir: Path) {
 
-    private val prefs = ChatPreferences()
+    private val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
 
     @Test
     fun `the message column has as many dividers as the profile stores positions`() {
