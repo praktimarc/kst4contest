@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.lang.reflect.Modifier
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * Nothing that goes to the server or to another radio amateur has got into the texts.
@@ -17,7 +19,7 @@ import java.lang.reflect.Modifier
  * deliberately not: a partial file is the normal state of a contribution in progress, and a
  * check over every language would turn the arrival of one into a red build.
  */
-class TranslationBoundaryTest {
+class TranslationBoundaryTest(@TempDir private val tempDir: Path) {
 
     private val everyText: List<String> =
         Translations.BY_LANGUAGE.values.flatMap { it.values }
@@ -63,7 +65,7 @@ class TranslationBoundaryTest {
 
     @Test
     fun noTextIsOneOfThePreferenceDefaultsThatGoToOtherRadioAmateurs() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
 
         val defaults = ChatPreferences::class.java.declaredFields
             .filter { it.type == String::class.java && !Modifier.isStatic(it.modifiers) }

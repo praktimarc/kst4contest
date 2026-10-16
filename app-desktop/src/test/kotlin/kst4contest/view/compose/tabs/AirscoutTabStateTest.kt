@@ -5,11 +5,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
-class AirscoutTabStateTest {
+class AirscoutTabStateTest(@TempDir private val tempDir: Path) {
 
-    private class Session {
-        val prefs = ChatPreferences()
+    private inner class Session {
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state by lazy { AirscoutTabState(prefs) }
     }
 

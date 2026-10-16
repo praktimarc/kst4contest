@@ -5,6 +5,8 @@ import kst4contest.model.ChatPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * ChatPreferences hands out MutableValue, which notifies its own listeners and nothing
@@ -15,11 +17,11 @@ import org.junit.jupiter.api.Test
  * The JavaFX window solved it with attachQtfFollower() and attachOwnQrgFollower(); this is
  * the same idea, ending in Compose state instead of a TextField.
  */
-class ObservedValueTest {
+class ObservedValueTest(@TempDir private val tempDir: Path) {
 
     @Test
     fun `the mirror starts at the stored value`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getMYQRGFirstCat().set("144.370")
 
         val observed = ObservedValue(prefs.getMYQRGFirstCat())
@@ -30,7 +32,7 @@ class ObservedValueTest {
     /** The rotator moving must reach the screen without anything asking it to. */
     @Test
     fun `a change to the underlying value reaches the mirror by itself`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getActualQTF().set(90.0)
         val observed = ObservedValue(prefs.getActualQTF())
 
@@ -41,7 +43,7 @@ class ObservedValueTest {
 
     @Test
     fun `a null value is carried through rather than turned into a default`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val observed = ObservedValue(prefs.getMYQRGSecondCat())
 
         prefs.getMYQRGSecondCat().set(null)
@@ -55,7 +57,7 @@ class ObservedValueTest {
      */
     @Test
     fun `drawing from the mirror subscribes to it`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getMYQRGFirstCat().set("144.370")
         val observed = ObservedValue(prefs.getMYQRGFirstCat())
 
@@ -73,7 +75,7 @@ class ObservedValueTest {
      */
     @Test
     fun `releasing the mirror stops it following`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.getMYQRGFirstCat().set("144.370")
         val observed = ObservedValue(prefs.getMYQRGFirstCat())
 
@@ -85,7 +87,7 @@ class ObservedValueTest {
 
     @Test
     fun `releasing twice is harmless`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val observed = ObservedValue(prefs.getMYQRGFirstCat())
         observed.release()
         observed.release()

@@ -68,8 +68,80 @@ subprojects {
         }
     }
 
+    /*
+     * Tests never see the operator's real home directory. ApplicationFileUtils resolves the
+     * application folder below user.home, and the no-argument ChatPreferences constructor
+     * seeds preferences.xml there when it is missing; a test that slipped through would
+     * create or rewrite files in ~/.praktiKST of whoever runs the build. Each test task's JVM
+     * gets its own scratch home, build/test-user-home/<task name>, emptied before the task
+     * runs, so one test task can never wipe another's. Tests that need their own profile
+     * directory still set user.home themselves and restore it afterwards.
+     *
+     * The redirection alone would hide the mistake, so every test task is finalized by
+     * checkTestUserHome, which fails the build if a preferences.xml was left in any scratch
+     * home: tests are expected to use ChatPreferences(Path) with a @TempDir. It is a
+     * finalizer and not a doLast because a doLast is skipped when a test fails, and a
+     * failing test must not hide the stray file. The check stays deliberately narrow: other
+     * files land in the scratch .praktiKST by design, for example the sound files
+     * PlayAudioUtils seeds from the bundled resources, and absorbing those is what the
+     * redirection is for. Only preferences.xml marks a test that should have used its own file.
+     *
+     * The opt-in ON4KST practice tests, which deliberately read the real profile, need
+     * -Don4kst.live=true, which the test task does not forward; they skip here either way
+     * and are meant to be run from an IDE.
+     */
+    val testUserHomeRoot = layout.buildDirectory.dir("test-user-home").get().asFile
+    val checkTestUserHome = tasks.register("checkTestUserHome") {
+        description = "Fails if a test wrote preferences.xml into its scratch user.home"
+        group = "verification"
+        doLast {
+            val strayPreferences = testUserHomeRoot.listFiles().orEmpty()
+                .map { it.resolve(".praktiKST/preferences.xml") }
+                .filter { it.exists() }
+            if (strayPreferences.isNotEmpty()) {
+                throw GradleException(
+                    "A test wrote ${strayPreferences.joinToString()}: it used the user " +
+                        "profile instead of ChatPreferences(Path) with a @TempDir"
+                )
+            }
+        }
+    }
+
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+
+        val testUserHome = testUserHomeRoot.resolve(name)
+        /*
+         * The scratch home is a declared output. Test tasks are cacheable, and a cache hit
+         * skips doFirst; as an output the directory is restored together with the cached
+         * result, so checkTestUserHome always judges the files that belong to these inputs
+         * and never a leftover from another run.
+         *
+         * Skiko unpacks its native library (about 30 MB) below user.home unless told
+         * otherwise. It is kept beside the scratch home instead, so it neither bloats every
+         * cache entry nor is unpacked again on each run.
+         *
+         * Both paths are passed through an argument provider rather than systemProperty():
+         * a system property is a task input, and an absolute path there would make the
+         * cache key differ between checkouts.
+         */
+        val skikoDataPath = layout.buildDirectory.dir("skiko-data").get().asFile
+        outputs.dir(testUserHome)
+        jvmArgumentProviders.add(CommandLineArgumentProvider {
+            listOf(
+                "-Duser.home=${testUserHome.absolutePath}",
+                "-Dskiko.data.path=${skikoDataPath.absolutePath}"
+            )
+        })
+        doFirst {
+            // deleteRecursively() reports failure instead of throwing. A file left over
+            // from an earlier run would later be blamed on this one, so stop here.
+            if (!testUserHome.deleteRecursively()) {
+                throw GradleException("Could not empty the test user.home $testUserHome")
+            }
+            testUserHome.mkdirs()
+        }
+        finalizedBy(checkTestUserHome)
     }
 
     // XML for CI to read, HTML for people. Gradle does not wire the report after the test

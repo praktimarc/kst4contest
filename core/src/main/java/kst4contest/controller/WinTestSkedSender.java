@@ -178,7 +178,6 @@ public class WinTestSkedSender {
     private void sendUdp(WinTestMessage msg) throws Exception {
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setBroadcast(true);
-            socket.setReuseAddress(true);
 
             byte[] bytes = msg.toBytes();
             DatagramPacket packet = new DatagramPacket(bytes, bytes.length, broadcastAddress, port);

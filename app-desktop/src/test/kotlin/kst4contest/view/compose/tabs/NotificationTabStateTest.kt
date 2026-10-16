@@ -11,11 +11,13 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
-class NotificationTabStateTest {
+class NotificationTabStateTest(@TempDir private val tempDir: Path) {
 
-    private class Session {
-        val prefs = ChatPreferences()
+    private inner class Session {
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val monitored = SimpleRoster<String>()
         var serverEnabledApplied: Boolean? = null
         var portApplied: Int? = null

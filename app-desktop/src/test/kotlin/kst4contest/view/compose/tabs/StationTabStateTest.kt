@@ -6,11 +6,13 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
-class StationTabStateTest {
+class StationTabStateTest(@TempDir private val tempDir: Path) {
 
-    private class Session {
-        val prefs = ChatPreferences()
+    private inner class Session {
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         var mainApplied: ChatCategory? = null
         var secondApplied: ChatCategory? = null
         var secondWasApplied = false
@@ -87,7 +89,7 @@ class StationTabStateTest {
     fun `the second chat switch lives with the login settings`() {
         // It moved here from the GUI tab: the JavaFX checkbox stood on the Station tab
         // next to the category pickers, and it decides what the Connect button does.
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = StationTabState(prefs, { }, { })
 
         state.loginToSecondChatEnabled = true

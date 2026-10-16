@@ -1,8 +1,10 @@
 package kst4contest.model;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.nio.file.Path;
 
 /**
  * The two designs' colour overrides are stored independently.
@@ -13,9 +15,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class ChatPreferencesPaletteTest {
 
+    @TempDir
+    Path tempDir;
+
     @Test
     void theTwoDesignsAreStoredIndependently() {
-        ChatPreferences prefs = new ChatPreferences();
+        ChatPreferences prefs = new ChatPreferences(tempDir.resolve("preferences.xml"));
 
         prefs.setGuiOptions_paletteOverridesDay("surface=#FFFFFF");
         prefs.setGuiOptions_paletteOverridesEvening("surface=#000000");
@@ -27,7 +32,7 @@ class ChatPreferencesPaletteTest {
     @Test
     void anUnsetOverrideReadsAsEmptyAndNotAsNull() {
         // A preferences file from an older release has no such element at all.
-        ChatPreferences prefs = new ChatPreferences();
+        ChatPreferences prefs = new ChatPreferences(tempDir.resolve("preferences.xml"));
 
         assertEquals("", prefs.getGuiOptions_paletteOverridesDay());
         assertEquals("", prefs.getGuiOptions_paletteOverridesEvening());
@@ -35,7 +40,7 @@ class ChatPreferencesPaletteTest {
 
     @Test
     void aNullSetterValueBecomesEmpty() {
-        ChatPreferences prefs = new ChatPreferences();
+        ChatPreferences prefs = new ChatPreferences(tempDir.resolve("preferences.xml"));
 
         prefs.setGuiOptions_paletteOverridesDay(null);
         prefs.setGuiOptions_paletteOverridesEvening(null);

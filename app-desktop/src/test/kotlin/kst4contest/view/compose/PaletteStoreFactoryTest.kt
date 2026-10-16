@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.File
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
 /**
  * The factory binds the store to one profile's preferences and one profile's stylesheet.
@@ -15,7 +17,7 @@ import java.io.File
  * another's colours. The stylesheet path is injected here rather than derived inside, so the
  * test does not have to write into the operator's home directory to check which file is read.
  */
-class PaletteStoreFactoryTest {
+class PaletteStoreFactoryTest(@TempDir private val tempDir: Path) {
 
     private val daylight = OperatorProfilePaletteFiles(
         dayFile = File("/nonexistent/day.css"),
@@ -24,7 +26,7 @@ class PaletteStoreFactoryTest {
 
     @Test
     fun aChangeLandsInTheDesignsOwnPreference() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
 
         val store = PaletteStoreFactory.create(prefs, daylight)
         store.set(darkMode = false, role = PaletteRole.ACCENT, colour = "#FF0000")
@@ -35,7 +37,7 @@ class PaletteStoreFactoryTest {
 
     @Test
     fun anEveningChangeLandsInTheEveningPreference() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
 
         val store = PaletteStoreFactory.create(prefs, daylight)
         store.set(darkMode = true, role = PaletteRole.ACCENT, colour = "#FF0000")
@@ -47,7 +49,7 @@ class PaletteStoreFactoryTest {
     @Test
     fun whatIsAlreadyStoredIsInForceFromTheStart() {
         // The store is built at startup; a colour saved last session has to be there at once.
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.guiOptions_paletteOverridesDay = "accent=#FF0000"
 
         val store = PaletteStoreFactory.create(prefs, daylight)
@@ -57,7 +59,7 @@ class PaletteStoreFactoryTest {
 
     @Test
     fun aMissingStylesheetLeavesEveryRoleWithTheShippedSheet() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
 
         val store = PaletteStoreFactory.create(prefs, daylight)
 
@@ -73,7 +75,7 @@ class PaletteStoreFactoryTest {
             file.writeText(".root { -fx-accent: #123456; }")
 
             val store = PaletteStoreFactory.create(
-                ChatPreferences(),
+                ChatPreferences(tempDir.resolve("preferences.xml")),
                 OperatorProfilePaletteFiles(dayFile = file, eveningFile = file),
             )
 

@@ -9,8 +9,10 @@ import java.util.Locale
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
 
-class GuiOptionsTabStateTest {
+class GuiOptionsTabStateTest(@TempDir private val tempDir: Path) {
 
     /*
      * Over lambdas rather than over the preferences, so switching the language in a test does
@@ -33,7 +35,7 @@ class GuiOptionsTabStateTest {
          * that gets saved, and it has to do so through the store, which is what repaints the
          * open windows. A store wired to anything else would pass a weaker test.
          */
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = GuiOptionsTabState(prefs, LanguageStoreFactory.create(prefs, Locale.UK))
 
         state.language = "de"
@@ -45,7 +47,7 @@ class GuiOptionsTabStateTest {
 
     @Test
     fun `reading comes straight from the preferences`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.setGUI_darkModeActiveByDefault(true)
 
         assertTrue(GuiOptionsTabState(prefs, languageStore()).gUI_darkModeActiveByDefault)
@@ -53,7 +55,7 @@ class GuiOptionsTabStateTest {
 
     @Test
     fun `writing reaches the preferences at once`() {
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = GuiOptionsTabState(prefs, languageStore())
 
         state.guiOptions_defaultFilterPublicMsgs = true
@@ -68,7 +70,7 @@ class GuiOptionsTabStateTest {
         // The JavaFX tab offered them as four separate checkboxes, not a choice of
         // one. Turning them into a radio group would take a combination away that
         // an operator may have configured.
-        val prefs = ChatPreferences()
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = GuiOptionsTabState(prefs, languageStore())
 
         state.guiOptions_defaultFilterPublicMsgs = true

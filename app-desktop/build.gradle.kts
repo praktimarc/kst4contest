@@ -66,11 +66,14 @@ val generateStrings by tasks.registering(JavaExec::class) {
     mainClass.set("kst4contest.i18n.GeneratorMain")
 
     val input = layout.projectDirectory.dir("src/main/i18n")
+    // A local copy: the provider below must not capture the script-level val, which
+    // drags the build script object into the configuration cache and fails to serialize.
+    val output = generatedI18nDirectory
     inputs.dir(input)
-    outputs.dir(generatedI18nDirectory)
+    outputs.dir(output)
 
     argumentProviders.add(CommandLineArgumentProvider {
-        listOf(input.asFile.absolutePath, generatedI18nDirectory.get().asFile.absolutePath)
+        listOf(input.asFile.absolutePath, output.get().asFile.absolutePath)
     })
 }
 
