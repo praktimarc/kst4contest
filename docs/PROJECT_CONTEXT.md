@@ -365,6 +365,7 @@ section records only the durable architecture and operational boundaries.
 - Keep canonical worker-thread domain state separate from the row lists the user interface draws from.
 - The station map is a Compose canvas that fetches its own tiles. The JavaFX WebView, the bundled Leaflet resources, the CSS-3D-transform workaround and the `TileProxyServer` were removed with JavaFX; offline DEM, terrain packages and the profile cache are unaffected and must stay that way.
 - Deliberate test data, comments and Easter eggs are preserved unless explicitly changed.
+- Chat frames (issue #105, second slice): CH (live) and CR (history) go through one `MessageBusManagementThread.processChatFrame(fields, live)`. `classifyRoute` and `decideChatFrameEffects` are pure; history frames never play sounds, answer or spot, and keep their frequency extraction after publishing. Known oddities kept on purpose: TO_ME is case-sensitive, FROM_ME case-insensitive; the CR SERVER sender has no AirScout info.
 
 ## Planned Technical Direction
 
