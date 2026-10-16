@@ -30,6 +30,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Own site height and highest point of the remote square in the path analysis:** the **Station** tab has two new settings in its path-analysis section. **Own ground height ASL, metres** replaces the elevation-model value at the own locator centre by the height of the actual site; left empty, the elevation model decides as before. **Target station on the highest point of its locator square**, on by default, ends the path at the highest of 25 sampled points of the remote locator square instead of at its centre, because contest stations usually operate from the high ground of their square. The lookup costs one additional request to the elevation service per remote square and session; if it fails, the analysis uses the square centre as before.
 
+- **SO2R with two radios:** the new option **SO2R** on the **TRX sync** tab (off by default) keeps two radios apart. N1MM, DXLog and UCXLog are assigned by `RadioNr`: radio 1 updates MYQRG, radio 2 updates SECONDQRG. For Win-Test, enter one station name per radio. A second PSTRotator (own host and port, on the **Station** tab) adds **Turn ant2** next to **Turn ant1** and a QTF2 field next to QTF. Without SO2R everything stays as before. This implements the first part of [Issue #46](https://github.com/praktimarc/kst4contest/issues/46).
+
 ### Changed
 
 - **The terrain profile cache is separate:** computed terrain profiles now live in their own shared file `terrainprofilecache.db` and are stored per owner. Previously the whole cache was dropped whenever the callsign or locator changed, which would have discarded every computed profile on each profile switch.
