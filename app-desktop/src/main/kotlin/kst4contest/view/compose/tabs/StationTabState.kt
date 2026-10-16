@@ -39,6 +39,11 @@ class StationTabState(
      * follow it while the tab is open; the default suits a state built without a session.
      */
     private val connectionState: () -> On4KstConnectionState = { On4KstConnectionState.DISCONNECTED },
+    /**
+     * Restarts or stops rotator 2 to match the stored settings; shared by this tab and the
+     * TRX synch tab through [SECOND_ROTATOR], so it runs once per apply.
+     */
+    private val applySecondRotator: () -> Unit = {},
 ) {
 
     var loginChatCategoryMain: ChatCategory?
@@ -166,6 +171,36 @@ class StationTabState(
 
     var stn_pstRotatorPort: Int by draft.setting({ prefs.getStn_pstRotatorPort() }) { prefs.setStn_pstRotatorPort(it) }
 
+    var stn_pstRotator2Enabled: Boolean by draft.setting(
+        { prefs.isStn_pstRotator2Enabled() },
+        effectKey = SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { prefs.setStn_pstRotator2Enabled(it) }
+
+    var stn_pstRotator2Host: String by draft.setting(
+        { prefs.getStn_pstRotator2Host() },
+        effectKey = SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { prefs.setStn_pstRotator2Host(it) }
+
+    /**
+     * Refused on apply when it is rotator 1's port as it will be stored: both clients would
+     * bind the same answer port. Compared with the drafted value of rotator 1, so changing
+     * both in one apply is judged by the result, not by the order of the edits.
+     */
+    var stn_pstRotator2Port: Int by draft.setting(
+        { prefs.getStn_pstRotator2Port() },
+        effectKey = SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { port ->
+        require(port != stn_pstRotatorPort) { CurrentStrings.get().stationRotator2PortClash(port.toString()) }
+        prefs.setStn_pstRotator2Port(port)
+    }
+
+    /** Whether the rotator 2 block is active; follows the stored SO2R switch. */
+    val so2rEnabled: Boolean
+        get() = prefs.isTrxSynch_so2rEnabled()
+
     var stn_qtfDefault: Double by draft.setting({ prefs.getStn_qtfDefault() }) { prefs.setStn_qtfDefault(it) }
 
     /**
@@ -235,6 +270,9 @@ class StationTabState(
     }
 
     companion object {
+        /** The effect key of everything that restarts rotator 2; shared with the TRX synch tab. */
+        const val SECOND_ROTATOR: String = "secondRotator"
+
         /**
          * Reads an own ground elevation entry: empty means "elevation model" (NaN), a
          * number in the accepted range is taken, anything else is refused with null.

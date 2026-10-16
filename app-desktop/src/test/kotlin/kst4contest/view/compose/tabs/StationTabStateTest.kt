@@ -19,13 +19,43 @@ class StationTabStateTest(@TempDir private val tempDir: Path) {
         var mainApplied: ChatCategory? = null
         var secondApplied: ChatCategory? = null
         var secondWasApplied = false
+        val secondRotatorCalls = mutableListOf<Unit>()
         val draft = SettingsDraft()
         val state = StationTabState(
             prefs,
             draft,
             { mainApplied = it },
             { secondApplied = it; secondWasApplied = true },
+            applySecondRotator = { secondRotatorCalls.add(Unit) },
         )
+    }
+
+    @Test
+    fun `rotator 2 settings restart it once per apply however many changed`() {
+        val s = Session()
+
+        s.state.stn_pstRotator2Enabled = true
+        s.state.stn_pstRotator2Host = "10.0.0.7"
+        s.state.stn_pstRotator2Port = 12020
+        val outcome = s.draft.apply()
+
+        assertTrue(outcome.isClean, outcome.failures.toString())
+        assertEquals(12020, s.prefs.getStn_pstRotator2Port())
+        assertEquals(1, s.secondRotatorCalls.size)
+    }
+
+    @Test
+    fun `rotator 2 on the port of rotator 1 is refused and stays in the draft`() {
+        val s = Session()
+        s.state.stn_pstRotatorPort = 12040
+
+        s.state.stn_pstRotator2Port = 12040
+        val outcome = s.draft.apply()
+
+        assertEquals(1, outcome.failedWrites.size)
+        assertTrue(outcome.failedWrites.single().contains("12040"), outcome.failedWrites.toString())
+        assertEquals(12010, s.prefs.getStn_pstRotator2Port())
+        assertEquals(12040, s.state.stn_pstRotator2Port, "the refused value is still shown")
     }
 
     @Test

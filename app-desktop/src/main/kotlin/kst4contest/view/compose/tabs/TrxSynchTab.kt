@@ -62,6 +62,24 @@ fun TrxSynchTab(state: TrxSynchTabState) {
             )
         }
 
+        Form.section(strings.trxSynchSo2rSection) {
+            Form.check(
+                strings.trxSynchSo2rEnabled,
+                state.trxSynch_so2rEnabled,
+            ) { state.trxSynch_so2rEnabled = it; revision++ }
+
+            GuardedTextField(
+                label = strings.trxSynchWinTestStationRadio2,
+                value = state.logsynch_wintestNetworkStationNameOfWintestClient2,
+                enabled = state.trxSynch_so2rEnabled,
+                onAccepted = {
+                    state.logsynch_wintestNetworkStationNameOfWintestClient2 = it
+                    revision++
+                },
+            )
+            Text(strings.trxSynchSo2rHint)
+        }
+
         Form.section(strings.trxSynchHintSection) {
             Text(strings.trxSynchHint)
         }

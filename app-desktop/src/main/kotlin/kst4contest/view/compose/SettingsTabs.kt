@@ -143,6 +143,7 @@ fun buildSettingsTabs(
         applyMainCategory = { category -> controller.setChatCategoryMain(category) },
         applySecondCategory = { category -> controller.setChatCategorySecondChat(category) },
         connectionState = connectionState,
+        applySecondRotator = { controller.reconfigureSecondRotator() },
     )
 
     val notificationState = NotificationTabState(
@@ -225,7 +226,7 @@ fun buildSettingsTabs(
     return listOf(
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabStation }) { StationTab(stationState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabLogSynch }) { LogSynchTab(logSynchState) },
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabTrxSynch }) { TrxSynchTab(TrxSynchTabState(prefs, draft, host::applyOwnQrgFollower)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabTrxSynch }) { TrxSynchTab(TrxSynchTabState(prefs, draft, applySecondRotator = { controller.reconfigureSecondRotator() }, applyOwnQrgFollower = host::applyOwnQrgFollower)) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabAirscout }) { AirscoutTab(AirscoutTabState(prefs, draft)) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabNotification }) { NotificationTab(notificationState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabShortcuts }) { ShortcutsTab(shortcutsState, reportRefusal) },
