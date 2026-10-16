@@ -694,6 +694,319 @@ public class MessageBusManagementThread extends Thread {
 						+ ", fieldCount=" + (fields == null ? 0 : fields.length));
 	}
 
+	/**
+	 * Processes one ON4KST chat frame: {@code CH} (live) or {@code CR} (history).
+	 *
+	 * <p>Both share sender and receiver resolution, routing and publishing. The
+	 * differences are kept exactly as they were in the two former branches:
+	 * a live SERVER sender gets an empty AirScout info, a historic one does not;
+	 * live frames detect the sender's frequency before routing, historic frames
+	 * after publishing and the diagnostic log; historic frames never play sounds,
+	 * answer, tick or spot. Which side effects apply is decided by
+	 * {@link #decideChatFrameEffects}; this method only executes them.</p>
+	 *
+	 * <p>The fields are read in the same order as before, so a truncated frame
+	 * fails at the same point, after the same side effects.</p>
+	 *
+	 * @param fields the frame split on {@code |}
+	 * @param live {@code true} for {@code CH}, {@code false} for {@code CR}
+	 */
+	private void processChatFrame(String[] fields, boolean live) {
+
+		ChatPreferences prefs = this.client.getChatPreferences();
+
+		ChatMessage newMessageArrived = new ChatMessage();
+		ChatCategory chategoryForMessageAndMessageSender;
+
+		newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(fields[1]));
+
+		chategoryForMessageAndMessageSender = newMessageArrived.getChatCategory();
+		newMessageArrived.setMessageGeneratedTime(fields[2]);
+		newMessageArrived.setMessageSenderName(fields[4]);
+		newMessageArrived.setMessageText(fields[6]);
+
+		if (fields[3].equals("SERVER")) {
+			ChatMember dummy = new ChatMember();
+			if (live) {
+				dummy.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
+			}
+			dummy.setCallSign("SERVER");
+			dummy.setName("Sysop");
+			newMessageArrived.setSender(dummy);
+			newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(fields[1]));
+			dummy.setChatCategory(util_getChatCategoryByCategoryNrString(fields[1]));
+
+		} else {
+
+			newMessageArrived.setSender(resolveInboundSender(
+					fields[3],
+					chategoryForMessageAndMessageSender,
+					newMessageArrived));
+		}
+
+		if (live) {
+			/*
+			 * Detect and store the sender's QRG before any directional-opportunity
+			 * or DX-Cluster processing. A frequency first mentioned in this directed
+			 * message is then immediately available for the resulting spot.
+			 *
+			 * The parser needs only the message text, sender and preferences. The
+			 * receiver does not have to be resolved yet.
+			 */
+			smartFrequencyExtraction(newMessageArrived, prefs);
+		}
+
+		// Built only now: the receiver field has always been read after the sender.
+		InboundChatFrame frame = InboundChatFrame.of(fields);
+
+		if (frame.receiverField().equals("0")) {
+			// message is not directed to anyone, move it to the cq messages.
+			newMessageArrived.setReceiver(createAllReceiver());
+
+			this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
+
+		} else {
+			//message is directed to another chatmember, process as such!
+
+			newMessageArrived.setReceiver(resolveInboundReceiver(
+					frame.receiverField(),
+					chategoryForMessageAndMessageSender));
+
+			try {
+				ChatRoute route = classifyRoute(
+						frame.receiverField(),
+						newMessageArrived.getSender().getCallSign(),
+						newMessageArrived.getReceiver().getCallSign(),
+						prefs.getStn_loginCallSign());
+
+				DirectionalOpportunity opportunity = null;
+				boolean senderAlreadyInAngleAndRange = false;
+				if (route == ChatRoute.BETWEEN_OTHERS) {
+					/*
+					 * With explicit fallback sender/receiver objects, this path may also see
+					 * stations that already left the chat or arrived before their user-list
+					 * entry. Their locators may be missing, so angle/range analysis and DX
+					 * spotting are skipped while the chat message itself is still published.
+					 */
+					opportunity = classifyDirectionalOpportunity(
+							prefs.getStn_loginLocatorMainCat(),
+							newMessageArrived.getSender().getQra(),
+							newMessageArrived.getReceiver().getQra(),
+							prefs.getStn_maxQRBDefault(),
+							prefs.getStn_antennaBeamWidthDeg());
+					senderAlreadyInAngleAndRange = newMessageArrived.getSender().isInAngleAndRange();
+				}
+
+				// Built only where it was built before: it logs when no reply is possible.
+				String autoAnswerTextCandidate = null;
+				if (route == ChatRoute.TO_ME && live && !isAutoMessage(newMessageArrived.getMessageText())) {
+					boolean qrgRequested =
+							prefs.isMessageHandling_autoAnswerToQRGRequestEnabled()
+									&& matchesQrgQuestion(newMessageArrived.getMessageText(), QRG_QUESTION_TEXTS);
+
+					ChatMember incomingSender = newMessageArrived.getSender();
+
+					autoAnswerTextCandidate = buildAutoAnswerMessageText(
+							incomingSender == null ? null : incomingSender.getCallSign(),
+							// Diagnostics only: same fallback as autoAnswerCooldownKey.
+							newMessageArrived.getChatCategory() != null || incomingSender == null
+									? newMessageArrived.getChatCategory()
+									: incomingSender.getChatCategory(),
+							qrgRequested,
+							selectAutoAnswerQrg(
+									newMessageArrived.getChatCategory(),
+									this.client.getChatCategorySecondChat(),
+									prefs.getMYQRGFirstCat().get(),
+									prefs.getMYQRGSecondCat().get()
+							),
+							prefs.isMsgHandling_autoAnswerEnabled(),
+							prefs.getMessageHandling_autoAnswerTextMainCat()
+					);
+				}
+
+				ChatMessageEffects effects = decideChatFrameEffects(
+						route,
+						live,
+						newMessageArrived.getMessageText(),
+						opportunity,
+						senderAlreadyInAngleAndRange,
+						new ChatFrameSettings(
+								prefs.isNotify_playSimpleSounds(),
+								prefs.isNotify_playCWCallsignsOnRxedPMs(),
+								prefs.isNotify_playVoiceCallsignsOnRxedPMs(),
+								prefs.isNotify_dxClusterServerEnabled(),
+								autoAnswerTextCandidate));
+
+				if (route == ChatRoute.TO_ME) {
+					/**
+					 * message is directed to me, will be put in the "to me" messagelist
+					 */
+					this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
+
+					if (effects.playPmSound()) {
+						this.client.getPlayAudioUtils().playNoiseLauncher('P');
+					}
+					if (effects.playCwCallsign()) {
+						this.client.getPlayAudioUtils().playCWLauncher(" " + " " + newMessageArrived.getSender().getCallSign().toUpperCase());
+					}
+					if (effects.playVoiceCallsign()) {
+						this.client.getPlayAudioUtils().playVoiceLauncher( "?" + newMessageArrived.getSender().getCallSign().toUpperCase());
+					}
+					if (effects.playBell()) {
+						this.client.getPlayAudioUtils().playVoiceLauncher("!");
+					}
+					if (effects.sendVersionReply()) {
+
+						ChatMessage versionInfo = new ChatMessage();
+						ChatMember itsMe = new ChatMember();
+						itsMe.setCallSign(prefs.getStn_loginCallSign());
+
+						versionInfo.setSender(itsMe);
+						versionInfo.setReceiver(newMessageArrived.getSender());
+						versionInfo.setChatCategory(newMessageArrived.getChatCategory());
+						versionInfo.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign()
+								+ " " + AUTOANSWER_PREFIX
+								+ " KST4Contest v" + ApplicationConstants.APPLICATION_CURRENT_VERSION
+								+ " by DO5AMF");
+
+						this.client.getMessageTXBus().add(versionInfo);
+					}
+
+					/*
+					 * Unified auto-answer (generic + QRG) with ping-pong guard and
+					 * per-remote cooldown. Invalid or incomplete replies are rejected
+					 * before the cooldown is checked or updated. A missing QRG must
+					 * therefore not suppress a later valid reply.
+					 */
+					if (effects.autoAnswerText() != null
+							&& isAutoAnswerAllowedNow(newMessageArrived)) {
+
+						ChatMessage automaticAnswer = new ChatMessage();
+						ChatMember itsMe = new ChatMember();
+
+						itsMe.setCallSign(prefs.getStn_loginCallSign());
+
+						automaticAnswer.setSender(itsMe);
+						automaticAnswer.setReceiver(newMessageArrived.getSender());
+						automaticAnswer.setChatCategory(newMessageArrived.getChatCategory());
+						automaticAnswer.setMessageText(effects.autoAnswerText());
+
+						this.client.getMessageTXBus().add(automaticAnswer);
+
+						/*
+						 * Record the cooldown only after a complete and locally
+						 * validated reply has been placed in the transmit queue.
+						 */
+						markLocalAutoAnswerSent(newMessageArrived);
+					}
+
+					LOGGER.fine((live
+							? "Message directed to local callsign: "
+							: "Historic message directed to local callsign: ")
+							+ newMessageArrived.getReceiver().getCallSign());
+
+				} else if (route == ChatRoute.FROM_ME) {
+					/**
+					 * message sent by me!
+					 * message from me will appear in the PM window, too, with (>CALLSIGN) before
+					 */
+					String originalMessage = newMessageArrived.getMessageText();
+					newMessageArrived
+							.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
+					this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
+
+					// if you sent the message to another station, it will be sorted in to
+					// the "to me message list" with modified messagetext, added rxers callsign
+
+				} else {
+					// Message sent from one other station to another other station.
+
+					//play only tick sound if the sender was not set directedtome before
+					if (effects.playDirectionalTick()) {
+						this.client.getPlayAudioUtils().playNoiseLauncher('-');
+					}
+
+					// The log statements keep their former position relative to the flag change.
+					if (live && opportunity == DirectionalOpportunity.OUT_OF_ANGLE_OR_RANGE) {
+						LOGGER.fine("Not in angle " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
+								new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
+								" ; sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(prefs.getStn_loginLocatorMainCat())));
+					}
+
+					newMessageArrived.getSender().setInAngleAndRange(effects.inAngleAndRange());
+
+					if (effects.evaluateDxClusterSpot()) {
+						try {
+							ChatMember sender = newMessageArrived.getSender();
+
+							DxClusterSpotDecision spotDecision = decideDxClusterSpot(sender);
+
+							if (spotDecision == DxClusterSpotDecision.SPOT) {
+								/*
+								 * The DX Cluster spot must not depend on AirScout data. A known
+								 * frequency and a valid directional opportunity are sufficient.
+								 * Available AP information is added only as an optional comment.
+								 */
+								this.client
+										.getDxClusterServer()
+										.broadcastSingleDXClusterEntryToLoggers(
+												buildDxClusterSpotEntry(sender)
+										);
+
+							} else if (spotDecision == DxClusterSpotDecision.ALREADY_WORKED) {
+								// Only reached when the worked check was the reason (issue #91).
+								LOGGER.fine("DX Cluster spot suppressed, station already worked on this band: "
+										+ sender.getCallSign());
+							}
+						} catch (Exception exception) {
+							LOGGER.log(Level.WARNING,
+									"DXCluster message-server error while processing spot for "
+											+ newMessageArrived.getSender().getCallSign(),
+									exception);
+						}
+					}
+
+					if (live && opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
+						LOGGER.fine("Angle warning " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
+								new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
+								" / sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(prefs.getStn_loginLocatorMainCat())));
+					} else if (live && opportunity == DirectionalOpportunity.MISSING_LOCATOR) {
+						LOGGER.info("Skipping angle/range analysis for message with missing locator: "
+								+ newMessageArrived.getSender().getCallSign() + " -> "
+								+ newMessageArrived.getReceiver().getCallSign());
+					}
+
+					this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
+				}
+			} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
+				LOGGER.log(Level.WARNING,
+						live
+								? "Referenced user disappeared while processing a message"
+								: "Referenced user disappeared while processing a historic message",
+						referenceDeletedByUserLeftChatDuringMessageprocessing);
+			}
+		}
+
+		try {
+
+			LOGGER.fine((live ? "Processed message: " : "Processed historic message: ")
+					+ newMessageArrived.getChatCategory().getCategoryNumber()
+					+ " " + newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getMessageSenderName() + " -> "
+					+ newMessageArrived.getReceiver().getCallSign() + ": " + newMessageArrived.getMessageText());
+		} catch (Exception exceptionOccured) {
+			LOGGER.log(Level.WARNING,
+					live
+							? "Could not format processed-message diagnostic"
+							: "Could not format historic-message diagnostic",
+					exceptionOccured);
+		}
+
+		if (!live) {
+			// --- Band/QRG recognition (fills ChatMember.knownActiveBands) ---
+			smartFrequencyExtraction(newMessageArrived, prefs);
+		}
+	}
+
 
 	/**
 	 * Processes received messages via port 23001 (improved telnet Interface)
@@ -886,353 +1199,7 @@ public class MessageBusManagementThread extends Thread {
 					 * CH|2|1663966535|DM5M|dm5m-team|0|kst4contest.test|0|
 					 */
 						if (splittedMessageLine[0].contains(CHATCHANNELMESSAGE)) {
-
-							//experimental 1.26: multi channel messages
-							ChatMessage newMessageArrived = new ChatMessage();
-							ChatCategory chategoryForMessageAndMessageSender;
-
-							newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
-
-							chategoryForMessageAndMessageSender = newMessageArrived.getChatCategory();
-							newMessageArrived.setMessageGeneratedTime(splittedMessageLine[2]);
-							newMessageArrived.setMessageSenderName(splittedMessageLine[4]);
-							newMessageArrived.setMessageText(splittedMessageLine[6]);
-
-							if (splittedMessageLine[3].equals("SERVER")) {
-								ChatMember dummy = new ChatMember();
-								dummy.setAirPlaneReflectInfo(new AirPlaneReflectionInfo());
-								dummy.setCallSign("SERVER");
-								dummy.setName("Sysop");
-								newMessageArrived.setSender(dummy);
-								newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
-								dummy.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
-//					System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> servers cat " + newMessageArrived.getChatCategory());
-
-							} else {
-
-								newMessageArrived.setSender(resolveInboundSender(
-										splittedMessageLine[3],
-										chategoryForMessageAndMessageSender,
-										newMessageArrived));
-							}
-
-							/*
-							 * Detect and store the sender's QRG before any directional-opportunity
-							 * or DX-Cluster processing. A frequency first mentioned in this directed
-							 * message is then immediately available for the resulting spot.
-							 *
-							 * The parser needs only the message text, sender and preferences. The
-							 * receiver does not have to be resolved yet.
-							 */
-							smartFrequencyExtraction(
-									newMessageArrived,
-									this.client.getChatPreferences());
-
-							// TODO: Next: get frequency infos out of name?
-
-							if (splittedMessageLine[7].equals("0")) {
-								// message is not directed to anyone, move it to the cq messages.
-								newMessageArrived.setReceiver(createAllReceiver());
-
-								this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-
-//					this.client.getLst_globalChatMessageList().add(0, newMessageArrived); // sdtout to all message-List
-
-							} else {
-								//message is directed to another chatmember, process as such!
-
-								newMessageArrived.setReceiver(resolveInboundReceiver(
-										splittedMessageLine[7],
-										chategoryForMessageAndMessageSender));
-
-//					System.out.println("message directed to: " + newMessageArrived.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessageArrived.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
-
-								try {
-									/**
-									 * message is directed to me, will be put in the "to me" messagelist
-									 */
-									if (newMessageArrived.getReceiver().getCallSign()
-											.equals(this.client.getChatPreferences().getStn_loginCallSign())) {
-
-//							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
-
-										this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-
-										if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
-											this.client.getPlayAudioUtils().playNoiseLauncher('P');
-										}
-										if (this.client.getChatPreferences().isNotify_playCWCallsignsOnRxedPMs()) {
-											this.client.getPlayAudioUtils().playCWLauncher(" " + " " + newMessageArrived.getSender().getCallSign().toUpperCase());
-										}
-										if (this.client.getChatPreferences().isNotify_playVoiceCallsignsOnRxedPMs()) {
-											this.client.getPlayAudioUtils().playVoiceLauncher( "?" + newMessageArrived.getSender().getCallSign().toUpperCase());
-										}
-
-										if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
-											if (newMessageArrived.getMessageText().toUpperCase().contains("//BELL")) {
-												this.client.getPlayAudioUtils().playVoiceLauncher("!");
-											}
-										}
-										if (newMessageArrived.getMessageText().toUpperCase().contains("//VER")) {
-
-											ChatMessage versionInfo = new ChatMessage();
-											ChatMember itsMe = new ChatMember();
-											itsMe.setCallSign(this.client.getChatPreferences().getStn_loginCallSign());
-
-											versionInfo.setSender(itsMe);
-											versionInfo.setReceiver(newMessageArrived.getSender());
-											versionInfo.setChatCategory(newMessageArrived.getChatCategory());
-											versionInfo.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign()
-													+ " " + AUTOANSWER_PREFIX
-													+ " KST4Contest v" + ApplicationConstants.APPLICATION_CURRENT_VERSION
-													+ " by DO5AMF");
-
-											this.client.getMessageTXBus().add(versionInfo);
-										}
-
-//							if (this.client.getChatPreferences().isMsgHandling_autoAnswerEnabled()) {
-//
-//								ChatMessage automaticAnswer = new ChatMessage();
-//								ChatMember itsMe = new ChatMember();
-//								itsMe.setCallSign(this.client.getChatPreferences().getStn_loginCallSign());
-//
-//								automaticAnswer.setSender(itsMe);
-//								automaticAnswer.setReceiver(newMessageArrived.getSender());
-//								automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " " + this.client.getChatPreferences().getMessageHandling_autoAnswerTextMainCat());
-//
-//								this.client.getMessageTXBus().add(automaticAnswer);
-//
-//							}
-
-										/**
-										 * auto reply/answer to QRG requests is here
-										 */
-//							if (this.client.getChatPreferences().isMessageHandling_autoAnswerToQRGRequestEnabled()) {
-//
-//								for (String lookForQRGString : qrgQuestionTexts) {
-//									if (newMessageArrived.getMessageText().contains(lookForQRGString)) {
-//
-//										ChatMessage automaticAnswer = new ChatMessage();
-//										ChatMember itsMe = new ChatMember();
-//										itsMe.setCallSign(this.client.getChatPreferences().getStn_loginCallSign());
-//
-//										automaticAnswer.setSender(itsMe);
-//										automaticAnswer.setReceiver(newMessageArrived.getSender());
-//										automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " KST4Contest Auto: QRG is: " + this.client.getChatPreferences().getMYQRGFirstCat().get());
-//
-//										if (this.client.getChatPreferences().isLoginToSecondChatEnabled()) {
-//											automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " KST4Contest Auto: QRGs: " + this.client.getChatPreferences().getMYQRGFirstCat().get() + " / " + this.client.getChatPreferences().getMYQRGSecondCat().get());
-//										} else {
-//											automaticAnswer.setMessageText("/CQ " + newMessageArrived.getSender().getCallSign() + " KST4Contest Auto: QRG is: " + this.client.getChatPreferences().getMYQRGFirstCat().get());
-//										}
-//
-//										this.client.getMessageTXBus().add(automaticAnswer);
-//
-//									}
-//								}
-//							}
-
-										// ==== Unified auto-answer (generic + QRG) with ping-pong guard
-//      and per-remote cooldown ====
-										final String incomingText = newMessageArrived.getMessageText();
-
-// Never answer another automatically generated message.
-										if (!isAutoMessage(incomingText)) {
-
-											ChatPreferences autoAnswerPrefs =
-													this.client.getChatPreferences();
-
-											boolean qrgRequested =
-													autoAnswerPrefs.isMessageHandling_autoAnswerToQRGRequestEnabled()
-															&& matchesQrgQuestion(incomingText, QRG_QUESTION_TEXTS);
-
-											boolean genericEnabled =
-													autoAnswerPrefs.isMsgHandling_autoAnswerEnabled();
-
-											ChatMember incomingSender = newMessageArrived.getSender();
-
-											String automaticAnswerText = buildAutoAnswerMessageText(
-													incomingSender == null ? null : incomingSender.getCallSign(),
-													// Diagnostics only: same fallback as autoAnswerCooldownKey.
-													newMessageArrived.getChatCategory() != null || incomingSender == null
-															? newMessageArrived.getChatCategory()
-															: incomingSender.getChatCategory(),
-													qrgRequested,
-													selectAutoAnswerQrg(
-															newMessageArrived.getChatCategory(),
-															this.client.getChatCategorySecondChat(),
-															autoAnswerPrefs.getMYQRGFirstCat().get(),
-															autoAnswerPrefs.getMYQRGSecondCat().get()
-													),
-													genericEnabled,
-													autoAnswerPrefs.getMessageHandling_autoAnswerTextMainCat()
-											);
-
-											/*
-											 * Invalid or incomplete replies are rejected before the cooldown
-											 * is checked or updated. A missing QRG must therefore not suppress
-											 * a later valid reply.
-											 */
-											if (automaticAnswerText != null
-													&& isAutoAnswerAllowedNow(newMessageArrived)) {
-
-												ChatMessage automaticAnswer = new ChatMessage();
-												ChatMember itsMe = new ChatMember();
-
-												itsMe.setCallSign(
-														this.client.getChatPreferences()
-																.getStn_loginCallSign()
-												);
-
-												automaticAnswer.setSender(itsMe);
-												automaticAnswer.setReceiver(
-														newMessageArrived.getSender()
-												);
-												automaticAnswer.setChatCategory(
-														newMessageArrived.getChatCategory()
-												);
-												automaticAnswer.setMessageText(automaticAnswerText);
-
-												this.client.getMessageTXBus().add(automaticAnswer);
-
-												/*
-												 * Record the cooldown only after a complete and locally
-												 * validated reply has been placed in the transmit queue.
-												 */
-												markLocalAutoAnswerSent(newMessageArrived);
-											}
-										}
-
-
-										LOGGER.fine("Message directed to local callsign: "
-												+ newMessageArrived.getReceiver().getCallSign());
-
-									} else if (newMessageArrived.getSender().getCallSign().toUpperCase()
-											.equals(this.client.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
-										/**
-										 * message sent by me!
-										 * message from me will appear in the PM window, too, with (>CALLSIGN) before
-										 */
-										String originalMessage = newMessageArrived.getMessageText();
-										newMessageArrived
-												.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
-//							this.client.getLst_globalChatMessageList().add(0,newMessageArrived);
-										this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-
-
-										// if you sent the message to another station, it will be sorted in to
-										// the "to me message list" with modified messagetext, added rxers callsign
-
-									} else {
-										/*
-										 * Message sent from one other station to another other station.
-										 *
-										 * The old code reached this point only with members from the visible user list.
-										 * With explicit fallback sender/receiver objects, this path may also see
-										 * stations that already left the chat or arrived before their user-list entry.
-										 * In that case locators may be missing, so angle/range analysis and DX spotting
-										 * must be skipped while the chat message itself is still published.
-										 */
-										DirectionalOpportunity opportunity = classifyDirectionalOpportunity(
-												client.getChatPreferences().getStn_loginLocatorMainCat(),
-												newMessageArrived.getSender().getQra(),
-												newMessageArrived.getReceiver().getQra(),
-												client.getChatPreferences().getStn_maxQRBDefault(),
-												client.getChatPreferences().getStn_antennaBeamWidthDeg());
-
-										if (opportunity != DirectionalOpportunity.MISSING_LOCATOR) {
-											if (opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
-
-												//play only tick sound if the sender was not set directedtome before
-												if (shouldPlayDirectionalTick(
-														this.client.getChatPreferences().isNotify_playSimpleSounds(),
-														newMessageArrived.getSender().isInAngleAndRange())) {
-													this.client.getPlayAudioUtils().playNoiseLauncher('-');
-												}
-
-												newMessageArrived.getSender().setInAngleAndRange(true);
-
-												if (client.getChatPreferences().isNotify_dxClusterServerEnabled()) {
-													try {
-														ChatMember sender = newMessageArrived.getSender();
-
-														DxClusterSpotDecision spotDecision = decideDxClusterSpot(sender);
-
-														if (spotDecision == DxClusterSpotDecision.SPOT) {
-															/*
-															 * The DX Cluster spot must not depend on AirScout data. A known
-															 * frequency and a valid directional opportunity are sufficient.
-															 * Available AP information is added only as an optional comment.
-															 */
-															this.client
-																	.getDxClusterServer()
-																	.broadcastSingleDXClusterEntryToLoggers(
-																			buildDxClusterSpotEntry(sender)
-																	);
-
-														} else if (spotDecision == DxClusterSpotDecision.ALREADY_WORKED) {
-															// Only reached when the worked check was the reason (issue #91).
-															LOGGER.fine("DX Cluster spot suppressed, station already worked on this band: "
-																	+ sender.getCallSign());
-														}
-													} catch (Exception exception) {
-												LOGGER.log(Level.WARNING,
-														"DXCluster message-server error while processing spot for "
-																+ newMessageArrived.getSender().getCallSign(),
-														exception);
-//											exception.printStackTrace();
-													}
-												}
-
-										LOGGER.fine("Angle warning " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
-														new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
-														" / sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())));
-
-											} else {
-										LOGGER.fine("Not in angle " +  newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getSender().getQra() + " -> " + newMessageArrived.getReceiver().getCallSign() + ", " + newMessageArrived.getReceiver().getQra() + " = " +
-														new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(newMessageArrived.getReceiver().getQra())) +
-														" ; sender bearing to me: " + new Location(newMessageArrived.getSender().getQra()).getBearing(new Location(client.getChatPreferences().getStn_loginLocatorMainCat())));
-												newMessageArrived.getSender().setInAngleAndRange(false);
-											}
-										} else {
-											newMessageArrived.getSender().setInAngleAndRange(false);
-										LOGGER.info("Skipping angle/range analysis for message with missing locator: "
-													+ newMessageArrived.getSender().getCallSign() + " -> "
-													+ newMessageArrived.getReceiver().getCallSign());
-										}
-
-//							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
-										this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-//						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
-									}
-								} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-									LOGGER.log(Level.WARNING,
-											"Referenced user disappeared while processing a message",
-											referenceDeletedByUserLeftChatDuringMessageprocessing);
-								}
-
-								// sdtout to me message-List
-
-//					newMessageArrived.setReceiver(this.client.getChatMemberTable().get(splittedMessageLine[7])); // set sender
-								// to the
-								// member of
-								// before
-								// initialized
-								// list
-							}
-
-							try {
-
-								LOGGER.fine("Processed message: " + newMessageArrived.getChatCategory().getCategoryNumber()
-										+ " " + newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getMessageSenderName() + " -> "
-										+ newMessageArrived.getReceiver().getCallSign() + ": " + newMessageArrived.getMessageText());
-							} catch (Exception exceptionOccured) {
-								LOGGER.log(Level.WARNING,
-										"Could not format processed-message diagnostic",
-										exceptionOccured);
-							}
-
-							// TODO: Next: get frequency infos out of name?
+							processChatFrame(splittedMessageLine, true);
 						} else
 
 						/**
@@ -1462,137 +1429,7 @@ public class MessageBusManagementThread extends Thread {
 												 * 	    ^^^^^^^^^^time ...
 												 */
 													if (splittedMessageLine[0].contains(SERVERMESSAGEHISTORIC)) {
-
-
-														ChatMessage newMessageArrived = new ChatMessage();
-														ChatCategory chategoryForMessageAndMessageSender;
-
-														newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
-
-														chategoryForMessageAndMessageSender = newMessageArrived.getChatCategory();
-														newMessageArrived.setMessageGeneratedTime(splittedMessageLine[2]);
-														newMessageArrived.setMessageSenderName(splittedMessageLine[4]);
-														newMessageArrived.setMessageText(splittedMessageLine[6]);
-
-														if (splittedMessageLine[3].equals("SERVER")) {
-															ChatMember dummy = new ChatMember();
-															dummy.setCallSign("SERVER");
-															dummy.setName("Sysop");
-															newMessageArrived.setSender(dummy);
-															newMessageArrived.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
-															dummy.setChatCategory(util_getChatCategoryByCategoryNrString(splittedMessageLine[1]));
-//					System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> servers cat " + newMessageArrived.getChatCategory());
-
-														} else {
-
-															newMessageArrived.setSender(resolveInboundSender(
-																	splittedMessageLine[3],
-																	chategoryForMessageAndMessageSender,
-																	newMessageArrived));
-														}
-
-
-														if (splittedMessageLine[7].equals("0")) {
-															// message is not directed to anyone, move it to the cq messages.
-															newMessageArrived.setReceiver(createAllReceiver());
-
-//					this.client.getLst_globalChatMessageList().add(0, newMessageArrived); // sdtout to all message-List
-															this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-
-														} else {
-															//message is directed to another chatmember, process as such!
-
-															newMessageArrived.setReceiver(resolveInboundReceiver(
-																	splittedMessageLine[7],
-																	chategoryForMessageAndMessageSender));
-
-//					System.out.println("message directed to: " + newMessageArrived.getReceiver().getCallSign() + ". EQ?: " + this.client.getownChatMemberObject().getCallSign() + " sent by: " + newMessageArrived.getSender().getCallSign().toUpperCase() + " -> EQ?: "+ this.client.getChatPreferences().getLoginCallSign().toUpperCase());
-
-															try {
-																/**
-																 * message is directed to me, will be put in the "to me" messagelist
-																 */
-																if (newMessageArrived.getReceiver().getCallSign()
-																		.equals(this.client.getChatPreferences().getStn_loginCallSign())) {
-
-//							this.client.getLst_globalChatMessageList().add(0, newMessageArrived);
-																	this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-
-														LOGGER.fine("Historic message directed to local callsign: "
-																+ newMessageArrived.getReceiver().getCallSign());
-
-																} else if (newMessageArrived.getSender().getCallSign().toUpperCase()
-																		.equals(this.client.getChatPreferences().getStn_loginCallSign().toUpperCase())) {
-																	/**
-																	 * message sent by me!
-																	 * message from me will appear in the PM window, too, with (>CALLSIGN) before
-																	 */
-																	String originalMessage = newMessageArrived.getMessageText();
-																	newMessageArrived
-																			.setMessageText("(>" + newMessageArrived.getReceiver().getCallSign() + ")" + originalMessage);
-//							this.client.getLst_globalChatMessageList().add(0,newMessageArrived);
-
-																	this.client.publishChatMessage(newMessageArrived); // sdtout to all message-List (new from v1.7)
-																	// if you sent the message to another station, it will be sorted in to
-																	// the "to me message list" with modified messagetext, added rxers callsign
-
-																} else {
-																	//message sent to other user
-																	// message sent from one other station to another other station
-																	DirectionalOpportunity opportunity = classifyDirectionalOpportunity(
-																			client.getChatPreferences().getStn_loginLocatorMainCat(),
-																			newMessageArrived.getSender().getQra(),
-																			newMessageArrived.getReceiver().getQra(),
-																			client.getChatPreferences().getStn_maxQRBDefault(),
-																			client.getChatPreferences().getStn_antennaBeamWidthDeg());
-
-																	if (opportunity != DirectionalOpportunity.MISSING_LOCATOR) {
-																		if (opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
-
-																			newMessageArrived.getSender().setInAngleAndRange(true);
-
-																		} else {
-																			newMessageArrived.getSender().setInAngleAndRange(false);
-																		}
-																	} else {
-																		/*
-																		 * Historic fallback senders/receivers may not have locators.
-																		 * The message is still valid and should be displayed, but angle/range
-																		 * analysis cannot be calculated without both locators.
-																		 */
-																		newMessageArrived.getSender().setInAngleAndRange(false);
-																	}
-
-																	this.client.publishChatMessage(newMessageArrived);
-//						System.out.println("MSGBS bgfx: tx call = " + newMessageArrived.getSender().getCallSign() + " / rx call = " + newMessageArrived.getReceiver().getCallSign());
-																}
-															} catch (NullPointerException referenceDeletedByUserLeftChatDuringMessageprocessing) {
-													LOGGER.log(Level.WARNING,
-															"Referenced user disappeared while processing a historic message",
-															referenceDeletedByUserLeftChatDuringMessageprocessing);
-															}
-
-															// sdtout to me message-List
-
-														}
-
-														try {
-
-											LOGGER.fine("Processed historic message: " + newMessageArrived.getChatCategory().getCategoryNumber()
-																	+ " " + newMessageArrived.getSender().getCallSign() + ", " + newMessageArrived.getMessageSenderName() + " -> "
-																	+ newMessageArrived.getReceiver().getCallSign() + ": " + newMessageArrived.getMessageText());
-														} catch (Exception exceptionOccured) {
-											LOGGER.log(Level.WARNING,
-													"Could not format historic-message diagnostic",
-													exceptionOccured);
-														}
-
-														// --- Band/QRG recognition (fills ChatMember.knownActiveBands) ---
-														smartFrequencyExtraction(newMessageArrived, this.client.getChatPreferences());
-
-
-
-
+														processChatFrame(splittedMessageLine, false);
 													} else
 
 													/**
@@ -1854,6 +1691,30 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	/**
+	 * Where a chat message belongs. Keeps the long-standing asymmetry on purpose: the
+	 * receiver is compared with the login call case-sensitively, the sender
+	 * case-insensitively. Changing either changes which messages are answered or marked.
+	 *
+	 * @param receiverField the raw receiver field; {@code 0} means public
+	 * @param senderCall the sender's call
+	 * @param receiverCall the resolved receiver's call, unused for public messages
+	 * @param ownCall the raw login call from the preferences
+	 * @return the route of the message
+	 */
+	static ChatRoute classifyRoute(String receiverField, String senderCall, String receiverCall, String ownCall) {
+		if ("0".equals(receiverField)) {
+			return ChatRoute.PUBLIC;
+		}
+		if (receiverCall.equals(ownCall)) {
+			return ChatRoute.TO_ME;
+		}
+		if (senderCall.toUpperCase().equals(ownCall.toUpperCase())) {
+			return ChatRoute.FROM_ME;
+		}
+		return ChatRoute.BETWEEN_OTHERS;
+	}
+
+	/**
 	 * Returns whether the short tick sound for a new directional opportunity is
 	 * played: only with simple sounds enabled and only on the transition into
 	 * the opportunity, not again while the sender is already marked.
@@ -1867,6 +1728,78 @@ public class MessageBusManagementThread extends Thread {
 			boolean senderAlreadyInAngleAndRange
 	) {
 		return simpleSoundsEnabled && !senderAlreadyInAngleAndRange;
+	}
+
+	/**
+	 * Settings the chat frame decision depends on.
+	 *
+	 * @param simpleSounds whether simple notification sounds are enabled
+	 * @param cwOnPm whether the sender's call is sent in CW for private messages
+	 * @param voiceOnPm whether the sender's call is spoken for private messages
+	 * @param dxClusterServerEnabled whether the DX Cluster server is enabled
+	 * @param autoAnswerTextCandidate the auto answer text built for this message, or {@code null}
+	 */
+	record ChatFrameSettings(
+			boolean simpleSounds,
+			boolean cwOnPm,
+			boolean voiceOnPm,
+			boolean dxClusterServerEnabled,
+			String autoAnswerTextCandidate
+	) {
+	}
+
+	/**
+	 * Decides the side effects of a chat frame.
+	 * <ul>
+	 * <li>Public and own messages: none.</li>
+	 * <li>Live message to me: PM sound, CW and voice call per settings, bell for {@code //BELL}
+	 * (with simple sounds), version reply for {@code //VER}, auto answer unless the text is automatic.</li>
+	 * <li>History message to me: none.</li>
+	 * <li>Between others: the sender's flag follows the opportunity; live and in angle and range
+	 * additionally the tick and the DX Cluster spot evaluation.</li>
+	 * </ul>
+	 *
+	 * @param route the route of the message
+	 * @param live {@code true} for a live frame, {@code false} for history
+	 * @param messageText the message text
+	 * @param opportunity the directional opportunity, only used between others
+	 * @param senderAlreadyInAngleAndRange the sender's flag before this message
+	 * @param settings the settings the decision depends on
+	 * @return the effects to execute
+	 */
+	static ChatMessageEffects decideChatFrameEffects(
+			ChatRoute route,
+			boolean live,
+			String messageText,
+			DirectionalOpportunity opportunity,
+			boolean senderAlreadyInAngleAndRange,
+			ChatFrameSettings settings
+	) {
+		switch (route) {
+			case TO_ME:
+				if (!live) {
+					return ChatMessageEffects.NONE;
+				}
+				String upper = messageText.toUpperCase();
+				return new ChatMessageEffects(
+						settings.simpleSounds(),
+						settings.cwOnPm(),
+						settings.voiceOnPm(),
+						settings.simpleSounds() && upper.contains("//BELL"),
+						upper.contains("//VER"),
+						isAutoMessage(messageText) ? null : settings.autoAnswerTextCandidate(),
+						null,
+						false,
+						false);
+			case BETWEEN_OTHERS:
+				boolean inRange = opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE;
+				boolean tick = live && inRange
+						&& shouldPlayDirectionalTick(settings.simpleSounds(), senderAlreadyInAngleAndRange);
+				boolean spot = live && inRange && settings.dxClusterServerEnabled();
+				return new ChatMessageEffects(false, false, false, false, false, null, inRange, tick, spot);
+			default:
+				return ChatMessageEffects.NONE;
+		}
 	}
 
 	/**
