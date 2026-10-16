@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMember;
+import kst4contest.model.ChatPreferences;
 import kst4contest.model.ThreadStateMessage;
 
 import java.io.BufferedWriter;
@@ -480,7 +481,8 @@ public class ReadUDPByWintestThread extends Thread {
      *
      * @param msg complete Win-Test STATUS packet
      */
-    private void parseStatus(String msg) {
+    /* package-private for tests */
+    void parseStatus(String msg) {
         try {
             ArrayList<String> parts = new ArrayList<>();
             Matcher matcher = STATUS_TOKEN_PATTERN.matcher(msg);
@@ -501,13 +503,13 @@ public class ReadUDPByWintestThread extends Thread {
             }
 
             String stationName = parts.get(1);
-            String stationFilter = client
-                    .getChatPreferences()
-                    .getLogsynch_wintestNetworkStationNameOfWintestClient1();
-
-            if (stationFilter != null
-                    && !stationFilter.isBlank()
-                    && !stationName.equalsIgnoreCase(stationFilter)) {
+            ChatPreferences prefs = client.getChatPreferences();
+            java.util.Optional<RadioSlot> slot = RadioSlotRouter.forWinTestStation(
+                    prefs.isTrxSynch_so2rEnabled(),
+                    stationName,
+                    prefs.getLogsynch_wintestNetworkStationNameOfWintestClient1(),
+                    prefs.getLogsynch_wintestNetworkStationNameOfWintestClient2());
+            if (slot.isEmpty()) {
                 return;
             }
 
@@ -564,15 +566,9 @@ public class ReadUDPByWintestThread extends Thread {
                             ? formattedPassQrg
                             : formattedMainQrg;
 
-            if (client
-                    .getChatPreferences()
-                    .isLogsynch_wintestQrgSyncEnabled()) {
-                client.uiDispatcher().runOnUi(
-                        () -> client
-                                .getChatPreferences()
-                                .getMYQRGFirstCat()
-                                .set(qrgToSet)
-                );
+            if (prefs.isLogsynch_wintestQrgSyncEnabled()) {
+                RadioSlot target = slot.get();
+                client.uiDispatcher().runOnUi(() -> target.qrgIn(prefs).set(qrgToSet));
             }
 
             System.out.println(
