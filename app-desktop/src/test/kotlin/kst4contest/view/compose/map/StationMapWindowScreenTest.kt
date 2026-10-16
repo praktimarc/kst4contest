@@ -381,4 +381,36 @@ class StationMapWindowScreenTest {
         onNode(isToggleable()).assertIsOn()
         assertEquals(true, prefs.isGUIstationMapClusteringEnabled)
     }
+
+    /**
+     * The map shows the stations the list shows (#21). The Compose map drew every station
+     * whatever the filter bar said, although its status line reported a filtered view; the
+     * JavaFX map took the filtered list. A filter switched on after the first draw has to
+     * take the marker away too, and a click where it stood selects nothing.
+     */
+    @Test
+    fun aStationTheFiltersHideHasNoMarker() = runComposeUiTest {
+        val state = windowState(prefs())
+        val near = station("DL1NEAR", 2, locator = "JO50JP").apply { qrb = 150.0 }
+        val far = station("DL2FAR", 2, locator = "JO62QM").apply { qrb = 600.0 }
+        val selectorCalls = mutableListOf<ChatMember?>()
+        state.stationSelector = { selectorCalls += it }
+
+        show(state, listOf(near, far), mapLookingAt("JO50JP", zoom = 12f))
+        onNodeWithText("Showing 2 visible stations").assertExists()
+
+        runOnIdle {
+            state.stationFilter.minQrbKm = 300.0
+            state.stationFilter.minQrbEnabled = true
+            state.stations.rowFilter = { state.stationFilter.acceptsQrb(it.qrb) }
+        }
+        waitForIdle()
+
+        onNodeWithText("Showing 1 visible stations | filtered view active").assertExists()
+
+        // The map looks straight at the hidden station: a click there finds no marker.
+        onNodeWithTag(StationMapWindow.MAP_CANVAS_TAG).performClick()
+        waitForIdle()
+        assertEquals(emptyList<ChatMember?>(), selectorCalls, "the hidden station still had a marker")
+    }
 }

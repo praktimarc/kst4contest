@@ -129,7 +129,19 @@ object StationMapWindow {
             val antennaBeamWidthDeg = mainWindowState.prefs.stn_antennaBeamWidthDeg
             val maxQrbKm = mainWindowState.prefs.stn_maxQRBDefault
 
-            val markers by remember(mainWindowState.stations.rows, mainWindowState.stations.contentRevision, selectedMember, mainWindowState.activeBands) {
+            /*
+             * The markers are the stations the list shows, not all of them (#21): the
+             * JavaFX map took the sorted, filtered list (StationMapBridge.refreshNow), and
+             * the status line below already says "filtered view active". A selected
+             * station that a filter hides gets no marker either, as it did there.
+             */
+            val markers by remember(
+                mainWindowState.stations.rows,
+                mainWindowState.stations.rowFilter,
+                mainWindowState.stations.contentRevision,
+                selectedMember,
+                mainWindowState.activeBands,
+            ) {
                 derivedStateOf {
                     val builder = MapCallsignRawSnapshotBuilder()
                     val activeBands = mainWindowState.activeBands
@@ -140,7 +152,7 @@ object StationMapWindow {
                     }
 
                     builder.buildSnapshots(
-                        mainWindowState.stations.rows,
+                        mainWindowState.stations.visibleRows,
                         selectedMember,
                         bandSet
                     )
