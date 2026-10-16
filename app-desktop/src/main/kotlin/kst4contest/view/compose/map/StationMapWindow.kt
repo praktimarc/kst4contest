@@ -1,5 +1,6 @@
 package kst4contest.view.compose.map
 
+import kst4contest.view.compose.WindowPlacementOnScreen
 import kst4contest.view.i18n.LocalStrings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -61,7 +62,13 @@ object StationMapWindow {
             onResized = onResized,
         ) { _ ->
             val window = this.window
-            androidx.compose.runtime.LaunchedEffect(window) { window?.minimumSize = java.awt.Dimension(900, 600) }
+            /*
+             * Never larger than the smallest screen: AWT enforces a minimum size even past
+             * the edge, and some operators work on 640x480.
+             */
+            androidx.compose.runtime.LaunchedEffect(window) {
+                window?.minimumSize = WindowPlacementOnScreen.minimumSizeOnScreens(900, 600)
+            }
             val tileFetcher = remember { TileFetcher() }
 
             /*

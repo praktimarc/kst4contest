@@ -2120,6 +2120,36 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 	}
 
+	/**
+	 * Hands the window hosts the active profile's stored window positions. Set on every
+	 * startup, so a profile switch replaces the previous profile's positions. The opt-in is
+	 * read on each call, so applying the setting takes effect without a restart.
+	 */
+	private void installWindowPositionMemory(ChatPreferences prefs) {
+		kst4contest.view.compose.WindowPlacementOnScreen.setMemory(new kst4contest.view.compose.WindowPositionMemory() {
+			@Override
+			public kst4contest.view.compose.StoredWindowPosition load(String windowId) {
+				if (!prefs.isGuiOptions_rememberWindowPositions()) {
+					return null;
+				}
+				int[] p = prefs.getWindowPosition(windowId);
+				return p == null ? null : new kst4contest.view.compose.StoredWindowPosition(
+						new java.awt.Point(p[0], p[1]), new java.awt.Rectangle(p[2], p[3], p[4], p[5]));
+			}
+
+			@Override
+			public void save(String windowId, kst4contest.view.compose.StoredWindowPosition stored) {
+				if (!prefs.isGuiOptions_rememberWindowPositions()) {
+					return;
+				}
+				prefs.setWindowPosition(windowId, stored.getPosition().x, stored.getPosition().y,
+						stored.getScreen().x, stored.getScreen().y,
+						stored.getScreen().width, stored.getScreen().height);
+				requestLayoutSave();
+			}
+		});
+	}
+
 	private void requestLayoutSave() {
 		if (layoutAutosave != null) {
 			layoutAutosave.requestSave();
@@ -2163,6 +2193,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 				.isMessageHandling_debugModeToFileEnabled());
 		layoutAutosave = new LayoutAutosave(
 				chatcontroller.getChatPreferences()::writeLayoutPreferencesToXmlFile, uiDispatcher);
+		installWindowPositionMemory(chatcontroller.getChatPreferences());
 		// Every profile starts with its own configured design; the menu quick switch only lasts for the session.
 		chatcontroller.getChatPreferences().setGUI_darkModeActive(
 				chatcontroller.getChatPreferences().isGUI_darkModeActiveByDefault());

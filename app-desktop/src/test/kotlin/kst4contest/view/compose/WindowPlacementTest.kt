@@ -202,4 +202,51 @@ class WindowPlacementTest {
         assertTrue(movedAway(Point(560, 220), Point(560, 220 + MOVE_TOLERANCE_PX + 1)))
         assertTrue(movedAway(Point(560, 220), Point(3000, 220)))
     }
+
+    @Test
+    fun `a stored position is restored on the very screen it was stored on`() {
+        val stored = StoredWindowPosition(Point(2500, 300), right.bounds)
+
+        assertEquals(Rectangle(2500, 300, 800, 600), WindowPlacement.restore(listOf(primary, right), stored, 800, 600))
+    }
+
+    @Test
+    fun `a stored position is kept within the usable area of its screen`() {
+        val stored = StoredWindowPosition(Point(1500, 900), primary.bounds)
+
+        assertEquals(Rectangle(1120, 440, 800, 600), WindowPlacement.restore(listOf(primary), stored, 800, 600))
+    }
+
+    @Test
+    fun `a stored position is not used when its screen is gone or changed`() {
+        val unplugged = StoredWindowPosition(Point(2500, 300), right.bounds)
+        val otherResolution = StoredWindowPosition(Point(100, 100), Rectangle(0, 0, 2560, 1440))
+
+        assertNull(WindowPlacement.restore(listOf(primary, left), unplugged, 800, 600))
+        assertNull(WindowPlacement.restore(listOf(primary), otherResolution, 800, 600))
+    }
+
+    /** A 640x480 field monitor right of the primary screen. */
+    private val tiny = ScreenArea(
+        bounds = Rectangle(1920, 0, 640, 480),
+        usable = Rectangle(1920, 0, 640, 480),
+    )
+
+    @Test
+    fun `a window moved onto a smaller screen is cut down to it`() {
+        val moved = Rectangle(1950, 20, 1000, 800)
+
+        assertEquals(Rectangle(1920, 0, 640, 480), WindowPlacement.fitted(listOf(primary, tiny), moved))
+    }
+
+    @Test
+    fun `a window that fits its screen is left alone`() {
+        assertNull(WindowPlacement.fitted(listOf(primary, tiny), Rectangle(100, 100, 800, 600)))
+    }
+
+    @Test
+    fun `a minimum size is capped to the smallest connected screen`() {
+        assertEquals(java.awt.Dimension(640, 480), WindowPlacement.minimumWithin(listOf(primary, tiny), 900, 600))
+        assertEquals(java.awt.Dimension(900, 600), WindowPlacement.minimumWithin(listOf(primary), 900, 600))
+    }
 }

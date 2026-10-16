@@ -42,6 +42,8 @@ class GuiOptionsTabState(
         get() = languageStore.stored
         set(value) { languageStore.use(value) }
 
+    var guiOptions_rememberWindowPositions: Boolean by draft.setting({ prefs.isGuiOptions_rememberWindowPositions() }) { prefs.setGuiOptions_rememberWindowPositions(it) }
+
     var guiOptions_showGrossFieldWorkedHintInBandColumns: Boolean by draft.setting({ prefs.isGuiOptions_showGrossFieldWorkedHintInBandColumns() }) { prefs.setGuiOptions_showGrossFieldWorkedHintInBandColumns(it) }
 
 }

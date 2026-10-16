@@ -16,6 +16,25 @@ import java.awt.Window
 data class ScreenArea(val bounds: Rectangle, val usable: Rectangle)
 
 /**
+ * A window position kept across restarts, together with the screen it was on.
+ *
+ * @param position the window's top-left corner in desktop coordinates
+ * @param screen the bounds of the screen the window was on when it was stored
+ */
+data class StoredWindowPosition(val position: Point, val screen: Rectangle)
+
+/**
+ * Where window positions are kept across restarts, when the operator opted in.
+ *
+ * The application sets it per profile; [load] answers null and [save] does nothing while
+ * the opt-in is off, so the hosts need not know about the setting.
+ */
+interface WindowPositionMemory {
+    fun load(windowId: String): StoredWindowPosition?
+    fun save(windowId: String, stored: StoredWindowPosition)
+}
+
+/**
  * Where a secondary window opens, decided without touching AWT (issue #59).
  *
  * The rule: a window the operator moved during this session reopens where it was moved to,
@@ -84,6 +103,54 @@ object WindowPlacement {
         }
 
         return centredOn(usableArea(screenOf(screens, mainWindow)), width, height)
+    }
+
+    /**
+     * Where a window opens from a position stored in an earlier run.
+     *
+     * Only on the very screen it was stored on: same place in the desktop, same size. A
+     * changed layout -- a monitor unplugged, rearranged or switched to another resolution --
+     * makes the stored position meaningless, and the caller falls back to the session rule.
+     * On that screen the window is kept within the usable area, like a session position.
+     *
+     * @return the frame bounds to open with, or null when the stored screen is not connected
+     */
+    fun restore(screens: List<ScreenArea>, stored: StoredWindowPosition, width: Int, height: Int): Rectangle? {
+        val screen = screens.firstOrNull { it.bounds == stored.screen } ?: return null
+        return keptWithin(usableArea(screen), stored.position, width, height)
+    }
+
+    /**
+     * The window cut down to the usable area of the screen it is on, or null when it fits.
+     *
+     * For a window that is already open and was moved onto a smaller screen -- a laptop
+     * panel, a 640x480 field monitor. Opening sizes are cut by [place] and [restore]; this
+     * covers the move. Shifted the least distance into the usable area, like [keptWithin].
+     */
+    fun fitted(screens: List<ScreenArea>, window: Rectangle): Rectangle? {
+        if (screens.isEmpty()) {
+            return null
+        }
+        val usable = usableArea(screenOf(screens, window))
+        if (window.width <= usable.width && window.height <= usable.height) {
+            return null
+        }
+        return keptWithin(usable, window.location, window.width, window.height)
+    }
+
+    /**
+     * A minimum size no larger than the smallest usable area: AWT enforces the minimum even when it does
+     * not fit the screen, which leaves the window's edges unreachable.
+     */
+    fun minimumWithin(screens: List<ScreenArea>, width: Int, height: Int): java.awt.Dimension {
+        if (screens.isEmpty()) {
+            return java.awt.Dimension(width, height)
+        }
+        val areas = screens.map(::usableArea)
+        return java.awt.Dimension(
+            clamp(width, areas.minOf { it.width }),
+            clamp(height, areas.minOf { it.height }),
+        )
     }
 
     /**
@@ -183,6 +250,48 @@ object WindowPlacementOnScreen {
      */
     @Volatile
     var mainWindow: Window? = null
+
+    /**
+     * The positions kept across restarts, set by the application for the active profile.
+     * Null in tests and before startup, which means nothing is restored or stored.
+     */
+    @JvmStatic
+    @Volatile
+    var memory: WindowPositionMemory? = null
+
+    /**
+     * Where a window opens from its stored position, or null when none applies.
+     */
+    fun restore(windowId: String, width: Int, height: Int): Rectangle? {
+        val stored = memory?.load(windowId) ?: return null
+        return WindowPlacement.restore(connectedScreens(), stored, width, height)
+    }
+
+    /**
+     * The minimum size a window may enforce, capped to the smallest connected screen. The
+     * smallest rather than the current one, because the window may be moved there later
+     * and must then still be cut down to fit.
+     */
+    fun minimumSizeOnScreens(width: Int, height: Int): java.awt.Dimension =
+        WindowPlacement.minimumWithin(connectedScreens(), width, height)
+
+    /**
+     * The window cut down to the screen it is now on, or null when it fits.
+     */
+    fun fitted(window: Rectangle): Rectangle? = WindowPlacement.fitted(connectedScreens(), window)
+
+    /**
+     * Stores the position the operator moved a window to, with the screen it is now on.
+     */
+    fun store(windowId: String, position: Point, width: Int, height: Int) {
+        val target = memory ?: return
+        val screens = connectedScreens()
+        if (screens.isEmpty()) {
+            return
+        }
+        val screen = WindowPlacement.screenOf(screens, Rectangle(position.x, position.y, width, height))
+        target.save(windowId, StoredWindowPosition(position, screen.bounds))
+    }
 
     /** The connected screens, the default one first. Empty without a display. */
     fun connectedScreens(): List<ScreenArea> = runCatching {

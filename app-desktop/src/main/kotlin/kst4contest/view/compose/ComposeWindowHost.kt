@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.WindowPlacement as ComposeWindowPlacement
@@ -26,6 +27,8 @@ import java.awt.Toolkit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
 
 /**
@@ -56,7 +59,8 @@ import kotlinx.coroutines.flow.drop
  * earlier in the session — see [WindowPlacement] for the rule.
  *
  * @param threadName names the thread in a stack dump, which is where one looks when a
- *        window will not close
+ *        window will not close. It is also the key of the window's stored position, so
+ *        renaming it forgets where the operator put the window.
  * @param isMainWindow true for the main window only. It keeps the platform's placement
  *        and publishes its frame, which is what every other window is placed against.
  */
@@ -77,9 +81,10 @@ class ComposeWindowHost(
     private var frame: ComposeWindow? = null
 
     /**
-     * Where the operator moved this window to, for this session only. Deliberately not
-     * persisted: a stored position outlives the monitor layout it was made on, which is
-     * the very problem of issue #59. Lives as long as the host, and the hosts are
+     * Where the operator moved this window to, for this session. Not persisted here: a
+     * stored position outlives the monitor layout it was made on, which is the very problem
+     * of issue #59. Keeping positions across restarts is the operator's opt-in, handled by
+     * [WindowPlacementOnScreen.memory] and used only on the very screen it was made on. Lives as long as the host, and the hosts are
      * singletons, so it survives closing and reopening the window and a profile switch.
      */
     @Volatile
@@ -247,14 +252,18 @@ class ComposeWindowHost(
                      * for any window that opens before the main window exists.
                      */
                     val placed = remember {
-                        if (isMainWindow) {
-                            null
-                        } else {
-                            WindowPlacementOnScreen.place(
-                                movedTo,
-                                widthDp.roundToInt(),
-                                heightDp.roundToInt(),
-                            )
+                        val width = widthDp.roundToInt()
+                        val height = heightDp.roundToInt()
+                        when {
+                            /*
+                             * The main window only ever uses a stored position; without
+                             * one the platform places it, as before.
+                             */
+                            isMainWindow -> WindowPlacementOnScreen.restore(threadName, width, height)
+                            /* This session's move is newer than anything stored. */
+                            movedTo != null -> WindowPlacementOnScreen.place(movedTo, width, height)
+                            else -> WindowPlacementOnScreen.restore(threadName, width, height)
+                                ?: WindowPlacementOnScreen.place(null, width, height)
                         }
                     }
 
@@ -290,20 +299,64 @@ class ComposeWindowHost(
                         }
                     }
 
-                    if (!isMainWindow) {
-                        LaunchedEffect(windowState) {
-                            /* One tracker per opening; the rule is in MoveTracker. */
-                            val tracker = MoveTracker(placed?.location)
-                            snapshotFlow { windowState.position }.collect { position ->
-                                if (position is WindowPosition.Absolute
-                                    && windowState.placement == ComposeWindowPlacement.Floating
-                                    && !windowState.isMinimized
-                                ) {
-                                    val now = Point(
+                    LaunchedEffect(windowState) {
+                        /*
+                         * One tracker per opening; the rule is in MoveTracker. An operator
+                         * move is remembered for the session (secondary windows) and handed
+                         * to the stored positions, which keep it only when the operator
+                         * opted in. Only moves are stored, never the window manager's
+                         * nudges, so a restored window cannot drift a little on every start.
+                         */
+                        val tracker = MoveTracker(placed?.location)
+                        snapshotFlow { windowState.position }.collect { position ->
+                            if (position is WindowPosition.Absolute
+                                && windowState.placement == ComposeWindowPlacement.Floating
+                                && !windowState.isMinimized
+                            ) {
+                                val now = Point(
+                                    position.x.value.roundToInt(),
+                                    position.y.value.roundToInt(),
+                                )
+                                val size = windowState.size
+                                tracker.observe(now)?.let { moved ->
+                                    if (!isMainWindow) {
+                                        movedTo = moved
+                                    }
+                                    WindowPlacementOnScreen.store(
+                                        threadName,
+                                        moved,
+                                        if (size.width.isSpecified) size.width.value.roundToInt() else widthDp.roundToInt(),
+                                        if (size.height.isSpecified) size.height.value.roundToInt() else heightDp.roundToInt(),
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    LaunchedEffect(windowState) {
+                        /*
+                         * A window moved onto a smaller screen -- a laptop panel, a 640x480
+                         * field monitor -- is cut down to it, so no edge or button ends up out
+                         * of reach. Only once it has rested: resizing in the middle of a drag
+                         * would fight the window manager for the window.
+                         */
+                        snapshotFlow { windowState.position to windowState.size }.collectLatest { (position, size) ->
+                            delay(FIT_SETTLE_MILLIS)
+                            if (position is WindowPosition.Absolute
+                                && size.width.isSpecified && size.height.isSpecified
+                                && windowState.placement == ComposeWindowPlacement.Floating
+                                && !windowState.isMinimized
+                            ) {
+                                WindowPlacementOnScreen.fitted(
+                                    java.awt.Rectangle(
                                         position.x.value.roundToInt(),
                                         position.y.value.roundToInt(),
-                                    )
-                                    tracker.observe(now)?.let { movedTo = it }
+                                        size.width.value.roundToInt(),
+                                        size.height.value.roundToInt(),
+                                    ),
+                                )?.let { fit ->
+                                    windowState.size = DpSize(fit.width.dp, fit.height.dp)
+                                    windowState.position = WindowPosition(fit.x.dp, fit.y.dp)
                                 }
                             }
                         }
@@ -387,6 +440,9 @@ class ComposeWindowHost(
  * screen, and on X11 reopening it would drift by the decoration each time.
  */
 internal const val MOVE_TOLERANCE_PX = 48
+
+/** How long a window must rest after a move before it is cut down to a smaller screen. */
+private const val FIT_SETTLE_MILLIS = 500L
 
 /** Whether [now] is far enough from [opened] to be the operator's move rather than a nudge. */
 internal fun movedAway(opened: Point, now: Point): Boolean =

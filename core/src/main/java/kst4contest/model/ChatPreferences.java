@@ -435,6 +435,21 @@ public class ChatPreferences {
 	private boolean GUI_darkModeActive = false;
 	private boolean GUI_darkModeActiveByDefault = false;
 
+	/**
+	 * Opt-in: windows reopen across restarts where the operator last moved them, on the
+	 * same screen. Off by default, because a stored position outlives the monitor layout
+	 * it was made on; the positions are only used when that exact screen is connected.
+	 */
+	private boolean guiOptions_rememberWindowPositions = false;
+
+	/**
+	 * Last operator-chosen window positions by window id, each as
+	 * {x, y, screenX, screenY, screenWidth, screenHeight} in desktop coordinates.
+	 */
+	private final Map<String, int[]> windowPositions = new LinkedHashMap<>();
+
+	private static final String TAG_WINDOW_POSITION = "windowPosition";
+
 	private double[] GUIscn_ChatwindowMainSceneSizeHW = new double[] {768, 1234};
 	private double[] GUIclusterAndQSOMonStage_SceneSizeHW = new double[] {700, 500};
 	private double[] GUIstage_updateStage_SceneSizeHW = new double[] {580, 480};
@@ -2223,6 +2238,10 @@ public class ChatPreferences {
 			guiOptions_darkModeActiveByDefault.setTextContent(this.GUI_darkModeActiveByDefault + "");
 			guiSaveableOptions.appendChild(guiOptions_darkModeActiveByDefault);
 
+			Element guiOptions_rememberWindowPositions = doc.createElement("guiOptions_rememberWindowPositions");
+			guiOptions_rememberWindowPositions.setTextContent(String.valueOf(this.guiOptions_rememberWindowPositions));
+			guiSaveableOptions.appendChild(guiOptions_rememberWindowPositions);
+
 			// --- GUImainWindowRightSplitPane_dividerposition (2 dividers => 2 values) --- NEW
 			ensureMainWindowRightSplitPaneDividerPositions(2);
 
@@ -2305,6 +2324,7 @@ public class ChatPreferences {
 			guiOptions.appendChild(GUIstationMapClusteringEnabled);
 
 			appendTableColumnWidths(doc, guiOptions);
+			appendWindowPositions(doc, guiOptions);
 
 			/****************************************************************************************
 			 ****************************** now write this XML! *************************************
@@ -2357,6 +2377,8 @@ public class ChatPreferences {
 			updateLayoutElements(document, guiOptions);
 			removeDirectChildren(guiOptions, TAG_TABLE_COLUMN_WIDTH);
 			appendTableColumnWidths(document, guiOptions);
+			removeDirectChildren(guiOptions, TAG_WINDOW_POSITION);
+			appendWindowPositions(document, guiOptions);
 			writeDocumentAtomically(document);
 			return true;
 		} catch (ParserConfigurationException | SAXException | IOException | TransformerException exception) {
@@ -3227,6 +3249,8 @@ public class ChatPreferences {
 							this.setGUIpnl_directedMSGWin_dividerpositionDefault(csvStringToDoubleArray(s5));
 						}
 
+						readWindowPositions(element);
+
 						tableColumnWidths.clear();
 						NodeList widthElements = element.getElementsByTagName(TAG_TABLE_COLUMN_WIDTH);
 						for (int widthIndex = 0; widthIndex < widthElements.getLength(); widthIndex++) {
@@ -3268,6 +3292,9 @@ public class ChatPreferences {
 				// Added in later versions: dark mode flags
 				this.GUI_darkModeActive = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActive, "guiOptions_darkModeActive");
 				this.GUI_darkModeActiveByDefault = getBoolean(guiSaveableOptionsEl, this.GUI_darkModeActiveByDefault, "guiOptions_darkModeActiveByDefault");
+
+				// Added in release 1.50: opt-in for window positions across restarts.
+				this.guiOptions_rememberWindowPositions = getBoolean(guiSaveableOptionsEl, false, "guiOptions_rememberWindowPositions");
 			}
 
 
@@ -3403,6 +3430,77 @@ public class ChatPreferences {
 
 	public void setGUI_darkModeActiveByDefault(boolean GUI_darkModeActiveByDefault) {
 		this.GUI_darkModeActiveByDefault = GUI_darkModeActiveByDefault;
+	}
+
+	public boolean isGuiOptions_rememberWindowPositions() {
+		return guiOptions_rememberWindowPositions;
+	}
+
+	public void setGuiOptions_rememberWindowPositions(boolean guiOptions_rememberWindowPositions) {
+		this.guiOptions_rememberWindowPositions = guiOptions_rememberWindowPositions;
+	}
+
+	/**
+	 * Returns the stored position of one window.
+	 *
+	 * @param windowId stable window identifier
+	 * @return a copy of {x, y, screenX, screenY, screenWidth, screenHeight}, or null when
+	 *         nothing usable is stored
+	 */
+	public synchronized int[] getWindowPosition(String windowId) {
+		int[] stored = windowPositions.get(windowId);
+		return stored == null ? null : stored.clone();
+	}
+
+	/**
+	 * Updates one window position in memory. Persistence is coordinated by the layout
+	 * autosave layer, like the table column widths.
+	 */
+	public synchronized void setWindowPosition(String windowId, int x, int y,
+			int screenX, int screenY, int screenWidth, int screenHeight) {
+		if (isValidWindowId(windowId) && screenWidth > 0 && screenHeight > 0) {
+			windowPositions.put(windowId, new int[] { x, y, screenX, screenY, screenWidth, screenHeight });
+		}
+	}
+
+	private static boolean isValidWindowId(String windowId) {
+		return windowId != null && !windowId.isBlank();
+	}
+
+	private void appendWindowPositions(Document document, Element guiOptions) {
+		for (Map.Entry<String, int[]> entry : windowPositions.entrySet()) {
+			int[] p = entry.getValue();
+			Element element = document.createElement(TAG_WINDOW_POSITION);
+			element.setAttribute("windowId", entry.getKey());
+			element.setAttribute("x", String.valueOf(p[0]));
+			element.setAttribute("y", String.valueOf(p[1]));
+			element.setAttribute("screenX", String.valueOf(p[2]));
+			element.setAttribute("screenY", String.valueOf(p[3]));
+			element.setAttribute("screenWidth", String.valueOf(p[4]));
+			element.setAttribute("screenHeight", String.valueOf(p[5]));
+			guiOptions.appendChild(element);
+		}
+	}
+
+	private void readWindowPositions(Element guiOptions) {
+		windowPositions.clear();
+		NodeList elements = guiOptions.getElementsByTagName(TAG_WINDOW_POSITION);
+		for (int index = 0; index < elements.getLength(); index++) {
+			if (!(elements.item(index) instanceof Element element)) {
+				continue;
+			}
+			try {
+				setWindowPosition(element.getAttribute("windowId"),
+						Integer.parseInt(element.getAttribute("x")),
+						Integer.parseInt(element.getAttribute("y")),
+						Integer.parseInt(element.getAttribute("screenX")),
+						Integer.parseInt(element.getAttribute("screenY")),
+						Integer.parseInt(element.getAttribute("screenWidth")),
+						Integer.parseInt(element.getAttribute("screenHeight")));
+			} catch (NumberFormatException ignored) {
+				// A damaged entry is dropped; the window then opens by the default rule.
+			}
+		}
 	}
 
 	/**

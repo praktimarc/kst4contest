@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -124,6 +126,51 @@ class ChatPreferencesLayoutPersistenceTest {
         assertFalse(restored.isGUIstationMapClusteringEnabled());
         assertEquals(123.75,
                 restored.getTableColumnWidth("qso-other-monitor", "call-tx").orElseThrow());
+    }
+
+    @Test
+    void windowPositionsAndTheirOptInSurviveFullXmlRoundTrip() {
+        Path preferencesFile = temporaryDirectory.resolve("windows.xml");
+        ChatPreferences written = preferencesAt(preferencesFile);
+        written.setGuiOptions_rememberWindowPositions(true);
+        written.setWindowPosition("Map", 2100, -40, 1920, -200, 2560, 1440);
+
+        assertTrue(written.writePreferencesToXmlFile());
+
+        ChatPreferences restored = preferencesAt(preferencesFile);
+        assertTrue(restored.readPreferencesFromXmlFile());
+        assertTrue(restored.isGuiOptions_rememberWindowPositions());
+        assertArrayEquals(new int[] { 2100, -40, 1920, -200, 2560, 1440 }, restored.getWindowPosition("Map"));
+        assertNull(restored.getWindowPosition("settings-window"));
+    }
+
+    @Test
+    void windowPositionsAreWrittenByTheLayoutAutosaveAndTheOptInDefaultsOff() throws IOException {
+        Path preferencesFile = temporaryDirectory.resolve("windows-layout.xml");
+        Files.writeString(preferencesFile, """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <praktiKST>
+                    <configVersion>8</configVersion>
+                    <guiOptions>
+                        <windowPosition windowId="Map" x="1" y="2" screenX="0" screenY="0" screenWidth="10" screenHeight="10"/>
+                        <windowPosition windowId="broken" x="a" y="2" screenX="0" screenY="0" screenWidth="10" screenHeight="10"/>
+                    </guiOptions>
+                </praktiKST>
+                """);
+
+        ChatPreferences preferences = preferencesAt(preferencesFile);
+        assertTrue(preferences.readPreferencesFromXmlFile());
+        assertFalse(preferences.isGuiOptions_rememberWindowPositions());
+        assertNull(preferences.getWindowPosition("broken"));
+        preferences.setWindowPosition("main-window", 5, 6, 0, 0, 1920, 1080);
+
+        assertTrue(preferences.writeLayoutPreferencesToXmlFile());
+
+        ChatPreferences restored = preferencesAt(preferencesFile);
+        assertTrue(restored.readPreferencesFromXmlFile());
+        assertArrayEquals(new int[] { 1, 2, 0, 0, 10, 10 }, restored.getWindowPosition("Map"));
+        assertArrayEquals(new int[] { 5, 6, 0, 0, 1920, 1080 }, restored.getWindowPosition("main-window"));
+        assertEquals(1, Files.readString(preferencesFile).split("windowId=\"Map\"", -1).length - 1);
     }
 
     private ChatPreferences preferencesAt(Path preferencesFile) {
