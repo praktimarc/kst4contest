@@ -48,7 +48,7 @@ fun StationFilterBar(
         modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
-        // ROW 1: Reset | QRB | QTF + bearings
+        // ROW 1: Reset | QRB max + min | QTF + bearings
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -81,6 +81,30 @@ fun StationFilterBar(
                     } else if (it.isEmpty()) {
                         filters.maxQrbKm = 0.0
                         if (filters.maxQrbEnabled) onChanged()
+                    }
+                },
+                modifier = Modifier.width(50.dp)
+            )
+
+            // Minimum QRB checkbox + field (#21); together with the one above a range
+            CompactCheckbox(
+                checked = filters.minQrbEnabled,
+                onCheckedChange = {
+                    filters.minQrbEnabled = it
+                    onChanged()
+                },
+            )
+            Text(strings.filterShowOnlyQrbAbove, style = MaterialTheme.typography.bodySmall)
+            CompactTextField(
+                value = if (filters.minQrbKm.rem(1) == 0.0) filters.minQrbKm.toInt().toString() else filters.minQrbKm.toString(),
+                onValueChange = {
+                    val parsed = it.toDoubleOrNull()
+                    if (parsed != null) {
+                        filters.minQrbKm = parsed
+                        if (filters.minQrbEnabled) onChanged()
+                    } else if (it.isEmpty()) {
+                        filters.minQrbKm = 0.0
+                        if (filters.minQrbEnabled) onChanged()
                     }
                 },
                 modifier = Modifier.width(50.dp)

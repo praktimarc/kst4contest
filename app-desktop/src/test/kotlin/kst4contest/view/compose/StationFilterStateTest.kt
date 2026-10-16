@@ -132,6 +132,94 @@ class StationFilterStateTest {
     }
 
     @Test
+    fun `the minimum QRB filter needs its own switch`() {
+        val filters = StationFilterState()
+
+        filters.minQrbKm = 300.0
+        assertTrue(filters.activeFilters.isEmpty(), "a distance alone filters nothing")
+
+        filters.minQrbEnabled = true
+        assertEquals(setOf(StationFilter.MIN_QRB), filters.activeFilters)
+    }
+
+    @Test
+    fun `resetting switches both QRB filters off`() {
+        val filters = StationFilterState()
+        filters.maxQrbEnabled = true
+        filters.minQrbEnabled = true
+
+        filters.reset()
+
+        assertTrue(filters.activeFilters.isEmpty())
+        assertFalse(filters.minQrbEnabled)
+        assertFalse(filters.maxQrbEnabled)
+    }
+
+    @Test
+    fun `without a QRB filter every distance passes, an unknown one too`() {
+        val filters = StationFilterState()
+        filters.maxQrbKm = 100.0
+        filters.minQrbKm = 500.0
+
+        assertTrue(filters.acceptsQrb(50.0))
+        assertTrue(filters.acceptsQrb(1000.0))
+        assertTrue(filters.acceptsQrb(null))
+    }
+
+    /** The behaviour the controller predicate had before #21 moved it here. */
+    @Test
+    fun `the maximum QRB keeps stations up to and including the distance`() {
+        val filters = StationFilterState()
+        filters.maxQrbEnabled = true
+        filters.maxQrbKm = 300.0
+
+        assertTrue(filters.acceptsQrb(299.9))
+        assertTrue(filters.acceptsQrb(300.0))
+        assertFalse(filters.acceptsQrb(300.1))
+        assertFalse(filters.acceptsQrb(null), "an unknown distance is not a short one")
+    }
+
+    @Test
+    fun `the minimum QRB keeps only stations further away than the distance`() {
+        val filters = StationFilterState()
+        filters.minQrbEnabled = true
+        filters.minQrbKm = 300.0
+
+        assertFalse(filters.acceptsQrb(299.9))
+        assertFalse(filters.acceptsQrb(300.0), "the issue asks for QRB > X, so X itself is out")
+        assertTrue(filters.acceptsQrb(300.1))
+        assertFalse(filters.acceptsQrb(null), "an unknown distance is not a long one")
+    }
+
+    @Test
+    fun `both QRB filters together keep a distance range`() {
+        val filters = StationFilterState()
+        filters.minQrbEnabled = true
+        filters.minQrbKm = 200.0
+        filters.maxQrbEnabled = true
+        filters.maxQrbKm = 500.0
+
+        assertFalse(filters.acceptsQrb(200.0))
+        assertTrue(filters.acceptsQrb(200.1))
+        assertTrue(filters.acceptsQrb(500.0))
+        assertFalse(filters.acceptsQrb(500.1))
+        assertFalse(filters.acceptsQrb(null))
+    }
+
+    @Test
+    fun `a range with the minimum above the maximum keeps nothing`() {
+        val filters = StationFilterState()
+        filters.minQrbEnabled = true
+        filters.minQrbKm = 500.0
+        filters.maxQrbEnabled = true
+        filters.maxQrbKm = 200.0
+
+        listOf(100.0, 300.0, 600.0).forEach {
+            assertFalse(filters.acceptsQrb(it), "$it km passed an empty range")
+        }
+    }
+
+    @Test
     fun `a search text filters while it is there and stops when it is cleared`() {
         val filters = StationFilterState()
 
