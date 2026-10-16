@@ -110,28 +110,87 @@ class SettingsNotices {
 }
 
 /**
- * A request to settle the settings window's pending edits, from outside its composition: the
- * title bar's X, the Windows menu, a profile switch, the client's exit. The window decides
- * what to do with it the next time it draws -- go on at once, or ask about the edits not
- * applied yet -- which keeps the request itself free of any wait on the event thread.
+ * The question about edits not applied yet, asked when the window closes, the profile is
+ * switched or the client exits.
+ *
+ * The decision is taken in [settle], on the calling event thread, not in the window's next
+ * frame: a minimised window may draw no frames, and an exit from the main window would then
+ * wait for the settings window to be restored. Only the dialog itself needs a frame, and the
+ * window is raised before it is needed. Compose state, so the open window shows the question.
  */
-class SettingsCloseRequest {
+class SettingsQuestion {
 
-    /** Counts the requests, so the window can tell a new one from one already handled. */
-    var count by mutableStateOf(0)
+    /** What a shown question goes on with. */
+    class Asked(
+        /** Run after Apply or Discard; null means close the window, which is what the X wants. */
+        val then: (() -> Unit)?,
+        /**
+         * Why Apply cannot be offered: a field holds text it refuses. Discard and Back still
+         * work, so the operator is never trapped behind a field he only wants to get rid of.
+         */
+        val refusal: String?,
+    )
+
+    /** The question being shown, or null. */
+    var asking: Asked? by mutableStateOf(null)
+        private set
+
+    /** Counts the closes asked for with nothing to settle; the window closes on each. */
+    var closeRequests by mutableStateOf(0)
         private set
 
     /**
-     * What to do once the edits are settled -- applied, discarded, or there were none. Null
-     * closes the window, which is what the X asks for.
+     * Settles the pending edits of [draft]: runs [nothingPending] at once when nothing waits
+     * and no field refuses what it holds, and shows the question otherwise.
+     *
+     * While a question is shown a further request is ignored. Replacing its continuation would
+     * turn an exit the operator is being asked about into a mere close of the window -- or the
+     * other way round.
+     *
+     * @return true when a question is shown now
      */
-    var then: (() -> Unit)? = null
-        private set
+    fun settle(
+        draft: SettingsDraft,
+        notices: SettingsNotices,
+        then: (() -> Unit)?,
+        nothingPending: () -> Unit,
+    ): Boolean {
+        if (asking != null) return true
 
-    fun request(then: (() -> Unit)? = null) {
-        this.then = then
-        count++
+        val refusals = draft.commitTypedEntries()
+        // A refusal a field reported on its own focus loss is standing as the notice.
+        val standing = notices.current as? SettingsNotice.Problem
+        val refusal = refusals.takeIf { it.isNotEmpty() }?.joinToString("\n") ?: standing?.message
+
+        if (refusal == null && !draft.hasPendingChanges) {
+            nothingPending()
+            return false
+        }
+
+        // The reason moves into the question, so two dialogs do not stand on top of each other.
+        if (standing != null) notices.dismiss()
+        asking = Asked(then, refusal)
+        return true
     }
+
+    /** The X of the window: close when nothing waits, ask otherwise. */
+    fun settleClose(draft: SettingsDraft, notices: SettingsNotices) {
+        settle(draft, notices, then = null, nothingPending = { closeRequests++ })
+    }
+
+    /** The question was answered; called before acting on the answer. */
+    fun answered() {
+        asking = null
+    }
+}
+
+/**
+ * Wraps [action] so it runs at most once, however often it is invoked: a continuation of a
+ * profile switch or an exit must not run twice because a dialog was clicked twice.
+ */
+internal fun runOnce(action: Runnable): Runnable {
+    val ran = java.util.concurrent.atomic.AtomicBoolean(false)
+    return Runnable { if (ran.compareAndSet(false, true)) action.run() }
 }
 
 /**
@@ -171,7 +230,7 @@ object SettingsWindow {
     private class OpenWindow(
         val draft: SettingsDraft,
         val notices: SettingsNotices,
-        val request: SettingsCloseRequest,
+        val question: SettingsQuestion,
     )
 
     @Volatile
@@ -191,47 +250,37 @@ object SettingsWindow {
      */
     @JvmStatic
     fun requestClose() {
-        settle(onSettled = null, nothingPending = { host.close() })
+        val open = openWith
+        if (open == null || !host.isOpen) return
+        if (open.question.settle(open.draft, open.notices, then = null, nothingPending = { host.close() })) {
+            host.raise()
+        }
     }
 
     /**
      * Runs [action] once the window's pending edits are settled: at once when the window is
      * closed or nothing waits, otherwise after the operator chose Apply or Discard in the
      * window. Back cancels -- [action] never runs. For the profile switch and the exit, so
-     * that neither drops edits the operator has not decided about.
+     * that neither drops edits the operator has not decided about. While a question is
+     * already shown the request is ignored, see [SettingsQuestion.settle].
      *
-     * Must be called on the event thread, and never waits there: with something to ask it
-     * only raises the window and sets the question as Compose state. The action then runs
-     * from the dialog's callback, posted to the event queue, so whatever it opens -- the
-     * switch confirmation, the window teardown -- does not run inside the click handler.
+     * Must be called on the event thread, and never waits there. The decision is taken here
+     * and now; with something to ask the window is raised -- de-iconified if minimised, so it
+     * draws again -- and the question set as Compose state. The action then runs from the
+     * dialog's callback, posted to the event queue, so whatever it opens -- the switch
+     * confirmation, the window teardown -- does not run inside the click handler. It runs at
+     * most once.
      */
     @JvmStatic
     fun settleThen(action: Runnable) {
-        settle(onSettled = { EventQueue.invokeLater(action) }, nothingPending = action::run)
-    }
-
-    /*
-     * Commits what the fields hold first, here on the event thread: the window may be
-     * minimised, and a minimised window draws no frames, so a decision left to its next frame
-     * could wait for ever. Only when there really is something to ask -- or a refusal to
-     * show -- is the window raised and the request handed to it.
-     */
-    private fun settle(onSettled: (() -> Unit)?, nothingPending: () -> Unit) {
+        val once = runOnce(action)
         val open = openWith
         if (open == null || !host.isOpen) {
-            nothingPending()
+            once.run()
             return
         }
-
-        val accepted = typedEntriesAccepted(open.draft, open.notices)
-        if (accepted && !open.draft.hasPendingChanges) {
-            nothingPending()
-            return
-        }
-
-        host.raise()
-        if (accepted) {
-            open.request.request(onSettled)
+        if (open.question.settle(open.draft, open.notices, then = { EventQueue.invokeLater(once) }, nothingPending = once::run)) {
+            host.raise()
         }
     }
 
@@ -269,8 +318,8 @@ object SettingsWindow {
             return
         }
 
-        val closeRequest = SettingsCloseRequest()
-        openWith = OpenWindow(draft, notices, closeRequest)
+        val question = SettingsQuestion()
+        openWith = OpenWindow(draft, notices, question)
 
         host.show(
             title = { kst4contest.view.i18n.CurrentStrings.get().settingsWindowTitle },
@@ -281,9 +330,10 @@ object SettingsWindow {
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
-            onCloseRequest = closeRequest::request,
+            // The X is clicked in a window that is showing, so its frames run.
+            onCloseRequest = { question.settleClose(draft, notices) },
         ) { close ->
-            SettingsContent(tabs, notices, buttons, close, draft, closeRequest)
+            SettingsContent(tabs, notices, buttons, close, draft, question)
         }
     }
 }
@@ -291,8 +341,7 @@ object SettingsWindow {
 /**
  * @param draft the edits waiting to be applied. Provided to the tabs, so a field still holding
  *        a typed entry can be committed into it before an apply.
- * @param closeRequest the requests to settle the pending edits: closing the window, or going
- *        on with a profile switch or the exit
+ * @param question the question about the pending edits, and the closes asked for without one
  */
 @Composable
 internal fun SettingsContent(
@@ -301,27 +350,12 @@ internal fun SettingsContent(
     buttons: @Composable (close: () -> Unit) -> Unit,
     close: () -> Unit,
     draft: SettingsDraft = SettingsDraft(),
-    closeRequest: SettingsCloseRequest = SettingsCloseRequest(),
+    question: SettingsQuestion = SettingsQuestion(),
 ) {
     var selected by remember { mutableStateOf(0) }
-    /* What to do after the question, while it is asked; null while nothing is asked. */
-    var settledThen by remember { mutableStateOf<(() -> Unit)?>(null) }
-
-    /*
-     * A request is handled here, where the close action and the notices are. Fields still
-     * holding a typed entry are committed first, so an entry typed just before the X counts
-     * as pending. One the field refuses leaves everything as it is, with the reason shown.
-     */
-    val requests = closeRequest.count
-    LaunchedEffect(requests) {
-        if (requests == 0) return@LaunchedEffect
-
-        val proceed = closeRequest.then ?: close
-        when {
-            !typedEntriesAccepted(draft, notices) -> Unit
-            draft.hasPendingChanges -> settledThen = proceed
-            else -> proceed()
-        }
+    val closes = question.closeRequests
+    LaunchedEffect(closes) {
+        if (closes > 0) close()
     }
 
     CompositionLocalProvider(LocalSettingsDraft provides draft) {
@@ -373,19 +407,21 @@ internal fun SettingsContent(
         }
     }
 
-    settledThen?.let { proceed ->
+    question.asking?.let { asked ->
+        val proceed = asked.then ?: close
         PendingChangesDialog(
+            refusal = asked.refusal,
             onApply = {
-                settledThen = null
+                question.answered()
                 // A refusal or a failure stops here, with the reason shown; nothing goes on.
                 if (applyChecked(draft, notices)) proceed()
             },
             onDiscard = {
-                settledThen = null
+                question.answered()
                 draft.discard()
                 proceed()
             },
-            onBack = { settledThen = null },
+            onBack = { question.answered() },
         )
     }
 
@@ -407,19 +443,36 @@ internal fun SettingsContent(
 }
 
 /**
- * Asks what becomes of the edits not applied yet when the operator closes the window: apply
- * them, discard them, or go back to the window. Dismissing it goes back -- nothing is lost
- * by a stray click beside it.
+ * Asks what becomes of the edits not applied yet when the operator closes the window,
+ * switches the profile or exits: apply them, discard them, or go back to the window.
+ * Dismissing it goes back -- nothing is lost by a stray click beside it.
+ *
+ * @param refusal set when a field holds text it refuses: shown in the dialog, and Apply is
+ *        disabled. Discard and Back stay available, so a field the operator only wants to get
+ *        rid of never blocks the close, the switch or the exit.
  */
 @Composable
-internal fun PendingChangesDialog(onApply: () -> Unit, onDiscard: () -> Unit, onBack: () -> Unit) {
+internal fun PendingChangesDialog(
+    refusal: String?,
+    onApply: () -> Unit,
+    onDiscard: () -> Unit,
+    onBack: () -> Unit,
+) {
     val strings = LocalStrings.current
 
     AlertDialog(
         onDismissRequest = onBack,
         title = { Text(strings.settingsPendingTitle) },
-        text = { Text(strings.settingsPendingQuestion) },
-        confirmButton = { TextButton(onClick = onApply) { Text(strings.settingsPendingApply) } },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(strings.settingsPendingQuestion)
+                // Why Apply is not offered; Discard and Back still are.
+                refusal?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onApply, enabled = refusal == null) { Text(strings.settingsPendingApply) }
+        },
         dismissButton = {
             Row {
                 TextButton(onClick = onDiscard) { Text(strings.settingsPendingDiscard) }

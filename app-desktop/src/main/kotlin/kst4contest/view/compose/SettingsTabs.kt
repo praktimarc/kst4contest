@@ -308,8 +308,8 @@ private fun categoryName(category: kst4contest.model.ChatCategory?, fallback: St
  * "Save settings" applies and writes the file, and Connect applies before it connects: the
  * session would otherwise use the stored server or second-chat switch rather than the one
  * the tab shows. A field that refuses what it holds stops the button before anything is
- * applied, so the operator sees why instead of a closed window or a saved file, and can
- * still discard. A write or effect that fails is named in a problem notice.
+ * applied, so the operator sees why instead of a closed window or a saved file; the X still
+ * offers Discard. A write or effect that fails is reported in a problem notice.
  */
 fun settingsButtons(
     controller: ChatController,
@@ -350,8 +350,9 @@ fun settingsButtons(
 
 /**
  * Commits what the fields still hold and tells whether all of it was accepted. On a refusal
- * the reason is the notice on screen and nothing has been applied yet, so the operator can
- * still correct the field or discard everything.
+ * the reason is the notice on screen and nothing has been applied yet. The operator corrects
+ * the field, or discards everything through the window's X, whose question offers Discard
+ * even while a field refuses (see SettingsQuestion).
  *
  * A problem notice already standing counts as a refusal too. The click on a button can
  * itself take the focus from a field, which then commits -- and is refused, reporting it --
@@ -416,4 +417,4 @@ internal fun applyAndSave(draft: SettingsDraft, notices: SettingsNotices, save: 
 }
 
 private fun applyFailedText(outcome: ApplyOutcome): String =
-    kst4contest.view.i18n.CurrentStrings.get().settingsApplyFailed(outcome.failures.joinToString("\n"))
+    kst4contest.view.i18n.CurrentStrings.get().settingsApplyFailed(outcome.failures.joinToString("; "))

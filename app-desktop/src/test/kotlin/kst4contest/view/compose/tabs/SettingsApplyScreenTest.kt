@@ -1,6 +1,9 @@
 package kst4contest.view.compose.tabs
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.isDialog
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithText
@@ -11,7 +14,8 @@ import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.ChatPreferences
 import kst4contest.view.compose.Form
 import kst4contest.view.compose.Kst4ContestTheme
-import kst4contest.view.compose.SettingsCloseRequest
+import kst4contest.view.compose.SettingsQuestion
+import kst4contest.view.compose.runOnce
 import kst4contest.view.compose.SettingsContent
 import kst4contest.view.compose.SettingsDraft
 import kst4contest.view.compose.SettingsNotice
@@ -52,9 +56,15 @@ class SettingsApplyScreenTest {
         }
         val draft = SettingsDraft()
         val notices = SettingsNotices()
-        val closeRequest = SettingsCloseRequest()
+        val question = SettingsQuestion()
         var closed = false
         var restarts = 0
+
+        /** The title bar's X. */
+        fun x() = question.settleClose(draft, notices)
+
+        /** A profile switch or the exit, as SettingsWindow.settleThen hands it on. */
+        fun switchOrExit(action: () -> Unit) = question.settle(draft, notices, then = action, nothingPending = action)
         val state = BeaconTabState(
             prefs,
             draft,
@@ -89,7 +99,7 @@ class SettingsApplyScreenTest {
                     },
                     close = { w.closed = true },
                     draft = w.draft,
-                    closeRequest = w.closeRequest,
+                    question = w.question,
                 )
             }
         }
@@ -244,7 +254,7 @@ class SettingsApplyScreenTest {
         val w = Window()
         show(w)
 
-        runOnIdle { w.closeRequest.request() }
+        runOnIdle { w.x() }
         waitForIdle()
 
         assertTrue(w.closed)
@@ -256,7 +266,7 @@ class SettingsApplyScreenTest {
         show(w)
         toggle("Send the beacon in this category")
 
-        runOnIdle { w.closeRequest.request() }
+        runOnIdle { w.x() }
         awaitNode(inDialog(PENDING_QUESTION))
         assertFalse(w.closed, "the window closed without asking")
 
@@ -274,7 +284,7 @@ class SettingsApplyScreenTest {
         toggle("Send the beacon in this category")
         typeAndCommit("Interval in whole minutes", "9")
 
-        runOnIdle { w.closeRequest.request() }
+        runOnIdle { w.x() }
         awaitNode(inDialog("Discard")).performClick()
         awaitGone(inDialog(PENDING_QUESTION))
 
@@ -291,7 +301,7 @@ class SettingsApplyScreenTest {
         show(w)
         toggle("Send the beacon in this category")
 
-        runOnIdle { w.closeRequest.request() }
+        runOnIdle { w.x() }
         awaitNode(inDialog("Back to the settings")).performClick()
         awaitGone(inDialog(PENDING_QUESTION))
 
@@ -313,7 +323,7 @@ class SettingsApplyScreenTest {
         field.performTextReplacement("9")
         waitForIdle()
 
-        runOnIdle { w.closeRequest.request() }
+        runOnIdle { w.x() }
         awaitNode(inDialog(PENDING_QUESTION))
 
         assertFalse(w.closed)
@@ -326,18 +336,19 @@ class SettingsApplyScreenTest {
             lst_txtShortCutBtnList.setAll(listOf("MYQRG", "pse sked"))
         }
         val draft = SettingsDraft()
-        val closeRequest = SettingsCloseRequest()
+        val question = SettingsQuestion()
+        val notices = SettingsNotices()
         var closed = false
         val state = ShortcutsTabState(prefs, draft, { }, { })
         setContent {
             Kst4ContestTheme(darkMode = false, baseFontSizeSp = 12f) {
                 SettingsContent(
                     tabs = listOf(SettingsTab("Shortcuts") { ShortcutsTab(state) { } }),
-                    notices = SettingsNotices(),
+                    notices = notices,
                     buttons = { },
                     close = { closed = true },
                     draft = draft,
-                    closeRequest = closeRequest,
+                    question = question,
                 )
             }
         }
@@ -349,7 +360,7 @@ class SettingsApplyScreenTest {
         row.performTextReplacement("pse sked 432")
         waitForIdle()
 
-        runOnIdle { closeRequest.request() }
+        runOnIdle { question.settleClose(draft, notices) }
         awaitNode(inDialog("Apply")).performClick()
         awaitGone(inDialog(PENDING_QUESTION))
 
@@ -368,7 +379,7 @@ class SettingsApplyScreenTest {
         show(w)
         toggle("Send the beacon in this category")
 
-        runOnIdle { w.closeRequest.request { wentOn = true } }
+        runOnIdle { w.switchOrExit { wentOn = true } }
         awaitNode(inDialog("Apply")).performClick()
         awaitGone(inDialog(PENDING_QUESTION))
 
@@ -384,7 +395,7 @@ class SettingsApplyScreenTest {
         show(w)
         toggle("Send the beacon in this category")
 
-        runOnIdle { w.closeRequest.request { wentOn = true } }
+        runOnIdle { w.switchOrExit { wentOn = true } }
         awaitNode(inDialog("Back to the settings")).performClick()
         awaitGone(inDialog(PENDING_QUESTION))
 
@@ -399,7 +410,7 @@ class SettingsApplyScreenTest {
         show(w)
         toggle("Send the beacon in this category")
 
-        runOnIdle { w.closeRequest.request { wentOn = true } }
+        runOnIdle { w.switchOrExit { wentOn = true } }
         awaitNode(inDialog("Discard")).performClick()
         awaitGone(inDialog(PENDING_QUESTION))
 
@@ -414,7 +425,7 @@ class SettingsApplyScreenTest {
         show(w)
         toggle("Send the beacon in this category")
 
-        runOnIdle { w.closeRequest.request { wentOn = true } }
+        runOnIdle { w.switchOrExit { wentOn = true } }
         awaitNode(inDialog(PENDING_QUESTION))
         type("Server port", "23x")
         awaitNode(inDialog("Apply")).performClick()
@@ -430,11 +441,82 @@ class SettingsApplyScreenTest {
         var wentOn = false
         show(w)
 
-        runOnIdle { w.closeRequest.request { wentOn = true } }
+        runOnIdle { w.switchOrExit { wentOn = true } }
         waitForIdle()
 
         assertTrue(wentOn)
         assertFalse(w.closed)
+    }
+
+    /*
+     * An X while the exit or switch question is open must not replace its continuation:
+     * Apply would then only close the window, and the exit would be dropped without a word.
+     */
+    @Test
+    fun theXDoesNotReplaceAnOpenSwitchOrExitQuestion() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.switchOrExit { wentOn = true } }
+        awaitNode(inDialog(PENDING_QUESTION))
+        runOnIdle { w.x() }
+        awaitNode(inDialog("Apply")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertTrue(wentOn, "the exit or switch was dropped")
+        assertFalse(w.closed)
+    }
+
+    /*
+     * Invalid text in a field refuses Apply, but must not trap the operator: the question is
+     * shown anyway, with the reason, and Discard closes.
+     */
+    @Test
+    fun anInvalidFieldStillLetsTheXDiscard() = runComposeUiTest {
+        val w = Window()
+        show(w)
+        toggle("Send the beacon in this category")
+        type("Server port", "23x")
+
+        runOnIdle { w.x() }
+        awaitNode(inDialog(PENDING_QUESTION))
+        awaitNode(inDialog("Apply")).assertIsNotEnabled()
+        onNode(hasText("23x", substring = true) and hasAnyAncestor(isDialog())).assertExists()
+
+        awaitNode(inDialog("Discard")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertTrue(w.closed)
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat, "something was applied")
+    }
+
+    /* The same for a switch or the exit, even when only the invalid field is unsettled. */
+    @Test
+    fun anInvalidFieldStillLetsASwitchOrExitDiscard() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+        type("Server port", "23x")
+
+        runOnIdle { w.switchOrExit { wentOn = true } }
+        assertFalse(wentOn, "went on past a field that refuses its text")
+        awaitNode(inDialog("Discard")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertTrue(wentOn)
+    }
+
+    @Test
+    fun aContinuationRunsOnlyOnce() {
+        var runs = 0
+        val once = runOnce { runs++ }
+
+        once.run()
+        once.run()
+
+        assertEquals(1, runs)
     }
 
     /* Without a settings window there is nothing to ask: the action runs at once, synchronously. */

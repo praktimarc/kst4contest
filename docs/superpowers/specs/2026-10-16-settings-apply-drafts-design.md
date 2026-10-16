@@ -37,7 +37,9 @@ bearbeiten, dann anwenden oder verwerfen.
    gilt das als Abweisung: nichts wird angewendet, das Fenster bleibt offen, die Meldung nennt
    das Feld. Sonst ginge still der letzte gültige Wert in Kraft, den der Operateur nicht mehr
    sieht — und Verwerfen wäre nicht mehr möglich, weil die übrigen Änderungen schon wirkten.
-   Erst wenn kein Feld etwas abweist, wird angewendet.
+   Erst wenn kein Feld etwas abweist, wird angewendet. Damit ein solches Feld nicht
+   einsperrt, erscheint beim X, beim Profilwechsel und beim Beenden die Frage trotzdem: mit
+   dem Grund, Übernehmen gesperrt, Verwerfen und Zurück verfügbar.
 6. **Verbinden** wendet ebenfalls zuerst an. Sonst verbände der Knopf mit dem gespeicherten
    statt mit dem sichtbaren Serverport oder Zweitchat-Häkchen — der Operateur sieht den einen
    Wert und bekommt den anderen.
@@ -45,7 +47,9 @@ bearbeiten, dann anwenden oder verwerfen.
    (`SettingsWindow.settleThen`): Übernehmen wendet die Änderungen auf das **bisherige**
    Profil an — das, in dem sie gemacht wurden — und setzt den Wechsel bzw. das Beenden fort;
    Verwerfen setzt ohne sie fort; Zurück bricht Wechsel bzw. Beenden ab. Ohne offene
-   Änderungen geht es sofort und wie bisher weiter. Erst der anschließende Abbau
+   Änderungen geht es sofort und wie bisher weiter. Solange eine Frage offen ist, werden
+   weitere Anfragen ignoriert — ein X darf die Fortsetzung eines Beendens nicht durch ein
+   bloßes Schließen ersetzen —, und jede Fortsetzung läuft höchstens einmal. Erst der anschließende Abbau
    (`SettingsWindow.close`) und ein JVM-Shutdown-Hook verwerfen ohne Frage.
 8. **Scheitert beim Anwenden ein Schreibvorgang oder eine Wirkung**, laufen alle übrigen
    trotzdem; die Fehler stehen danach in einer Problem-Meldung, das Fenster bleibt offen. Eine
@@ -145,12 +149,14 @@ hätten.
 ## Fäden
 
 Alles läuft auf dem AWT-Ereignisfaden, wie bisher die sofortigen Änderungen: Knopfdruck,
-Dialogwahl, Menüeintrag. Gewartet wird dort nie. `requestClose` und `settleThen` übernehmen
-den getippten Text gleich auf dem Ereignisfaden — ein minimiertes Fenster zeichnet nicht, eine
-Entscheidung bis zum nächsten Bild könnte ewig warten — und gehen ohne offene Änderungen sofort
-weiter. Gibt es etwas zu fragen, heben sie das Fenster nach vorn und setzen nur einen Zustand;
-die Frage erscheint beim nächsten Bild, und die Fortsetzung (Wechsel, Beenden) läuft aus dem
-Rückruf des Dialogs, über `EventQueue.invokeLater`, nicht im Klick-Handler selbst.
+Dialogwahl, Menüeintrag. Gewartet wird dort nie. Die Entscheidung — weiter, fragen —
+fällt in `SettingsQuestion.settle` sofort auf dem Ereignisfaden, nicht im nächsten Bild des
+Einstellungsfensters: ob ein minimiertes Compose-Fenster weiter Bilder erzeugt, ist ohne
+laufende Oberfläche nicht prüfbar, und ein Beenden über das Hauptfenster darf davon nicht
+abhängen. Ohne offene Änderungen geht es sofort weiter. Gibt es etwas zu fragen, wird das
+Fenster nach vorn geholt und, falls minimiert, wiederhergestellt; erst danach braucht es ein
+Bild, nämlich für den Dialog. Die Fortsetzung (Wechsel, Beenden) läuft aus dem Rückruf des
+Dialogs, über `EventQueue.invokeLater`, nicht im Klick-Handler selbst.
 
 ## Prüfung
 
