@@ -3847,10 +3847,13 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		chatcontroller.getMessageTXBus().add(sendMe);
 	}
 
-	/** Options/Windows -> open or close the settings window. */
+	/**
+	 * Options/Windows -> open or close the settings window. Closing goes the way of the
+	 * window's own X, so edits not applied yet are asked about rather than dropped.
+	 */
 	void menuActionToggleSettingsWindow() {
 		if (SettingsWindow.isOpen()) {
-			SettingsWindow.close();
+			SettingsWindow.requestClose();
 		} else {
 			openSettingsWindow();
 		}

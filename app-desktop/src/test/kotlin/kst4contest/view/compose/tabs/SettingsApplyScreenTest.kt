@@ -1,6 +1,8 @@
 package kst4contest.view.compose.tabs
 
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -9,6 +11,7 @@ import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.ChatPreferences
 import kst4contest.view.compose.Form
 import kst4contest.view.compose.Kst4ContestTheme
+import kst4contest.view.compose.SettingsCloseRequest
 import kst4contest.view.compose.SettingsContent
 import kst4contest.view.compose.SettingsDraft
 import kst4contest.view.compose.SettingsNotice
@@ -16,6 +19,9 @@ import kst4contest.view.compose.SettingsNotices
 import kst4contest.view.compose.SettingsTab
 import kst4contest.view.compose.applyAndSave
 import kst4contest.view.compose.applyRefusing
+import kst4contest.view.compose.awaitGone
+import kst4contest.view.compose.awaitNode
+import kst4contest.view.compose.inDialog
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -25,7 +31,7 @@ import java.nio.file.Path
 
 /**
  * The settings window around its tabs: edits wait in the draft, Apply/Close applies them,
- * Save applies before it writes.
+ * Save applies before it writes, and the X asks about what is still waiting.
  *
  * Drawn with the Beacon tab because it has all three kinds of control that matter here: a
  * checkbox, a field that commits on Enter or focus loss, and an effect (the timer restart).
@@ -45,6 +51,7 @@ class SettingsApplyScreenTest {
         }
         val draft = SettingsDraft()
         val notices = SettingsNotices()
+        val closeRequest = SettingsCloseRequest()
         var closed = false
         var restarts = 0
         val state = BeaconTabState(
@@ -69,6 +76,7 @@ class SettingsApplyScreenTest {
                     },
                     close = { w.closed = true },
                     draft = w.draft,
+                    closeRequest = w.closeRequest,
                 )
             }
         }
@@ -139,6 +147,124 @@ class SettingsApplyScreenTest {
         assertTrue(w.notices.current is SettingsNotice.Problem)
     }
 
+    @Test
+    fun theXClosesAtOnceWhenNothingIsPending() = runComposeUiTest {
+        val w = Window()
+        show(w)
+
+        runOnIdle { w.closeRequest.request() }
+        waitForIdle()
+
+        assertTrue(w.closed)
+    }
+
+    @Test
+    fun theXAsksAboutPendingEditsAndApplyAppliesThem() = runComposeUiTest {
+        val w = Window()
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.closeRequest.request() }
+        awaitNode(inDialog(PENDING_QUESTION))
+        assertFalse(w.closed, "the window closed without asking")
+
+        awaitNode(inDialog("Apply")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertTrue(w.prefs.isBcn_beaconsEnabledMainCat)
+        assertTrue(w.closed)
+    }
+
+    @Test
+    fun discardingOnTheXChangesNothing() = runComposeUiTest {
+        val w = Window()
+        show(w)
+        toggle("Send the beacon in this category")
+        typeAndCommit("Interval in whole minutes", "9")
+
+        runOnIdle { w.closeRequest.request() }
+        awaitNode(inDialog("Discard")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat)
+        assertEquals(5, w.prefs.bcn_beaconIntervalInMinutesMainCat)
+        assertEquals(0, w.restarts)
+        assertTrue(w.closed)
+        assertFalse(w.draft.hasPendingChanges)
+    }
+
+    @Test
+    fun goingBackKeepsTheWindowAndTheEdits() = runComposeUiTest {
+        val w = Window()
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.closeRequest.request() }
+        awaitNode(inDialog("Back to the settings")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertFalse(w.closed)
+        assertTrue(w.draft.hasPendingChanges)
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat)
+        checkBeside("Send the beacon in this category").assertExists()
+    }
+
+    /* An entry typed just before the X counts as pending, although no Enter committed it. */
+    @Test
+    fun theXAsksAboutAnEntryStillInTheFocusedField() = runComposeUiTest {
+        val w = Window()
+        show(w)
+
+        val field = fieldBeside("Interval in whole minutes")
+        field.performScrollTo().performClick()
+        waitForIdle()
+        field.performTextReplacement("9")
+        waitForIdle()
+
+        runOnIdle { w.closeRequest.request() }
+        awaitNode(inDialog(PENDING_QUESTION))
+
+        assertFalse(w.closed)
+    }
+
+    /* A list row still being edited counts too: the lists commit a row on Enter or focus loss. */
+    @Test
+    fun theXAsksAboutARowStillBeingEdited() = runComposeUiTest {
+        val prefs = ChatPreferences(directory.resolve("preferences.xml")).apply {
+            lst_txtShortCutBtnList.setAll(listOf("MYQRG", "pse sked"))
+        }
+        val draft = SettingsDraft()
+        val closeRequest = SettingsCloseRequest()
+        var closed = false
+        val state = ShortcutsTabState(prefs, draft, { }, { })
+        setContent {
+            Kst4ContestTheme(darkMode = false, baseFontSizeSp = 12f) {
+                SettingsContent(
+                    tabs = listOf(SettingsTab("Shortcuts") { ShortcutsTab(state) { } }),
+                    notices = SettingsNotices(),
+                    buttons = { },
+                    close = { closed = true },
+                    draft = draft,
+                    closeRequest = closeRequest,
+                )
+            }
+        }
+        waitForIdle()
+
+        val row = onNode(hasSetTextAction() and hasText("pse sked"))
+        row.performScrollTo().performClick()
+        waitForIdle()
+        row.performTextReplacement("pse sked 432")
+        waitForIdle()
+
+        runOnIdle { closeRequest.request() }
+        awaitNode(inDialog("Apply")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertEquals(listOf("MYQRG", "pse sked 432"), prefs.lst_txtShortCutBtnList.snapshot())
+        assertTrue(closed)
+    }
+
     /* Save applies first, so the file holds what the window shows; the window stays open. */
     @Test
     fun saveAppliesBeforeItWrites() {
@@ -162,5 +288,7 @@ class SettingsApplyScreenTest {
 
     private companion object {
         const val APPLY_AND_CLOSE = "Apply/Close prefs"
+        const val PENDING_QUESTION =
+            "Some settings have been changed but not applied yet. Apply them before the window closes?"
     }
 }

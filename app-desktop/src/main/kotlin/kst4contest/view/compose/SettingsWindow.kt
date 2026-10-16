@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.HorizontalDivider
@@ -30,12 +31,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kst4contest.view.i18n.LocalStrings
 
 /**
  * One tab of the settings window: a title and the content to show.
@@ -106,6 +109,23 @@ class SettingsNotices {
 }
 
 /**
+ * A request to close the settings window, from outside its composition: the title bar's X
+ * and the Windows menu. The window decides what to do with it -- close, or ask about the
+ * edits not applied yet -- the next time it draws, which keeps the request itself free of
+ * any wait on the event thread.
+ */
+class SettingsCloseRequest {
+
+    /** Counts the requests, so the window can tell a new one from one already handled. */
+    var count by mutableStateOf(0)
+        private set
+
+    fun request() {
+        count++
+    }
+}
+
+/**
  * The settings window.
  *
  * Unlike the operator profile picker this window does **not** block: the operator keeps
@@ -113,7 +133,10 @@ class SettingsNotices {
  * most once — a second instance would let two windows write the same preferences
  * against each other.
  *
- * The controls stage their edits in a [SettingsDraft]; the button bar applies it.
+ * The controls stage their edits in a [SettingsDraft]; the button bar applies it. Closing
+ * the window while edits are waiting asks whether to apply or discard them. A close from
+ * outside -- a profile switch, the client shutting down -- discards them: the preferences
+ * they belong to are about to be replaced or dropped.
  */
 object SettingsWindow {
 
@@ -134,9 +157,30 @@ object SettingsWindow {
     @JvmStatic
     fun applyDarkMode(darkMode: Boolean) = host.applyDarkMode(darkMode)
 
-    /** Closes the window and waits for it to be gone; see ComposeWindowHost.close. */
+    /** The draft and the close request of the window that is open, if one is. */
+    @Volatile
+    private var openWith: Pair<SettingsDraft, SettingsCloseRequest>? = null
+
+    /**
+     * Closes the window and waits for it to be gone; see ComposeWindowHost.close. Edits not
+     * applied yet are discarded. For a close the operator did not ask for -- a profile switch,
+     * the shutdown; the operator's own close goes through [requestClose].
+     */
     @JvmStatic
     fun close() = host.close()
+
+    /**
+     * Closes the window the way its X does: at once when nothing waits to be applied,
+     * otherwise after asking. The window is raised first when there is something to ask, so
+     * the question is not hidden behind the main window.
+     */
+    @JvmStatic
+    fun requestClose() {
+        val (draft, request) = openWith ?: return
+        if (!host.isOpen) return
+        if (draft.hasPendingChanges) host.raise()
+        request.request()
+    }
 
     /**
      * @param draft the edits of this opening of the window; the tabs and the buttons were
@@ -172,6 +216,9 @@ object SettingsWindow {
             return
         }
 
+        val closeRequest = SettingsCloseRequest()
+        openWith = draft to closeRequest
+
         host.show(
             title = { kst4contest.view.i18n.CurrentStrings.get().settingsWindowTitle },
             darkMode = darkMode,
@@ -181,8 +228,9 @@ object SettingsWindow {
             widthDp = widthDp,
             heightDp = heightDp,
             onResized = onResized,
+            onCloseRequest = closeRequest::request,
         ) { close ->
-            SettingsContent(tabs, notices, buttons, close, draft)
+            SettingsContent(tabs, notices, buttons, close, draft, closeRequest)
         }
     }
 }
@@ -190,6 +238,7 @@ object SettingsWindow {
 /**
  * @param draft the edits waiting to be applied. Provided to the tabs, so a field still holding
  *        a typed entry can be committed into it before an apply.
+ * @param closeRequest the operator's requests to close the window, from its X or the menu
  */
 @Composable
 internal fun SettingsContent(
@@ -198,8 +247,29 @@ internal fun SettingsContent(
     buttons: @Composable (close: () -> Unit) -> Unit,
     close: () -> Unit,
     draft: SettingsDraft = SettingsDraft(),
+    closeRequest: SettingsCloseRequest = SettingsCloseRequest(),
 ) {
     var selected by remember { mutableStateOf(0) }
+    var askingAboutPending by remember { mutableStateOf(false) }
+
+    /*
+     * A close request is handled here, where the close action and the notices are. Fields
+     * still holding a typed entry are committed first, so an entry typed just before the X
+     * counts as pending. One the field refuses leaves the window open with the reason shown.
+     */
+    val requests = closeRequest.count
+    LaunchedEffect(requests) {
+        if (requests == 0) return@LaunchedEffect
+
+        val before = notices.current
+        draft.commitTypedEntries()
+        val now = notices.current
+        when {
+            now is SettingsNotice.Problem && now !== before -> Unit
+            draft.hasPendingChanges -> askingAboutPending = true
+            else -> close()
+        }
+    }
 
     CompositionLocalProvider(LocalSettingsDraft provides draft) {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -250,6 +320,22 @@ internal fun SettingsContent(
         }
     }
 
+    if (askingAboutPending) {
+        PendingChangesDialog(
+            onApply = {
+                askingAboutPending = false
+                draft.apply()
+                close()
+            },
+            onDiscard = {
+                askingAboutPending = false
+                draft.discard()
+                close()
+            },
+            onBack = { askingAboutPending = false },
+        )
+    }
+
     notices.current?.let { notice ->
         AlertDialog(
             onDismissRequest = notices::dismiss,
@@ -265,6 +351,29 @@ internal fun SettingsContent(
             confirmButton = { TextButton(onClick = notices::dismiss) { Text(kst4contest.view.i18n.LocalStrings.current.dialogOk) } },
         )
     }
+}
+
+/**
+ * Asks what becomes of the edits not applied yet when the operator closes the window: apply
+ * them, discard them, or go back to the window. Dismissing it goes back -- nothing is lost
+ * by a stray click beside it.
+ */
+@Composable
+internal fun PendingChangesDialog(onApply: () -> Unit, onDiscard: () -> Unit, onBack: () -> Unit) {
+    val strings = LocalStrings.current
+
+    AlertDialog(
+        onDismissRequest = onBack,
+        title = { Text(strings.settingsPendingTitle) },
+        text = { Text(strings.settingsPendingQuestion) },
+        confirmButton = { TextButton(onClick = onApply) { Text(strings.settingsPendingApply) } },
+        dismissButton = {
+            Row {
+                TextButton(onClick = onDiscard) { Text(strings.settingsPendingDiscard) }
+                TextButton(onClick = onBack) { Text(strings.settingsPendingBack) }
+            }
+        },
+    )
 }
 
 /**
