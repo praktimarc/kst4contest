@@ -5,6 +5,9 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.SettingsContent
+import kst4contest.view.compose.SettingsNotices
+import kst4contest.view.compose.SettingsTab
 import kst4contest.view.compose.StationColumns
 import kst4contest.view.compose.tabs.BeaconTabState
 import kst4contest.view.compose.tabs.GuiOptionsTab
@@ -74,6 +77,44 @@ class RemainingTextsFollowTheLanguageTest {
             )
         } finally {
             // use() also sets the JVM-wide CurrentStrings; leave the next test the base language.
+            runOnIdle { store.use("en") }
+        }
+    }
+
+    /**
+     * The settings window's notice: its title is read in the composition, its message is
+     * produced outside one by the save action -- the same split as above, one window further.
+     */
+    @Test
+    fun theSettingsNoticeFollowsTheLanguage() = runComposeUiTest {
+        var stored = "en"
+        val store = LanguageStore({ stored }, { stored = it }, Locale.UK)
+        val notices = SettingsNotices()
+
+        setContent {
+            CompositionLocalProvider(LocalStrings provides store.strings) {
+                SettingsContent(
+                    tabs = listOf(SettingsTab("Tab") {}),
+                    notices = notices,
+                    buttons = {},
+                    close = {},
+                )
+            }
+        }
+
+        try {
+            runOnIdle {
+                store.use("de")
+                notices.problem(CurrentStrings.get().settingsWriteFailed)
+            }
+            waitForIdle()
+
+            onNodeWithText("Einstellungen").assertExists()
+            onNodeWithText(
+                "Die Konfigurationsdatei konnte nicht geschrieben werden. " +
+                    "Die Einstellungen bleiben für diese Sitzung aktiv.",
+            ).assertExists()
+        } finally {
             runOnIdle { store.use("en") }
         }
     }

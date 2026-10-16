@@ -58,7 +58,7 @@ class ProfilesTabState(
     }
 
     val activeProfileName: String
-        get() = activeSelection()?.profile?.displayName ?: "unknown"
+        get() = activeSelection()?.profile?.displayName ?: CurrentStrings.get().profilesUnknown
 
     val preferencesPath: String
         get() = activeSelection()?.preferencesAbsolutePath ?: ""
@@ -120,7 +120,7 @@ class ProfilesTabState(
 
     /** The suggested name of a duplicate, the one the JavaFX dialog pre-filled. */
     fun duplicateNameSuggestion(): String =
-        selected?.let { "Copy of " + it.displayName } ?: ""
+        selected?.let { CurrentStrings.get().profilesCopyOf(it.displayName) } ?: ""
 
     fun renameSelected(name: String): ProfileNotice? {
         val profile = selected ?: return notASelection()
@@ -218,9 +218,9 @@ class ProfilesTabState(
          */
         fun describeWorkedDataMode(profile: OperatorProfile): String =
             if (profile.isRootProfile || profile.isSharedWorkedDatabase) {
-                "common station database"
+                CurrentStrings.get().profilesSharedDatabase
             } else {
-                "own database"
+                CurrentStrings.get().profilesOwnDatabase
             }
 
         /** Blank for a profile never used, rather than an epoch date. */

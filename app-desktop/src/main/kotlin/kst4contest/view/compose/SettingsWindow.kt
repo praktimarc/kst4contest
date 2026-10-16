@@ -165,7 +165,7 @@ object SettingsWindow {
         buttons: @Composable (close: () -> Unit) -> Unit,
     ) {
         host.show(
-            title = { "Change Client Settings" },
+            title = { kst4contest.view.i18n.CurrentStrings.get().settingsWindowTitle },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
@@ -241,8 +241,8 @@ internal fun SettingsContent(
             title = {
                 Text(
                     when (notice) {
-                        is SettingsNotice.Info -> "Info"
-                        is SettingsNotice.Problem -> "Settings"
+                        is SettingsNotice.Info -> kst4contest.view.i18n.LocalStrings.current.settingsNoticeInfo
+                        is SettingsNotice.Problem -> kst4contest.view.i18n.LocalStrings.current.settingsNoticeProblem
                     }
                 )
             },
