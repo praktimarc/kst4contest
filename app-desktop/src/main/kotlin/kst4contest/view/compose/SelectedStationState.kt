@@ -57,8 +57,9 @@ enum class SelectedMessageFilter(val label: String) {
  * @param turnAntennaTo turns the antenna to an azimuth in degrees, which is what
  *        `ChatController.rotateTo` does; null where no rotator can be driven
  * @param turnSecondAntennaTo the same for antenna 2 (rotator 2); null where it cannot be driven
- * @param secondAntennaOffered whether SO2R with rotator 2 is configured right now; read on
- *        every draw, so Apply shows the button without a restart
+ * @param secondAntennaOffered whether SO2R with rotator 2 is configured right now; called on
+ *        every draw, so the supplied lambda has to read Compose state for the button to
+ *        follow a settings Apply
  */
 class SelectedStationState(
     private val propagateNotQrv: (ChatMember) -> Unit,
@@ -121,9 +122,11 @@ class SelectedStationState(
         if (heading.isFinite()) turnAntennaTo?.invoke(heading)
     }
 
+    /** SO2R with rotator 2 is configured, so the second turn button is offered at all. */
     val showsSecondAntenna: Boolean
         get() = turnSecondAntennaTo != null && secondAntennaOffered()
 
+    /** Needs the button to be offered and a finite heading to the selected station. */
     val canTurnSecondAntenna: Boolean
         get() = showsSecondAntenna && selected?.getQTFdirection()?.isFinite() == true
 

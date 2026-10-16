@@ -62,6 +62,7 @@ class ChatInputRowSo2rScreenTest {
 
         onAllNodesWithText("270.0").assertCountEquals(0)
         so2r = true
+        waitForIdle()
         onNodeWithText("270.0").assertExists()
         onNodeWithText("270.0").assertIsNotEnabled()
     }

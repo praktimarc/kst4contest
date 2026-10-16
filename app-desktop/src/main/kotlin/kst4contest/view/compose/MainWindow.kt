@@ -206,7 +206,7 @@ private fun MessageColumn(
                     ownQrgSecond = state.ownQrgSecond,
                     antennaQtf = state.antennaQtf,
                     antennaQtf2 = state.antennaQtf2,
-                    so2rEnabled = state.prefs.isTrxSynch_so2rEnabled(),
+                    so2rEnabled = state.surroundings.so2rEnabled,
                     modifier = Modifier.fillMaxWidth(),
                 )
             },

@@ -3099,6 +3099,9 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 		MainMenuState menu = new MainMenuState();
 		MainWindowSurroundings surroundings = new MainWindowSurroundings(menu);
+		surroundings.setSo2rEnabled(chatcontroller.getChatPreferences().isTrxSynch_so2rEnabled());
+		surroundings.setSecondAntennaOffered(chatcontroller.getChatPreferences().isTrxSynch_so2rEnabled()
+				&& chatcontroller.getChatPreferences().isStn_pstRotator2Enabled());
 
 		SelectedStationState selectedStation = new SelectedStationState(
 				member -> {
@@ -3171,8 +3174,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					chatcontroller.rotateTo(kst4contest.controller.RadioSlot.SECOND, azimuth);
 					return kotlin.Unit.INSTANCE;
 				},
-				() -> chatcontroller.getChatPreferences().isTrxSynch_so2rEnabled()
-						&& chatcontroller.getChatPreferences().isStn_pstRotator2Enabled());
+				surroundings::getSecondAntennaOffered);
 
 		if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToMe()) {
 			selectedStation.setMessageFilter(SelectedMessageFilter.PM_TO_ME);
@@ -4008,6 +4010,19 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 * The Compose settings still call this through the shared interface, and an empty body
 	 * is honest about there being nothing to do.</p>
 	 */
+	@Override
+	public void refreshSo2rState() {
+		runOnUi(() -> {
+			if (composeMainWindowState == null) {
+				return;
+			}
+			kst4contest.model.ChatPreferences preferences = chatcontroller.getChatPreferences();
+			MainWindowSurroundings target = composeMainWindowState.getSurroundings();
+			target.setSo2rEnabled(preferences.isTrxSynch_so2rEnabled());
+			target.setSecondAntennaOffered(preferences.isTrxSynch_so2rEnabled() && preferences.isStn_pstRotator2Enabled());
+		});
+	}
+
 	@Override
 	public void applyOwnQrgFollower(boolean enabled) {
 		// intentionally empty: no JavaFX text field left to follow

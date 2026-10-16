@@ -163,4 +163,13 @@ class MainWindowSurroundings(private val menu: MainMenuState = MainMenuState()) 
     var settingsWindowOpen: Boolean by mutableStateOf(false)
 
     var monitorWindowOpen: Boolean by mutableStateOf(false)
+
+    /**
+     * Whether SO2R is switched on. Compose state, because the preference is not: the
+     * application pushes the stored value in at start-up and after every settings Apply.
+     */
+    var so2rEnabled: Boolean by mutableStateOf(false)
+
+    /** SO2R with rotator 2 enabled, i.e. antenna 2 can be turned; pushed in like [so2rEnabled]. */
+    var secondAntennaOffered: Boolean by mutableStateOf(false)
 }

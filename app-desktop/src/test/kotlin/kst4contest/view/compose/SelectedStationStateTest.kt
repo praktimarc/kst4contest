@@ -296,4 +296,20 @@ class SelectedStationStateTest {
         assertTrue(state.showsSecondAntenna)
         assertFalse(state.canTurnSecondAntenna)
     }
+
+    @Test
+    fun `antenna 2 offer follows the surroundings flag without a new selection`() {
+        val surroundings = MainWindowSurroundings()
+        val state = SelectedStationState(
+            propagateNotQrv = { },
+            createSked = { _, _, _, _ -> true },
+            turnSecondAntennaTo = { },
+            secondAntennaOffered = { surroundings.secondAntennaOffered },
+        )
+        state.select(member("DL1ABC"))
+
+        assertFalse(state.showsSecondAntenna)
+        surroundings.secondAntennaOffered = true
+        assertTrue(state.showsSecondAntenna)
+    }
 }
