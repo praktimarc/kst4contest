@@ -48,11 +48,19 @@ fun StationFilterBar(
         modifier = modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 1.dp),
         verticalArrangement = Arrangement.spacedBy(1.dp),
     ) {
-        // ROW 1: Reset | QRB max + min | QTF + bearings
-        Row(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+        /*
+         * ROW 1: Reset | QRB max + min | QTF | bearings
+         *
+         * It wraps (#21): with both QRB filters the line no longer fits a narrow station
+         * pane, and a plain row cut the bearing buttons off at the right edge. Each group
+         * stays together on its line; only the QRB pair and the bearings may break up
+         * inside their group when even that group is wider than the pane.
+         */
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
         ) {
             // Reset filters
             FilterButton(strings.filterReset, on = false, isAccent = true) {
@@ -60,89 +68,105 @@ fun StationFilterBar(
                 onChanged()
             }
 
-            VerticalSeparator()
-
-            // QRB checkbox + field
-            CompactCheckbox(
-                checked = filters.maxQrbEnabled,
-                onCheckedChange = {
-                    filters.maxQrbEnabled = it
-                    onChanged()
-                },
-            )
-            Text(strings.filterShowOnlyQrb, style = MaterialTheme.typography.bodySmall)
-            CompactTextField(
-                value = if (filters.maxQrbKm.rem(1) == 0.0) filters.maxQrbKm.toInt().toString() else filters.maxQrbKm.toString(),
-                onValueChange = {
-                    val parsed = it.toDoubleOrNull()
-                    if (parsed != null) {
-                        filters.maxQrbKm = parsed
-                        if (filters.maxQrbEnabled) onChanged()
-                    } else if (it.isEmpty()) {
-                        filters.maxQrbKm = 0.0
-                        if (filters.maxQrbEnabled) onChanged()
+            // QRB maximum + minimum (#21): together they make a range, so they stay one group
+            FilterGroup {
+                GroupSeparator()
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(1.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilterGroup {
+                        CompactCheckbox(
+                            checked = filters.maxQrbEnabled,
+                            onCheckedChange = {
+                                filters.maxQrbEnabled = it
+                                onChanged()
+                            },
+                        )
+                        Text(strings.filterShowOnlyQrb, style = MaterialTheme.typography.bodySmall)
+                        CompactTextField(
+                            value = if (filters.maxQrbKm.rem(1) == 0.0) filters.maxQrbKm.toInt().toString() else filters.maxQrbKm.toString(),
+                            onValueChange = {
+                                val parsed = it.toDoubleOrNull()
+                                if (parsed != null) {
+                                    filters.maxQrbKm = parsed
+                                    if (filters.maxQrbEnabled) onChanged()
+                                } else if (it.isEmpty()) {
+                                    filters.maxQrbKm = 0.0
+                                    if (filters.maxQrbEnabled) onChanged()
+                                }
+                            },
+                            modifier = Modifier.width(50.dp)
+                        )
                     }
-                },
-                modifier = Modifier.width(50.dp)
-            )
-
-            // Minimum QRB checkbox + field (#21); together with the one above a range
-            CompactCheckbox(
-                checked = filters.minQrbEnabled,
-                onCheckedChange = {
-                    filters.minQrbEnabled = it
-                    onChanged()
-                },
-            )
-            Text(strings.filterShowOnlyQrbAbove, style = MaterialTheme.typography.bodySmall)
-            CompactTextField(
-                value = if (filters.minQrbKm.rem(1) == 0.0) filters.minQrbKm.toInt().toString() else filters.minQrbKm.toString(),
-                onValueChange = {
-                    val parsed = it.toDoubleOrNull()
-                    if (parsed != null) {
-                        filters.minQrbKm = parsed
-                        if (filters.minQrbEnabled) onChanged()
-                    } else if (it.isEmpty()) {
-                        filters.minQrbKm = 0.0
-                        if (filters.minQrbEnabled) onChanged()
+                    FilterGroup {
+                        CompactCheckbox(
+                            checked = filters.minQrbEnabled,
+                            onCheckedChange = {
+                                filters.minQrbEnabled = it
+                                onChanged()
+                            },
+                        )
+                        Text(strings.filterShowOnlyQrbAbove, style = MaterialTheme.typography.bodySmall)
+                        CompactTextField(
+                            value = if (filters.minQrbKm.rem(1) == 0.0) filters.minQrbKm.toInt().toString() else filters.minQrbKm.toString(),
+                            onValueChange = {
+                                val parsed = it.toDoubleOrNull()
+                                if (parsed != null) {
+                                    filters.minQrbKm = parsed
+                                    if (filters.minQrbEnabled) onChanged()
+                                } else if (it.isEmpty()) {
+                                    filters.minQrbKm = 0.0
+                                    if (filters.minQrbEnabled) onChanged()
+                                }
+                            },
+                            modifier = Modifier.width(50.dp)
+                        )
                     }
-                },
-                modifier = Modifier.width(50.dp)
-            )
+                }
+            }
 
-            VerticalSeparator()
+            // QTF checkbox + field
+            FilterGroup {
+                GroupSeparator()
+                CompactCheckbox(
+                    checked = filters.qtfEnabled,
+                    onCheckedChange = {
+                        filters.qtfEnabled = it
+                        onChanged()
+                    },
+                )
+                Text(strings.filterShowOnlyQtf, style = MaterialTheme.typography.bodySmall)
+                CompactTextField(
+                    value = if (filters.qtfDegrees.rem(1) == 0.0) filters.qtfDegrees.toInt().toString() else filters.qtfDegrees.toString(),
+                    onValueChange = {
+                        val parsed = it.toDoubleOrNull()
+                        if (parsed != null) {
+                            filters.qtfDegrees = parsed
+                            filters.bearing = null
+                            if (filters.qtfEnabled) onChanged()
+                        } else if (it.isEmpty()) {
+                            filters.qtfDegrees = 0.0
+                            filters.bearing = null
+                            if (filters.qtfEnabled) onChanged()
+                        }
+                    },
+                    modifier = Modifier.width(50.dp)
+                )
+                Text("± BW/2", style = MaterialTheme.typography.bodySmall)
+            }
 
-            // QTF checkbox + field + bearings
-            CompactCheckbox(
-                checked = filters.qtfEnabled,
-                onCheckedChange = {
-                    filters.qtfEnabled = it
-                    onChanged()
-                },
-            )
-            Text(strings.filterShowOnlyQtf, style = MaterialTheme.typography.bodySmall)
-            CompactTextField(
-                value = if (filters.qtfDegrees.rem(1) == 0.0) filters.qtfDegrees.toInt().toString() else filters.qtfDegrees.toString(),
-                onValueChange = {
-                    val parsed = it.toDoubleOrNull()
-                    if (parsed != null) {
-                        filters.qtfDegrees = parsed
-                        filters.bearing = null
-                        if (filters.qtfEnabled) onChanged()
-                    } else if (it.isEmpty()) {
-                        filters.qtfDegrees = 0.0
-                        filters.bearing = null
-                        if (filters.qtfEnabled) onChanged()
+            // Bearings
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(1.dp),
+            ) {
+                Bearing.entries.forEach { bearing ->
+                    FilterButton(bearing.name, on = filters.bearing == bearing) {
+                        filters.toggleBearing(bearing)
+                        onChanged()
                     }
-                },
-                modifier = Modifier.width(50.dp)
-            )
-            Text("± BW/2", style = MaterialTheme.typography.bodySmall)
-
-            Bearing.entries.forEach { bearing ->
-                FilterButton(bearing.name, on = filters.bearing == bearing) {
-                    filters.toggleBearing(bearing)
-                    onChanged()
                 }
             }
         }
@@ -257,6 +281,31 @@ private fun FilterButton(label: String, on: Boolean, isAccent: Boolean = false, 
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = fg, maxLines = 1)
     }
+}
+
+/** Controls that belong together and move to the next line of a wrapping row as one. */
+@Composable
+private fun FilterGroup(content: @Composable () -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        content()
+    }
+}
+
+/**
+ * The group divider for a wrapping row. A fixed height, because [VerticalSeparator] fills
+ * the row's intrinsic height, which a line of a flow row does not offer.
+ */
+@Composable
+private fun GroupSeparator() {
+    Box(
+        modifier = Modifier
+            .width(Density.HAIRLINE)
+            .height(18.dp)
+            .background(MaterialTheme.colorScheme.outline),
+    )
 }
 
 /** Thin vertical separator matching JavaFX's group dividers. */

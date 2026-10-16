@@ -1,13 +1,18 @@
 package kst4contest.view.compose
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.ui.unit.dp
 import kst4contest.model.Band
 import kst4contest.view.compose.tabs.checkBeside
 import kst4contest.view.compose.tabs.fieldBeside
@@ -96,5 +101,39 @@ class StationFilterBarScreenTest {
 
         checkBeside(minLabel).assertIsOff()
         assertFalse(bar.filters.minQrbEnabled)
+    }
+
+    /**
+     * The first row used to be a plain row: with both QRB filters in it, a narrow station
+     * pane cut the bearing buttons off at the right edge. It wraps now, and every control
+     * has to stay on screen.
+     */
+    @Test
+    fun aNarrowBarWrapsInsteadOfCuttingControlsOff() = runComposeUiTest {
+        val filters = StationFilterState()
+        val width = 300.dp
+        setContent {
+            Kst4ContestTheme(darkMode = false, baseFontSizeSp = 12f) {
+                Box(Modifier.width(width)) {
+                    StationFilterBar(filters = filters, activeBands = EnumSet.of(Band.B_144), onChanged = {})
+                }
+            }
+        }
+        waitForIdle()
+
+        val limit = with(density) { width.toPx() }
+        val controls = Bearing.entries.map { onNodeWithText(it.name) } +
+            listOf(
+                onNodeWithText(maxLabel),
+                onNodeWithText(minLabel),
+                onNodeWithText("Show only QTF:"),
+                fieldBeside(maxLabel),
+                fieldBeside(minLabel),
+            )
+        controls.forEach { node ->
+            node.assertIsDisplayed()
+            val right = node.fetchSemanticsNode().boundsInRoot.right
+            assertTrue(right <= limit + 0.5f, "a control ends at $right px, beyond the $limit px wide bar")
+        }
     }
 }
