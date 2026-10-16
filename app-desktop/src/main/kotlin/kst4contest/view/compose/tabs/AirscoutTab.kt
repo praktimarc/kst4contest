@@ -16,8 +16,8 @@ import kst4contest.view.compose.Form
 /**
  * The Airscout tab: the UDP link to AirScout and how the queried frequency is chosen.
  *
- * Labels, defaults and the closing note are the JavaFX ones, including that the server
- * identifier, the client identifier and the frequency mode take effect at once while a
+ * Labels and defaults are the JavaFX ones. The closing note says that the server
+ * identifier, the client identifier and the frequency mode take effect when applied while a
  * changed UDP port needs a reconnect.
  *
  * The identifier, port and band fields keep what the operator typed and mark it as an

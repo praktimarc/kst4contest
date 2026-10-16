@@ -4,6 +4,8 @@ import kst4contest.model.Band
 import kst4contest.model.ChatMember
 import kst4contest.model.ChatPreferences
 import kst4contest.observe.SimpleRoster
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -16,25 +18,99 @@ import java.nio.file.Path
 
 class NotificationTabStateTest(@TempDir private val tempDir: Path) {
 
-    private inner class Session {
+    /*
+     * The rules are pinned with a draft that applies at once; what the draft changes is
+     * pinned by the tests that pass a real one.
+     */
+    private inner class Session(val draft: SettingsDraft = ImmediateDraft()) {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val monitored = SimpleRoster<String>()
-        var serverEnabledApplied: Boolean? = null
-        var portApplied: Int? = null
+        var serverApplies = 0
+        var enabledAtApply: Boolean? = null
+        var portAtApply: Int? = null
         var spotSent: ChatMember? = null
         var spotRefusal: String? = null
 
         fun state() = NotificationTabState(
             prefs,
+            draft,
             monitored,
-            applyDxClusterServerEnabled = { serverEnabledApplied = it },
-            applyDxClusterServerPort = { portApplied = it },
+            applyDxClusterServer = {
+                serverApplies++
+                enabledAtApply = prefs.isNotify_dxClusterServerEnabled()
+                portAtApply = prefs.getNotify_dxclusterServerPort()
+            },
             broadcastTestSpot = { spotSent = it; spotRefusal },
         )
     }
 
     @Test
-    fun `the sound settings read from and write to the preferences at once`() {
+    fun `an edit waits for apply, and discarding drops it`() {
+        val s = Session(SettingsDraft())
+        s.prefs.setNotify_playSimpleSounds(true)
+        val state = s.state()
+
+        state.notify_playSimpleSounds = false
+        state.notify_optionalFrequencyPrefix = Band.B_432
+        assertNull(state.commitSpotterCallSign("DO5AMF"))
+
+        assertTrue(s.prefs.isNotify_playSimpleSounds(), "an edit took effect before Apply")
+        assertFalse(state.notify_playSimpleSounds, "the tab shows the edit")
+        assertEquals("DO5AMF", state.notify_DXCSrv_SpottersCallSign)
+
+        s.draft.discard()
+        assertTrue(s.prefs.isNotify_playSimpleSounds())
+        assertTrue(state.notify_playSimpleSounds)
+
+        state.notify_playSimpleSounds = false
+        s.draft.apply()
+        assertFalse(s.prefs.isNotify_playSimpleSounds())
+    }
+
+    @Test
+    fun `the server is touched on apply only, and once for switch and port together`() {
+        val s = Session(SettingsDraft())
+        s.prefs.setNotify_dxClusterServerEnabled(false)
+        s.prefs.setNotify_dxclusterServerPort(8000)
+        val state = s.state()
+
+        state.enableDxClusterServer(true)
+        assertNull(state.commitDxClusterServerPort("7300"))
+        assertEquals(0, s.serverApplies, "the server moved before Apply")
+
+        s.draft.apply()
+
+        assertEquals(1, s.serverApplies, "two restarts in a row can fail on the port")
+        assertEquals(true, s.enabledAtApply)
+        assertEquals(7300, s.portAtApply, "the server must come up on the new port")
+    }
+
+    @Test
+    fun `the monitoring list reaches the roster on apply`() {
+        val s = Session(SettingsDraft())
+        val state = s.state()
+
+        assertNull(state.addMonitoredCallSign("DN9APW"))
+        assertTrue(s.monitored.snapshot().isEmpty(), "the list took effect before Apply")
+        assertTrue(s.draft.hasPendingChanges)
+
+        s.draft.apply()
+        assertEquals(listOf("DN9APW"), s.monitored.snapshot())
+    }
+
+    @Test
+    fun `the test spot is an action and needs no apply`() {
+        val s = Session(SettingsDraft())
+        val state = s.state()
+
+        assertNull(state.sendTestSpot())
+
+        assertNotNull(s.spotSent)
+        assertFalse(s.draft.hasPendingChanges)
+    }
+
+    @Test
+    fun `the sound settings read from and write to the preferences`() {
         val s = Session()
         s.prefs.setNotify_playSimpleSounds(true)
         val state = s.state()
@@ -51,7 +127,7 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `the band-upgrade hints write through`() {
+    fun `the band-upgrade hints reach the preferences`() {
         val s = Session()
         val state = s.state()
 
@@ -65,12 +141,13 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
     @Test
     fun `enabling the DX cluster server also tells the running session`() {
         val s = Session()
+        s.prefs.setNotify_dxClusterServerEnabled(false)
         val state = s.state()
 
         state.enableDxClusterServer(true)
 
         assertTrue(s.prefs.isNotify_dxClusterServerEnabled())
-        assertEquals(true, s.serverEnabledApplied,
+        assertEquals(true, s.enabledAtApply,
             "the JavaFX checkbox started or stopped the server as well, and the "
                 + "settings coverage test cannot see that call")
     }
@@ -83,7 +160,7 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
         assertNull(state.commitDxClusterServerPort("7300"))
 
         assertEquals(7300, s.prefs.getNotify_dxclusterServerPort())
-        assertEquals(7300, s.portApplied)
+        assertEquals(7300, s.portAtApply)
     }
 
     @Test
@@ -96,7 +173,7 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
 
         assertNotNull(refusal, "the JavaFX field alerted and restored the previous port")
         assertEquals(8000, s.prefs.getNotify_dxclusterServerPort())
-        assertNull(s.portApplied, "an refused port must not restart the server")
+        assertEquals(0, s.serverApplies, "an refused port must not restart the server")
     }
 
     @Test
@@ -117,7 +194,7 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
 
         assertNull(state.commitDxClusterServerPort("8000"))
 
-        assertNull(s.portApplied,
+        assertEquals(0, s.serverApplies,
             "the JavaFX field only restarted the server when the port actually changed")
     }
 
@@ -155,15 +232,15 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `an unsupported stored prefix falls back to 144 and is written back`() {
-        val s = Session()
+    fun `an unsupported stored prefix is shown as 144 without writing anything`() {
+        val s = Session(SettingsDraft())
         s.prefs.setNotify_optionalFrequencyPrefix("4711")
 
         val state = s.state()
 
         assertEquals(Band.B_144, state.notify_optionalFrequencyPrefix)
-        assertEquals("144", s.prefs.getNotify_optionalFrequencyPrefix().get(),
-            "the JavaFX window repaired the stored value the same way")
+        assertEquals("4711", s.prefs.getNotify_optionalFrequencyPrefix().get(),
+            "reading the tab wrote the preferences; repairStoredSettings does that, once")
     }
 
     @Test
@@ -184,7 +261,7 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
         assertEquals(listOf("DN9APW"), state.monitoredCallSigns.texts,
             "monitoring works on the base call, so every SSID maps to the same entry")
         assertEquals(listOf("DN9APW"), s.monitored.snapshot(),
-            "the JavaFX button added to the roster at once")
+            "applied, the roster holds the entry")
     }
 
     @Test

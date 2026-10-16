@@ -1,12 +1,14 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.SettingsDraft
+import kst4contest.view.compose.setting
 
 /**
  * The TRX synch tab as a typed facade over ChatPreferences.
  *
- * Every property writes through immediately and there is deliberately no apply(), the
- * way the JavaFX controls behaved.
+ * Edits are staged in the window's [SettingsDraft] and take effect when the operator
+ * applies them.
  *
  * The tab carries the two sources that may update the own QRG. Both live under the
  * logsynch_ and trxSynch_ prefixes, but the JavaFX window put both controls on this
@@ -19,33 +21,37 @@ import kst4contest.model.ChatPreferences
  * cannot read a checked box as "my QRG is being kept current".
  *
  * @param applyOwnQrgFollower attaches the own-QRG follower when any source is enabled
- *   and detaches it otherwise; maps to attachOwnQrgFollower()/detachOwnQrgFollower()
+ *   and detaches it otherwise, once per apply however many sources changed; maps to attachOwnQrgFollower()/detachOwnQrgFollower()
  *   plus the tooltip on the own-QRG field. Not a ChatPreferences setter, so no coverage
  *   test can see it, and passed in so the rules stay testable without a controller.
  */
 class TrxSynchTabState(
     private val prefs: ChatPreferences,
+    private val draft: SettingsDraft,
     private val applyOwnQrgFollower: (Boolean) -> Unit,
 ) {
 
-    var trxSynch_ucxLogUDPListenerEnabled: Boolean
-        get() = prefs.isTrxSynch_ucxLogUDPListenerEnabled()
-        set(value) {
-            prefs.setTrxSynch_ucxLogUDPListenerEnabled(value)
-            applyOwnQrgFollower(anyQrgSourceEnabled)
-        }
+    var trxSynch_ucxLogUDPListenerEnabled: Boolean by draft.setting(
+        { prefs.isTrxSynch_ucxLogUDPListenerEnabled() },
+        effectKey = OWN_QRG_FOLLOWER,
+        effect = ::applyFollower,
+    ) { prefs.setTrxSynch_ucxLogUDPListenerEnabled(it) }
 
-    var logsynch_wintestQrgSyncEnabled: Boolean
-        get() = prefs.isLogsynch_wintestQrgSyncEnabled()
-        set(value) {
-            prefs.setLogsynch_wintestQrgSyncEnabled(value)
-            applyOwnQrgFollower(anyQrgSourceEnabled)
-        }
+    var logsynch_wintestQrgSyncEnabled: Boolean by draft.setting(
+        { prefs.isLogsynch_wintestQrgSyncEnabled() },
+        effectKey = OWN_QRG_FOLLOWER,
+        effect = ::applyFollower,
+    ) { prefs.setLogsynch_wintestQrgSyncEnabled(it) }
 
     /** Use the Win-Test pass frequency from STATUS instead of the own QRG. */
-    var logsynch_wintestUsePassQrg: Boolean
-        get() = prefs.isLogsynch_wintestUsePassQrg()
-        set(value) { prefs.setLogsynch_wintestUsePassQrg(value) }
+    var logsynch_wintestUsePassQrg: Boolean by draft.setting(
+        { prefs.isLogsynch_wintestUsePassQrg() },
+    ) { prefs.setLogsynch_wintestUsePassQrg(it) }
+
+    // Staged trimmed, so the draft holds what will be stored.
+    private var stationFilter: String by draft.setting(
+        { prefs.getLogsynch_wintestNetworkStationNameOfWintestClient1() },
+    ) { prefs.setLogsynch_wintestNetworkStationNameOfWintestClient1(it) }
 
     /**
      * Win-Test station name filter. An empty filter accepts every station, which is
@@ -53,8 +59,13 @@ class TrxSynchTabState(
      * way the JavaFX field committed it.
      */
     var logsynch_wintestNetworkStationNameOfWintestClient1: String
-        get() = prefs.getLogsynch_wintestNetworkStationNameOfWintestClient1()
-        set(value) { prefs.setLogsynch_wintestNetworkStationNameOfWintestClient1(value.trim()) }
+        get() = stationFilter
+        set(value) { stationFilter = value.trim() }
+
+    /* Read from the stored values: it runs on apply, after both switches are written. */
+    private fun applyFollower() {
+        applyOwnQrgFollower(prefs.isTrxSynch_ucxLogUDPListenerEnabled() || prefs.isLogsynch_wintestQrgSyncEnabled())
+    }
 
     /**
      * True when at least one source may update the own QRG. One source switched off is
@@ -74,5 +85,8 @@ class TrxSynchTabState(
          * would read whichever one the tab happened to use.
          */
         const val QRG_SOURCE_HINT_KEY: String = "trxSynch.hint"
+
+        /** The effect key both QRG sources share. */
+        private const val OWN_QRG_FOLLOWER = "ownQrgFollower"
     }
 }

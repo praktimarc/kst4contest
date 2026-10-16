@@ -127,7 +127,7 @@ class ComposeWindowHost(private val threadName: String) {
      * [deiconifiedState] for what to write — so the only thing left here that no headless
      * test can observe is the single call to `toFront`.
      */
-    private fun raise() {
+    fun raise() {
         val frame = this.frame ?: return
 
         EventQueue.invokeLater {

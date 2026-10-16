@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -240,7 +242,7 @@ class EditableListState(
  * reject it and put the stored value back.
  *
  * @param onChanged called after every committed change — add, edit, removal, move.
- *        The lists write through, so this is where the roster is filled.
+ *        The settings tabs stage the list here; applying the draft fills the roster.
  * @param onRefused shown to the operator when a rule refuses an edit; the JavaFX
  *        tables opened an alert here.
  * @param onAdd replaces the default "insert the template at the top" behaviour.
@@ -298,6 +300,23 @@ fun DataTable(
 
                         else -> changed()
                     }
+                }
+
+                /*
+                 * Inside the settings window a row still being edited is committed before the
+                 * draft is applied: a click on "Apply/Close prefs" leaves the focus in the row,
+                 * see SettingsDraft.registerTypedEntry. Only an edited row; committing an
+                 * untouched one would report a change that was never made. A refusal is reported
+                 * by commit() through onRefused, so the registration answers null.
+                 */
+                val settingsDraft = LocalSettingsDraft.current
+                val pendingEdit = rememberUpdatedState { if (draft != entry.text) commit() }
+                DisposableEffect(settingsDraft, entry.key) {
+                    val registration = settingsDraft?.registerTypedEntry {
+                        pendingEdit.value()
+                        null
+                    }
+                    onDispose { registration?.close() }
                 }
 
                 val isSelected = state.selectedIndex == index

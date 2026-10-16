@@ -4,7 +4,9 @@
 
 Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist der zentrale Ausgangspunkt für alle Konfigurationen. Es empfiehlt sich, das Einstellungsfenster während des Betriebs geöffnet zu lassen (z. B. um den Beacon schnell ein- und auszuschalten).
 
-> **Wichtig**: Fachliche Einstellungen mit **„Save Settings"** sichern, wenn sie beim nächsten Start wieder gelten sollen. Layoutänderungen wie Fenstergrößen, Divider-Positionen und Tabellenbreiten speichert KST4Contest automatisch. Die gemeinsame Datei liegt unter Linux und macOS in `~/.praktiKST/preferences.xml` und unter Windows in `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`).
+> **Wichtig**: Änderungen im Einstellungsfenster wirken, sobald **Apply/Close prefs** oder **Save Settings** gedrückt wird; **Connect** übernimmt sie ebenfalls vorher. Wer mit offenen Änderungen das Fenster schließt, das Profil wechselt oder das Programm beendet, wird zuerst gefragt, ob sie übernommen oder verworfen werden sollen, oder kann zurück. Farben, Sprache und die Anmeldedaten im Reiter **Station** wirken sofort.
+>
+> Fachliche Einstellungen mit **„Save Settings"** sichern, wenn sie beim nächsten Start wieder gelten sollen. Layoutänderungen wie Fenstergrößen, Divider-Positionen und Tabellenbreiten speichert KST4Contest automatisch. Die gemeinsame Datei liegt unter Linux und macOS in `~/.praktiKST/preferences.xml` und unter Windows in `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`).
 
 ---
 
@@ -139,7 +141,7 @@ Die TRX-Synchronisation übernimmt die aktuelle Frequenz aus dem Logprogramm und
 
 Der allgemeine Listener ist für Logprogramme vorgesehen, die kompatible `RadioInfo`-Pakete senden. Dazu gehören – abhängig von deren jeweiliger Konfiguration – UCXLog, N1MM+, QARTest und DXLog.net. QSO- und `RadioInfo`-Pakete verwenden denselben unter **Log sync** konfigurierten Port. Dort wird jedoch getrennt festgelegt, ob KST4Contest QSO-Informationen, TRX-Informationen oder beide Paketarten verarbeitet. Eine automatische QRG-Quelle muss aktiviert sein und tatsächlich gültige Pakete liefern; die Aktivierung allein aktualisiert `MYQRG` nicht.
 
-Wird der gemeinsame UDP-Port geändert, muss KST4Contest neu gestartet werden. Eine reine Änderung der Checkboxen wird dagegen sofort berücksichtigt.
+Wird der gemeinsame UDP-Port geändert, muss KST4Contest neu gestartet werden. Eine reine Änderung der Checkboxen wird dagegen berücksichtigt, sobald sie übernommen ist.
 
 ### Welche QRG wird aktualisiert?
 
@@ -303,7 +305,7 @@ Die Auswahl begrenzt nicht nur den Netzwerkverkehr. Sie verhindert außerdem, da
 
 ### Übernahme geänderter Einstellungen
 
-Folgende Änderungen werden nach Verlassen des Eingabefeldes beziehungsweise Betätigen der Checkbox sofort für neue Pakete verwendet:
+Folgende Änderungen werden für neue Pakete verwendet, sobald sie übernommen sind:
 
 - Aktivierung oder Deaktivierung der AirScout-Integration,
 - Server-Identifier,
@@ -368,7 +370,7 @@ Mehr zur Erkennungslogik und zu absichtlich ignorierten Zahlen: [QRG-Erkennung](
 
 KST4Contest kann erkannte Richtungsgelegenheiten als DX-Cluster-Spots an ein Logprogramm weitergeben. Eine im Chat erkannte Frequenz erscheint dadurch direkt in der Bandmap des Logprogramms und muss nicht erst von Hand übertragen werden.
 
-Die Checkbox **Enable the local DX Cluster server …** startet beziehungsweise beendet den lokalen TCP-Server. Bei einer laufenden Chat-Verbindung wird die Änderung sofort wirksam.
+Die Checkbox **Enable the local DX Cluster server …** startet beziehungsweise beendet den lokalen TCP-Server. Bei einer laufenden Chat-Verbindung wird die Änderung wirksam, sobald sie übernommen ist.
 
 Folgende Einstellungen und Schaltflächen gehören zur lokalen DX-Cluster-Ausgabe:
 
@@ -477,7 +479,7 @@ Rufzeichen werden folgendermaßen verwaltet:
 
 Die Eingabe darf ein sichtbares KST-Suffix oder portable Bestandteile enthalten. KST4Contest normalisiert sie vor dem Speichern auf das Basisrufzeichen. Mehrere Varianten desselben Basisrufzeichens gelten deshalb als Duplikat.
 
-Die Änderung der Liste wirkt sofort. Zum dauerhaften Speichern anschließend **Save Settings** verwenden. Die Basisrufzeichen werden in der `preferences.xml` gespeichert und beim nächsten Programmstart wiederhergestellt.
+Die Änderung der Liste wirkt, sobald sie übernommen ist. Zum dauerhaften Speichern anschließend **Save Settings** verwenden. Die Basisrufzeichen werden in der `preferences.xml` gespeichert und beim nächsten Programmstart wiederhergestellt.
 
 > Die Zusammenführung der KST-Suffixe über das Basisrufzeichen ist ab v1.42 enthalten.
 
@@ -514,7 +516,7 @@ Die Reihenfolge der Tabelle entspricht der Reihenfolge der Schaltflächen im Hau
 3. Wird der Inhalt vollständig gelöscht und anschließend mit `Enter` bestätigt, entfernt KST4Contest den Eintrag.
 4. Mit **Move selected up** und **Move selected down** wird der markierte Eintrag innerhalb der Liste verschoben.
 
-Änderungen werden sofort im Hauptfenster sichtbar. Damit sie auch nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
+Übernommene Änderungen werden sofort im Hauptfenster sichtbar. Damit sie auch nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
 
 ---
 
@@ -563,7 +565,7 @@ Die Snippet-Liste wird genauso bearbeitet wie die Shortcut-Liste:
 4. Ein leer bestätigter Eintrag wird entfernt.
 5. **Move selected up** und **Move selected down** ändern die Reihenfolge und damit auch die Zuordnung zu `Ctrl+1` bis `Ctrl+0`.
 
-Die Kontextmenüs und Tastenkombinationen werden nach einer Änderung sofort aktualisiert. Für die dauerhafte Speicherung anschließend **Save Settings** verwenden.
+Die Kontextmenüs und Tastenkombinationen werden aktualisiert, sobald die Änderung übernommen ist. Für die dauerhafte Speicherung anschließend **Save Settings** verwenden.
 
 Eine vollständige Übersicht der verfügbaren Platzhalter und ihrer Grenzen steht unter [Makros und Variablen](de-Makros-und-Variablen).
 
@@ -872,7 +874,7 @@ Im Reiter **GUI** lassen sich zwei Zusatzinformationen der Bandspalten ein- oder
 - **Show "o" in band columns …** zeigt ein `o`, wenn das vierstellige Großfeld auf dem betreffenden Band bereits gearbeitet wurde. Das Abschalten entfernt keine Daten aus der Datenbank; nur die zusätzliche Anzeige in den Bandspalten wird ausgeblendet. `wkdany` bleibt davon unberührt.
 - **Show "a" in band columns …** unterscheidet ein vollständig neues Rufzeichen von einer Bandmöglichkeit mit einem bereits auf einem anderen Band gearbeiteten Rufzeichen. Ist die Option ausgeschaltet, werden beide Fälle als `B+` dargestellt. Die Bandherleitung selbst ändert sich dadurch nicht.
 
-Änderungen werden in der laufenden Benutzeroberfläche unmittelbar sichtbar. Damit sie nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
+Übernommene Änderungen werden in der laufenden Benutzeroberfläche unmittelbar sichtbar. Damit sie nach dem nächsten Programmstart erhalten bleiben, anschließend **Save Settings** verwenden.
 
 ![GUI-Einstellungen für die Hinweise in den Bandspalten](client_settings_window_gui.png)
 
@@ -946,7 +948,7 @@ Der Reiter **Profiles** im Einstellungsfenster zeigt alle Profile mit Name, Art 
 
 ### Profil im laufenden Betrieb wechseln
 
-**File → Switch operator profile...** oder die Schaltfläche im Reiter **Profiles** wechseln ohne Programmneustart. Nach einer Sicherheitsabfrage wird die ON4KST-Verbindung getrennt und die Oberfläche mit den Einstellungen und dem Layout des gewählten Profils neu aufgebaut. Der Layoutstand des bisherigen Profils wird vorher gesichert; noch nicht mit **Save Settings** bestätigte fachliche Änderungen gehen dabei verloren.
+**File → Switch operator profile...** oder die Schaltfläche im Reiter **Profiles** wechseln ohne Programmneustart. Nach einer Sicherheitsabfrage wird die ON4KST-Verbindung getrennt und die Oberfläche mit den Einstellungen und dem Layout des gewählten Profils neu aufgebaut. Hält das Einstellungsfenster noch nicht übernommene Änderungen, fragt KST4Contest zuerst, ob sie auf das bisherige Profil übernommen, verworfen oder der Wechsel abgebrochen werden soll. Der Layoutstand des bisherigen Profils wird vorher gesichert; noch nicht mit **Save Settings** bestätigte fachliche Änderungen gehen dabei verloren.
 
 Sobald mehr als ein Profil existiert, zeigt die Titelzeile des Hauptfensters zusätzlich den Profilnamen.
 
@@ -958,7 +960,7 @@ Das ON4KST-Passwort steht wie bisher im Klartext in der `preferences.xml` des je
 
 ## Dark Mode (ab v1.26)
 
-Mit welchem Farbschema KST4Contest startet, legt jedes Operator-Profil selbst fest: im Reiter **GUI** unter **Design** mit **Light mode** oder **Dark mode**. Die Auswahl wirkt sofort und wird mit **Save Settings** in der `preferences.xml` des Profils gespeichert.
+Mit welchem Farbschema KST4Contest startet, legt jedes Operator-Profil selbst fest: im Reiter **GUI** unter **Design** mit **Light mode** oder **Dark mode**. Die Auswahl wirkt, sobald sie übernommen ist, und wird mit **Save Settings** in der `preferences.xml` des Profils gespeichert.
 
 Für einen kurzen Wechsel während des Betriebs gibt es **Windows → Use dark mode design** und **Windows → Use default mode design**. Diese Umschaltung gilt nur bis zum nächsten Start oder Profilwechsel; danach gilt wieder die Einstellung im Reiter **GUI**.
 
@@ -966,7 +968,7 @@ Für einen kurzen Wechsel während des Betriebs gibt es **Windows → Use dark m
 
 ## Einstellungen speichern
 
-**Save Settings** speichert die fachlichen Einstellungen und den vollständigen aktuellen Layoutstand. Änderungen an Fenstergrößen und -positionen, relevanten Dividern, verwalteten Tabellenbreiten sowie der Karteneinstellung **Group nearby stations** werden zusätzlich automatisch mit kurzer Verzögerung gespeichert. Ein ausstehender Layoutstand wird beim Programmende noch geschrieben.
+**Save Settings** übernimmt zuerst offene Änderungen und speichert dann die fachlichen Einstellungen und den vollständigen aktuellen Layoutstand. Änderungen an Fenstergrößen und -positionen, relevanten Dividern, verwalteten Tabellenbreiten sowie der Karteneinstellung **Group nearby stations** werden zusätzlich automatisch mit kurzer Verzögerung gespeichert. Ein ausstehender Layoutstand wird beim Programmende noch geschrieben.
 
 - Speicherort: unter Linux und macOS `~/.praktiKST/preferences.xml` und unter Windows `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`)
 - Der automatische Layout-Writer übernimmt keine noch nicht mit **Save Settings** bestätigten fachlichen Änderungen.

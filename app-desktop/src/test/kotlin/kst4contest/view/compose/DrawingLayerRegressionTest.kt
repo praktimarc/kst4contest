@@ -56,7 +56,7 @@ class DrawingLayerRegressionTest(@TempDir private val tempDir: Path) {
     fun aTypedSettingAppearsOnScreenAndNotOnlyInThePreferences() = runComposeUiTest {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.setMessageHandling_autoAnswerTextMainCat("")
-        val state = MessageHandlingTabState(prefs)
+        val state = MessageHandlingTabState(prefs, ImmediateDraft())
 
         // The real tab, not a field in isolation: the fault was in the wiring between them.
         setContent(themed { MessageHandlingTab(state) })

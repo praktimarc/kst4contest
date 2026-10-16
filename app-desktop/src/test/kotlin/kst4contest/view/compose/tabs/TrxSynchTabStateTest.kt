@@ -1,6 +1,7 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -13,7 +14,8 @@ class TrxSynchTabStateTest(@TempDir private val tempDir: Path) {
     private inner class Session {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val followerCalls = mutableListOf<Boolean>()
-        val state by lazy { TrxSynchTabState(prefs) { followerCalls.add(it) } }
+        val draft = SettingsDraft()
+        val state by lazy { TrxSynchTabState(prefs, draft) { followerCalls.add(it) } }
     }
 
     @Test
@@ -31,16 +33,31 @@ class TrxSynchTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `writing reaches the preferences at once, without a confirmation step`() {
+    fun `an edit waits for apply`() {
         val s = Session()
 
         s.state.trxSynch_ucxLogUDPListenerEnabled = true
-        s.state.logsynch_wintestQrgSyncEnabled = true
         s.state.logsynch_wintestUsePassQrg = true
 
+        assertFalse(s.prefs.isTrxSynch_ucxLogUDPListenerEnabled(), "an edit took effect before Apply")
+        assertTrue(s.state.trxSynch_ucxLogUDPListenerEnabled, "the tab shows the edit")
+        assertTrue(s.followerCalls.isEmpty(), "the follower moved before Apply")
+
+        s.draft.apply()
+
         assertTrue(s.prefs.isTrxSynch_ucxLogUDPListenerEnabled())
-        assertTrue(s.prefs.isLogsynch_wintestQrgSyncEnabled())
         assertTrue(s.prefs.isLogsynch_wintestUsePassQrg())
+    }
+
+    @Test
+    fun `a discarded edit changes nothing`() {
+        val s = Session()
+
+        s.state.trxSynch_ucxLogUDPListenerEnabled = true
+        s.draft.discard()
+
+        assertFalse(s.prefs.isTrxSynch_ucxLogUDPListenerEnabled())
+        assertTrue(s.followerCalls.isEmpty())
     }
 
     @Test
@@ -49,27 +66,33 @@ class TrxSynchTabStateTest(@TempDir private val tempDir: Path) {
         val s = Session()
 
         s.state.logsynch_wintestNetworkStationNameOfWintestClient1 = "  STN1 "
+        s.draft.apply()
         assertEquals("STN1", s.prefs.getLogsynch_wintestNetworkStationNameOfWintestClient1())
 
         s.state.logsynch_wintestNetworkStationNameOfWintestClient1 = "   "
+        s.draft.apply()
         assertEquals("", s.prefs.getLogsynch_wintestNetworkStationNameOfWintestClient1())
     }
 
     @Test
-    fun `the own-QRG follower follows whether any source is enabled`() {
+    fun `the own-QRG follower follows whether any source is enabled, once per apply`() {
         val s = Session()
 
+        // Both sources in one apply: one call, with the finished state.
         s.state.trxSynch_ucxLogUDPListenerEnabled = true
+        s.state.logsynch_wintestQrgSyncEnabled = false
+        s.draft.apply()
         assertEquals(listOf(true), s.followerCalls)
 
-        s.state.logsynch_wintestQrgSyncEnabled = true
-        assertEquals(listOf(true, true), s.followerCalls)
-
         // One source off is not all sources off: the follower must stay attached.
+        s.state.logsynch_wintestQrgSyncEnabled = true
+        s.draft.apply()
         s.state.trxSynch_ucxLogUDPListenerEnabled = false
+        s.draft.apply()
         assertEquals(listOf(true, true, true), s.followerCalls)
 
         s.state.logsynch_wintestQrgSyncEnabled = false
+        s.draft.apply()
         assertEquals(listOf(true, true, true, false), s.followerCalls)
     }
 

@@ -4,7 +4,9 @@
 
 After the first start, the **settings window** opens – this is the central starting point for all configuration. It is recommended to keep the settings window open during operation (e.g. to quickly toggle the beacon on and off).
 
-> **Important**: Use **Save Settings** for functional settings which should remain in effect after the next start. KST4Contest saves layout changes such as window sizes, divider positions and table-column widths automatically. The shared file is `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows.
+> **Important**: Changes in the settings window take effect when you click **Apply/Close prefs** or **Save Settings**; **Connect** applies them first as well. Closing the window, switching the operator profile or exiting with changes pending first asks whether to apply or discard them, or to go back. Colours, the language and the login data on the **Station** tab take effect immediately.
+>
+> Use **Save Settings** for functional settings which should remain in effect after the next start. KST4Contest saves layout changes such as window sizes, divider positions and table-column widths automatically. The shared file is `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows.
 
 ---
 
@@ -158,7 +160,7 @@ TRX synchronisation imports the current frequency from the logging application a
 
 The general listener is intended for logging applications which transmit compatible `RadioInfo` packets. Depending on their individual configuration, this includes UCXLog, N1MM+, QARTest and DXLog.net. QSO and `RadioInfo` packets use the same port configured under **Log sync**, but separate options determine whether KST4Contest processes QSO information, TRX information or both packet types. An automatic QRG source must be enabled and actually supply valid packets; enabling it alone does not update `MYQRG`.
 
-Restart KST4Contest after changing the shared UDP port. Changes to the two QRG-sync checkboxes take effect immediately.
+Restart KST4Contest after changing the shared UDP port. Changes to the two QRG-sync checkboxes take effect as soon as they are applied.
 
 ### Which QRG Is Updated?
 
@@ -356,7 +358,7 @@ This selection does more than reduce network traffic. It also prevents AirScout 
 
 ### Applying Changed Settings
 
-The following changes are used for new packets immediately after leaving the input field or changing the checkbox:
+The following changes are used for new packets as soon as they are applied:
 
 - enabling or disabling the AirScout integration,
 - server identifier,
@@ -417,7 +419,7 @@ Further details, including numbers which are deliberately ignored, are described
 
 KST4Contest can forward detected directional opportunities to logging software as DX cluster spots. A frequency recognised in the chat can therefore appear directly in the logger's band map without being entered manually.
 
-The **Enable the local DX Cluster server …** checkbox starts or stops the local TCP server. When KST4Contest is connected to the chat, the change takes effect immediately.
+The **Enable the local DX Cluster server …** checkbox starts or stops the local TCP server. When KST4Contest is connected to the chat, the change takes effect as soon as it is applied.
 
 The following settings and controls belong to the local DX cluster output:
 
@@ -514,7 +516,7 @@ The order of the table determines the order of the buttons in the main window. M
 3. To remove an entry, delete its complete contents and confirm with `Enter`.
 4. Use **Move selected up** and **Move selected down** to change the position of the selected entry.
 
-Changes appear in the main window immediately. Use **Save Settings** afterwards if they should remain available after the next program start.
+Applied changes appear in the main window at once. Use **Save Settings** afterwards if they should remain available after the next program start.
 
 ---
 
@@ -563,7 +565,7 @@ The snippet list is edited in the same way as the shortcut list:
 4. Confirming an empty entry removes it.
 5. **Move selected up** and **Move selected down** change both the displayed order and the assignment to `Ctrl+1` through `Ctrl+0`.
 
-The context menus and keyboard mappings are updated immediately. Use **Save Settings** afterwards to store the modified list permanently.
+The context menus and keyboard mappings are updated as soon as the change is applied. Use **Save Settings** afterwards to store the modified list permanently.
 
 The complete list of available placeholders and their limitations is described under [Macros and Variables](en-Macros-and-Variables).
 
@@ -914,7 +916,7 @@ Manage the list as follows:
 
 The entered value may contain a visible KST suffix or portable components. KST4Contest normalises it to the base callsign before storing it. Different variants of the same base callsign are therefore treated as duplicates.
 
-Changes to the list take effect immediately. Press **Save Settings** afterwards to retain them. The base callsigns are stored in `preferences.xml` and restored at the next program start.
+Changes to the list take effect as soon as they are applied. Press **Save Settings** afterwards to retain them. The base callsigns are stored in `preferences.xml` and restored at the next program start.
 
 > Base-callsign monitoring across KST suffixes is included from v1.42 onwards.
 
@@ -929,7 +931,7 @@ Two optional additions to the band columns can be enabled or disabled in the **G
 - **Show "o" in band columns …** displays an `o` if the four-character grid square has already been worked on the relevant band. Disabling the option does not delete any database records; it only hides the additional indicator in the band columns. `wkdany` is unaffected.
 - **Show "a" in band columns …** distinguishes a completely new callsign from a band opportunity involving a callsign already worked elsewhere. When disabled, both cases are displayed as `B+`. The band-opportunity calculation itself remains unchanged.
 
-Changes are reflected in the current user interface immediately. Click **Save Settings** afterwards if they should persist after the next start.
+Applied changes are reflected in the current user interface at once. Click **Save Settings** afterwards if they should persist after the next start.
 
 ![GUI settings for band-column hints](client_settings_window_gui.png)
 
@@ -1003,7 +1005,7 @@ The **Profiles** tab in the settings window lists all profiles with their name, 
 
 ### Switching profiles while running
 
-**File > Switch operator profile...**, or the button on the **Profiles** tab, switches without restarting the program. After a confirmation the ON4KST connection is closed and the user interface is rebuilt with the settings and layout of the selected profile. The layout of the previous profile is saved first; settings not yet confirmed with **Save Settings** are lost.
+**File > Switch operator profile...**, or the button on the **Profiles** tab, switches without restarting the program. After a confirmation the ON4KST connection is closed and the user interface is rebuilt with the settings and layout of the selected profile. If the settings window still holds changes that were not applied, KST4Contest first asks whether to apply them to the current profile, discard them, or cancel the switch. The layout of the previous profile is saved first; settings not yet confirmed with **Save Settings** are lost.
 
 Once more than one profile exists, the main window title also shows the profile name.
 
@@ -1015,7 +1017,7 @@ As before, the ON4KST password is stored in clear text in the `preferences.xml` 
 
 ## Dark Mode (from v1.26)
 
-Each operator profile sets its own startup colour scheme: on the **GUI** tab under **Design**, choose **Light mode** or **Dark mode**. The choice takes effect immediately and is stored in the profile's `preferences.xml` with **Save Settings**.
+Each operator profile sets its own startup colour scheme: on the **GUI** tab under **Design**, choose **Light mode** or **Dark mode**. The choice takes effect when it is applied and is stored in the profile's `preferences.xml` with **Save Settings**.
 
 For a quick change during operation, use **Windows → Use dark mode design** and **Windows → Use default mode design**. This switch only lasts until the next start or profile switch; after that the setting on the **GUI** tab applies again.
 
@@ -1023,7 +1025,7 @@ For a quick change during operation, use **Windows → Use dark mode design** an
 
 ## Saving Settings
 
-**Save Settings** stores functional settings and the complete current layout. Changes to window sizes and positions, relevant dividers, managed table-column widths and the **Group nearby stations** map setting are also saved automatically after a short delay. Any pending layout update is written when the programme exits.
+**Save Settings** applies pending changes first, then stores functional settings and the complete current layout. Changes to window sizes and positions, relevant dividers, managed table-column widths and the **Group nearby stations** map setting are also saved automatically after a short delay. Any pending layout update is written when the programme exits.
 
 - Storage location: `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows
 - The automatic layout writer does not copy functional changes which have not yet been confirmed with **Save Settings**.

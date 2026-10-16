@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -46,7 +47,11 @@ class SynchTabsScreenTest {
         }
         var restarts = 0
         var stops = 0
-        val state = LogSynchTabState(prefs, { restarts++ }, { stops++ }, { detected })
+        val state = run {
+            // What the settings window does once before it builds the tabs.
+            repairStoredSettings(prefs) { detected }
+            LogSynchTabState(prefs, ImmediateDraft(), { restarts++ }, { stops++ })
+        }
     }
 
     @Test
@@ -63,7 +68,7 @@ class SynchTabsScreenTest {
     }
 
     @Test
-    fun logSynchWritesThroughAndStartsTheWinTestListener() = runComposeUiTest {
+    fun logSynchStoresItsFieldsAndStartsTheWinTestListener() = runComposeUiTest {
         val s = LogSynch(preferences())
         showTab { LogSynchTab(s.state) }
 
@@ -97,10 +102,10 @@ class SynchTabsScreenTest {
     // ------------------------------------------------------------------ TRX synch
 
     @Test
-    fun trxSynchWritesThroughAndSwitchesTheQrgFollower() = runComposeUiTest {
+    fun trxSynchStoresItsFieldsAndSwitchesTheQrgFollower() = runComposeUiTest {
         val prefs = preferences()
         val follower = mutableListOf<Boolean>()
-        val state = TrxSynchTabState(prefs) { follower += it }
+        val state = TrxSynchTabState(prefs, ImmediateDraft()) { follower += it }
         showTab { TrxSynchTab(state) }
 
         onNodeWithText("Receive UCXLog TRX info").assertExists()
@@ -123,7 +128,7 @@ class SynchTabsScreenTest {
     fun airscoutWritesValidEntriesAndKeepsAnInvalidOneOffThePreferences() = runComposeUiTest {
         // The link defaults to on; start from off so a tick is a visible change.
         val prefs = preferences().apply { isAirScout_asUDPListenerEnabled = false }
-        val state = AirscoutTabState(prefs)
+        val state = AirscoutTabState(prefs, ImmediateDraft())
         showTab { AirscoutTab(state) }
 
         onNodeWithText("AirScout UDP communication").assertExists()

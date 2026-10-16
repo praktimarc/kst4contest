@@ -1,4 +1,5 @@
 package kst4contest.view;
+import kst4contest.view.compose.SettingsDraft;
 import kst4contest.view.compose.SettingsHost;
 import kst4contest.view.compose.SettingsNotices;
 import kst4contest.view.compose.SettingsTabsKt;
@@ -1985,11 +1986,20 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 */
 	private void requestOperatorProfileSwitch(OperatorProfile targetProfile) {
 
-		if (targetProfile == null || !confirmOperatorProfileSwitch(targetProfile)) {
+		if (targetProfile == null) {
 			return;
 		}
 
-		ApplicationRuntimeLauncher.switchProfile(targetProfile);
+		/*
+		 * Settings edits not applied yet are asked about first: applied, they land in the
+		 * profile being left, which is the one they were made in; "back" cancels the switch.
+		 * Without pending edits this continues at once, as before.
+		 */
+		SettingsWindow.settleThen(() -> {
+			if (confirmOperatorProfileSwitch(targetProfile)) {
+				ApplicationRuntimeLauncher.switchProfile(targetProfile);
+			}
+		});
 	}
 
 	/**
@@ -2421,6 +2431,15 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	private void closeWindowEvent() {
 		System.out.println("Window close request ...");
 
+		/*
+		 * Settings edits not applied yet are asked about before the quit question; "back"
+		 * cancels the exit. Without pending edits this continues at once, as before.
+		 */
+		SettingsWindow.settleThen(this::confirmAndExit);
+	}
+
+	/** Asks whether to quit, and quits on yes. */
+	private void confirmAndExit() {
 		/*
 		 * ConfirmKind.YES and not the default: the JavaFX dialog used ButtonType.YES here,
 		 * and JavaFX ordered YES ahead of CANCEL on Linux and Windows but behind it on
@@ -3751,10 +3770,17 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 */
 	private void openSettingsWindow() {
 
+		/*
+		 * One draft per opening: the tabs stage into it, the buttons apply it, and the window
+		 * asks about it when closed with edits pending.
+		 */
+		SettingsDraft draft = new SettingsDraft();
+
 		SettingsWindow.show(
 				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices, paletteStore, languageStore,
-						this::settingsConnectionState),
+						this::settingsConnectionState, draft),
 				settingsNotices,
+				draft,
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
 				paletteStore,
@@ -3767,7 +3793,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					requestLayoutSave();
 					return kotlin.Unit.INSTANCE;
 				},
-				SettingsTabsKt.settingsButtons(chatcontroller, this, settingsNotices));
+				SettingsTabsKt.settingsButtons(chatcontroller, this, settingsNotices, draft));
 	}
 
 	/*
@@ -3839,10 +3865,13 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		chatcontroller.getMessageTXBus().add(sendMe);
 	}
 
-	/** Options/Windows -> open or close the settings window. */
+	/**
+	 * Options/Windows -> open or close the settings window. Closing goes the way of the
+	 * window's own X, so edits not applied yet are asked about rather than dropped.
+	 */
 	void menuActionToggleSettingsWindow() {
 		if (SettingsWindow.isOpen()) {
-			SettingsWindow.close();
+			SettingsWindow.requestClose();
 		} else {
 			openSettingsWindow();
 		}

@@ -11,8 +11,8 @@ import kst4contest.view.compose.Form
 /**
  * The Station tab: own station, server, active bands and path-analysis defaults.
  *
- * No confirmation callback: StationTabState writes through to ChatPreferences, the
- * way the JavaFX controls did. "Save settings" persists, it does not collect.
+ * The controls stage their edits in the window's draft (see StationTabState); only the
+ * login credentials write through at once.
  */
 @Composable
 fun StationTab(state: StationTabState) {

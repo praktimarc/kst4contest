@@ -33,10 +33,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -124,12 +126,12 @@ object Form {
      *        looser where two spellings mean one value, as with colours. It must agree
      *        with what [commit] stores: a draft that commit would store as `c` has to count
      *        as unchanged against `c`, or leaving the field after Enter commits it again.
-     * @param current the value stored right now, read when the field commits. The draft
-     *        is judged against it, and falls back to it on a refusal (what the JavaFX
-     *        fields did with setText). Required, because [stored] alone goes stale when it
-     *        comes from a plain getter: nothing recomposes the caller after a commit, so
-     *        after Enter it still names the old value, and once the preference is reset
-     *        behind the field it names the new one by coincidence only.
+     * @param current the value in force right now, read when the field commits: inside the
+     *        settings window the value staged in the draft, otherwise the stored one. The
+     *        typed text is judged against it, and falls back to it on a refusal (what the
+     *        JavaFX fields did with setText). Required, because [stored] alone goes stale
+     *        when it comes from a plain getter: nothing need recompose the caller after a
+     *        commit, so after Enter it can still name the old value.
      */
     @Composable
     fun committed(
@@ -164,6 +166,24 @@ object Form {
                 onRefused(refusal)
                 draft = current()
             }
+        }
+
+        /*
+         * Inside the settings window the draft can commit this field without a focus change:
+         * a click on "Apply/Close prefs" may leave the focus in the field, and the entry would
+         * otherwise reach the draft only when the closing window removed the field. Through
+         * an updated state, because commitDraft closes over this composition's parameters.
+         * A refusal is reported by commitDraft itself through onRefused, as on focus loss, so
+         * the registration answers null and the caller sees the refusal as the notice.
+         */
+        val settingsDraft = LocalSettingsDraft.current
+        val latestCommit = rememberUpdatedState(::commitDraft)
+        DisposableEffect(settingsDraft) {
+            val entry = settingsDraft?.registerTypedEntry {
+                latestCommit.value()
+                null
+            }
+            onDispose { entry?.close() }
         }
 
         labelled(label) {
@@ -304,34 +324,53 @@ object Form {
     }
 
     @Composable
-    fun int(label: String, value: Int, onChange: (Int) -> Unit) {
-        var draft by remember(value) { mutableStateOf(value.toString()) }
-
-        labelled(label) {
-            CompactTextField(
-                value = draft,
-                onValueChange = { typed ->
-                    draft = typed
-                    typed.trim().toIntOrNull()?.let(onChange)
-                },
-                isError = draft.trim().toIntOrNull() == null,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
+    fun int(label: String, value: Int, onChange: (Int) -> Unit) =
+        number(label, value, { it.trim().toIntOrNull() }, onChange)
 
     @Composable
-    fun decimal(label: String, value: Double, onChange: (Double) -> Unit) {
-        var draft by remember(value) { mutableStateOf(value.toString()) }
+    fun decimal(label: String, value: Double, onChange: (Double) -> Unit) =
+        number(label, value, { it.trim().replace(',', '.').toDoubleOrNull() }, onChange)
+
+    /**
+     * The number field behind [int] and [decimal].
+     *
+     * The text follows the stored value only when that value is not what the operator's own
+     * text already says. A settings draft is Compose state, so the value an entry stages comes
+     * straight back as [value]; resetting the text to `value.toString()` then would turn a
+     * typed "1" into "1.0" before the next digit, and "135,5" could never be typed.
+     */
+    @Composable
+    private fun <N> number(label: String, value: N, parse: (String) -> N?, onChange: (N) -> Unit) {
+        // The last text typed. A plain holder: it only seeds the text below, nothing draws it.
+        val typed = remember { arrayOf(value.toString()) }
+        var draft by remember(value) {
+            mutableStateOf(if (parse(typed[0]) == value) typed[0] else value.toString())
+        }
+
+        /*
+         * Text that does not parse stages nothing, so the draft still holds the last valid
+         * value while the field shows something else in red. Applying then would put a value
+         * into effect the operator no longer sees; the field refuses instead, naming itself.
+         */
+        val strings = kst4contest.view.i18n.LocalStrings.current
+        val settingsDraft = LocalSettingsDraft.current
+        val refusal = rememberUpdatedState {
+            if (parse(draft) == null) strings.settingsInvalidEntry(label, draft) else null
+        }
+        DisposableEffect(settingsDraft) {
+            val entry = settingsDraft?.registerTypedEntry { refusal.value() }
+            onDispose { entry?.close() }
+        }
 
         labelled(label) {
             CompactTextField(
                 value = draft,
-                onValueChange = { typed ->
-                    draft = typed
-                    typed.trim().replace(',', '.').toDoubleOrNull()?.let(onChange)
+                onValueChange = { entered ->
+                    typed[0] = entered
+                    draft = entered
+                    parse(entered)?.let(onChange)
                 },
-                isError = draft.trim().replace(',', '.').toDoubleOrNull() == null,
+                isError = parse(draft) == null,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

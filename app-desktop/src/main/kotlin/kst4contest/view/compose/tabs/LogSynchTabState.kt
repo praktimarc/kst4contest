@@ -1,23 +1,24 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.SettingsDraft
+import kst4contest.view.compose.setting
 
 /**
  * The Log synch tab as a typed facade over ChatPreferences.
  *
- * Every property writes through immediately, and there is deliberately no apply().
- * That mirrors the JavaFX window it replaces: its controls each wrote into
- * ChatPreferences the moment they changed, and its two buttons only persisted
- * ("Save settings" calls writePreferencesToXmlFile) or closed the window.
+ * Edits are staged in the window's [SettingsDraft] and take effect when the operator
+ * applies them. The log file path is the exception: it changes through a file chooser,
+ * an action, and is written when chosen.
  *
- * Two things this tab controlled are not settings at all but effects on the running
- * session, and no coverage test can see them because they are not ChatPreferences
- * setters. They are taken as callbacks rather than from a ChatController so the rules
- * stay testable without opening a database:
+ * One thing this tab controls is not a setting at all but an effect on the running session,
+ * and no coverage test can see it because it is not a ChatPreferences setter: the Win-Test
+ * UDP listener is started, stopped or rebound when its switch or its port is applied -- once
+ * per apply, see [applyWintestListener]. It is taken as callbacks rather than from a
+ * ChatController so the rules stay testable without opening a database.
  *
- *  - the Win-Test UDP listener is started and stopped with its setting;
- *  - the Win-Test broadcast address is auto-detected while it is still the catch-all
- *    default, which the JavaFX window did while building the settings pane.
+ * The broadcast address the JavaFX window auto-detected while building the pane is detected
+ * by repairStoredSettings now, before the window is built, not by this state.
  *
  * Ports, transports and framing are untouched: the accepted values, the defaults and
  * the moment a socket is rebound are the ones the JavaFX window had.
@@ -25,23 +26,17 @@ import kst4contest.model.ChatPreferences
  * @param restartWintestListener rebinds the Win-Test UDP listener; maps to
  *   ChatController.restartWintestUdpListenerIfEnabled()
  * @param stopWintestListener maps to ChatController.stopWintestUdpListener()
- * @param detectWintestBroadcastAddress the detected subnet broadcast address, or null
- *   when none could be determined; maps to detectPreferredWintestBroadcastAddress()
  */
 class LogSynchTabState(
     private val prefs: ChatPreferences,
+    private val draft: SettingsDraft,
     private val restartWintestListener: () -> Unit,
     private val stopWintestListener: () -> Unit,
-    private val detectWintestBroadcastAddress: () -> String?,
 ) {
 
-    init {
-        autoDetectBroadcastAddressWhileStillDefault()
-    }
-
-    var logsynch_fileBasedWkdCallInterpreterEnabled: Boolean
-        get() = prefs.isLogsynch_fileBasedWkdCallInterpreterEnabled()
-        set(value) { prefs.setLogsynch_fileBasedWkdCallInterpreterEnabled(value) }
+    var logsynch_fileBasedWkdCallInterpreterEnabled: Boolean by draft.setting(
+        { prefs.isLogsynch_fileBasedWkdCallInterpreterEnabled() },
+    ) { prefs.setLogsynch_fileBasedWkdCallInterpreterEnabled(it) }
 
     /**
      * The log file polled for worked callsigns. The JavaFX tab showed it read-only and
@@ -53,75 +48,73 @@ class LogSynchTabState(
         get() = prefs.getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly()
         set(value) { prefs.setLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly(value) }
 
-    var logsynch_ucxUDPWkdCallListenerEnabled: Boolean
-        get() = prefs.isLogsynch_ucxUDPWkdCallListenerEnabled()
-        set(value) { prefs.setLogsynch_ucxUDPWkdCallListenerEnabled(value) }
+    var logsynch_ucxUDPWkdCallListenerEnabled: Boolean by draft.setting(
+        { prefs.isLogsynch_ucxUDPWkdCallListenerEnabled() },
+    ) { prefs.setLogsynch_ucxUDPWkdCallListenerEnabled(it) }
 
     /**
      * Shared UDP port for QSO and TRX messages, default 12060. The JavaFX field
      * accepted any number here and rebound nothing — that listener comes up at start —
      * so neither a range nor a restart is added.
      */
-    var logsynch_ucxUDPWkdCallListenerPort: Int
-        get() = prefs.getLogsynch_ucxUDPWkdCallListenerPort()
-        set(value) { prefs.setLogsynch_ucxUDPWkdCallListenerPort(value) }
+    var logsynch_ucxUDPWkdCallListenerPort: Int by draft.setting(
+        { prefs.getLogsynch_ucxUDPWkdCallListenerPort() },
+    ) { prefs.setLogsynch_ucxUDPWkdCallListenerPort(it) }
 
-    var logsynch_wintestNetworkListenerEnabled: Boolean
-        get() = prefs.isLogsynch_wintestNetworkListenerEnabled()
-        set(value) {
-            prefs.setLogsynch_wintestNetworkListenerEnabled(value)
-            if (value) restartWintestListener() else stopWintestListener()
-        }
+    var logsynch_wintestNetworkListenerEnabled: Boolean by draft.setting(
+        { prefs.isLogsynch_wintestNetworkListenerEnabled() },
+        effectKey = WINTEST_LISTENER,
+        effect = ::applyWintestListener,
+    ) { prefs.setLogsynch_wintestNetworkListenerEnabled(it) }
 
     /**
-     * UDP port for the Win-Test listener, default 9871. The setting is written at once
-     * like every other, but the socket is only rebound by [commitWintestNetworkPort] —
-     * the JavaFX field did that on focus loss, and rebinding per keystroke would bind
-     * and unbind a UDP port for every digit on the way to the intended one.
+     * UDP port for the Win-Test listener, default 9871. The socket is rebound when the port
+     * is applied, not per keystroke: rebinding per digit would bind and unbind a UDP port
+     * for every number on the way to the intended one.
      */
-    var logsynch_wintestNetworkPort: Int
-        get() = prefs.getLogsynch_wintestNetworkPort()
-        set(value) { prefs.setLogsynch_wintestNetworkPort(value) }
+    var logsynch_wintestNetworkPort: Int by draft.setting(
+        { prefs.getLogsynch_wintestNetworkPort() },
+        effectKey = WINTEST_LISTENER,
+        effect = ::applyWintestListener,
+    ) { prefs.setLogsynch_wintestNetworkPort(it) }
 
-    /** Applies the entered port to the running listener, if there is one. */
-    fun commitWintestNetworkPort() {
-        if (prefs.isLogsynch_wintestNetworkListenerEnabled()) {
-            restartWintestListener()
-        }
-    }
+    /*
+     * The two trimmed values are staged trimmed, so the draft holds what will be stored and a
+     * trailing space does not count as a change.
+     */
+    private var stationNameOfKst: String by draft.setting(
+        { prefs.getLogsynch_wintestNetworkStationNameOfKST() },
+    ) { prefs.setLogsynch_wintestNetworkStationNameOfKST(it) }
+
+    private var broadcastAddress: String by draft.setting(
+        { prefs.getLogsynch_wintestNetworkBroadcastAddress() },
+    ) { prefs.setLogsynch_wintestNetworkBroadcastAddress(it) }
 
     /** The name KST4Contest uses as source of Win-Test SKED packets. */
     var logsynch_wintestNetworkStationNameOfKST: String
-        get() = prefs.getLogsynch_wintestNetworkStationNameOfKST()
-        set(value) { prefs.setLogsynch_wintestNetworkStationNameOfKST(value.trim()) }
+        get() = stationNameOfKst
+        set(value) { stationNameOfKst = value.trim() }
 
     /** UDP broadcast address used for sending to Win-Test. */
     var logsynch_wintestNetworkBroadcastAddress: String
-        get() = prefs.getLogsynch_wintestNetworkBroadcastAddress()
-        set(value) { prefs.setLogsynch_wintestNetworkBroadcastAddress(value.trim()) }
+        get() = broadcastAddress
+        set(value) { broadcastAddress = value.trim() }
 
     /**
-     * Replaces the catch-all default 255.255.255.255 with the detected subnet
-     * broadcast address. An address the operator or a previous detection chose is
-     * left alone, and a failed detection keeps the default: guessing an address here
-     * would send SKED packets somewhere nobody is listening.
+     * Brings the Win-Test listener in line with the applied switch and port: rebound while
+     * enabled, stopped otherwise. The switch and the port share it, so applying both runs it
+     * once and binds the new port; a port changed while the listener is off meets a listener
+     * that is not running, and stopping that does nothing.
      */
-    private fun autoDetectBroadcastAddressWhileStillDefault() {
-        if (prefs.getLogsynch_wintestNetworkBroadcastAddress() != DEFAULT_BROADCAST_ADDRESS) {
-            return
-        }
-        val detected = try {
-            detectWintestBroadcastAddress()
-        } catch (probeFailure: RuntimeException) {
-            null
-        }
-        if (detected != null && detected.isNotBlank()) {
-            prefs.setLogsynch_wintestNetworkBroadcastAddress(detected)
-        }
+    private fun applyWintestListener() {
+        if (prefs.isLogsynch_wintestNetworkListenerEnabled()) restartWintestListener() else stopWintestListener()
     }
 
     companion object {
         /** The stored value that still means "not configured for this network". */
         const val DEFAULT_BROADCAST_ADDRESS: String = "255.255.255.255"
+
+        /** The effect key the Win-Test switch and port share. */
+        private const val WINTEST_LISTENER = "wintestListener"
     }
 }

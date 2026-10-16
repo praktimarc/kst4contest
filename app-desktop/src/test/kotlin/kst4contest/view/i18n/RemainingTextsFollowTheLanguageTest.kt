@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.ChatPreferences
 import kst4contest.view.compose.SettingsContent
+import kst4contest.view.compose.SettingsDraft
 import kst4contest.view.compose.SettingsNotices
 import kst4contest.view.compose.SettingsTab
 import kst4contest.view.compose.StationColumns
@@ -37,9 +38,10 @@ class RemainingTextsFollowTheLanguageTest {
         var stored = "en"
         val store = LanguageStore({ stored }, { stored = it }, Locale.UK)
         val prefs = ChatPreferences(directory.resolve("preferences.xml"))
-        val state = GuiOptionsTabState(prefs, store)
+        val state = GuiOptionsTabState(prefs, SettingsDraft(), store)
         val beacon = BeaconTabState(
             prefs,
+            SettingsDraft(),
             validateBeaconTemplate = {},
             restartBeaconTimer = {},
             mainCategoryName = "Microwave",

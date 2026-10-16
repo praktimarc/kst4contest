@@ -276,6 +276,21 @@ section records only the durable architecture and operational boundaries.
 
 ## Important Decisions and Workarounds
 
+- **Settings take effect with Apply, not while they are edited** (release 1.50,
+  `docs/superpowers/specs/2026-10-16-settings-apply-drafts-design.md`): the settings window
+  stages every edit in a `SettingsDraft` that the tab states read through; Apply/Close, Save
+  and Connect apply it; the X, a profile switch and the exit ask about what is pending first
+  (`SettingsWindow.settleThen`, Back cancels). Fields still holding text -- typed but not
+  committed, or invalid -- are checked before anything is applied, so a refusal leaves Discard
+  possible. Apply writes everything first and then runs each effect key once, in first-changed
+  order, so a listener or server whose switch and port both changed restarts once, on the new
+  port; a failing write or effect is reported and the rest still runs.
+  Immediate on purpose: login credentials (locked while connected), language, colours, and the
+  actions (profiles, worked database, test spot, file chooser, stylesheet export). A new
+  setting goes through `draft.setting(...)` and gets a row in `DraftedSettingsTableTest`; one
+  that writes `ChatPreferences` directly bypasses Apply. Corrections of stored values that are
+  no edit (fallback band, Win-Test broadcast detection) run once in `repairStoredSettings`
+  before the window is built, never inside a tab state.
 - **The interface language has four kinds of text, and the rule is the addressee** (release
   1.50): interface text is translated; protocol text (the pipe-framed opcodes in
   `On4KstProtocol`, and the `/`-prefixed chat commands) and amateur shorthand (the

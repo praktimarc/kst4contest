@@ -15,6 +15,8 @@ import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.Band
 import kst4contest.model.ChatMember
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import kst4contest.observe.SimpleRoster
 import kst4contest.view.i18n.LanguageStore
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -60,7 +62,7 @@ class MessagingTabsScreenTest {
             isMessageHandling_debugModeToFileEnabled = false
         }
         val recording = mutableListOf<Boolean>()
-        val state = MessageHandlingTabState(prefs) { recording += it }
+        val state = MessageHandlingTabState(prefs, ImmediateDraft()) { recording += it }
         showTab { MessageHandlingTab(state) }
 
         onNodeWithText("Automatic answer to private messages").assertExists()
@@ -87,7 +89,7 @@ class MessagingTabsScreenTest {
         val prefs = preferences().apply { isGUI_darkModeActiveByDefault = false }
         var storedLanguage = "en"
         val languages = LanguageStore({ storedLanguage }, { storedLanguage = it }, Locale.UK)
-        val state = GuiOptionsTabState(prefs, languages)
+        val state = GuiOptionsTabState(prefs, ImmediateDraft(), languages)
         showTab { GuiOptionsTab(state) }
 
         onNodeWithText("Startup design").assertExists()
@@ -117,11 +119,21 @@ class MessagingTabsScreenTest {
 
     // ------------------------------------------------------------------ Beacon
 
-    private class Beacon(val prefs: ChatPreferences, val refuse: Boolean = false) {
+    /*
+     * A draft that applies at once by default, so the tests below keep pinning the field's
+     * commit rules (#128) against the stored value; the drafted behaviour is pinned by the
+     * tests that pass a real draft.
+     */
+    private class Beacon(
+        val prefs: ChatPreferences,
+        val refuse: Boolean = false,
+        val draft: SettingsDraft = ImmediateDraft(),
+    ) {
         var restarts = 0
         val refusals = mutableListOf<String>()
         val state = BeaconTabState(
             prefs,
+            draft,
             validateBeaconTemplate = { if (refuse) throw IllegalArgumentException("no variable %foo%") },
             restartBeaconTimer = { restarts++ },
             mainCategoryName = "Microwave",
@@ -226,15 +238,15 @@ class MessagingTabsScreenTest {
     }
 
     /*
-     * The stored value can change under a field without the field's own key changing: the
-     * field commits 9 over 5, nothing recomposes the tab, then a profile switch puts 5 back
-     * and the tab recomposes with 5 -- the same `stored` it was first drawn with. The field
-     * still shows 9, so leaving it must commit 9 again; judged against what the field itself
-     * last committed, it looked unchanged and the shown value silently differed from the
-     * stored one.
+     * The stored value can change under a field -- a profile switch puts 5 back after the field
+     * committed 9. The field used to keep showing 9 then, because nothing recomposed the tab
+     * after a commit, and #128 made leaving it commit the shown 9 again. Since the edits go
+     * through the settings draft, which is Compose state, a commit recomposes the tab: the field
+     * follows the stored value, shows the 5, and leaving it commits nothing. Either way what the
+     * field shows is what is stored once the operator has left it.
      */
     @Test
-    fun aValueResetBehindTheFieldIsCommittedAgainWhenTheFieldIsLeft() = runComposeUiTest {
+    fun aValueResetBehindTheFieldIsShownAndNotCommittedAgain() = runComposeUiTest {
         val s = Beacon(preferences())
         s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
         val generation = mutableStateOf(0)
@@ -251,13 +263,13 @@ class MessagingTabsScreenTest {
             generation.value++
         }
         waitForIdle()
-        fieldBeside("Interval in whole minutes").assertTextEquals("9")
+        fieldBeside("Interval in whole minutes").assertTextEquals("5")
 
         fieldBeside("Beacon message").performScrollTo().performClick()
         waitForIdle()
 
-        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat, "the shown 9 was not committed again")
-        assertEquals(2, s.restarts)
+        assertEquals(5, s.prefs.bcn_beaconIntervalInMinutesMainCat, "the field committed a value it no longer showed")
+        assertEquals(1, s.restarts)
     }
 
     /** Leaving the field commits what was typed, without Enter, and restarts the timer once. */
@@ -281,7 +293,7 @@ class MessagingTabsScreenTest {
 
     // ------------------------------------------------------------------ Notification
 
-    private class Notification(val prefs: ChatPreferences) {
+    private class Notification(val prefs: ChatPreferences, val draft: SettingsDraft = ImmediateDraft()) {
         init {
             prefs.isNotify_dxClusterServerEnabled = false
         }
@@ -292,15 +304,19 @@ class MessagingTabsScreenTest {
         val refusals = mutableListOf<String>()
         val state = NotificationTabState(
             prefs,
+            draft,
             monitored,
-            applyDxClusterServerEnabled = { serverEnabled += it },
-            applyDxClusterServerPort = { ports += it },
+            // What the server is brought to on apply: its switch, and the port it binds.
+            applyDxClusterServer = {
+                serverEnabled += prefs.isNotify_dxClusterServerEnabled
+                ports += prefs.notify_dxclusterServerPort
+            },
             broadcastTestSpot = { spots += it; "no logger connected" },
         )
     }
 
     @Test
-    fun notificationWritesThroughAndStartsTheClusterServer() = runComposeUiTest {
+    fun notificationStoresItsFieldsAndStartsTheClusterServer() = runComposeUiTest {
         val s = Notification(preferences())
         showTab { NotificationTab(s.state) { s.refusals += it } }
 
@@ -314,6 +330,7 @@ class MessagingTabsScreenTest {
         toggle("Run the DX Cluster server")
         assertTrue(s.prefs.isNotify_dxClusterServerEnabled)
         assertEquals(listOf(true), s.serverEnabled)
+        s.ports.clear()
 
         typeAndCommit("Spotter callsign", "dn9apw")
         assertEquals("DN9APW", s.prefs.notify_DXCSrv_SpottersCallSign.get())

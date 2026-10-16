@@ -1,6 +1,8 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -10,9 +12,13 @@ import java.nio.file.Path
 
 class AirscoutTabStateTest(@TempDir private val tempDir: Path) {
 
-    private inner class Session {
+    /*
+     * The rules below are pinned with a draft that applies at once; what the draft itself
+     * changes is pinned by the two tests that pass a real one.
+     */
+    private inner class Session(val draft: SettingsDraft = ImmediateDraft()) {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state by lazy { AirscoutTabState(prefs) }
+        val state by lazy { AirscoutTabState(prefs, draft) }
     }
 
     @Test
@@ -34,7 +40,39 @@ class AirscoutTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `writing reaches the preferences at once, without a confirmation step`() {
+    fun `an edit waits for apply`() {
+        val s = Session(SettingsDraft())
+        s.prefs.setAirScout_asCommunicationPort(9872)
+
+        s.state.airScout_asCommunicationPort = 9873
+        s.state.airScout_asServerNameString = " AS3 "
+
+        assertEquals(9872, s.prefs.getAirScout_asCommunicationPort(), "an edit took effect before Apply")
+        assertEquals(9873, s.state.airScout_asCommunicationPort, "the tab shows the edit")
+        assertEquals("AS3", s.state.airScout_asServerNameString, "the draft holds the trimmed value")
+
+        s.draft.apply()
+
+        assertEquals(9873, s.prefs.getAirScout_asCommunicationPort())
+        assertEquals("AS3", s.prefs.getAirScout_asServerNameString())
+    }
+
+    @Test
+    fun `a discarded edit changes nothing, and an invalid one never enters the draft`() {
+        val s = Session(SettingsDraft())
+        s.prefs.setAirScout_asBandString("1440000")
+
+        s.state.airScout_asBandString = "-1"
+        assertFalse(s.draft.hasPendingChanges, "a refused value reached the draft")
+
+        s.state.airScout_asBandString = "4320000"
+        s.draft.discard()
+
+        assertEquals("1440000", s.prefs.getAirScout_asBandString())
+    }
+
+    @Test
+    fun `writing reaches the preferences on apply`() {
         val s = Session()
 
         s.state.airScout_asUDPListenerEnabled = true

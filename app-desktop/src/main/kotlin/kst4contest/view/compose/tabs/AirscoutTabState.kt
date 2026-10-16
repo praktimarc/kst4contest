@@ -1,14 +1,16 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.SettingsDraft
+import kst4contest.view.compose.setting
 
 /**
  * The Airscout tab as a typed facade over ChatPreferences.
  *
- * Every property writes through immediately and there is deliberately no apply(), the
- * way the JavaFX controls behaved.
+ * Edits are staged in the window's [SettingsDraft] and take effect when the operator
+ * applies them.
  *
- * Three properties are guarded before the write, and the guard is not decoration. The
+ * Three properties are guarded before they are staged, and the guard is not decoration. The
  * ChatPreferences setters do not keep the previous value on bad input, they substitute
  * the factory default: an empty identifier becomes "AS"/"KST", a port outside 1..65535
  * becomes 9872, a band value that is not a positive number becomes "1440000". The
@@ -19,27 +21,48 @@ import kst4contest.model.ChatPreferences
  * The accepted ranges are the JavaFX ones, unchanged: AirScout ports and the band
  * value are protocol values and neither the defaults nor the bounds are touched.
  */
-class AirscoutTabState(private val prefs: ChatPreferences) {
+class AirscoutTabState(private val prefs: ChatPreferences, private val draft: SettingsDraft) {
 
-    var airScout_asUDPListenerEnabled: Boolean
-        get() = prefs.isAirScout_asUDPListenerEnabled()
-        set(value) { prefs.setAirScout_asUDPListenerEnabled(value) }
+    var airScout_asUDPListenerEnabled: Boolean by draft.setting(
+        { prefs.isAirScout_asUDPListenerEnabled() },
+    ) { prefs.setAirScout_asUDPListenerEnabled(it) }
+
+    /*
+     * The drafted values behind the guarded properties below. Only a valid, normalised value
+     * is staged, so neither the draft nor apply can hand the setters what they would replace
+     * with the factory default.
+     */
+    private var serverName: String by draft.setting(
+        { prefs.getAirScout_asServerNameString() },
+    ) { prefs.setAirScout_asServerNameString(it) }
+
+    private var clientName: String by draft.setting(
+        { prefs.getAirScout_asClientNameString() },
+    ) { prefs.setAirScout_asClientNameString(it) }
+
+    private var communicationPort: Int by draft.setting(
+        { prefs.getAirScout_asCommunicationPort() },
+    ) { prefs.setAirScout_asCommunicationPort(it) }
+
+    private var bandString: String by draft.setting(
+        { prefs.getAirScout_asBandString() },
+    ) { prefs.setAirScout_asBandString(it) }
 
     /** Logical identifier of the target AirScout server; invalid input is ignored. */
     var airScout_asServerNameString: String
-        get() = prefs.getAirScout_asServerNameString()
+        get() = serverName
         set(value) {
             if (isValidIdentifier(value)) {
-                prefs.setAirScout_asServerNameString(value.trim())
+                serverName = value.trim()
             }
         }
 
     /** Identifier of this KST4Contest instance; invalid input is ignored. */
     var airScout_asClientNameString: String
-        get() = prefs.getAirScout_asClientNameString()
+        get() = clientName
         set(value) {
             if (isValidIdentifier(value)) {
-                prefs.setAirScout_asClientNameString(value.trim())
+                clientName = value.trim()
             }
         }
 
@@ -49,10 +72,10 @@ class AirscoutTabState(private val prefs: ChatPreferences) {
      * that changes here.
      */
     var airScout_asCommunicationPort: Int
-        get() = prefs.getAirScout_asCommunicationPort()
+        get() = communicationPort
         set(value) {
             if (isValidPort(value)) {
-                prefs.setAirScout_asCommunicationPort(value)
+                communicationPort = value
             }
         }
 
@@ -60,9 +83,9 @@ class AirscoutTabState(private val prefs: ChatPreferences) {
      * Pick the AirScout frequency per station instead of forcing one value. Uses the
      * station's current QRG first, then station-name and chat-category evidence.
      */
-    var airScout_autoBandSelectionEnabled: Boolean
-        get() = prefs.isAirScout_autoBandSelectionEnabled()
-        set(value) { prefs.setAirScout_autoBandSelectionEnabled(value) }
+    var airScout_autoBandSelectionEnabled: Boolean by draft.setting(
+        { prefs.isAirScout_autoBandSelectionEnabled() },
+    ) { prefs.setAirScout_autoBandSelectionEnabled(it) }
 
     /**
      * The forced AirScout band value, a protocol number such as 1440000 for 144 MHz.
@@ -70,9 +93,9 @@ class AirscoutTabState(private val prefs: ChatPreferences) {
      * value produced in the JavaFX field.
      */
     var airScout_asBandString: String
-        get() = prefs.getAirScout_asBandString()
+        get() = bandString
         set(value) {
-            parseBandValue(value)?.let { prefs.setAirScout_asBandString(it) }
+            parseBandValue(value)?.let { bandString = it }
         }
 
     /**

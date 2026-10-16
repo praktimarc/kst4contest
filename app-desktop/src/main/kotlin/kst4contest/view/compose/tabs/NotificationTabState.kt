@@ -10,121 +10,129 @@ import kst4contest.view.compose.CommitOutcome
 import kst4contest.view.compose.EditableListState
 import kst4contest.view.compose.EntryRule
 import kst4contest.view.i18n.CurrentStrings
+import kst4contest.view.compose.SettingsDraft
+import kst4contest.view.compose.setting
 import java.util.Locale
 
 /**
  * State of the notification tab: sounds, band-upgrade hints, the local DX Cluster
  * server and the QSO monitoring list.
  *
- * Three of these reach past the preferences into the running session, which the
- * settings coverage test cannot see, so they are constructor callbacks rather than
- * plain properties: starting and stopping the server, restarting it after a port
- * change, and sending the test spot.
+ * Edits are staged in the window's [SettingsDraft] and take effect when the operator
+ * applies them; the monitoring list too. The test spot is an action and is sent at once.
+ *
+ * Two of these reach past the preferences into the running session, which the settings
+ * coverage test cannot see, so they are constructor callbacks rather than plain
+ * properties: bringing the server in line with its switch and port, and sending the test
+ * spot.
  *
  * @param monitoredRoster `ChatController.getLstNotify_QSOSniffer_sniffedCallSignList`;
  *        it lives on the controller, not in the preferences, which is why it is
  *        passed separately.
- * @param applyDxClusterServerEnabled starts or stops the server, the work the
- *        JavaFX checkbox did beyond writing the flag.
- * @param applyDxClusterServerPort restarts the server; called only when the port
- *        actually changed, as the JavaFX field did.
+ * @param applyDxClusterServer brings the running server in line with the applied switch
+ *        and port: restarted while enabled, stopped otherwise. The switch and the port
+ *        share it, so one apply restarts the server once, on the new port.
  * @param broadcastTestSpot delivers the spot and returns null on success or the
  *        reason it could not be delivered.
  */
 class NotificationTabState(
     private val prefs: ChatPreferences,
+    private val draft: SettingsDraft,
     private val monitoredRoster: SimpleRoster<String>,
-    private val applyDxClusterServerEnabled: (Boolean) -> Unit,
-    private val applyDxClusterServerPort: (Int) -> Unit,
+    private val applyDxClusterServer: () -> Unit,
     private val broadcastTestSpot: (ChatMember) -> String?,
 ) {
 
-    var notify_playSimpleSounds: Boolean
-        get() = prefs.isNotify_playSimpleSounds()
-        set(value) { prefs.setNotify_playSimpleSounds(value) }
+    var notify_playSimpleSounds: Boolean by draft.setting(
+        { prefs.isNotify_playSimpleSounds() },
+    ) { prefs.setNotify_playSimpleSounds(it) }
 
-    var notify_playCWCallsignsOnRxedPMs: Boolean
-        get() = prefs.isNotify_playCWCallsignsOnRxedPMs()
-        set(value) { prefs.setNotify_playCWCallsignsOnRxedPMs(value) }
+    var notify_playCWCallsignsOnRxedPMs: Boolean by draft.setting(
+        { prefs.isNotify_playCWCallsignsOnRxedPMs() },
+    ) { prefs.setNotify_playCWCallsignsOnRxedPMs(it) }
 
-    var notify_playVoiceCallsignsOnRxedPMs: Boolean
-        get() = prefs.isNotify_playVoiceCallsignsOnRxedPMs()
-        set(value) { prefs.setNotify_playVoiceCallsignsOnRxedPMs(value) }
+    var notify_playVoiceCallsignsOnRxedPMs: Boolean by draft.setting(
+        { prefs.isNotify_playVoiceCallsignsOnRxedPMs() },
+    ) { prefs.setNotify_playVoiceCallsignsOnRxedPMs(it) }
 
-    var notify_bandUpgradeHintOnLogEnabled: Boolean
-        get() = prefs.isNotify_bandUpgradeHintOnLogEnabled()
-        set(value) { prefs.setNotify_bandUpgradeHintOnLogEnabled(value) }
+    var notify_bandUpgradeHintOnLogEnabled: Boolean by draft.setting(
+        { prefs.isNotify_bandUpgradeHintOnLogEnabled() },
+    ) { prefs.setNotify_bandUpgradeHintOnLogEnabled(it) }
 
-    var notify_bandUpgradePriorityBoostEnabled: Boolean
-        get() = prefs.isNotify_bandUpgradePriorityBoostEnabled()
-        set(value) { prefs.setNotify_bandUpgradePriorityBoostEnabled(value) }
+    var notify_bandUpgradePriorityBoostEnabled: Boolean by draft.setting(
+        { prefs.isNotify_bandUpgradePriorityBoostEnabled() },
+    ) { prefs.setNotify_bandUpgradePriorityBoostEnabled(it) }
+
+    private var dxClusterServerEnabled: Boolean by draft.setting(
+        { prefs.isNotify_dxClusterServerEnabled() },
+        effectKey = DX_CLUSTER_SERVER,
+        effect = { applyDxClusterServer() },
+    ) { prefs.setNotify_dxClusterServerEnabled(it) }
+
+    private var dxClusterServerPort: Int by draft.setting(
+        { prefs.getNotify_dxclusterServerPort() },
+        effectKey = DX_CLUSTER_SERVER,
+        effect = { applyDxClusterServer() },
+    ) { prefs.setNotify_dxclusterServerPort(it) }
+
+    private var spotterCallSign: String by draft.setting(
+        { prefs.getNotify_DXCSrv_SpottersCallSign().get() },
+    ) { prefs.setNotify_DXCSrv_SpottersCallSign(it) }
 
     val notify_dxClusterServerEnabled: Boolean
-        get() = prefs.isNotify_dxClusterServerEnabled()
+        get() = dxClusterServerEnabled
 
     val notify_dxclusterServerPort: Int
-        get() = prefs.getNotify_dxclusterServerPort()
+        get() = dxClusterServerPort
 
     val notify_DXCSrv_SpottersCallSign: String
-        get() = prefs.getNotify_DXCSrv_SpottersCallSign().get()
+        get() = spotterCallSign
 
-    /**
-     * The band a spot falls back to when its frequency carries no band information.
-     *
-     * Stored as a prefix string, so an unreadable value is possible; reading it
-     * repairs the stored value to 144, which is what the JavaFX window did when it
-     * built the combo box (Kst4ContestApplication:11349).
+    /*
+     * Stored as a prefix string, so an unreadable value is possible. It is shown as 144 here
+     * and written back as 144 by repairStoredSettings before the window is built -- never
+     * from this read, which runs during composition.
      */
+    private var fallbackBand: Band by draft.setting(
+        { Band.fromPrefix(prefs.getNotify_optionalFrequencyPrefix().get()) ?: Band.B_144 },
+    ) { prefs.setNotify_optionalFrequencyPrefix(it.prefix) }
+
+    /** The band a spot falls back to when its frequency carries no band information. */
     var notify_optionalFrequencyPrefix: Band
-        get() {
-            val stored = Band.fromPrefix(prefs.getNotify_optionalFrequencyPrefix().get())
-
-            if (stored == null) {
-                prefs.setNotify_optionalFrequencyPrefix(Band.B_144.prefix)
-                return Band.B_144
-            }
-
-            return stored
-        }
-        set(value) { prefs.setNotify_optionalFrequencyPrefix(value.prefix) }
+        get() = fallbackBand
+        set(value) { fallbackBand = value }
 
     val monitoredCallSigns = EditableListState(
         monitoredRoster.snapshot(),
         rule = EntryRule { candidate, _, others -> judgeMonitoredCallSign(candidate, others) },
     )
 
-    /** Writes the flag and lets the running session start or stop the server. */
+    /** Stages the server switch; applying it starts or stops the server. */
     fun enableDxClusterServer(enabled: Boolean) {
-        prefs.setNotify_dxClusterServerEnabled(enabled)
-        applyDxClusterServerEnabled(enabled)
+        dxClusterServerEnabled = enabled
     }
 
     /**
-     * @return null when applied, otherwise the reason the port was refused.
+     * @return null when staged, otherwise the reason the port was refused.
      */
     fun commitDxClusterServerPort(entered: String): String? {
-        val previousPort = prefs.getNotify_dxclusterServerPort()
         val port = entered.trim().toIntOrNull()
 
         if (port == null || port < 1 || port > 65535) {
             return CurrentStrings.get().notificationInvalidPort(entered.trim())
         }
 
-        prefs.setNotify_dxclusterServerPort(port)
-
         /*
-         * Restarting on an unchanged port would drop a connected logger for nothing;
-         * the JavaFX field guarded the restart the same way.
+         * The stored port staged again is no change, so it restarts nothing: restarting on
+         * an unchanged port would drop a connected logger for nothing, and the JavaFX field
+         * guarded the restart the same way.
          */
-        if (port != previousPort) {
-            applyDxClusterServerPort(port)
-        }
-
+        dxClusterServerPort = port
         return null
     }
 
     /**
-     * @return null when stored, otherwise the reason the callsign was refused.
+     * @return null when staged, otherwise the reason the callsign was refused.
      */
     fun commitSpotterCallSign(entered: String): String? {
         val spotterCallSign = entered.trim().uppercase(Locale.ROOT)
@@ -133,13 +141,12 @@ class NotificationTabState(
             return CurrentStrings.get().notificationInvalidSpotter(spotterCallSign)
         }
 
-        prefs.setNotify_DXCSrv_SpottersCallSign(spotterCallSign)
+        this.spotterCallSign = spotterCallSign
         return null
     }
 
     /**
-     * Appends a callsign to the monitoring list and fills the roster at once, as the
-     * JavaFX dialog did.
+     * Appends a callsign to the monitoring list and stages the list.
      *
      * @return null when added, otherwise the reason it was refused.
      */
@@ -163,9 +170,14 @@ class NotificationTabState(
         return null
     }
 
-    /** Fills the monitoring roster from the list. */
+    /** Stages the list; applying it fills the monitoring roster. */
     fun commitMonitoredCallSigns() {
-        monitoredCallSigns.commitTo(monitoredRoster)
+        draft.stage(
+            MONITORED_CALL_SIGNS,
+            monitoredCallSigns.texts.toList(),
+            live = { monitoredRoster.snapshot() },
+            write = { monitoredCallSigns.commitTo(monitoredRoster) },
+        )
     }
 
     /**
@@ -210,5 +222,12 @@ class NotificationTabState(
         }
 
         return CommitOutcome.Stored(baseCall)
+    }
+
+    private companion object {
+        /** The effect key the server switch and port share. */
+        const val DX_CLUSTER_SERVER = "dxClusterServer"
+
+        const val MONITORED_CALL_SIGNS = "NotificationTabState.monitoredCallSigns"
     }
 }
