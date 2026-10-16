@@ -338,6 +338,20 @@ public class ChatController implements ThreadStatusCallback {
 		(slot == RadioSlot.SECOND ? rotator2 : rotator1).rotateTo(azimuth);
 	}
 
+	/*
+	 * Not isDisconnected(): that flag defaults to false before the first connect,
+	 * so it would claim a session where none exists.
+	 */
+	private boolean isSessionRunning() {
+		return on4KstConnectionManager != null && sessionRunning(on4KstConnectionManager.getState());
+	}
+
+	static boolean sessionRunning(On4KstConnectionState state) {
+		return state != null
+				&& state != On4KstConnectionState.DISCONNECTED
+				&& state != On4KstConnectionState.STOPPING;
+	}
+
 	/**
 	 * Follows the settings for rotator 2 after Apply: always stopped first, so a changed
 	 * host or port is bound anew, and started again only while a session runs. Without it,
@@ -346,7 +360,7 @@ public class ChatController implements ThreadStatusCallback {
 	public void reconfigureSecondRotator() {
 		rotator2.stop();
 		if (secondRotatorWanted(chatPreferences)) {
-			if (!isDisconnected()) {
+			if (isSessionRunning()) {
 				rotator2.start();
 			}
 		} else {

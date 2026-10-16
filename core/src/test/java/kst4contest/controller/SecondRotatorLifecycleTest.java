@@ -27,4 +27,14 @@ class SecondRotatorLifecycleTest {
         prefs.setStn_pstRotator2Enabled(false);
         assertFalse(ChatController.secondRotatorWanted(prefs));
     }
+
+    @Test
+    void sessionRunsOnlyInStatesBetweenStartAndStop() {
+        assertFalse(ChatController.sessionRunning(null));
+        assertFalse(ChatController.sessionRunning(On4KstConnectionState.DISCONNECTED));
+        assertFalse(ChatController.sessionRunning(On4KstConnectionState.STOPPING));
+        assertTrue(ChatController.sessionRunning(On4KstConnectionState.CONNECTING));
+        assertTrue(ChatController.sessionRunning(On4KstConnectionState.ONLINE));
+        assertTrue(ChatController.sessionRunning(On4KstConnectionState.RECONNECT_WAIT));
+    }
 }
