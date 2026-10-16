@@ -111,7 +111,28 @@ subprojects {
         useJUnitPlatform()
 
         val testUserHome = testUserHomeRoot.resolve(name)
-        systemProperty("user.home", testUserHome.absolutePath)
+        /*
+         * The scratch home is a declared output. Test tasks are cacheable, and a cache hit
+         * skips doFirst; as an output the directory is restored together with the cached
+         * result, so checkTestUserHome always judges the files that belong to these inputs
+         * and never a leftover from another run.
+         *
+         * Skiko unpacks its native library (about 30 MB) below user.home unless told
+         * otherwise. It is kept beside the scratch home instead, so it neither bloats every
+         * cache entry nor is unpacked again on each run.
+         *
+         * Both paths are passed through an argument provider rather than systemProperty():
+         * a system property is a task input, and an absolute path there would make the
+         * cache key differ between checkouts.
+         */
+        val skikoDataPath = layout.buildDirectory.dir("skiko-data").get().asFile
+        outputs.dir(testUserHome)
+        jvmArgumentProviders.add(CommandLineArgumentProvider {
+            listOf(
+                "-Duser.home=${testUserHome.absolutePath}",
+                "-Dskiko.data.path=${skikoDataPath.absolutePath}"
+            )
+        })
         doFirst {
             // deleteRecursively() reports failure instead of throwing. A file left over
             // from an earlier run would later be blamed on this one, so stop here.
