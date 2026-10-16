@@ -2,6 +2,8 @@ package kst4contest.view.compose.tabs
 
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onAllNodesWithText
@@ -11,6 +13,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.runComposeUiTest
+import androidx.compose.runtime.mutableStateOf
+import kst4contest.controller.On4KstConnectionState
 import kst4contest.model.ChatCategory
 import kst4contest.model.ChatPreferences
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -52,7 +56,8 @@ class StationTabScreenTest {
             isStn_bandActive10G = false
         }
         val mainApplied = mutableListOf<ChatCategory?>()
-        val state = StationTabState(prefs, { mainApplied += it }, { })
+        val link = mutableStateOf(On4KstConnectionState.DISCONNECTED)
+        val state = StationTabState(prefs, { mainApplied += it }, { }, { link.value })
     }
 
     @Test
@@ -129,5 +134,32 @@ class StationTabScreenTest {
 
         assertEquals(3, s.prefs.loginChatCategoryMain?.categoryNumber)
         assertEquals(3, s.mainApplied.single()?.categoryNumber, "the running session was not told")
+    }
+
+    /*
+     * The credentials are locked while a session exists or is being made: the running
+     * connection would not pick up a change, so an edit would look applied and be ignored
+     * until the next login. The lock used to be a plain field nothing ever wrote.
+     */
+    @Test
+    fun theLoginFieldsAreLockedWhileConnectedOrConnecting() = runComposeUiTest {
+        val s = Session(preferences())
+        showTab { StationTab(s.state) }
+        val credentials = listOf("Callsign", "Name, main category", "Name, second category", "Locator", "Password")
+
+        credentials.forEach { fieldBeside(it).assertIsEnabled() }
+
+        runOnIdle { s.link.value = On4KstConnectionState.CONNECTING }
+        waitForIdle()
+        credentials.forEach { fieldBeside(it).assertIsNotEnabled() }
+
+        runOnIdle { s.link.value = On4KstConnectionState.ONLINE }
+        waitForIdle()
+        credentials.forEach { fieldBeside(it).assertIsNotEnabled() }
+        fieldBeside("Server host name").assertIsEnabled()
+
+        runOnIdle { s.link.value = On4KstConnectionState.DISCONNECTED }
+        waitForIdle()
+        credentials.forEach { fieldBeside(it).assertIsEnabled() }
     }
 }

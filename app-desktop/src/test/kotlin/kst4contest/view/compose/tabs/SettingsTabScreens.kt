@@ -8,11 +8,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
-import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.performClick
@@ -71,10 +71,13 @@ private fun ComposeUiTest.besideLabel(
     return onAllNodes(matcher)[all.indexOf(chosen)]
 }
 
-/** The text field to the right of [label]. */
+/**
+ * The text field to the right of [label]. Matched by its editable text rather than by its
+ * set-text action, which a disabled field does not offer, so a locked field is found too.
+ */
 @OptIn(ExperimentalTestApi::class)
 internal fun ComposeUiTest.fieldBeside(label: String, occurrence: Int = 0): SemanticsNodeInteraction =
-    besideLabel(label, occurrence, hasSetTextAction()) { anchor, candidates ->
+    besideLabel(label, occurrence, SemanticsMatcher.keyIsDefined(SemanticsProperties.EditableText)) { anchor, candidates ->
         candidates.filter { it.boundsInRoot.left >= anchor.boundsInRoot.right - 1f }
             .minByOrNull { it.boundsInRoot.left }
     }

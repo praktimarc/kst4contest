@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import kst4contest.controller.On4KstConnectionState
 import kst4contest.model.ChatCategory
 import kst4contest.model.ChatPreferences
 
@@ -26,6 +27,11 @@ class StationTabState(
      */
     private val applyMainCategory: (ChatCategory?) -> Unit,
     private val applySecondCategory: (ChatCategory?) -> Unit,
+    /**
+     * The state of the ON4KST session. A lambda over Compose state, so the login fields
+     * follow it while the tab is open; the default suits a state built without a session.
+     */
+    private val connectionState: () -> On4KstConnectionState = { On4KstConnectionState.DISCONNECTED },
 ) {
 
     var loginChatCategoryMain: ChatCategory?
@@ -173,8 +179,14 @@ class StationTabState(
      * password, name, locator and both category pickers once the session was logged
      * in: changing them there would not reach the running connection, so an edit
      * would look applied and be ignored until the next login.
+     *
+     * Locked for every state but DISCONNECTED: a reconnect wait or a session being
+     * stopped still belongs to the credentials it was started with. Derived on each read
+     * rather than held, so a composition reading it follows the connection state the
+     * moment that changes, provided [connectionState] reads Compose state.
      */
-    var loginFieldsEnabled: Boolean = true
+    val loginFieldsEnabled: Boolean
+        get() = connectionState() == On4KstConnectionState.DISCONNECTED
 
     /**
      * The categories the operator can log into, built the way the JavaFX choice box
