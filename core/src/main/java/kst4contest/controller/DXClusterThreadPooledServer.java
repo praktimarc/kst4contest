@@ -40,7 +40,8 @@ public class DXClusterThreadPooledServer implements Runnable {
             Executors.newSingleThreadScheduledExecutor();
 
     private volatile boolean stopped;
-    private ServerSocket serverSocket;
+    /** Assigned by run() on the server thread and closed by stop() from another one. */
+    private volatile ServerSocket serverSocket;
 
     public DXClusterThreadPooledServer(
             int port,
