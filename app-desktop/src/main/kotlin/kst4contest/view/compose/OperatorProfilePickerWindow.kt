@@ -123,7 +123,7 @@ object OperatorProfilePickerWindow {
         val dialog = ComposeDialog(owner = null, modalityType = Dialog.ModalityType.APPLICATION_MODAL)
         dialog.title = kst4contest.view.i18n.CurrentStrings.get().pickerTitle
         dialog.size = DIALOG_SIZE
-        dialog.setLocationRelativeTo(null)
+        WindowPlacementOnScreen.centreOnMainWindowScreen(dialog)
         /* Disposed and not hidden: a hidden dialog keeps its window and Skia layer alive. */
         dialog.defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
         /*

@@ -13,14 +13,20 @@ import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
+import androidx.compose.ui.window.WindowPlacement as ComposeWindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.awt.ComposeWindow
 import java.awt.EventQueue
 import java.awt.Frame
+import java.awt.Point
 import java.awt.Toolkit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.flow.drop
 
 /**
  * A Compose window that lives beside the JavaFX application.
@@ -45,10 +51,19 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - **It must follow a design switch.** The operator can change the design from the
  *   main window's menu while this window is open.
  *
+ * Every window but the main one also opens on the screen the operator is working on
+ * (issue #59): centred on the main window's screen, or where the operator moved it to
+ * earlier in the session — see [WindowPlacement] for the rule.
+ *
  * @param threadName names the thread in a stack dump, which is where one looks when a
  *        window will not close
+ * @param isMainWindow true for the main window only. It keeps the platform's placement
+ *        and publishes its frame, which is what every other window is placed against.
  */
-class ComposeWindowHost(private val threadName: String) {
+class ComposeWindowHost(
+    private val threadName: String,
+    private val isMainWindow: Boolean = false,
+) {
 
     private val open = AtomicBoolean(false)
     private val darkModeState = mutableStateOf(false)
@@ -60,6 +75,15 @@ class ComposeWindowHost(private val threadName: String) {
     /** The AWT frame behind the Compose window, held only so a second press can raise it. */
     @Volatile
     private var frame: ComposeWindow? = null
+
+    /**
+     * Where the operator moved this window to, for this session only. Deliberately not
+     * persisted: a stored position outlives the monitor layout it was made on, which is
+     * the very problem of issue #59. Lives as long as the host, and the hosts are
+     * singletons, so it survives closing and reopening the window and a profile switch.
+     */
+    @Volatile
+    private var movedTo: Point? = null
 
     /** Whether the window is currently open, so a caller can tell without opening one. */
     val isOpen: Boolean
@@ -216,9 +240,30 @@ class ComposeWindowHost(private val threadName: String) {
                         return@application
                     }
 
+                    /*
+                     * Decided once per opening, on the event thread this composition runs
+                     * on — which is where the screens and the main window may be read.
+                     * Null keeps the platform's placement: always for the main window, and
+                     * for any window that opens before the main window exists.
+                     */
+                    val placed = remember {
+                        if (isMainWindow) {
+                            null
+                        } else {
+                            WindowPlacementOnScreen.place(
+                                movedTo,
+                                widthDp.roundToInt(),
+                                heightDp.roundToInt(),
+                            )
+                        }
+                    }
+
                     val windowState = rememberWindowState(
-                        width = widthDp.dp,
-                        height = heightDp.dp,
+                        position = placed
+                            ?.let { WindowPosition(it.x.dp, it.y.dp) }
+                            ?: WindowPosition.PlatformDefault,
+                        width = placed?.width?.dp ?: widthDp.dp,
+                        height = placed?.height?.dp ?: heightDp.dp,
                     )
 
                     /*
@@ -229,9 +274,46 @@ class ComposeWindowHost(private val threadName: String) {
                      */
                     if (onResized != null) {
                         LaunchedEffect(windowState) {
-                            snapshotFlow { windowState.size }.collect { size ->
-                                if (size.width.isSpecified && size.height.isSpecified) {
-                                    onResized(size.width.value, size.height.value)
+                            /*
+                             * A secondary window skips the opening size: it may be the
+                             * screen-clamped one, and writing that back would shrink the
+                             * stored size for good because the window once opened on a
+                             * smaller screen. The main window keeps writing it, as before.
+                             */
+                            snapshotFlow { windowState.size }
+                                .drop(if (isMainWindow) 0 else 1)
+                                .collect { size ->
+                                    if (size.width.isSpecified && size.height.isSpecified) {
+                                        onResized(size.width.value, size.height.value)
+                                    }
+                                }
+                        }
+                    }
+
+                    if (!isMainWindow) {
+                        LaunchedEffect(windowState) {
+                            /*
+                             * The baseline a move is measured against. Without a placement of
+                             * our own it is the first position the platform reports, so a
+                             * window that opened before the main window existed is not taken
+                             * as moved merely because the platform chose a spot for it.
+                             */
+                            var openedAt: Point? = placed?.location
+                            snapshotFlow { windowState.position }.collect { position ->
+                                if (position is WindowPosition.Absolute
+                                    && windowState.placement == ComposeWindowPlacement.Floating
+                                    && !windowState.isMinimized
+                                ) {
+                                    val now = Point(
+                                        position.x.value.roundToInt(),
+                                        position.y.value.roundToInt(),
+                                    )
+                                    val baseline = openedAt
+                                    if (baseline == null) {
+                                        openedAt = now
+                                    } else if (movedAway(baseline, now)) {
+                                        movedTo = now
+                                    }
                                 }
                             }
                         }
@@ -251,6 +333,9 @@ class ComposeWindowHost(private val threadName: String) {
                          */
                         DisposableEffect(window) {
                             frame = window
+                            if (isMainWindow) {
+                                WindowPlacementOnScreen.mainWindow = window
+                            }
                             /*
                              * The only place the handle is dropped. Clearing it again in
                              * the thread's finally block looks like a belt to this brace,
@@ -259,7 +344,12 @@ class ComposeWindowHost(private val threadName: String) {
                              * the late write would wipe a live handle and bring back the
                              * dead button this whole method exists to remove.
                              */
-                            onDispose { frame = null }
+                            onDispose {
+                                frame = null
+                                if (WindowPlacementOnScreen.mainWindow === window) {
+                                    WindowPlacementOnScreen.mainWindow = null
+                                }
+                            }
                         }
 
                         CompositionLocalProvider(
@@ -296,6 +386,21 @@ class ComposeWindowHost(private val threadName: String) {
         const val CLOSE_TIMEOUT_MS = 2_000L
     }
 }
+
+/**
+ * How far a window must have gone from where it was opened to count as moved by the
+ * operator.
+ *
+ * Not zero, because window managers nudge a new window on their own — by the decoration,
+ * or to keep it clear of a panel — and that nudge would otherwise be remembered as the
+ * operator's choice. The window would then stop following the main window to another
+ * screen, and on X11 reopening it would drift by the decoration each time.
+ */
+internal const val MOVE_TOLERANCE_PX = 48
+
+/** Whether [now] is far enough from [opened] to be the operator's move rather than a nudge. */
+internal fun movedAway(opened: Point, now: Point): Boolean =
+    abs(now.x - opened.x) > MOVE_TOLERANCE_PX || abs(now.y - opened.y) > MOVE_TOLERANCE_PX
 
 /**
  * The application icon, so these windows are not the only ones in the taskbar showing

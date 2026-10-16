@@ -254,7 +254,7 @@ object ComposeAlert {
             val dialog = ComposeDialog(owner = null, modalityType = Dialog.ModalityType.MODELESS)
             dialog.title = title
             dialog.size = DIALOG_SIZE
-            dialog.setLocationRelativeTo(null)
+            WindowPlacementOnScreen.centreOnMainWindowScreen(dialog)
             /* Disposed and not hidden, for the reason spelled out in open(). */
             dialog.defaultCloseOperation = WindowConstants.DISPOSE_ON_CLOSE
             dialog.isAlwaysOnTop = true
@@ -322,7 +322,7 @@ object ComposeAlert {
         )
         dialog.title = title
         dialog.size = DIALOG_SIZE
-        dialog.setLocationRelativeTo(null)
+        WindowPlacementOnScreen.centreOnMainWindowScreen(dialog)
         /*
          * Disposed, not hidden. The JDialog default is HIDE_ON_CLOSE, which would leave the
          * window and its Skia layer alive behind the operator's back — one per dismissal,
