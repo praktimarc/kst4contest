@@ -6,10 +6,12 @@ import java.sql.SQLException;
 //import java.net.Socket;
 //import java.util.ArrayList;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Hashtable;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.logging.Level;
@@ -22,6 +24,7 @@ import kst4contest.model.*;
 import kst4contest.logic.FrequencyTextParser;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.LongPredicate;
+import java.util.function.LongSupplier;
 import kst4contest.observe.SimpleValue;
 
 /**
@@ -51,12 +54,6 @@ public class MessageBusManagementThread extends Thread {
 	//	private File fileLogRAW;
 //	private TimerTask userActualizationTask; // Is used as a temporary userout-print
 //	private TimerTask userActualizationTask; //kst4contest.test 4 23001
-	// private boolean serverReady = false; //kst4contest.test 4 23001
-	private boolean serverReady = true;
-	private Hashtable<String, ChatMember> chatMemberTable;
-	private final String PTRN_USERLISTENTRY = "([a-zA-Z0-9]{2}/{1})?([a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z]{0,3})(/p)? [a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2} [ -~]{1,20}";
-	private final String PTRN_QRG_CAT2 = "(([0-9]{3,4}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
-	private final String PTRN_QRG_CAT3 = "(([0-9]{3,5}[\\.|,| ]?[0-9]{3})([\\.|,][\\d]{1,2})?)|(([a-zA-Z][0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)|((\\b[0-4]{1}[\\d]{2}\\b)([\\.|,][\\d]{1,2}\\b)?)";
 
 	/*
 	 * Frequency formats handled by the smart parser:
@@ -104,10 +101,25 @@ public class MessageBusManagementThread extends Thread {
 
 	// ==== Auto-answer flood/ping-pong protection ====
 	private static final String AUTOANSWER_PREFIX = ApplicationConstants.AUTOANSWER_PREFIX;
-	private static final long AUTOANSWER_COOLDOWN_MS = 120_000L; // two minutes
+	static final long AUTOANSWER_COOLDOWN_MS = 120_000L; // two minutes
+
+	/*
+	 * Lower-case fragments that identify a question for the local QRG. An incoming
+	 * private message is matched case-insensitively against each of them.
+	 */
+	static final Set<String> QRG_QUESTION_TEXTS = Set.of(
+			"ur qrg?",
+			"your qrg?",
+			"qrg?",
+			"freq?",
+			"pse qrg"
+	);
 
 	// Cooldown per remote station and chat category; updated only after this client sends.
 	private final Hashtable<String, Long> lastLocalAutoAnswerPerRemoteMs = new Hashtable<>();
+
+	// Wall clock for the autoanswer cooldown; injectable for tests.
+	private final LongSupplier millisClock;
 //	BufferedWriter bufwrtrDBGMSGOut;
 
 //	    private String text;
@@ -120,14 +132,6 @@ public class MessageBusManagementThread extends Thread {
 //		this.bufwrtrDBGMSGOut = bufwrtrDBGMSGOut;
 //	}
 
-	public boolean isServerready() {
-		return serverReady;
-	}
-
-	public void setServerready(boolean serverReady) {
-		this.serverReady = serverReady;
-	}
-
 	public MessageBusManagementThread(ChatController client, ThreadStatusCallback callBack) {
 		this(client, callBack, 0L, client.getMessageRXBus(), ignored -> true);
 	}
@@ -139,132 +143,36 @@ public class MessageBusManagementThread extends Thread {
 			LinkedBlockingQueue<ChatMessage> receiveQueue,
 			LongPredicate connectionSessionIsActive
 	) {
+		this(client, callBack, connectionSessionId, receiveQueue,
+				connectionSessionIsActive, System::currentTimeMillis);
+	}
+
+	/**
+	 * Full constructor with an explicit wall clock.
+	 *
+	 * @param millisClock source of the current time in epoch milliseconds, used for
+	 *                    the autoanswer cooldown; production code passes
+	 *                    {@code System::currentTimeMillis}
+	 */
+	MessageBusManagementThread(
+			ChatController client,
+			ThreadStatusCallback callBack,
+			long connectionSessionId,
+			LinkedBlockingQueue<ChatMessage> receiveQueue,
+			LongPredicate connectionSessionIsActive,
+			LongSupplier millisClock
+	) {
 
 		this.callBackToController = callBack;
 		this.client = client;
 		this.connectionSessionId = connectionSessionId;
 		this.receiveQueue = receiveQueue;
 		this.connectionSessionIsActive = connectionSessionIsActive;
+		this.millisClock = millisClock;
 
 		ThreadStateMessage threadStateMessage = new ThreadStateMessage(this.ThreadNickName, true, "initialized", false);
 		callBackToController.onThreadStatus(ThreadNickName,threadStateMessage);
 
-	}
-
-	/**
-	 * check if a chatmessage is part of the userlist via telnet 23000 port<br/>
-	 * <b>Updates userlist!</b>
-	 *
-	 */
-	private void checkIfItsUserListEntry(ChatMessage messageToProcess) {
-
-		Pattern pattern = Pattern.compile(PTRN_USERLISTENTRY);
-		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
-		/**
-		 * "([a-zA-Z0-9]{1,2}\/)?[a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z](\/(p|m))?(
-		 * )[a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2}[ -~]{0,30}" Thats a line of the show users
-		 * list
-		 */
-
-		while (matcher.find()) {
-//			System.out.println("Chatmember detected: "+ matcher.group() + " " + matcher.start());
-
-			ChatMember member = new ChatMember();
-			String matchedString = matcher.group();
-
-			String[] splittedUserString;
-			splittedUserString = matchedString.split(" ");
-
-			member.setCallSign(splittedUserString[0]);
-			member.setQra(splittedUserString[1]);
-
-			String stringAggregation = "";
-			for (int i = 2; i < splittedUserString.length; i++) {
-				stringAggregation += splittedUserString[i] + " ";
-			}
-			member.setName(stringAggregation);
-
-//			this.client.getChatMemberTable().put(member.getCallSign(), member);//deleted cause change if list type
-
-//			if (member.getName().)
-
-//			System.out.println("Processed Userlist Entry [" + this.client.getChatMemberTable().size() + "]: Call: "
-//					+ member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
-		}
-	}
-
-	/**
-	 * check if a chatmessage is part of the userlist via telnet 23000 port<br/>
-	 * <b>This method updates the userlist!</b>
-	 */
-	private void checkIfItsUserListEntry23001(ChatMessage messageToProcess) {
-
-		Pattern pattern = Pattern.compile(PTRN_USERLISTENTRY);
-		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
-		/**
-		 * "([a-zA-Z0-9]{1,2}\/)?[a-zA-Z0-9]{1,3}[0-9][a-zA-Z0-9]{0,3}[a-zA-Z](\/(p|m))?(
-		 * )[a-zA-Z]{2}[0-9]{2}[a-zA-Z]{2}[ -~]{0,30}" Thats a line of the show users
-		 * list
-		 */
-
-		while (matcher.find()) {
-//			System.out.println("Chatmember detected: "+ matcher.group() + " " + matcher.start());
-
-			ChatMember member = new ChatMember();
-			String matchedString = matcher.group();
-
-			String[] splittedUserString;
-			splittedUserString = matchedString.split(" ");
-
-			member.setCallSign(splittedUserString[0]);
-			member.setQra(splittedUserString[1]);
-
-			String stringAggregation = "";
-			for (int i = 2; i < splittedUserString.length; i++) {
-				stringAggregation += splittedUserString[i] + " ";
-			}
-			member.setName(stringAggregation);
-
-//			this.client.getChatMemberTable().put(member.getCallSign(), member);
-
-//			if (member.getName().)
-
-//			System.out.println("[MSGBUSMGT:] Processed Userlist Entry [" + this.client.getChatMemberTable().size()
-//					+ "]: Call: " + member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
-		}
-	}
-
-	/**
-	 * check if a chatmessage or a name of a chatmember contains a frequency<br/>
-	 * <b>returns String = "" if no frequency found</b>
-	 *
-
-	 */
-	private String checkIfMessageInhibitsFrequency(ChatMessage messageToProcess) {
-
-		Pattern pattern = Pattern.compile(PTRN_QRG_CAT2); // TODO: PTRN should depend to category-selection of own stn, it´s not the case now
-		Matcher matcher = pattern.matcher(messageToProcess.getMessageText());
-		String[] splittedQRGString;
-//		splittedQRGString[0] = "0";
-
-		String stringAggregation = "";
-
-
-		while (matcher.find()) {
-			String matchedString = matcher.group();
-
-			splittedQRGString = matchedString.split(" ");
-
-			for (String s : splittedQRGString) {
-				stringAggregation += s + " ";
-			}
-
-			LOGGER.log(Level.FINE, "Processed QRG info: {0}", stringAggregation);
-
-//			System.out.println("Processed QRG Entry [" + this.client.getChatMemberTable().size() + "]: Call: "
-//					+ member.getCallSign() + ", QRA: " + member.getQra() + ", Name: " + member.getName());
-		}
-		return stringAggregation;
 	}
 
 	/**
@@ -293,7 +201,127 @@ public class MessageBusManagementThread extends Thread {
 			return;
 		}
 
-		String messageText = message.getMessageText();
+		Map<Band, Long> bandContextTimestamps = new EnumMap<>(Band.class);
+		if (sender.getKnownActiveBands() != null) {
+			for (Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
+					: sender.getKnownActiveBands().entrySet()) {
+				if (entry.getKey() != null && entry.getValue() != null) {
+					bandContextTimestamps.put(entry.getKey(), entry.getValue().timestampEpoch);
+				}
+			}
+		}
+
+		String configuredPrefix = null;
+		if (prefs != null
+				&& prefs.getNotify_optionalFrequencyPrefix() != null) {
+			configuredPrefix =
+					prefs.getNotify_optionalFrequencyPrefix().get();
+		}
+
+		List<DetectedChatFrequency> detectedFrequencies = detectFrequencies(
+				message.getMessageText(),
+				bandContextTimestamps,
+				configuredPrefix,
+				millisClock.getAsLong()
+		);
+
+		for (DetectedChatFrequency detected : detectedFrequencies) {
+			/*
+			 * Store the result in the thread-safe active-member model. The existing
+			 * compatibility property used by the TableView and DX-Cluster code is
+			 * updated by applyDetectedFrequencyToActiveMembers(...), too.
+			 */
+			client.applyDetectedFrequencyToActiveMembers(
+					sender,
+					detected.band(),
+					detected.frequencyMHz()
+			);
+
+			LOGGER.log(Level.FINE,
+					"[SmartParser] Detected for "
+							+ sender.getCallSign()
+							+ ": "
+							+ detected.frequencyMHz()
+							+ " MHz ("
+							+ detected.band()
+							+ ") "
+							+ (detected.derivedFromShortForm()
+							? "[derived from " + detected.rawMatch() + "]"
+							: "[full match]")
+			);
+		}
+	}
+
+	/**
+	 * One frequency found in a chat message by
+	 * {@link #detectFrequencies(String, Map, String, long)}.
+	 *
+	 * @param band band the frequency belongs to
+	 * @param frequencyMHz frequency in MHz, always greater than zero
+	 * @param rawMatch matched text with commas replaced by dots and, for a relative
+	 *                 value, without its leading dot
+	 * @param derivedFromShortForm {@code true} when the value was relative
+	 *                             ({@code .210}) or bare ({@code 210}) and the band
+	 *                             had to be taken from context
+	 */
+	record DetectedChatFrequency(
+			Band band,
+			double frequencyMHz,
+			String rawMatch,
+			boolean derivedFromShortForm
+	) {
+	}
+
+	/**
+	 * Detects complete and relative frequencies in a chat message, in the order in
+	 * which they occur.
+	 *
+	 * <p>Complete frequencies determine their band directly. A relative or bare
+	 * value is completed with the band whose most recent observation is the newest
+	 * among those not older than 30 minutes ({@code nowMillis - timestamp <= 1_800_000})
+	 * and whose band range contains the completed frequency. Only when no such band
+	 * exists is the configured fallback prefix used; an unknown or missing prefix
+	 * falls back to 144 MHz.</p>
+	 *
+	 * <p>Every detection is fed back as band context with timestamp
+	 * {@code nowMillis} before the next match is examined. This reproduces the
+	 * production path, where storing a detection on the sender updates the very
+	 * map the next match reads: in {@code "10368.100 then .150"} the second value
+	 * becomes 10368.150, not 144.150.</p>
+	 *
+	 * <p>A bare three-digit value is accepted only with nearby frequency-related
+	 * text, see {@link #hasExplicitBareFrequencyContext(String, int, int)}.</p>
+	 *
+	 * @param messageText chat message text, may be {@code null}
+	 * @param bandContextTimestamps epoch milliseconds of the sender's most recent
+	 *                              observation per band; not modified; may be
+	 *                              {@code null}
+	 * @param fallbackPrefix configured fallback band prefix such as {@code "432"},
+	 *                       may be {@code null}
+	 * @param nowMillis current time in epoch milliseconds
+	 * @return detected frequencies; never {@code null}
+	 */
+	static List<DetectedChatFrequency> detectFrequencies(
+			String messageText,
+			Map<Band, Long> bandContextTimestamps,
+			String fallbackPrefix,
+			long nowMillis
+	) {
+		List<DetectedChatFrequency> result = new ArrayList<>();
+
+		if (messageText == null) {
+			return result;
+		}
+
+		Map<Band, Long> bandContext = new EnumMap<>(Band.class);
+		if (bandContextTimestamps != null) {
+			for (Map.Entry<Band, Long> entry : bandContextTimestamps.entrySet()) {
+				if (entry.getKey() != null && entry.getValue() != null) {
+					bandContext.put(entry.getKey(), entry.getValue());
+				}
+			}
+		}
+
 		Matcher matcher = SMART_FREQUENCY_PATTERN.matcher(messageText);
 
 		while (matcher.find()) {
@@ -327,49 +355,31 @@ public class MessageBusManagementThread extends Thread {
 				 */
 				long bestTimestamp = 0L;
 
-				if (sender.getKnownActiveBands() != null) {
-					for (java.util.Map.Entry<Band, ChatMember.ActiveFrequencyInfo> entry
-							: sender.getKnownActiveBands().entrySet()) {
+				for (Map.Entry<Band, Long> entry : bandContext.entrySet()) {
+					Band candidateBand = entry.getKey();
+					long timestamp = entry.getValue();
 
-						Band candidateBand = entry.getKey();
-						ChatMember.ActiveFrequencyInfo info = entry.getValue();
+					if (nowMillis - timestamp > 1_800_000L) {
+						continue;
+					}
 
-						if (candidateBand == null || info == null) {
-							continue;
-						}
+					FrequencyTextParser.DetectedFrequency detectedFrequency =
+							FrequencyTextParser.parseExplicitFrequency(
+									candidateBand.getPrefix() + "." + foundRaw
+							);
 
-						if (System.currentTimeMillis() - info.timestampEpoch > 1_800_000L) {
-							continue;
-						}
+					if (detectedFrequency != null
+							&& detectedFrequency.getBand() == candidateBand
+							&& timestamp > bestTimestamp) {
 
-						try {
-							String reconstructed =
-									candidateBand.getPrefix()
-											+ "."
-											+ foundRaw;
+						finalDetectedFrequency =
+								detectedFrequency.getFrequencyMHz();
 
-							FrequencyTextParser.DetectedFrequency detectedFrequency =
-									FrequencyTextParser.parseExplicitFrequency(
-											reconstructed
-									);
+						finalDetectedBand =
+								candidateBand;
 
-							if (detectedFrequency != null
-									&& detectedFrequency.getBand() == candidateBand
-									&& info.timestampEpoch > bestTimestamp) {
-
-								finalDetectedFrequency =
-										detectedFrequency.getFrequencyMHz();
-
-								finalDetectedBand =
-										candidateBand;
-
-								bestTimestamp =
-										info.timestampEpoch;
-
-							}
-						} catch (NumberFormatException ignored) {
-							// Try the next known band.
-						}
+						bestTimestamp =
+								timestamp;
 					}
 				}
 
@@ -379,41 +389,24 @@ public class MessageBusManagementThread extends Thread {
 				 * The current UI itself offers only values from Band.values().
 				 */
 				if (finalDetectedBand == null) {
-					String configuredPrefix = null;
-
-					if (prefs != null
-							&& prefs.getNotify_optionalFrequencyPrefix() != null) {
-						configuredPrefix =
-								prefs.getNotify_optionalFrequencyPrefix().get();
-					}
-
-					Band fallbackBand = Band.fromPrefix(configuredPrefix);
+					Band fallbackBand = Band.fromPrefix(fallbackPrefix);
 					if (fallbackBand == null) {
 						fallbackBand = Band.B_144;
 					}
 
-					try {
-						String reconstructed =
-								fallbackBand.getPrefix()
-										+ "."
-										+ foundRaw;
+					FrequencyTextParser.DetectedFrequency detectedFrequency =
+							FrequencyTextParser.parseExplicitFrequency(
+									fallbackBand.getPrefix() + "." + foundRaw
+							);
 
-						FrequencyTextParser.DetectedFrequency detectedFrequency =
-								FrequencyTextParser.parseExplicitFrequency(
-										reconstructed
-								);
+					if (detectedFrequency != null
+							&& detectedFrequency.getBand() == fallbackBand) {
 
-						if (detectedFrequency != null
-								&& detectedFrequency.getBand() == fallbackBand) {
+						finalDetectedFrequency =
+								detectedFrequency.getFrequencyMHz();
 
-							finalDetectedFrequency =
-									detectedFrequency.getFrequencyMHz();
-
-							finalDetectedBand =
-									fallbackBand;
-						}
-					} catch (NumberFormatException ignored) {
-						// The matched value cannot be converted into a frequency.
+						finalDetectedBand =
+								fallbackBand;
 					}
 				}
 			} else {
@@ -435,30 +428,19 @@ public class MessageBusManagementThread extends Thread {
 				continue;
 			}
 
-			/*
-			 * Store the result in the thread-safe active-member model. The existing
-			 * compatibility property used by the TableView and DX-Cluster code is
-			 * updated by applyDetectedFrequencyToActiveMembers(...), too.
-			 */
-			client.applyDetectedFrequencyToActiveMembers(
-					sender,
+			result.add(new DetectedChatFrequency(
 					finalDetectedBand,
-					finalDetectedFrequency
-			);
+					finalDetectedFrequency,
+					foundRaw,
+					shortForm
+			));
 
-			LOGGER.log(Level.FINE,
-					"[SmartParser] Detected for "
-							+ sender.getCallSign()
-							+ ": "
-							+ finalDetectedFrequency
-							+ " MHz ("
-							+ finalDetectedBand
-							+ ") "
-							+ (shortForm
-							? "[derived from " + foundRaw + "]"
-							: "[full match]")
-			);
+			// The caller stores this detection on the sender, which makes it the
+			// newest context for the remaining matches of the same message.
+			bandContext.put(finalDetectedBand, nowMillis);
 		}
+
+		return result;
 	}
 
 
@@ -529,122 +511,6 @@ public class MessageBusManagementThread extends Thread {
 //		return rawInput;
 //	}
 
-
-	/**
-	 * Builds UserList and gets meta informations out of the chat, as far as it is
-	 * possible. \n This is the only place where the Chatmember-List will be written
-	 *
-	 * Old Method for port 23000, raw text interface without any comfort, no longer used
-	 * @param messageToProcess
-	 */
-	private void processRXMessage23000(ChatMessage messageToProcess) {
-
-		String reduce;
-
-		reduce = new String(messageToProcess.getMessageText());
-		reduce = reduce.replaceAll("\\s+", " "); // reduce bursts of spaces to one space sign
-
-		messageToProcess.setMessageText(reduce);
-
-		if (messageToProcess.getMessageText() == null
-				|| messageToProcess.getMessageText().isEmpty()) {
-//			System.out.println("[MSGBUSMGTT:] ###################### no processable data");
-		} else {
-
-			if (reduce.length() >= 14 && reduce.length() <= 40) {
-				checkIfItsUserListEntry(messageToProcess); // 23001 kst4contest.test unneccessary
-			}
-
-			checkIfMessageInhibitsFrequency(messageToProcess);
-		}
-	}
-
-//	private boolean isUserInTheUserTable(String chatMemberCallsign) {
-//
-//		String checkThisCallsign = chatMemberCallsign;
-//
-//		if (this.client.getChatMemberTable().containsKey(checkThisCallsign)) {
-//			return true;
-//		} else
-//			return false;
-//
-//	}
-
-	/**
-	 * checks if the callsign-String of a given chatmember instance and a given list
-	 * instance is in the list. If yes, returns the index in the List, <b>if not,
-	 * returns -1.</b>
-	 *
-	 * @param lookForThis
-	 * @return Integer (index), -1 for not found
-	 */
-	private int checkListForChatMemberIndexByCallSign(List<ChatMember> list, ChatMember lookForThis) {
-
-		if (lookForThis == null) {
-
-			LOGGER.warning(
-					"[ChecklistForChatMemberIndexByCallsign] ERROR: null Value for Chatmember detected! Member cannot be in the list!");
-			return -1;
-		} else if (lookForThis.getCallSign() == null) {
-			LOGGER.warning(
-					"[ChecklistForChatMemberIndexByCallsign] ERROR: null Value in Callsign detected! Member cannot be in the list!");
-			return -1;
-		}
-		/***
-		 * Old mechanic for index search, new one implemented due concurrentmodificationexc, which works - start
-		 *
-		 */
-//		for (Iterator iterator = list.iterator(); iterator.hasNext();) {
-//			ChatMember chatMember = (ChatMember) iterator.next();
-//			if (chatMember.getCallSign().equals(lookForThis.getCallSign())) {
-////				System.out
-////						.println("MSGBUSHELBER: Found " + chatMember.getCallSign() + " at " + list.indexOf(chatMember));
-//
-//				return list.indexOf(chatMember);
-//			} else {
-//
-//			}
-//		}
-//
-//		System.out.println("[MsgBusMgr, ERROR:] ChecklistForChatMemberIndexByCallsign, not found: "
-//				+ lookForThis.getCallSign() + "\n ");
-		/***
-		 * /Old mechanic for index search,new one implemented due concurrentmodificationexc which works - end
-		 *
-		 */
-
-		for (int i = 0; i < list.size(); i++) {
-			if (list.get(i).getCallSign().equals(lookForThis.getCallSign())) {
-				//TODO: New since 1.26! Check against category!
-
-				LOGGER.fine("Checking chat categories for list member "
-						+ list.get(i).getCallSign() + " / "
-						+ list.get(i).getChatCategory() + " against "
-						+ lookForThis.getCallSign() + " / "
-						+ lookForThis.getChatCategory());
-
-//				System.out
-//						.println("MSGBUSHELBER: Found " + chatMember.getCallSign() + " at " + list.indexOf(chatMember));
-
-				if (list.get(i).getChatCategory().equals(lookForThis.getChatCategory())) { //new 1.26
-
-					return list.indexOf(list.get(i));
-				} //new 1.26
-				else {
-					LOGGER.fine("Chat-member category does not match");
-
-				}
-
-//				System.out.println("--------------------------- chatcategory of list.get(i) = " + list.get(i).getChatCategory().getCategoryNumber());
-				LOGGER.log(Level.FINE,
-						"Requested chat-member category is {0}",
-						lookForThis.getChatCategory().getCategoryNumber());
-			}
-//				return list.indexOf(list.get(i)); //if no category found, return entry //TODO: ERROR detected here! Should work now, needs some proof
-//				return -1; //if category dont match, return: member not found
-		}
-		return -1; // if it´s not found, the method will always end here and return -1
-	}
 
 	/**
 	 * Creates a minimal receiver object for ON4KST broadcast messages.
@@ -866,22 +732,6 @@ public class MessageBusManagementThread extends Thread {
 		final String SRVR_LOGINWRONGEMPTYCALL = "102";
 		final String SRVR_LOGINWRONGCALLSYNTAX = "103";
 		final String SRVR_LOGINWRONGCALLUNKNOWN = "101";
-
-		/**
-		 * here we have a helper Set for identifying questions for my qrg which can be autoanswered later // TODO: move to an extra method
-		 */
-		final HashSet<String> qrgQuestionTexts = new HashSet<String>();
-//		final ArrayList<String> qrgQuestionTexts = new ArrayList<String>();
-		qrgQuestionTexts.add("ur qrg?");
-		qrgQuestionTexts.add("your qrg?");
-		qrgQuestionTexts.add("qrg?");
-		qrgQuestionTexts.add("freq?");
-		qrgQuestionTexts.add("pse qrg");
-
-
-		/**
-		 * here we have a helper list for identifying questions for my qrg which can be autoanswered later
-		 */
 
 		if (messageToProcess.getMessageText() == null
 				|| messageToProcess.getMessageText().isEmpty()) {
@@ -1185,35 +1035,37 @@ public class MessageBusManagementThread extends Thread {
 										// ==== Unified auto-answer (generic + QRG) with ping-pong guard
 //      and per-remote cooldown ====
 										final String incomingText = newMessageArrived.getMessageText();
-										final String incomingLower =
-												(incomingText == null)
-														? ""
-														: incomingText.toLowerCase(Locale.ROOT);
 
 // Never answer another automatically generated message.
-										if (!isAutoMessage(newMessageArrived)) {
+										if (!isAutoMessage(incomingText)) {
 
-											boolean qrgRequested = false;
+											ChatPreferences autoAnswerPrefs =
+													this.client.getChatPreferences();
 
-											if (this.client.getChatPreferences()
-													.isMessageHandling_autoAnswerToQRGRequestEnabled()) {
-
-												for (String lookForQRGString : qrgQuestionTexts) {
-													if (incomingLower.contains(lookForQRGString)) {
-														qrgRequested = true;
-														break;
-													}
-												}
-											}
+											boolean qrgRequested =
+													autoAnswerPrefs.isMessageHandling_autoAnswerToQRGRequestEnabled()
+															&& matchesQrgQuestion(incomingText, QRG_QUESTION_TEXTS);
 
 											boolean genericEnabled =
-													this.client.getChatPreferences()
-															.isMsgHandling_autoAnswerEnabled();
+													autoAnswerPrefs.isMsgHandling_autoAnswerEnabled();
+
+											ChatMember incomingSender = newMessageArrived.getSender();
 
 											String automaticAnswerText = buildAutoAnswerMessageText(
-													newMessageArrived,
+													incomingSender == null ? null : incomingSender.getCallSign(),
+													// Diagnostics only: same fallback as autoAnswerCooldownKey.
+													newMessageArrived.getChatCategory() != null || incomingSender == null
+															? newMessageArrived.getChatCategory()
+															: incomingSender.getChatCategory(),
 													qrgRequested,
-													genericEnabled
+													selectAutoAnswerQrg(
+															newMessageArrived.getChatCategory(),
+															this.client.getChatCategorySecondChat(),
+															autoAnswerPrefs.getMYQRGFirstCat().get(),
+															autoAnswerPrefs.getMYQRGSecondCat().get()
+													),
+													genericEnabled,
+													autoAnswerPrefs.getMessageHandling_autoAnswerTextMainCat()
 											);
 
 											/*
@@ -1281,23 +1133,21 @@ public class MessageBusManagementThread extends Thread {
 										 * In that case locators may be missing, so angle/range analysis and DX spotting
 										 * must be skipped while the chat message itself is still published.
 										 */
-										boolean senderHasLocator = newMessageArrived.getSender().getQra() != null
-												&& !newMessageArrived.getSender().getQra().isBlank();
-										boolean receiverHasLocator = newMessageArrived.getReceiver().getQra() != null
-												&& !newMessageArrived.getReceiver().getQra().isBlank();
+										DirectionalOpportunity opportunity = classifyDirectionalOpportunity(
+												client.getChatPreferences().getStn_loginLocatorMainCat(),
+												newMessageArrived.getSender().getQra(),
+												newMessageArrived.getReceiver().getQra(),
+												client.getChatPreferences().getStn_maxQRBDefault(),
+												client.getChatPreferences().getStn_antennaBeamWidthDeg());
 
-										if (senderHasLocator && receiverHasLocator) {
-											if (DirectionUtils.isInAngleAndRange(client.getChatPreferences().getStn_loginLocatorMainCat(),
-													newMessageArrived.getSender().getQra(),
-													newMessageArrived.getReceiver().getQra(),
-													client.getChatPreferences().getStn_maxQRBDefault(),
-													client.getChatPreferences().getStn_antennaBeamWidthDeg())) {
+										if (opportunity != DirectionalOpportunity.MISSING_LOCATOR) {
+											if (opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
 
-												if (this.client.getChatPreferences().isNotify_playSimpleSounds()) {
-													//play only tick sound if the sender was not set directedtome before
-													if (!newMessageArrived.getSender().isInAngleAndRange()) {
-														this.client.getPlayAudioUtils().playNoiseLauncher('-');
-													}
+												//play only tick sound if the sender was not set directedtome before
+												if (shouldPlayDirectionalTick(
+														this.client.getChatPreferences().isNotify_playSimpleSounds(),
+														newMessageArrived.getSender().isInAngleAndRange())) {
+													this.client.getPlayAudioUtils().playNoiseLauncher('-');
 												}
 
 												newMessageArrived.getSender().setInAngleAndRange(true);
@@ -1306,31 +1156,21 @@ public class MessageBusManagementThread extends Thread {
 													try {
 														ChatMember sender = newMessageArrived.getSender();
 
-														String detectedFrequency = sender.getFrequency() == null
-																? null
-																: sender.getFrequency().get();
+														DxClusterSpotDecision spotDecision = decideDxClusterSpot(sender);
 
-														if (detectedFrequency != null && !detectedFrequency.isBlank()
-																&& !isAlreadyWorkedForDxClusterSpot(sender)) {
+														if (spotDecision == DxClusterSpotDecision.SPOT) {
 															/*
 															 * The DX Cluster spot must not depend on AirScout data. A known
 															 * frequency and a valid directional opportunity are sufficient.
 															 * Available AP information is added only as an optional comment.
 															 */
-															ChatMember onlyForSpottingObject = new ChatMember();
-															onlyForSpottingObject.setCallSign(sender.getCallSign());
-															onlyForSpottingObject.setFrequency(sender.getFrequency());
-															onlyForSpottingObject.setQra(
-																	buildDxClusterSpotComment(sender)
-															);
-
 															this.client
 																	.getDxClusterServer()
 																	.broadcastSingleDXClusterEntryToLoggers(
-																			onlyForSpottingObject
+																			buildDxClusterSpotEntry(sender)
 																	);
 
-														} else if (detectedFrequency != null && !detectedFrequency.isBlank()) {
+														} else if (spotDecision == DxClusterSpotDecision.ALREADY_WORKED) {
 															// Only reached when the worked check was the reason (issue #91).
 															LOGGER.fine("DX Cluster spot suppressed, station already worked on this band: "
 																	+ sender.getCallSign());
@@ -1699,19 +1539,15 @@ public class MessageBusManagementThread extends Thread {
 																} else {
 																	//message sent to other user
 																	// message sent from one other station to another other station
-																	boolean senderHasLocator = newMessageArrived.getSender().getQra() != null
-																			&& !newMessageArrived.getSender().getQra().isBlank();
+																	DirectionalOpportunity opportunity = classifyDirectionalOpportunity(
+																			client.getChatPreferences().getStn_loginLocatorMainCat(),
+																			newMessageArrived.getSender().getQra(),
+																			newMessageArrived.getReceiver().getQra(),
+																			client.getChatPreferences().getStn_maxQRBDefault(),
+																			client.getChatPreferences().getStn_antennaBeamWidthDeg());
 
-																	boolean receiverHasLocator = newMessageArrived.getReceiver().getQra() != null
-																			&& !newMessageArrived.getReceiver().getQra().isBlank();
-
-																	if (senderHasLocator && receiverHasLocator) {
-																		if (DirectionUtils.isInAngleAndRange(
-																				client.getChatPreferences().getStn_loginLocatorMainCat(),
-																				newMessageArrived.getSender().getQra(),
-																				newMessageArrived.getReceiver().getQra(),
-																				client.getChatPreferences().getStn_maxQRBDefault(),
-																				client.getChatPreferences().getStn_antennaBeamWidthDeg())) {
+																	if (opportunity != DirectionalOpportunity.MISSING_LOCATOR) {
+																		if (opportunity == DirectionalOpportunity.IN_ANGLE_AND_RANGE) {
 
 																			newMessageArrived.getSender().setInAngleAndRange(true);
 
@@ -1852,7 +1688,6 @@ public class MessageBusManagementThread extends Thread {
 //			this.client.getLst_chatMemberList().remove(thisMemberActualizesUserListForRefreshingIntheGuy);
 			// ******************************************************************QUICKNDIRTY........
 
-//			checkIfMessageInhibitsFrequency(messageToProcess);
 		}
 	}
 
@@ -1966,6 +1801,133 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	/**
+	 * Outcome of the directional check for a message between two other stations.
+	 */
+	enum DirectionalOpportunity {
+		/** Sender or receiver locator is missing or blank; nothing was calculated. */
+		MISSING_LOCATOR,
+		/** The sender beams towards the receiver and the local station is covered. */
+		IN_ANGLE_AND_RANGE,
+		/** Both locators are known, but the local station is outside beam or range. */
+		OUT_OF_ANGLE_OR_RANGE
+	}
+
+	/**
+	 * Decides whether a message from one other station to another one is a
+	 * directional opportunity ("Richtungs-Chance") for the local station.
+	 *
+	 * <p>Without both a sender and a receiver locator the geometry is not
+	 * evaluated at all. Otherwise the decision is
+	 * {@link DirectionUtils#isInAngleAndRange(String, String, String, double, double)}:
+	 * the local station must be within {@code maxQrbKm} of the sender and inside
+	 * the sender's beam towards the receiver.</p>
+	 *
+	 * @param ownLocator locator of the local station
+	 * @param senderLocator locator of the sending station, may be {@code null}
+	 * @param receiverLocator locator of the receiving station, may be {@code null}
+	 * @param maxQrbKm maximum distance from the local station to the sender
+	 * @param beamWidthDeg assumed antenna beam width of the sender in degrees
+	 * @return the classification of the message
+	 */
+	static DirectionalOpportunity classifyDirectionalOpportunity(
+			String ownLocator,
+			String senderLocator,
+			String receiverLocator,
+			double maxQrbKm,
+			double beamWidthDeg
+	) {
+		boolean senderHasLocator = senderLocator != null && !senderLocator.isBlank();
+		boolean receiverHasLocator = receiverLocator != null && !receiverLocator.isBlank();
+
+		if (!senderHasLocator || !receiverHasLocator) {
+			return DirectionalOpportunity.MISSING_LOCATOR;
+		}
+
+		return DirectionUtils.isInAngleAndRange(
+				ownLocator,
+				senderLocator,
+				receiverLocator,
+				maxQrbKm,
+				beamWidthDeg)
+				? DirectionalOpportunity.IN_ANGLE_AND_RANGE
+				: DirectionalOpportunity.OUT_OF_ANGLE_OR_RANGE;
+	}
+
+	/**
+	 * Returns whether the short tick sound for a new directional opportunity is
+	 * played: only with simple sounds enabled and only on the transition into
+	 * the opportunity, not again while the sender is already marked.
+	 *
+	 * @param simpleSoundsEnabled whether simple notification sounds are enabled
+	 * @param senderAlreadyInAngleAndRange the sender's flag before this message
+	 * @return {@code true} when the tick is to be played
+	 */
+	static boolean shouldPlayDirectionalTick(
+			boolean simpleSoundsEnabled,
+			boolean senderAlreadyInAngleAndRange
+	) {
+		return simpleSoundsEnabled && !senderAlreadyInAngleAndRange;
+	}
+
+	/**
+	 * Outcome of the automatic DX Cluster spot decision for a directional opportunity.
+	 */
+	enum DxClusterSpotDecision {
+		/** The sender has no known frequency; nothing is spotted or logged. */
+		NO_FREQUENCY,
+		/** The sender is already worked on the band of its frequency (issue #91). */
+		ALREADY_WORKED,
+		/** The spot is to be sent. */
+		SPOT
+	}
+
+	/**
+	 * Decides whether an automatic DX Cluster spot is sent for the sender of a
+	 * directional opportunity. Whether the local DX Cluster server is enabled at
+	 * all is checked by the caller.
+	 *
+	 * <p>A frequency counts as known when its text is neither {@code null} nor
+	 * blank; it is not parsed here. A text that names no supported band therefore
+	 * still leads to {@link DxClusterSpotDecision#SPOT}, see
+	 * {@link #isAlreadyWorkedForDxClusterSpot(ChatMember)}.</p>
+	 *
+	 * @param sender station that triggered the directional opportunity, may be {@code null}
+	 * @return the decision
+	 */
+	static DxClusterSpotDecision decideDxClusterSpot(ChatMember sender) {
+		String detectedFrequency = sender == null || sender.getFrequency() == null
+				? null
+				: sender.getFrequency().get();
+
+		if (detectedFrequency == null || detectedFrequency.isBlank()) {
+			return DxClusterSpotDecision.NO_FREQUENCY;
+		}
+
+		return isAlreadyWorkedForDxClusterSpot(sender)
+				? DxClusterSpotDecision.ALREADY_WORKED
+				: DxClusterSpotDecision.SPOT;
+	}
+
+	/**
+	 * Builds the entry handed to the local DX Cluster server for an automatic spot:
+	 * the sender's callsign, the sender's frequency value (the same instance, not a
+	 * copy) and, in the locator field, the comment from
+	 * {@link #buildDxClusterSpotComment(ChatMember)}.
+	 *
+	 * @param sender station to spot
+	 * @return a new member object used only for spotting
+	 */
+	static ChatMember buildDxClusterSpotEntry(ChatMember sender) {
+		ChatMember onlyForSpottingObject = new ChatMember();
+		onlyForSpottingObject.setCallSign(sender.getCallSign());
+		onlyForSpottingObject.setFrequency(sender.getFrequency());
+		onlyForSpottingObject.setQra(
+				buildDxClusterSpotComment(sender)
+		);
+		return onlyForSpottingObject;
+	}
+
+	/**
 	 * Method gets a String with a messagecategory-number and returns out of which of the existing categories
 	 * (chat channels) this message/user had written from
 	 *
@@ -1995,6 +1957,71 @@ public class MessageBusManagementThread extends Thread {
 
 
 	/**
+	 * Returns whether a private message asks for the local QRG.
+	 *
+	 * <p>The comparison is a case-insensitive substring match against each of the
+	 * given fragments, so {@code "GM, PSE QRG for a sked"} matches {@code "pse qrg"}.</p>
+	 *
+	 * @param text incoming message text, may be {@code null}
+	 * @param questionTexts lower-case fragments that identify a QRG question
+	 * @return {@code true} when any fragment occurs in the text
+	 */
+	static boolean matchesQrgQuestion(String text, Set<String> questionTexts) {
+		if (text == null || questionTexts == null) {
+			return false;
+		}
+
+		String lower = text.toLowerCase(Locale.ROOT);
+
+		for (String questionText : questionTexts) {
+			if (lower.contains(questionText)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Returns whether a message carries the fixed marker used for automatic replies.
+	 * Such a message must never be answered automatically (ping-pong guard).
+	 *
+	 * @param text message text, may be {@code null}
+	 * @return {@code true} when the marker occurs anywhere in the text
+	 */
+	static boolean isAutoMessage(String text) {
+		return text != null && text.contains(AUTOANSWER_PREFIX);
+	}
+
+	/**
+	 * Selects the configured QRG for the category in which a request was received.
+	 *
+	 * <p>Only a request from the second chat category is answered with the second
+	 * QRG. Any other category, including an unresolved one, falls back to the first
+	 * QRG. Categories are compared by number, not by identity.</p>
+	 *
+	 * @param incomingCategory category of the incoming message, may be {@code null}
+	 * @param secondCategory configured second chat category, may be {@code null}
+	 * @param firstCategoryQrg QRG configured for the main category, may be {@code null}
+	 * @param secondCategoryQrg QRG configured for the second category, may be {@code null}
+	 * @return the QRG belonging to the incoming category
+	 */
+	static String selectAutoAnswerQrg(
+			ChatCategory incomingCategory,
+			ChatCategory secondCategory,
+			String firstCategoryQrg,
+			String secondCategoryQrg
+	) {
+		if (incomingCategory != null
+				&& secondCategory != null
+				&& incomingCategory.getCategoryNumber() == secondCategory.getCategoryNumber()) {
+			return secondCategoryQrg;
+		}
+
+		return firstCategoryQrg;
+	}
+
+	/**
 	 * Builds and validates one automatic private reply.
 	 *
 	 * <p>A QRG request is answered only when the QRG belonging to the
@@ -2006,21 +2033,24 @@ public class MessageBusManagementThread extends Thread {
 	 * queue. Invalid configuration values must neither produce an empty
 	 * automatic reply nor start the cooldown.</p>
 	 *
-	 * @param incoming incoming private message
+	 * @param senderCallSign callsign of the station that sent the private message
+	 * @param category chat category of the incoming message, used for diagnostics only
 	 * @param qrgRequested whether the message contains a recognised QRG request
+	 * @param categoryQrg the QRG configured for that category, see
+	 *                    {@link #selectAutoAnswerQrg(ChatCategory, ChatCategory, String, String)}
 	 * @param genericEnabled whether the general automatic reply is enabled
+	 * @param genericAnswerText the configured general reply text
 	 * @return validated message text or {@code null} when no reply may be sent
 	 */
-	private String buildAutoAnswerMessageText(
-			ChatMessage incoming,
+	static String buildAutoAnswerMessageText(
+			String senderCallSign,
+			ChatCategory category,
 			boolean qrgRequested,
-			boolean genericEnabled
+			String categoryQrg,
+			boolean genericEnabled,
+			String genericAnswerText
 	) {
-		if (incoming == null
-				|| incoming.getSender() == null
-				|| incoming.getSender().getCallSign() == null
-				|| incoming.getSender().getCallSign().isBlank()) {
-
+		if (senderCallSign == null || senderCallSign.isBlank()) {
 			LOGGER.warning(
 					"KST4Contest auto-answer skipped: "
 							+ "incoming message has no valid sender callsign."
@@ -2031,37 +2061,32 @@ public class MessageBusManagementThread extends Thread {
 		String payload;
 
 		if (qrgRequested) {
-			String qrg = getAutoAnswerQrgForCategory(
-					incoming.getChatCategory()
-			);
-
-			if (qrg == null || qrg.isBlank()) {
+			if (categoryQrg == null || categoryQrg.isBlank()) {
 				LOGGER.warning(
 						"KST4Contest QRG auto-answer skipped for "
-								+ incoming.getSender().getCallSign()
+								+ senderCallSign
 								+ ": no QRG is available for chat category "
-								+ autoAnswerCooldownKey(incoming)
+								+ senderCallSign.toUpperCase()
+								+ "|"
+								+ (category == null ? 0 : category.getCategoryNumber())
 								+ "."
 				);
 				return null;
 			}
 
-			payload = "QRG is: " + qrg.trim();
+			payload = "QRG is: " + categoryQrg.trim();
 
 		} else if (genericEnabled) {
-			payload = this.client.getChatPreferences()
-					.getMessageHandling_autoAnswerTextMainCat();
-
-			if (payload == null || payload.isBlank()) {
+			if (genericAnswerText == null || genericAnswerText.isBlank()) {
 				LOGGER.warning(
 						"KST4Contest generic auto-answer skipped for "
-								+ incoming.getSender().getCallSign()
+								+ senderCallSign
 								+ ": the configured answer text is empty."
 				);
 				return null;
 			}
 
-			payload = payload.trim();
+			payload = genericAnswerText.trim();
 
 		} else {
 			return null;
@@ -2069,7 +2094,7 @@ public class MessageBusManagementThread extends Thread {
 
 		String messageText =
 				"/CQ "
-						+ incoming.getSender().getCallSign().trim()
+						+ senderCallSign.trim()
 						+ " "
 						+ AUTOANSWER_PREFIX
 						+ " "
@@ -2081,7 +2106,7 @@ public class MessageBusManagementThread extends Thread {
 		} catch (IllegalArgumentException invalidMessage) {
 			LOGGER.warning(
 					"KST4Contest auto-answer skipped for "
-							+ incoming.getSender().getCallSign()
+							+ senderCallSign
 							+ ": "
 							+ invalidMessage.getMessage()
 			);
@@ -2090,31 +2115,16 @@ public class MessageBusManagementThread extends Thread {
 	}
 
 	/**
-	 * Returns whether a message carries the fixed marker used for automatic replies.
+	 * Builds the cooldown identity of an incoming private message: the upper-cased
+	 * remote callsign and the category number, separated by {@code |}.
+	 *
+	 * <p>The message category wins; the sender's category is only a fallback. A
+	 * missing callsign yields {@code UNKNOWN}, a missing category {@code 0}.</p>
+	 *
+	 * @param incoming incoming private message, may be {@code null}
+	 * @return key such as {@code DL1ABC|2}
 	 */
-	private boolean isAutoMessage(ChatMessage msg) {
-		return msg != null
-				&& msg.getMessageText() != null
-				&& msg.getMessageText().contains(AUTOANSWER_PREFIX);
-	}
-
-	/**
-	 * Returns the configured QRG for the category in which the request was received.
-	 * If the category cannot be resolved, the main category remains the safe fallback.
-	 */
-	private String getAutoAnswerQrgForCategory(ChatCategory incomingCategory) {
-		ChatCategory secondCategory = this.client.getChatCategorySecondChat();
-
-		if (incomingCategory != null
-				&& secondCategory != null
-				&& incomingCategory.getCategoryNumber() == secondCategory.getCategoryNumber()) {
-			return this.client.getChatPreferences().getMYQRGSecondCat().get();
-		}
-
-		return this.client.getChatPreferences().getMYQRGFirstCat().get();
-	}
-
-	private String autoAnswerCooldownKey(ChatMessage incoming) {
+	static String autoAnswerCooldownKey(ChatMessage incoming) {
 
 		String remoteCall = "UNKNOWN";
 		if (incoming != null && incoming.getSender() != null && incoming.getSender().getCallSign() != null) {
@@ -2133,17 +2143,25 @@ public class MessageBusManagementThread extends Thread {
 		return remoteCall + "|" + categoryNumber;
 	}
 
+	/**
+	 * Returns whether the cooldown has elapsed since the last local automatic reply.
+	 *
+	 * @param lastSentMillis epoch milliseconds of the last reply, {@code null} if none
+	 * @param nowMillis current epoch milliseconds
+	 * @return {@code true} when no reply was sent yet or at least
+	 *         {@link #AUTOANSWER_COOLDOWN_MS} have passed
+	 */
+	static boolean isCooldownElapsed(Long lastSentMillis, long nowMillis) {
+		return lastSentMillis == null || (nowMillis - lastSentMillis) >= AUTOANSWER_COOLDOWN_MS;
+	}
+
 	private boolean isAutoAnswerAllowedNow(ChatMessage incoming) {
-
-		String key = autoAnswerCooldownKey(incoming);
-		Long last = lastLocalAutoAnswerPerRemoteMs.get(key);
-
-		long now = System.currentTimeMillis();
-		return last == null || (now - last) >= AUTOANSWER_COOLDOWN_MS;
+		Long last = lastLocalAutoAnswerPerRemoteMs.get(autoAnswerCooldownKey(incoming));
+		return isCooldownElapsed(last, millisClock.getAsLong());
 	}
 
 	private void markLocalAutoAnswerSent(ChatMessage incoming) {
-		lastLocalAutoAnswerPerRemoteMs.put(autoAnswerCooldownKey(incoming), System.currentTimeMillis());
+		lastLocalAutoAnswerPerRemoteMs.put(autoAnswerCooldownKey(incoming), millisClock.getAsLong());
 	}
 
 
