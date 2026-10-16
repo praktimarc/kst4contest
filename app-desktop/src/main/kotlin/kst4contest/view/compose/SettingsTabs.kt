@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import kst4contest.controller.ChatController
 import kst4contest.controller.ActiveOperatorProfile
 import kst4contest.controller.OperatorProfileManagementService
+import kst4contest.controller.On4KstConnectionState
 import kst4contest.controller.OperatorProfilePaths
 import kst4contest.model.ChatMember
 import kst4contest.model.OperatorProfile
@@ -113,6 +114,10 @@ interface SettingsHost {
  * place, and the foreign-write coverage test can see it. A tab that only wrote a
  * preference and skipped its session call would look correct in the file and do
  * nothing until the next restart.
+ *
+ * @param connectionState the session state as Compose state reads it; the Station tab
+ *        locks the login fields from it. The controller's own getter is not observable,
+ *        so a tab reading it would stay on whatever the link was when the window opened.
  */
 fun buildSettingsTabs(
     controller: ChatController,
@@ -120,6 +125,7 @@ fun buildSettingsTabs(
     notices: SettingsNotices,
     paletteStore: PaletteStore,
     languageStore: kst4contest.view.i18n.LanguageStore,
+    connectionState: () -> On4KstConnectionState,
 ): List<SettingsTab> {
 
     val prefs = controller.chatPreferences
@@ -128,6 +134,7 @@ fun buildSettingsTabs(
         prefs,
         applyMainCategory = { category -> controller.setChatCategoryMain(category) },
         applySecondCategory = { category -> controller.setChatCategorySecondChat(category) },
+        connectionState = connectionState,
     )
 
     val notificationState = NotificationTabState(

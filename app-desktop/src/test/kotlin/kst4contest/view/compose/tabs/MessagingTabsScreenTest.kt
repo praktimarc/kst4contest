@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertTextEquals
@@ -151,18 +152,131 @@ class MessagingTabsScreenTest {
         val s = Beacon(preferences(), refuse = true)
         s.prefs.bcn_beaconTextMainCat = "cq cq"
         showTab { BeaconTab(s.state) { s.refusals += it } }
-        /*
-         * Drawing the tab already commits each committed field once, because the field's
-         * focus callback fires with "not focused" when it is first attached -- reported
-         * under #107 as a defect, not pinned here. Only what this test types is counted.
-         */
-        s.refusals.clear()
 
         typeAndCommit("Beacon message", "cq %foo%")
 
         assertEquals("cq cq", s.prefs.bcn_beaconTextMainCat)
         assertEquals(1, s.refusals.size)
         fieldBeside("Beacon message").assertTextEquals("cq cq")
+    }
+
+    /*
+     * Opening the tab used to commit all three fields once, because a committed field's
+     * focus callback fires with "not focused" when it is first attached: the beacon timer
+     * was restarted and a stored template the validator refuses was reported, although
+     * the operator had done nothing but look.
+     */
+    @Test
+    fun openingTheBeaconTabNeitherRestartsTheTimerNorValidates() = runComposeUiTest {
+        val s = Beacon(preferences(), refuse = true)
+        s.prefs.bcn_beaconTextMainCat = "cq %foo%"
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        showTab { BeaconTab(s.state) { s.refusals += it } }
+
+        assertEquals(0, s.restarts, "opening the tab restarted the beacon timer")
+        assertTrue(s.refusals.isEmpty(), "opening the tab reported: ${s.refusals}")
+        assertEquals("cq %foo%", s.prefs.bcn_beaconTextMainCat)
+    }
+
+    /*
+     * The tab reads the interval from a plain preference getter, so nothing recomposes it
+     * after Enter commits. Compared with that stale value, leaving the field afterwards
+     * looked like a second edit and restarted the timer again.
+     */
+    @Test
+    fun enterAndThenLeavingTheFieldRestartsTheTimerOnce() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        showTab { BeaconTab(s.state) { s.refusals += it } }
+
+        typeAndCommit("Interval in whole minutes", "9")
+        fieldBeside("Beacon message").performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat)
+        assertEquals(1, s.restarts, "one edit restarted the beacon timer more than once")
+    }
+
+    /*
+     * Pins what happens to a typed but uncommitted entry when the field leaves the screen
+     * while it has the focus -- the settings window switching to another tab, or closing.
+     * Compose clears the focus of a removed focused node and reports that to the field as a
+     * focus loss, so the entry is committed, exactly once. That was so before the field
+     * learned to tell a real focus loss from its first attachment, and must stay so: an
+     * operator who typed a value and switched tabs expects it to count.
+     */
+    @Test
+    fun aFieldRemovedWhileTypingCommitsTheEntryOnce() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        val visible = mutableStateOf(true)
+        showTab { if (visible.value) BeaconTab(s.state) { s.refusals += it } }
+
+        val field = fieldBeside("Interval in whole minutes")
+        field.performScrollTo().performClick()
+        waitForIdle()
+        field.performTextReplacement("9")
+        waitForIdle()
+        runOnIdle { visible.value = false }
+        waitForIdle()
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat, "the typed entry was lost")
+        assertEquals(1, s.restarts)
+        assertTrue(s.refusals.isEmpty(), "a valid entry was refused: ${s.refusals}")
+    }
+
+    /*
+     * The stored value can change under a field without the field's own key changing: the
+     * field commits 9 over 5, nothing recomposes the tab, then a profile switch puts 5 back
+     * and the tab recomposes with 5 -- the same `stored` it was first drawn with. The field
+     * still shows 9, so leaving it must commit 9 again; judged against what the field itself
+     * last committed, it looked unchanged and the shown value silently differed from the
+     * stored one.
+     */
+    @Test
+    fun aValueResetBehindTheFieldIsCommittedAgainWhenTheFieldIsLeft() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        val generation = mutableStateOf(0)
+        val reportA: (String) -> Unit = { s.refusals += it }
+        val reportB: (String) -> Unit = { s.refusals += it }
+        // A different callback per generation, so bumping it recomposes BeaconTab itself.
+        showTab { BeaconTab(s.state, if (generation.value % 2 == 0) reportA else reportB) }
+
+        typeAndCommit("Interval in whole minutes", "9")
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat)
+
+        runOnIdle {
+            s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+            generation.value++
+        }
+        waitForIdle()
+        fieldBeside("Interval in whole minutes").assertTextEquals("9")
+
+        fieldBeside("Beacon message").performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat, "the shown 9 was not committed again")
+        assertEquals(2, s.restarts)
+    }
+
+    /** Leaving the field commits what was typed, without Enter, and restarts the timer once. */
+    @Test
+    fun aTypedIntervalIsCommittedWhenTheFieldIsLeft() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        showTab { BeaconTab(s.state) { s.refusals += it } }
+
+        typeAndLeave("Interval in whole minutes", "9", leaveTo = "Beacon message")
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat)
+        assertEquals(1, s.restarts)
+
+        typeAndLeave("Beacon message", "cq de dn9apw", leaveTo = "Beacon message", leaveToOccurrence = 1)
+
+        assertEquals("cq de dn9apw", s.prefs.bcn_beaconTextMainCat)
+        assertEquals(1, s.restarts, "leaving a template field restarted the timer")
+        assertTrue(s.refusals.isEmpty(), "a valid entry was refused: ${s.refusals}")
     }
 
     // ------------------------------------------------------------------ Notification
@@ -209,6 +323,38 @@ class MessagingTabsScreenTest {
         assertEquals(1, s.refusals.size, "an impossible port was not refused")
         assertEquals(storedPort, s.prefs.notify_dxclusterServerPort)
         assertTrue(s.ports.isEmpty(), "the server was moved to a refused port")
+    }
+
+    /*
+     * Opening the tab used to commit the port and the spotter callsign once, because a
+     * committed field's focus callback fires with "not focused" when it is first attached.
+     * A stored value the rule refuses was then reported the moment the tab was looked at.
+     */
+    @Test
+    fun openingTheNotificationTabCommitsNothing() = runComposeUiTest {
+        val s = Notification(preferences())
+        s.prefs.setNotify_DXCSrv_SpottersCallSign("x")
+        showTab { NotificationTab(s.state) { s.refusals += it } }
+
+        assertTrue(s.refusals.isEmpty(), "opening the tab reported: ${s.refusals}")
+        assertTrue(s.ports.isEmpty(), "opening the tab moved the cluster server")
+        assertEquals("x", s.prefs.notify_DXCSrv_SpottersCallSign.get())
+    }
+
+    /** Leaving the field commits what was typed, without Enter. */
+    @Test
+    fun aTypedSpotterCallsignAndPortAreCommittedWhenTheFieldIsLeft() = runComposeUiTest {
+        val s = Notification(preferences())
+        s.prefs.notify_dxclusterServerPort = 7300
+        showTab { NotificationTab(s.state) { s.refusals += it } }
+
+        typeAndLeave("Spotter callsign", "do5amf", leaveTo = "TCP port")
+        assertEquals("DO5AMF", s.prefs.notify_DXCSrv_SpottersCallSign.get())
+
+        typeAndLeave("TCP port", "7301", leaveTo = "Spotter callsign")
+        assertEquals(7301, s.prefs.notify_dxclusterServerPort)
+        assertEquals(listOf(7301), s.ports)
+        assertTrue(s.refusals.isEmpty(), "a valid entry was refused: ${s.refusals}")
     }
 
     @Test

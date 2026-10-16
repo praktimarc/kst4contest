@@ -111,10 +111,25 @@ object Form {
      * every prefix of a valid entry, so the draft lives here until the operator leaves
      * the field or presses Enter.
      *
-     * @param stored the value currently stored; the draft falls back to it when an
-     *        entry is refused, which is what those fields did with setText
+     * Only an edited draft is committed: drawing the field, or entering and leaving it
+     * without typing, commits nothing, and neither does Enter on an unchanged value.
+     * A field removed while it holds the focus -- its tab switched away, its window
+     * closed -- commits a typed entry once: Compose reports the cleared focus to the
+     * field as a focus loss.
+     *
+     * @param stored the value stored when the caller composed; the draft starts from it
      * @param commit returns null when the value was accepted, otherwise the reason
      * @param onRefused shown to the operator; the JavaFX fields opened an alert
+     * @param isUnchanged whether the draft names the stored value. Textual by default,
+     *        looser where two spellings mean one value, as with colours. It must agree
+     *        with what [commit] stores: a draft that commit would store as `c` has to count
+     *        as unchanged against `c`, or leaving the field after Enter commits it again.
+     * @param current the value stored right now, read when the field commits. The draft
+     *        is judged against it, and falls back to it on a refusal (what the JavaFX
+     *        fields did with setText). Required, because [stored] alone goes stale when it
+     *        comes from a plain getter: nothing recomposes the caller after a commit, so
+     *        after Enter it still names the old value, and once the preference is reset
+     *        behind the field it names the new one by coincidence only.
      */
     @Composable
     fun committed(
@@ -122,14 +137,32 @@ object Form {
         stored: String,
         commit: (String) -> String?,
         onRefused: (String) -> Unit,
+        isUnchanged: (draft: String, stored: String) -> Boolean = { typed, now -> typed == now },
+        current: () -> String,
     ) {
         var draft by remember(stored) { mutableStateOf(stored) }
 
+        /*
+         * Whether the field has held the focus since it was last committed. onFocusChanged
+         * also fires when the modifier is first attached, with "not focused"; reading that
+         * as a focus loss committed every such field the moment its tab was opened. Only a
+         * change from focused to unfocused is the operator leaving the field. A plain holder,
+         * not state: nothing is drawn from it.
+         */
+        val hadFocus = remember { booleanArrayOf(false) }
+
         fun commitDraft() {
+            /*
+             * An untouched draft is no edit. Committing it anyway would turn a shipped colour
+             * into an override of itself, restart the beacon timer, or report a stored value
+             * the rule refuses although the operator only passed through the field.
+             */
+            if (isUnchanged(draft, current())) return
+
             val refusal = commit(draft)
             if (refusal != null) {
                 onRefused(refusal)
-                draft = stored
+                draft = current()
             }
         }
 
@@ -139,7 +172,14 @@ object Form {
                 onValueChange = { draft = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onFocusChanged { focus -> if (!focus.isFocused) commitDraft() }
+                    .onFocusChanged { focus ->
+                        if (focus.isFocused) {
+                            hadFocus[0] = true
+                        } else if (hadFocus[0]) {
+                            hadFocus[0] = false
+                            commitDraft()
+                        }
+                    }
                     .onKeyEvent { event ->
                         if (event.type == KeyEventType.KeyUp && event.key == Key.Enter) {
                             commitDraft()

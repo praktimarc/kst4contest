@@ -119,6 +119,13 @@ fun ColoursTab(
                     stored = row.hex,
                     commit = { typed -> state.set(row.role, typed) },
                     onRefused = reportRefusal,
+                    /*
+                     * A colour is compared the way PaletteOverrides normalises it -- trimmed,
+                     * case ignored -- so retyping the shown colour in lower case is no edit
+                     * and does not turn it into an override of itself.
+                     */
+                    isUnchanged = { typed, now -> typed.trim().equals(now.trim(), ignoreCase = true) },
+                    current = { state.roles().single { it.role == row.role }.hex },
                 )
             }
         }

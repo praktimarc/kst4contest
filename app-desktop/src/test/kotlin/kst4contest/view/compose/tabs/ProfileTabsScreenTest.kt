@@ -188,6 +188,84 @@ class ProfileTabsScreenTest {
         assertTrue(c.refusals.isEmpty(), "a valid colour was refused: ${c.refusals}")
     }
 
+    /*
+     * Opening the tab used to commit every role field once, because a committed field's
+     * focus callback fires with "not focused" when it is first attached. Each role then
+     * became an override of itself: the labels said "changed" instead of "shipped", and
+     * after "Save settings" the overrides hid the profile's stylesheet file for good.
+     */
+    @Test
+    fun openingTheTabWritesNoColour() = runComposeUiTest {
+        val c = Colours(directory)
+        show(c)
+
+        assertEquals(mapOf(false to "", true to ""), c.stored, "opening the tab wrote overrides")
+        c.state.roles().forEach { row ->
+            assertEquals(PaletteSource.SHIPPED, row.source, "${row.role} is no longer the shipped colour")
+        }
+        assertTrue(c.refusals.isEmpty(), "opening the tab reported: ${c.refusals}")
+    }
+
+    /** Passing through a field without typing is not an edit either. */
+    @Test
+    fun enteringAndLeavingAFieldWithoutTypingWritesNothing() = runComposeUiTest {
+        val c = Colours(directory)
+        show(c)
+        val accent = c.labelOf(PaletteRole.ACCENT, "Accent")
+        val text = c.labelOf(PaletteRole.TEXT, "Text")
+
+        fieldBeside(accent).performScrollTo().performClick()
+        waitForIdle()
+        fieldBeside(text).performScrollTo().performClick()
+        waitForIdle()
+        fieldBeside(accent).performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(mapOf(false to "", true to ""), c.stored, "passing through a field wrote an override")
+    }
+
+    /*
+     * The field shows the colour in upper case. Typing the same colour in lower case names
+     * no other colour, so it is no edit and must not become an override of itself.
+     */
+    @Test
+    fun theSameColourInOtherCaseIsNoChange() = runComposeUiTest {
+        val c = Colours(directory)
+        show(c)
+        val accent = c.labelOf(PaletteRole.ACCENT, "Accent")
+        val shown = c.state.roles().single { it.role == PaletteRole.ACCENT }.hex
+
+        typeAndCommit(accent, shown.lowercase())
+        fieldBeside(c.labelOf(PaletteRole.TEXT, "Text")).performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(mapOf(false to "", true to ""), c.stored, "an unchanged colour was written as an override")
+        assertEquals(PaletteSource.SHIPPED, c.state.roles().single { it.role == PaletteRole.ACCENT }.source)
+        assertTrue(c.refusals.isEmpty(), "the colour was refused: ${c.refusals}")
+    }
+
+    /** Leaving the field still commits what was typed, without Enter. */
+    @Test
+    fun aTypedColourIsCommittedWhenTheFieldIsLeft() = runComposeUiTest {
+        val c = Colours(directory)
+        show(c)
+
+        typeAndLeave(
+            c.labelOf(PaletteRole.ACCENT, "Accent"),
+            "#3C7A4B",
+            leaveTo = c.labelOf(PaletteRole.TEXT, "Text"),
+        )
+
+        val accent = c.state.roles().single { it.role == PaletteRole.ACCENT }
+        assertEquals("#3C7A4B", accent.hex)
+        assertEquals(PaletteSource.CHANGED, accent.source)
+        assertEquals(
+            PaletteSource.SHIPPED,
+            c.state.roles().single { it.role == PaletteRole.TEXT }.source,
+            "the field that was only entered became an override",
+        )
+    }
+
     @Test
     fun aMistypedColourIsRefusedAndChangesNothing() = runComposeUiTest {
         val c = Colours(directory)
