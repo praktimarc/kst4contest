@@ -54,10 +54,6 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **UCXLog/DXLog-Empfänger läuft weiter:** Eine nicht beschreibbare Sicherungsdatei für empfangene QSOs oder ein RadioInfo-Paket ohne Frequenz oder Betriebsart hielt den Empfänger für UCXLog-kompatible Logprogramme bis zum nächsten Neustart an, sodass weder gearbeitete Stationen noch QRG-Änderungen ankamen. Jetzt wird der Sicherungseintrag beziehungsweise das unvollständige Paket übersprungen, und der Empfänger empfängt weiter. Jeder andere unerwartete Fehler beim Verarbeiten eines Pakets verwirft jetzt nur dieses Paket und erscheint als Statusmeldung, statt den Empfänger anzuhalten.
 
-- **Das Öffnen eines Einstellungs-Reiters ändert nichts mehr:** Felder, die ihren Wert erst beim Verlassen oder mit Enter übernehmen, hielten schon das erste Zeichnen des Reiters für ein Verlassen des Felds. Allein das Öffnen von **Farben** machte alle sechs Farben zu eigenen Änderungen (markiert mit „geändert“ statt „Auslieferung“ oder „Datei“), und nach **Einstellungen speichern** verdeckten diese die Stylesheet-Datei des Profils dauerhaft. Das Öffnen von **Bake** startete den Baken-Timer neu und meldete eine gespeicherte, ungültige Bakennachricht; das Öffnen von **Hinweise** übernahm Port und Spotter-Rufzeichen erneut. Jetzt wird nur eine tatsächliche Änderung übernommen, wie bisher beim Verlassen des Felds oder mit Enter.
-
-- **Anmeldefelder während der Verbindung gesperrt:** Rufzeichen, Namen, Locator, Passwort und beide Chat-Kategorien im Reiter **Station** blieben während einer Verbindung bearbeitbar, obwohl eine Änderung erst bei der nächsten Anmeldung wirkt. Jetzt sind sie gesperrt, solange eine Verbindung besteht oder aufgebaut wird, und nach dem Trennen wieder freigegeben.
-
 ### Hinweise zur Aktualisierung
 
 - Bestehende Installationen werden **nicht** verändert: `preferences.xml` und `praktiKST.db` bleiben genau dort liegen, wo sie sind, und werden zum Profil **Default**. Es wird keine Datei verschoben oder kopiert.
