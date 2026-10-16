@@ -467,12 +467,13 @@ public class ReadUDPByWintestThread extends Thread {
     }
 
     /**
-     * Parses a Win-Test STATUS packet and optionally updates MYQRG.
+     * Parses a Win-Test STATUS packet and routes it to a radio.
      *
      * <p>The packet is tokenised while preserving quoted station names.
-     * The configured station-name filter is applied before any frequency is
-     * processed. An empty filter accepts STATUS packets from every Win-Test
-     * station.</p>
+     * {@code RadioSlotRouter} decides before any frequency is processed: radio 1
+     * updates MYQRG, radio 2 (only with SO2R) updates SECONDQRG, and a packet
+     * from any other station is ignored. An empty radio 1 station name accepts
+     * STATUS packets from every Win-Test station.</p>
      *
      * <p>The main frequency is read from token 7. If pass-frequency use is
      * enabled and token 11 contains a valid frequency, the pass frequency is

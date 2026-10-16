@@ -35,7 +35,6 @@ import java.nio.charset.StandardCharsets;
 import kst4contest.logic.FrequencyTextParser;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.concurrent.ScheduledFuture;
 import kst4contest.observe.SimpleValue;
 
 
@@ -801,8 +800,6 @@ public class ChatController implements ThreadStatusCallback {
 
 
 		if (action.equals(ApplicationConstants.DISCSTRING_DISCONNECT_AND_CLOSE)) {
-
-//            rotatorClient.
 
 //			this.lst_chatMemberList.clear();;
 			this.clearActiveChatMembers();

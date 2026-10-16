@@ -257,7 +257,7 @@ The option **SO2R: keep two radios apart (radio 2 writes SECONDQRG)** makes KST4
 
 - **N1MM+, DXLog.net, UCXLog:** assignment uses the `RadioNr` field of the `RadioInfo` packet. Nothing needs to be configured. Radio 1 updates `MYQRG`, radio 2 updates `SECONDQRG`.
 - **Win-Test:** there is no `RadioNr` here, so one station name per radio is entered, for example `STN1` for radio 1 in the existing station filter and `STN2` in the field **Win-Test station name of radio 2**. The field is greyed out without SO2R.
-- **Second PSTRotator:** after **Apply**, the **Station** tab shows the section **PSTRotator 2 (SO2R)** with a switch, host and port. The second instance needs its own port, for example `12010`; it answers on `12011`. The same port as PSTRotator 1 is refused on Apply. The second rotator runs only while an ON4KST session is running.
+- **Second PSTRotator:** after **Apply**, the **Station** tab shows the section **PSTRotator 2 (SO2R)** with a switch, host and port. The second instance needs its own port, for example `12010`; it answers on `12011`. The same port as PSTRotator 1, or one next to it, is refused on Apply. The second rotator starts with the ON4KST session.
 - **Operation:** the selected-station panel gets **Turn ant2 to ...** next to **Turn ant1**, and the send line shows a display-only QTF2 field for the second antenna. The tooltip of `SECONDQRG` names radio 2.
 - **QTF filters:** the QTF filters of the station list still follow rotator 1.
 
@@ -725,7 +725,7 @@ A possible reply is:
 [KST4C Automsg] QRG is: 144.300.00
 ```
 
-The values come from the same QRG fields used by `MYQRG` and `SECONDQRG`. The primary QRG may be entered manually or updated through [TRX synchronisation](#trx-sync-settings). The second category uses the value configured or entered for that category.
+The values come from the same QRG fields used by `MYQRG` and `SECONDQRG`. The primary QRG may be entered manually or updated through [TRX synchronisation](#trx-sync-settings). The second category uses the value configured or entered for that category; with SO2R, radio 2 writes this field (`SECONDQRG`).
 
 If no QRG is available for the incoming category, KST4Contest does not send an incomplete reply. A message containing `QRG is:` without a frequency would technically answer the request while providing no useful information. It is therefore rejected before reaching the transmit queue.
 

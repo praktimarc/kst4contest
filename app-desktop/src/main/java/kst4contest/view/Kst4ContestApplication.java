@@ -4001,15 +4001,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		}
 	}
 
-	/**
-	 * No-op since the JavaFX own-QRG text field was removed with the never-shown window.
-	 *
-	 * <p>The Compose chat input owns that value on both sides: it writes it through
-	 * {@code prefs.getMYQRGFirstCat().set(...)} and the MYQRG button reads it back through
-	 * {@code ChatInputState.appendOwnQrg}. There is no second field left to keep in step.
-	 * The Compose settings still call this through the shared interface, and an empty body
-	 * is honest about there being nothing to do.</p>
-	 */
+	/** Pushes the stored SO2R switches to the main window so it shows or hides the radio 2 controls. */
 	@Override
 	public void refreshSo2rState() {
 		runOnUi(() -> {
@@ -4023,6 +4015,15 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		});
 	}
 
+	/**
+	 * No-op since the JavaFX own-QRG text field was removed with the never-shown window.
+	 *
+	 * <p>The Compose chat input owns that value on both sides: it writes it through
+	 * {@code prefs.getMYQRGFirstCat().set(...)} and the MYQRG button reads it back through
+	 * {@code ChatInputState.appendOwnQrg}. There is no second field left to keep in step.
+	 * The Compose settings still call this through the shared interface, and an empty body
+	 * is honest about there being nothing to do.</p>
+	 */
 	@Override
 	public void applyOwnQrgFollower(boolean enabled) {
 		// intentionally empty: no JavaFX text field left to follow
