@@ -57,29 +57,62 @@ object MainWindowFrame {
         if (profileName.isNullOrBlank()) chatState else "$chatState - $profileName"
 
     /**
+     * What the title's first half says.
+     *
+     * The live connection line while the chat is usable -- exactly what the JavaFX title
+     * carried -- and a wording about the attempt otherwise. The connection manager's own
+     * detail ("session is authenticated and synchronized") is a diagnostic for the status
+     * bar, not a title: it says nothing about category, call or traffic.
+     *
+     * @param state the connection state, null before the first push
+     * @param onlineLine the line built by [onlineChatState], asked for only while online
+     * @return the chat half of the title
+     */
+    fun chatState(state: On4KstConnectionState?, onlineLine: () -> String): String =
+        if (state == On4KstConnectionState.ONLINE) onlineLine() else offlineChatState(state)
+
+    /**
+     * The connection line while the chat is usable, as the JavaFX title had it:
+     * "Connected to: 2: 144/432 MHz as DO1JKS (Johannes 70/2) in JN59MU (106 users online,
+     * 106 shown), 14 messages total."
+     *
+     * Counts are passed as text so MessageFormat does not group them by locale.
+     *
+     * @param mainCategory the main chat category, as its toString reads
+     * @param secondCategory the second category, null when it is not logged in
+     * @param shown the stations the filters let through
+     * @param messagesTotal every chat message held, public and directed
+     */
+    fun onlineChatState(
+        mainCategory: Any?,
+        secondCategory: Any?,
+        callSign: String?,
+        name: String?,
+        locator: String?,
+        usersOnline: Int,
+        shown: Int,
+        messagesTotal: Int,
+    ): String {
+        val strings = kst4contest.view.i18n.CurrentStrings.get()
+        val main = mainCategory?.toString().orEmpty()
+        val categories = if (secondCategory == null) main else strings.titleBothCategories(main, secondCategory.toString())
+        return strings.titleOnline(
+            categories,
+            callSign.orEmpty(),
+            name.orEmpty(),
+            locator.orEmpty(),
+            usersOnline.toString(),
+            shown.toString(),
+            messagesTotal.toString(),
+        )
+    }
+
+    /**
      * What the title says while the chat is not usable.
      *
      * The wording separates a scheduled reconnect from a dead session, which is the
      * difference between waiting and doing something about it.
      */
-    /**
-     * What the title's first half says.
-     *
-     * The live connection detail while the chat is usable -- which is the whole status line,
-     * exactly what the JavaFX title carried -- and a wording about the attempt otherwise. A
-     * blank detail falls through to the offline wording rather than leaving the title empty.
-     *
-     * @param state the connection state, null before the first push
-     * @param detail the status line the controller pushes
-     * @return the chat half of the title
-     */
-    fun chatState(state: On4KstConnectionState?, detail: String?): String =
-        if (state == On4KstConnectionState.ONLINE && !detail.isNullOrBlank()) {
-            detail
-        } else {
-            offlineChatState(state)
-        }
-
     fun offlineChatState(state: On4KstConnectionState?): String =
         when (state ?: On4KstConnectionState.DISCONNECTED) {
             On4KstConnectionState.RECONNECT_WAIT -> kst4contest.view.i18n.CurrentStrings.get().titleConnectionLost

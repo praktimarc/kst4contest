@@ -111,14 +111,25 @@ object MainWindowHost {
                  * Read inside the composition, so the title follows the connection the way
                  * the JavaFX one did: "Connected to: 2: 144/432 MHz as DN5PW in JO50JP
                  * (73 users online, 73 shown), 29 messages total." A captured string would
-                 * say "disconnected" for the life of the session.
+                 * say "disconnected" for the life of the session. The counts are Compose
+                 * state, so the title moves with every station and message.
                  */
-                val surroundings = currentState?.surroundings
+                val state = currentState
                 MainWindowFrame.title(
-                    chatState = MainWindowFrame.chatState(
-                        surroundings?.connectionState,
-                        surroundings?.connectionDetail,
-                    ),
+                    chatState = MainWindowFrame.chatState(state?.surroundings?.connectionState) {
+                        val prefs = state!!.prefs
+                        MainWindowFrame.onlineChatState(
+                            mainCategory = prefs.getLoginChatCategoryMain(),
+                            secondCategory = prefs.getLoginChatCategorySecond()
+                                .takeIf { prefs.isLoginToSecondChatEnabled() },
+                            callSign = prefs.getStn_loginCallSign(),
+                            name = prefs.getStn_loginNameMainCat(),
+                            locator = prefs.getStn_loginLocatorMainCat(),
+                            usersOnline = state.stations.rows.size,
+                            shown = state.stations.visibleRows.size,
+                            messagesTotal = state.publicMessages.rows.size,
+                        )
+                    },
                     profileName = profileName,
                 )
             },
