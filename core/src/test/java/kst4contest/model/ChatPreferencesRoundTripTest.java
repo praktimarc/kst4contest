@@ -86,7 +86,9 @@ class ChatPreferencesRoundTripTest {
             Map.entry("setGuiOptions_language", "de"),
             Map.entry("setMYQRGFirstCat", "144.321.00"),
             Map.entry("setMYQRGSecondCat", "432.321.00"),
-            Map.entry("setAirScout_asBandString", "4320000")
+            Map.entry("setAirScout_asBandString", "4320000"),
+            // Defaults to NaN ("elevation model decides"), and NaN + 7.5 is still NaN.
+            Map.entry("setStn_pathAnalysisOwnHeightAslMeters", 312.5)
     );
 
     @TempDir

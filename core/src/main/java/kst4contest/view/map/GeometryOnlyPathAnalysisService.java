@@ -114,8 +114,14 @@ public final class GeometryOnlyPathAnalysisService implements PathAnalysisServic
             );
         }
 
-        List<PathProfilePoint> enrichedProfilePoints = buildEnrichedProfilePoints(
+        List<PathProfilePoint> rawProfilePoints = applyGroundElevationOverrides(
                 terrainProfileData.profilePoints(),
+                request.homeGroundElevationOverrideMeters(),
+                request.targetGroundElevationOverrideMeters()
+        );
+
+        List<PathProfilePoint> enrichedProfilePoints = buildEnrichedProfilePoints(
+                rawProfilePoints,
                 distanceKm,
                 homeAntennaHeightMeters,
                 targetAntennaHeightMeters,
@@ -200,6 +206,52 @@ public final class GeometryOnlyPathAnalysisService implements PathAnalysisServic
                 propagationAssessment,
                 statusText,
                 enrichedProfilePoints
+        );
+    }
+
+    /**
+     * Replaces the terrain elevation of the first and/or last raw sample by a known
+     * ground elevation.
+     *
+     * <p>The endpoints are where the antennas stand, so their elevation decides the
+     * height of the line of sight. An operator who knows the elevation of the own site
+     * better than the elevation model does at the locator centre enters it, and the
+     * highest point of the remote square is known from its own lookup. Replacing the raw
+     * sample, rather than patching the antenna height later, keeps the chart, the horizon
+     * search and the clearance figures on one consistent profile.</p>
+     *
+     * @param rawProfilePoints raw samples from the provider, at least two
+     * @param homeGroundElevationMeters own ground elevation, or {@code NaN} to keep the model value
+     * @param targetGroundElevationMeters remote ground elevation, or {@code NaN} to keep the model value
+     * @return the samples with the overridden endpoints
+     */
+    static List<PathProfilePoint> applyGroundElevationOverrides(List<PathProfilePoint> rawProfilePoints,
+                                                                double homeGroundElevationMeters,
+                                                                double targetGroundElevationMeters) {
+        boolean overrideHome = Double.isFinite(homeGroundElevationMeters);
+        boolean overrideTarget = Double.isFinite(targetGroundElevationMeters);
+
+        if ((!overrideHome && !overrideTarget) || rawProfilePoints.size() < 2) {
+            return rawProfilePoints;
+        }
+
+        List<PathProfilePoint> points = new ArrayList<>(rawProfilePoints);
+        if (overrideHome) {
+            points.set(0, withElevation(points.get(0), homeGroundElevationMeters));
+        }
+        if (overrideTarget) {
+            int lastIndex = points.size() - 1;
+            points.set(lastIndex, withElevation(points.get(lastIndex), targetGroundElevationMeters));
+        }
+        return List.copyOf(points);
+    }
+
+    private static PathProfilePoint withElevation(PathProfilePoint point, double elevationMeters) {
+        return new PathProfilePoint(
+                point.distanceKm(),
+                point.latitudeDeg(),
+                point.longitudeDeg(),
+                elevationMeters
         );
     }
 

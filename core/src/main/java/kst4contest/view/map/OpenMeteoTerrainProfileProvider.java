@@ -28,8 +28,14 @@ import java.util.stream.Collectors;
  * deliberately local and lightweight: it avoids repeated API calls when the user
  * re-selects the same station, but it does not replace the existing long-term
  * offline DEM/download architecture.</p>
+ *
+ * <p>The same endpoint also answers {@link TerrainElevationProvider} lookups for
+ * arbitrary point sets, such as the grid used to find the highest point of a locator
+ * square. Those go through the same rate limiter and are packed into as few requests
+ * as the 100-coordinate limit allows; caching them is left to the caller, which knows
+ * what the points stand for.</p>
  */
-public final class OpenMeteoTerrainProfileProvider implements TerrainProfileProvider {
+public final class OpenMeteoTerrainProfileProvider implements TerrainProfileProvider, TerrainElevationProvider {
 
     private static final String SOURCE_NAME = "Open-Meteo Copernicus GLO-90";
     private static final String DEFAULT_BASE_URL = "https://api.open-meteo.com/v1/elevation";
@@ -111,6 +117,44 @@ public final class OpenMeteoTerrainProfileProvider implements TerrainProfileProv
         }
 
         return profileData;
+    }
+
+    @Override
+    public List<Double> loadElevations(List<PathGeometryUtils.GeoPoint> points) {
+        if (points == null || points.isEmpty()) {
+            return List.of();
+        }
+
+        List<Double> elevations = new ArrayList<>(points.size());
+
+        try {
+            for (int start = 0; start < points.size(); start += MAX_COORDINATES_PER_REQUEST) {
+                int end = Math.min(points.size(), start + MAX_COORDINATES_PER_REQUEST);
+                List<SamplePoint> chunk = new ArrayList<>(end - start);
+
+                for (PathGeometryUtils.GeoPoint point : points.subList(start, end)) {
+                    if (point == null
+                            || !Double.isFinite(point.latitudeDeg())
+                            || !Double.isFinite(point.longitudeDeg())) {
+                        return List.of();
+                    }
+                    chunk.add(new SamplePoint(0.0, point.latitudeDeg(), point.longitudeDeg()));
+                }
+
+                List<Double> chunkElevations = fetchElevations(chunk);
+                if (chunkElevations.size() != chunk.size()) {
+                    return List.of();
+                }
+                elevations.addAll(chunkElevations);
+            }
+        } catch (InterruptedException interruptedException) {
+            Thread.currentThread().interrupt();
+            return List.of();
+        } catch (Exception exception) {
+            return List.of();
+        }
+
+        return elevations;
     }
 
     private int resolveOnlineSampleCount(int requestedSampleCount) {
@@ -236,6 +280,7 @@ public final class OpenMeteoTerrainProfileProvider implements TerrainProfileProv
         return parseElevationArray(response.body());
     }
 
+    // Sleeps while holding the lock: must never be called from the UI thread.
     private synchronized void waitForRateLimitSlot() throws InterruptedException {
         long now = System.currentTimeMillis();
         long waitMillis = MINIMUM_REQUEST_INTERVAL.toMillis() - (now - lastRequestStartEpochMillis);

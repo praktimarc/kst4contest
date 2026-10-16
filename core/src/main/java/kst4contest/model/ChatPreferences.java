@@ -225,6 +225,17 @@ public class ChatPreferences {
 
 	double stn_pathAnalysisOwnAntennaHeightMeters = 10.0;
 	double stn_pathAnalysisDefaultTargetAntennaHeightMeters = 10.0;
+	/**
+	 * Ground elevation of the own site above mean sea level, entered by the operator.
+	 * NaN (the default, and an empty field) leaves it to the elevation model at the
+	 * locator centre.
+	 */
+	double stn_pathAnalysisOwnHeightAslMeters = Double.NaN;
+	/**
+	 * Whether the path analysis ends at the highest sampled point of the remote station's
+	 * locator square instead of at the square centre.
+	 */
+	boolean stn_pathAnalysisDxHighestPointInSquare = true;
 	String stn_pathAnalysisDemRootDirectory = "";
 	String stn_pathAnalysisDemDatasetId = "copernicus_glo_30";
 	double stn_pathAnalysisOwnTxPowerWatts = 750.0;
@@ -493,6 +504,48 @@ public class ChatPreferences {
 
 	public void setStn_pathAnalysisOwnAntennaHeightMeters(double stn_pathAnalysisOwnAntennaHeightMeters) {
 		this.stn_pathAnalysisOwnAntennaHeightMeters = Math.max(0.0, stn_pathAnalysisOwnAntennaHeightMeters);
+	}
+
+	/** Lowest own ground elevation accepted, metres: below the Dead Sea shore. */
+	public static final double PATH_ANALYSIS_OWN_HEIGHT_ASL_MIN_METERS = -500.0;
+	/** Highest own ground elevation accepted, metres: above the highest summit. */
+	public static final double PATH_ANALYSIS_OWN_HEIGHT_ASL_MAX_METERS = 9000.0;
+
+	/**
+	 * @return own ground elevation above mean sea level in metres, or NaN when the
+	 *         elevation model decides
+	 */
+	public double getStn_pathAnalysisOwnHeightAslMeters() {
+		return stn_pathAnalysisOwnHeightAslMeters;
+	}
+
+	/**
+	 * Sets the own ground elevation above mean sea level. NaN, or a value outside
+	 * {@link #PATH_ANALYSIS_OWN_HEIGHT_ASL_MIN_METERS} ..
+	 * {@link #PATH_ANALYSIS_OWN_HEIGHT_ASL_MAX_METERS}, clears it, so a broken value in
+	 * the XML file falls back to the elevation model instead of distorting every path.
+	 */
+	public void setStn_pathAnalysisOwnHeightAslMeters(double stn_pathAnalysisOwnHeightAslMeters) {
+		this.stn_pathAnalysisOwnHeightAslMeters = isValidOwnHeightAslMeters(stn_pathAnalysisOwnHeightAslMeters)
+				? stn_pathAnalysisOwnHeightAslMeters
+				: Double.NaN;
+	}
+
+	/**
+	 * @return whether the value is a usable own ground elevation (finite and in range)
+	 */
+	public static boolean isValidOwnHeightAslMeters(double meters) {
+		return Double.isFinite(meters)
+				&& meters >= PATH_ANALYSIS_OWN_HEIGHT_ASL_MIN_METERS
+				&& meters <= PATH_ANALYSIS_OWN_HEIGHT_ASL_MAX_METERS;
+	}
+
+	public boolean isStn_pathAnalysisDxHighestPointInSquare() {
+		return stn_pathAnalysisDxHighestPointInSquare;
+	}
+
+	public void setStn_pathAnalysisDxHighestPointInSquare(boolean stn_pathAnalysisDxHighestPointInSquare) {
+		this.stn_pathAnalysisDxHighestPointInSquare = stn_pathAnalysisDxHighestPointInSquare;
 	}
 
 	public double getStn_pathAnalysisDefaultTargetAntennaHeightMeters() {
@@ -1621,6 +1674,17 @@ public class ChatPreferences {
 			stn_pathAnalysisDefaultTargetAntennaHeightMeters.setTextContent(this.stn_pathAnalysisDefaultTargetAntennaHeightMeters + "");
 			station.appendChild(stn_pathAnalysisDefaultTargetAntennaHeightMeters);
 
+			// Empty when unset: reading an empty element keeps the NaN default.
+			Element stn_pathAnalysisOwnHeightAslMeters = doc.createElement("stn_pathAnalysisOwnHeightAslMeters");
+			stn_pathAnalysisOwnHeightAslMeters.setTextContent(Double.isFinite(this.stn_pathAnalysisOwnHeightAslMeters)
+					? this.stn_pathAnalysisOwnHeightAslMeters + ""
+					: "");
+			station.appendChild(stn_pathAnalysisOwnHeightAslMeters);
+
+			Element stn_pathAnalysisDxHighestPointInSquare = doc.createElement("stn_pathAnalysisDxHighestPointInSquare");
+			stn_pathAnalysisDxHighestPointInSquare.setTextContent(this.stn_pathAnalysisDxHighestPointInSquare + "");
+			station.appendChild(stn_pathAnalysisDxHighestPointInSquare);
+
 			Element stn_pathAnalysisDemRootDirectory = doc.createElement("stn_pathAnalysisDemRootDirectory");
 			stn_pathAnalysisDemRootDirectory.setTextContent(this.stn_pathAnalysisDemRootDirectory);
 			station.appendChild(stn_pathAnalysisDemRootDirectory);
@@ -2465,6 +2529,18 @@ public class ChatPreferences {
 						stationEl,
 						stn_pathAnalysisDefaultTargetAntennaHeightMeters,
 						"stn_pathAnalysisDefaultTargetAntennaHeightMeters"
+				);
+
+				setStn_pathAnalysisOwnHeightAslMeters(getDouble(
+						stationEl,
+						Double.NaN,
+						"stn_pathAnalysisOwnHeightAslMeters"
+				));
+
+				stn_pathAnalysisDxHighestPointInSquare = getBooleanOrDefault(
+						stationEl,
+						stn_pathAnalysisDxHighestPointInSquare,
+						"stn_pathAnalysisDxHighestPointInSquare"
 				);
 
 				stn_pathAnalysisDemRootDirectory = getText(

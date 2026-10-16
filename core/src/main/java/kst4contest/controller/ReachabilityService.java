@@ -13,7 +13,9 @@ import java.util.function.Consumer;
 import kst4contest.locatorUtils.Location;
 import kst4contest.model.Band;
 import kst4contest.model.ChatMember;
+import kst4contest.model.ChatPreferences;
 import kst4contest.view.map.GeometryOnlyPathAnalysisService;
+import kst4contest.view.map.LocatorHighestPointResolver;
 
 import kst4contest.view.map.OpenMeteoTerrainProfileProvider;
 import kst4contest.view.map.PathAnalysisRequest;
@@ -27,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * Central service for tropo/path reachability calculations.
@@ -50,6 +52,7 @@ public final class ReachabilityService {
 
     private final ChatController chatController;
     private final PathAnalysisService pathAnalysisService;
+    private final LocatorHighestPointResolver highestPointResolver;
     private final ExecutorService executor;
 
     /**
@@ -80,7 +83,10 @@ public final class ReachabilityService {
 
     public ReachabilityService(ChatController chatController) {
         this.chatController = Objects.requireNonNull(chatController, "chatController");
-        this.pathAnalysisService = new GeometryOnlyPathAnalysisService(new OpenMeteoTerrainProfileProvider());
+        OpenMeteoTerrainProfileProvider terrainProvider = new OpenMeteoTerrainProfileProvider();
+        this.pathAnalysisService = new GeometryOnlyPathAnalysisService(terrainProvider);
+        // One provider for both, so profile and grid lookups share its rate limiter.
+        this.highestPointResolver = new LocatorHighestPointResolver(terrainProvider);
         this.executor = Executors.newSingleThreadExecutor(new ReachabilityThreadFactory());
     }
 
@@ -118,7 +124,8 @@ public final class ReachabilityService {
             return;
         }
 
-        PathAnalysisResult cachedResult = pathAnalysisResultCache.get(buildCalculationKey(request));
+        PathAnalysisResult cachedResult = pathAnalysisResultCache.get(
+                buildCalculationKey(request, isHighestPointInSquareEnabled()));
         if (cachedResult != null) {
             storePathAnalysisResultInChatMembers(member, band, cachedResult);
         }
@@ -316,7 +323,8 @@ public final class ReachabilityService {
             return;
         }
 
-        String calculationKey = buildCalculationKey(request);
+        boolean highestPointInSquare = isHighestPointInSquareEnabled();
+        String calculationKey = buildCalculationKey(request, highestPointInSquare);
 
         PathAnalysisResult cachedResult = pathAnalysisResultCache.get(calculationKey);
         if (cachedResult != null) {
@@ -342,9 +350,30 @@ public final class ReachabilityService {
 
         executor.submit(() -> {
             PathAnalysisResult result;
+            PathAnalysisRequest effectiveRequest = request;
+            boolean fellBackToSquareCentre = false;
 
             try {
-                result = pathAnalysisService.analyze(request);
+                /*
+                 * The highest point of the remote square may need the elevation service,
+                 * so it is resolved here on the reachability thread and never while the
+                 * request is built on the UI thread.
+                 */
+                if (highestPointInSquare && needsHighestPointLookup(request)) {
+                    LocatorHighestPointResolver.HighestPoint highestPoint =
+                            highestPointResolver.resolve(request.toLocator6());
+                    if (highestPoint != null) {
+                        effectiveRequest = request.withTargetEndpoint(
+                                highestPoint.latitudeDeg(),
+                                highestPoint.longitudeDeg(),
+                                highestPoint.elevationMeters()
+                        );
+                    } else {
+                        fellBackToSquareCentre = true;
+                    }
+                }
+
+                result = pathAnalysisService.analyze(effectiveRequest);
                 if (result == null) {
                     result = createNoProfileResult(request, "Path analysis returned no result.");
                 }
@@ -357,8 +386,22 @@ public final class ReachabilityService {
 
             boolean usableBudget = hasUsableLinkBudget(result);
 
-            if (usableBudget) {
+            if (usableBudget && fellBackToSquareCentre) {
+                /*
+                 * A centre fallback answers this request but is not what the setting asks
+                 * for, so it is not kept: the next request tries the square again once the
+                 * resolver's own retry delay has passed. The terrain profile itself stays
+                 * cached in the provider, so this costs no repeated profile download.
+                 */
+                failedCalculationRetryAfterEpochMs.remove(calculationKey);
+            } else if (usableBudget) {
                 pathAnalysisResultCache.put(calculationKey, result);
+                /*
+                 * Also file it under the key of the resolved request: once the square is
+                 * cached, buildRequest places the endpoint there directly, and that request
+                 * then finds this result instead of computing it again.
+                 */
+                pathAnalysisResultCache.put(buildCalculationKey(effectiveRequest, highestPointInSquare), result);
                 failedCalculationRetryAfterEpochMs.remove(calculationKey);
             } else {
                 failedCalculationRetryAfterEpochMs.put(
@@ -422,9 +465,42 @@ public final class ReachabilityService {
                                              double targetLongitudeDeg,
                                              double analysisFrequencyMHz) {
 
+        return buildRequest(
+                chatController.getChatPreferences(),
+                ownLocator6,
+                targetCallsignRaw,
+                targetLocator6,
+                targetLatitudeDeg,
+                targetLongitudeDeg,
+                analysisFrequencyMHz,
+                highestPointResolver::peekCached
+        );
+    }
+
+    /**
+     * Builds a path-analysis request from the preferences.
+     *
+     * <p>The own ground elevation override comes from the preferences as entered. When
+     * the highest point of the remote square is enabled and already known, the remote
+     * endpoint is placed there; when it is not known yet, the request keeps the given
+     * position and the background job resolves it. Looking it up here would block the
+     * caller, which may be the UI thread.</p>
+     *
+     * @param preferences preferences to read the station values from
+     * @param cachedHighestPoint non-blocking lookup of an already resolved square
+     */
+    static PathAnalysisRequest buildRequest(ChatPreferences preferences,
+                                            String ownLocator6,
+                                            String targetCallsignRaw,
+                                            String targetLocator6,
+                                            double targetLatitudeDeg,
+                                            double targetLongitudeDeg,
+                                            double analysisFrequencyMHz,
+                                            Function<String, LocatorHighestPointResolver.HighestPoint> cachedHighestPoint) {
+
         Location homeLocation = new Location(ownLocator6);
 
-        return new PathAnalysisRequest(
+        PathAnalysisRequest request = new PathAnalysisRequest(
                 ownLocator6,
                 homeLocation.getLatitude().toDegrees(),
                 homeLocation.getLongitude().toDegrees(),
@@ -433,11 +509,39 @@ public final class ReachabilityService {
                 targetLatitudeDeg,
                 targetLongitudeDeg,
                 analysisFrequencyMHz,
-                chatController.getChatPreferences().getStn_pathAnalysisOwnAntennaHeightMeters(),
-                chatController.getChatPreferences().getStn_pathAnalysisDefaultTargetAntennaHeightMeters(),
+                preferences.getStn_pathAnalysisOwnAntennaHeightMeters(),
+                preferences.getStn_pathAnalysisDefaultTargetAntennaHeightMeters(),
                 PathGeometryUtils.DEFAULT_EFFECTIVE_EARTH_RADIUS_FACTOR,
-                chatController.getChatPreferences().buildPathLinkBudgetSettings()
+                preferences.buildPathLinkBudgetSettings(),
+                preferences.getStn_pathAnalysisOwnHeightAslMeters(),
+                Double.NaN
         );
+
+        if (preferences.isStn_pathAnalysisDxHighestPointInSquare() && cachedHighestPoint != null) {
+            LocatorHighestPointResolver.HighestPoint highestPoint = cachedHighestPoint.apply(targetLocator6);
+            if (highestPoint != null) {
+                request = request.withTargetEndpoint(
+                        highestPoint.latitudeDeg(),
+                        highestPoint.longitudeDeg(),
+                        highestPoint.elevationMeters()
+                );
+            }
+        }
+
+        return request;
+    }
+
+    /**
+     * Whether the background job still has to look up the highest point of the remote
+     * square. A request that already carries the remote ground elevation was placed on
+     * the cached point by {@link #buildRequest}.
+     */
+    static boolean needsHighestPointLookup(PathAnalysisRequest request) {
+        return !Double.isFinite(request.targetGroundElevationOverrideMeters());
+    }
+
+    private boolean isHighestPointInSquareEnabled() {
+        return chatController.getChatPreferences().isStn_pathAnalysisDxHighestPointInSquare();
     }
 
     /**
@@ -626,10 +730,18 @@ public final class ReachabilityService {
     /**
      * Builds a stable calculation key.
      *
-     * <p>The key includes station, locators, frequency, antenna heights and link
-     * budget settings. If any relevant input changes, a new calculation is allowed.</p>
+     * <p>The key includes station, locators, remote position, frequency, antenna heights,
+     * link budget settings, the own ground elevation override, the remote ground
+     * elevation and whether the highest point of the remote square is used. If any
+     * relevant input changes, a new calculation is allowed. The remote position is the
+     * one in the request: the square centre while the highest point is still unresolved,
+     * the highest point itself once it is cached. The switch is part of the key because
+     * before the lookup both settings produce the same centre request.</p>
+     *
+     * @param request the request as built
+     * @param highestPointInSquare whether the remote endpoint is the highest point of its square
      */
-    private String buildCalculationKey(PathAnalysisRequest request) {
+    static String buildCalculationKey(PathAnalysisRequest request, boolean highestPointInSquare) {
         return normalizeLocator6(request.fromLocator6())
                 + "|"
                 + normalizeCallsignRaw(request.toCallsignRaw())
@@ -646,14 +758,28 @@ public final class ReachabilityService {
                 + "|"
                 + String.format(Locale.US, "%.1f", request.targetAntennaHeightMeters())
                 + "|"
-                + request.linkBudgetSettings();
+                + request.linkBudgetSettings()
+                + "|homeAsl="
+                + formatOptionalMeters(request.homeGroundElevationOverrideMeters())
+                + "|targetAsl="
+                + formatOptionalMeters(request.targetGroundElevationOverrideMeters())
+                + "|highestPoint="
+                + highestPointInSquare;
     }
 
-    private String normalizeCallsignRaw(String callSignRaw) {
+    /*
+     * Full precision on purpose: rounded to one decimal, 123.04 m and 123.00 m would share
+     * a key and the second would be answered with the first one's result.
+     */
+    private static String formatOptionalMeters(double meters) {
+        return Double.isFinite(meters) ? Double.toString(meters) : "model";
+    }
+
+    private static String normalizeCallsignRaw(String callSignRaw) {
         return callSignRaw == null ? "" : callSignRaw.trim().toUpperCase(Locale.ROOT);
     }
 
-    private String normalizeLocator6(String locator) {
+    private static String normalizeLocator6(String locator) {
         return locator == null ? "" : locator.trim().toUpperCase(Locale.ROOT);
     }
 

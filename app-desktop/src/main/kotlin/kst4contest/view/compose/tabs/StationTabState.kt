@@ -3,8 +3,13 @@ package kst4contest.view.compose.tabs
 import kst4contest.controller.On4KstConnectionState
 import kst4contest.model.ChatCategory
 import kst4contest.model.ChatPreferences
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import kst4contest.view.compose.Form
 import kst4contest.view.compose.SettingsDraft
 import kst4contest.view.compose.setting
+import kst4contest.view.i18n.CurrentStrings
 
 /**
  * The Station tab as a typed facade over ChatPreferences.
@@ -103,6 +108,58 @@ class StationTabState(
 
     var stn_pathAnalysisOwnTxPowerWatts: Double by draft.setting({ prefs.getStn_pathAnalysisOwnTxPowerWatts() }) { prefs.setStn_pathAnalysisOwnTxPowerWatts(it) }
 
+    /**
+     * Own ground elevation above sea level in metres, NaN while the elevation model decides.
+     * Staged like every path-analysis setting; the reachability service reads the stored
+     * value, so a changed height reaches the analysis only once it is applied.
+     */
+    var stn_pathAnalysisOwnHeightAslMeters: Double by draft.setting({ prefs.getStn_pathAnalysisOwnHeightAslMeters() }) { prefs.setStn_pathAnalysisOwnHeightAslMeters(it) }
+
+    /** Whether the path ends at the highest point of the remote locator square. */
+    var stn_pathAnalysisDxHighestPointInSquare: Boolean by draft.setting({ prefs.isStn_pathAnalysisDxHighestPointInSquare() }) { prefs.setStn_pathAnalysisDxHighestPointInSquare(it) }
+
+    /**
+     * The entry last committed to the own-height field, as the operator typed it.
+     *
+     * [Form.committed] keys its draft text on the stored text, and the staged number reads
+     * back in its own spelling ("25.0" for "25"). The settings draft is Compose state, so
+     * the commit itself recomposes the field with the new key, and without this the field
+     * would swap "25" for "25.0" under the cursor right after Enter, or drop keys typed
+     * since. Handing back the committed spelling while it still names the same number
+     * keeps key and text in agreement.
+     */
+    private var committedOwnHeightAslText by mutableStateOf<String?>(null)
+
+    /**
+     * The own ground elevation as its field shows it: empty while the elevation model
+     * decides. The spelling of the last commit while it still names the drafted number,
+     * otherwise that number itself (discarded, applied elsewhere, or never committed here).
+     * Written only through [commitOwnHeightAsl].
+     */
+    val stn_pathAnalysisOwnHeightAslText: String
+        get() {
+            val drafted = stn_pathAnalysisOwnHeightAslMeters.let { if (it.isFinite()) it.toString() else "" }
+            val committed = committedOwnHeightAslText
+
+            return if (committed != null && isOwnHeightAslUnchanged(committed, drafted)) committed else drafted
+        }
+
+    /**
+     * Commits an own ground elevation entry into the draft. Empty hands the elevation back
+     * to the model; a number in range is staged; anything else is refused and nothing is
+     * staged.
+     *
+     * @return null when staged, otherwise the reason shown to the operator
+     */
+    fun commitOwnHeightAsl(entered: String): String? {
+        val meters = parseOwnHeightAsl(entered)
+            ?: return CurrentStrings.get().stationInvalidOwnHeightAsl(entered.trim())
+
+        stn_pathAnalysisOwnHeightAslMeters = meters
+        committedOwnHeightAslText = entered.trim()
+        return null
+    }
+
     var stn_pstRotatorEnabled: Boolean by draft.setting({ prefs.isStn_pstRotatorEnabled() }) { prefs.setStn_pstRotatorEnabled(it) }
 
     var stn_pstRotatorHost: String by draft.setting({ prefs.getStn_pstRotatorHost() }) { prefs.setStn_pstRotatorHost(it) }
@@ -175,5 +232,32 @@ class StationTabState(
     fun selectSecondCategory(category: ChatCategory?) {
         loginChatCategorySecond = category
         applySecondCategory(category)
+    }
+
+    companion object {
+        /**
+         * Reads an own ground elevation entry: empty means "elevation model" (NaN), a
+         * number in the accepted range is taken, anything else is refused with null.
+         * A comma is read as the decimal separator, as in the other number fields.
+         */
+        fun parseOwnHeightAsl(text: String): Double? {
+            val trimmed = text.trim()
+            if (trimmed.isEmpty()) {
+                return Double.NaN
+            }
+            val meters = trimmed.replace(',', '.').toDoubleOrNull() ?: return null
+            return if (ChatPreferences.isValidOwnHeightAslMeters(meters)) meters else null
+        }
+
+        /**
+         * Whether a draft names the stored height. Compared as numbers, so "250", "250.0"
+         * and "250,0" all count as the stored 250.0, and an empty draft as the unset value;
+         * a draft that does not parse is never unchanged, so leaving the field refuses it.
+         */
+        fun isOwnHeightAslUnchanged(draft: String, stored: String): Boolean {
+            val typed = parseOwnHeightAsl(draft) ?: return false
+            val now = parseOwnHeightAsl(stored) ?: return false
+            return if (typed.isNaN() || now.isNaN()) typed.isNaN() && now.isNaN() else typed == now
+        }
     }
 }

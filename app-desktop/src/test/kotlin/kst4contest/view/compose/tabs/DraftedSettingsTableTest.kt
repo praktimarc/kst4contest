@@ -75,6 +75,12 @@ class DraftedSettingsTableTest {
             { it.prefs.getStn_pathAnalysisOwnAntennaHeightMeters() }),
         Case("station own power", { it.station.stn_pathAnalysisOwnTxPowerWatts += 1.5 },
             { it.prefs.getStn_pathAnalysisOwnTxPowerWatts() }),
+        // Through the field's commit, which validates and then stages.
+        Case("station own ground height ASL", { it.station.commitOwnHeightAsl("312") },
+            { it.prefs.getStn_pathAnalysisOwnHeightAslMeters() }),
+        flag("station target on highest point", { it.station.stn_pathAnalysisDxHighestPointInSquare }) { f, v ->
+            f.station.stn_pathAnalysisDxHighestPointInSquare = v
+        },
         flag("station rotator", { it.station.stn_pstRotatorEnabled }) { f, v -> f.station.stn_pstRotatorEnabled = v },
         Case("station rotator host", { it.station.stn_pstRotatorHost += "x" }, { it.prefs.getStn_pstRotatorHost() }),
         Case("station rotator port", { it.station.stn_pstRotatorPort += 1 }, { it.prefs.getStn_pstRotatorPort() }),

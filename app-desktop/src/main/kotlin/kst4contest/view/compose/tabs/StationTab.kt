@@ -13,9 +13,11 @@ import kst4contest.view.compose.Form
  *
  * The controls stage their edits in the window's draft (see StationTabState); only the
  * login credentials write through at once.
+ *
+ * @param onRefused shows why a committed entry was refused (the own ground height)
  */
 @Composable
-fun StationTab(state: StationTabState) {
+fun StationTab(state: StationTabState, onRefused: (String) -> Unit = {}) {
     val strings = LocalStrings.current
 
     Column(
@@ -98,8 +100,22 @@ fun StationTab(state: StationTabState) {
             Form.decimal(strings.stationOwnTxPower, state.stn_pathAnalysisOwnTxPowerWatts) { state.stn_pathAnalysisOwnTxPowerWatts = it }
             Form.decimal(strings.stationOwnAntennaGain, state.stn_pathAnalysisOwnAntennaGainDbi) { state.stn_pathAnalysisOwnAntennaGainDbi = it }
             Form.decimal(strings.stationOwnAntennaHeight, state.stn_pathAnalysisOwnAntennaHeightMeters) { state.stn_pathAnalysisOwnAntennaHeightMeters = it }
+            /*
+             * Committed on Enter or on leaving the field, not per keystroke: the stored
+             * value reads back as "250.0", and a per-keystroke write would feed that back
+             * into the field while the operator is still typing.
+             */
+            Form.committed(
+                label = strings.stationOwnHeightAsl,
+                stored = state.stn_pathAnalysisOwnHeightAslText,
+                commit = state::commitOwnHeightAsl,
+                onRefused = onRefused,
+                isUnchanged = StationTabState::isOwnHeightAslUnchanged,
+                current = { state.stn_pathAnalysisOwnHeightAslText },
+            )
             Form.decimal(strings.stationTargetTxPower, state.stn_pathAnalysisDefaultTargetTxPowerWatts) { state.stn_pathAnalysisDefaultTargetTxPowerWatts = it }
             Form.decimal(strings.stationTargetAntennaGain, state.stn_pathAnalysisDefaultTargetAntennaGainDbi) { state.stn_pathAnalysisDefaultTargetAntennaGainDbi = it }
+            Form.check(strings.stationTargetHighestPoint, state.stn_pathAnalysisDxHighestPointInSquare) { state.stn_pathAnalysisDxHighestPointInSquare = it }
             Form.text(strings.stationDemDirectory, state.stn_pathAnalysisDemRootDirectory) { state.stn_pathAnalysisDemRootDirectory = it }
         }
     }
