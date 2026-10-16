@@ -2628,10 +2628,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 			if (state.isOn(kst4contest.view.compose.StationFilter.NEW_BANDS) && !isNewBandOpportunity(member)) return false;
 			if (state.isOn(kst4contest.view.compose.StationFilter.AIRSCOUT_NEXT_5_MIN) && !hasAsWindowInNextMinutes(member, 5)) return false;
 
-			if (state.isOn(kst4contest.view.compose.StationFilter.MAX_QRB)) {
-				Double qrb = member.getQrb();
-				if (qrb == null || qrb > state.getMaxQrbKm()) return false;
-			}
+			if (!state.acceptsQrb(member.getQrb())) return false;
 
 			if (state.isOn(kst4contest.view.compose.StationFilter.QTF)) {
 				Double qtf = member.getQTFdirection();

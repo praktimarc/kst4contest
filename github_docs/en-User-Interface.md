@@ -188,6 +188,7 @@ The filter bar is located above the chat-member table. Filters can be combined; 
 |---|---|
 | **Show only QTF** | Shows only stations inside the selected antenna direction and configured beamwidth |
 | **Show only QRB [km] <=** | Limits the list to the entered maximum distance |
+| **Show only QRB [km] >** | Hides stations up to the entered minimum distance; together with the maximum it shows a distance range |
 | **Find** | Filters by a complete or partial callsign |
 | **wkd** | Hides base callsigns already worked on at least one supported band |
 | individual band buttons | Hide stations already worked on that band or marked NOT QRV there |

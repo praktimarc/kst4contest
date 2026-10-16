@@ -275,7 +275,14 @@ class DataTableState<T>(
     var contentRevision by mutableStateOf(0)
         private set
 
+    /**
+     * Redraws the rows and filters them again. The filter reads mutable row fields (a
+     * station's QRB, worked and QRV flags, its last activity), so a cached [visibleRows]
+     * from before the change could keep a row the filter now excludes, or hide one it
+     * now lets through -- in the list and in the station map, which draws the same rows.
+     */
     fun forceRedraw() {
+        invalidateOrder()
         contentRevision++
     }
 
@@ -299,6 +306,7 @@ class DataTableState<T>(
              */
             val currentRows = rows
             val currentFilter = rowFilter
+            contentRevision // read for the subscription: forceRedraw drops the cache
             val currentColumn = sortedColumnId
             val ascending = sortAscending
 

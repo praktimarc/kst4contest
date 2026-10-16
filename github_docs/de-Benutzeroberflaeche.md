@@ -186,6 +186,7 @@ Die Filterleiste befindet sich oberhalb der Chatmember-Tabelle. Filter können m
 |---|---|
 | **Show only QTF** | Zeigt nur Stationen innerhalb der gewählten Antennenrichtung und des konfigurierten Öffnungswinkels |
 | **Show only QRB [km] <=** | Begrenzt die Liste auf die eingetragene maximale Entfernung |
+| **Show only QRB [km] >** | Blendet Stationen bis zur eingetragenen Mindestentfernung aus; zusammen mit dem Höchstwert ergibt sich ein Entfernungsbereich |
 | **Find** | Filtert nach einem vollständigen oder teilweisen Rufzeichen |
 | **wkd** | Blendet Basisrufzeichen aus, die bereits auf mindestens einem unterstützten Band gearbeitet wurden |
 | einzelne Band-Schaltflächen | Blenden Stationen aus, die auf dem betreffenden Band bereits gearbeitet oder dort als NOT QRV markiert wurden |

@@ -226,6 +226,8 @@ Useful: While calling CQ in a specific direction, only show stations in that dir
 
 Hide stations beyond a maximum distance. The **"Show only QRB [km] <="** button is a toggle.
 
+**"Show only QRB [km] >"** works the other way round: it hides every station up to the entered distance, so only the far ones remain. A station exactly at that distance is hidden as well. With both switched on, the list shows a range: `minimum < QRB <= maximum`. While either filter is on, stations without a known distance are hidden. Both values only last for the running session.
+
 ---
 
 ## Filters for Worked Status, New Bands and New Grid Squares

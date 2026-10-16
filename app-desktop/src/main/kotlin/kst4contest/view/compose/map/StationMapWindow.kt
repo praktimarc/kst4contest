@@ -129,7 +129,19 @@ object StationMapWindow {
             val antennaBeamWidthDeg = mainWindowState.prefs.stn_antennaBeamWidthDeg
             val maxQrbKm = mainWindowState.prefs.stn_maxQRBDefault
 
-            val markers by remember(mainWindowState.stations.rows, mainWindowState.stations.contentRevision, selectedMember, mainWindowState.activeBands) {
+            /*
+             * The markers are the stations the list shows, not all of them (#21): the
+             * JavaFX map took the sorted, filtered list (StationMapBridge.refreshNow), and
+             * the status line below already says "filtered view active". A selected
+             * station that a filter hides gets no marker either, as it did there.
+             */
+            val markers by remember(
+                mainWindowState.stations.rows,
+                mainWindowState.stations.rowFilter,
+                mainWindowState.stations.contentRevision,
+                selectedMember,
+                mainWindowState.activeBands,
+            ) {
                 derivedStateOf {
                     val builder = MapCallsignRawSnapshotBuilder()
                     val activeBands = mainWindowState.activeBands
@@ -140,7 +152,7 @@ object StationMapWindow {
                     }
 
                     builder.buildSnapshots(
-                        mainWindowState.stations.rows,
+                        mainWindowState.stations.visibleRows,
                         selectedMember,
                         bandSet
                     )
@@ -152,17 +164,29 @@ object StationMapWindow {
             // Read through updated state so a caller passing a new lambda is never served a stale one.
             val currentPathAnalysis by rememberUpdatedState(pathAnalysis)
 
-            LaunchedEffect(selectedMember) {
+            /*
+             * Whether the selected station has a marker. A filter can hide it (#21), and a
+             * station without a locator never has one; then there is nothing to analyse.
+             */
+            val selectedHasMarker = selectedMember != null &&
+                markers.any { it.callSignRaw() == selectedMember.callSignRaw }
+
+            LaunchedEffect(selectedMember, selectedHasMarker) {
                 if (selectedMember == null) {
                     pathAnalysisResult = null
                     return@LaunchedEffect
                 }
-                
+
+                val selectedSnapshot = markers.find { it.callSignRaw() == selectedMember.callSignRaw }
+                if (selectedSnapshot == null) {
+                    // No marker: no request, and no "Loading" for a station the map does not show.
+                    pathAnalysisResult = null
+                    return@LaunchedEffect
+                }
+
                 val analysis = currentPathAnalysis()
                 if (analysis != null) {
-                    val selectedSnapshot = markers.find { it.callSignRaw() == selectedMember.callSignRaw }
-                    
-                    if (selectedSnapshot != null && selectedSnapshot.hasUsablePosition()) {
+                    if (selectedSnapshot.hasUsablePosition()) {
                         /*
                          * Pan to the station and leave the zoom alone. The Leaflet map
                          * did exactly this (focusCallsignRaw) and touched the zoom only
@@ -183,8 +207,8 @@ object StationMapWindow {
 
                     pathAnalysisResult = PathAnalysisResult.loading(
                         prefs.stn_loginLocatorMainCat,
-                        selectedSnapshot?.locator6() ?: "",
-                        selectedSnapshot?.callSignRaw() ?: ""
+                        selectedSnapshot.locator6(),
+                        selectedSnapshot.callSignRaw()
                     )
                     
                     analysis.request(selectedMember, selectedSnapshot) { result ->

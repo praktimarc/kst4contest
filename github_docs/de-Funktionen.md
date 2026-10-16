@@ -227,6 +227,8 @@ Sinnvoll: Während man CQ in eine bestimmte Richtung ruft, nur Stationen in dies
 
 Stationen jenseits einer maximalen Entfernung ausblenden. Schaltfläche **„Show only QRB [km] <="** ist ein Toggle-Button.
 
+**„Show only QRB [km] >"** wirkt umgekehrt: Er blendet alle Stationen bis zur eingetragenen Entfernung aus, sodass nur die weiter entfernten übrig bleiben. Eine Station genau in dieser Entfernung wird ebenfalls ausgeblendet. Sind beide eingeschaltet, zeigt die Liste einen Bereich: `Minimum < QRB <= Maximum`. Solange einer der beiden Filter aktiv ist, werden Stationen ohne bekannte Entfernung ausgeblendet. Beide Werte gelten nur für die laufende Sitzung.
+
 ---
 
 ## Filter für Worked-Status, neue Bänder und neue Großfelder

@@ -195,4 +195,30 @@ class StationListScreenTest {
         onNodeWithText("DL2BBB").assertDoesNotExist()
         assertEquals(null, state.selectedRow)
     }
+
+    /**
+     * A station's fields change in place and the application calls forceRedraw: the list
+     * filters again, so a station the filter now excludes leaves the screen (#21).
+     */
+    @Test
+    fun aRedrawAfterAFieldChangedFiltersTheListAgain() = runComposeUiTest {
+        val state = stationList()
+        val moving = station("DL1MOVE", qrb = 500.0)
+        show(state)
+        runOnIdle {
+            state.replaceRows(listOf(moving, station("DL2STAY", qrb = 800.0)))
+            state.rowFilter = { (it.qrb ?: 0.0) > 300.0 }
+        }
+        waitForIdle()
+        onNodeWithText("DL1MOVE").assertExists()
+
+        runOnIdle {
+            moving.qrb = 100.0
+            state.forceRedraw()
+        }
+        waitForIdle()
+
+        onNodeWithText("DL1MOVE").assertDoesNotExist()
+        onNodeWithText("DL2STAY").assertExists()
+    }
 }

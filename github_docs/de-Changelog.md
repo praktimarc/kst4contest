@@ -24,6 +24,8 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **Profilwechsel im laufenden Betrieb:** **File → Switch operator profile...** trennt die Verbindung und baut die Oberfläche mit den Einstellungen des gewählten Profils neu auf, ohne Programmneustart.
 
+- **Filter für eine Mindestentfernung:** Neben **Show only QRB [km] <=** gibt es in der Filterleiste jetzt **Show only QRB [km] >** (deutsche Oberfläche: **Nur QRB [km] >**). Er blendet alle Stationen bis zur eingetragenen Entfernung aus. Sind beide eingeschaltet, zeigt die Liste einen Entfernungsbereich, etwa nur Stationen zwischen 300 und 800 km. Stationen ohne bekannte Entfernung werden ausgeblendet, solange einer der beiden Filter aktiv ist, und die Stationskarte folgt dem Filter. Wie beim Höchstwert gilt der Wert nur für die laufende Sitzung. Damit ist [Issue #21](https://github.com/praktimarc/kst4contest/issues/21) umgesetzt.
+
 - **Windows-Installer:** Neben dem portablen ZIP-Paket gibt es für Windows bei Stable-Releases jetzt einen MSI-Installer (`KST4Contest-v<Version>-windows-x64.msi`). Er installiert KST4Contest ohne Administratorrechte für das aktuelle Benutzerkonto, legt einen Startmenü-Eintrag und eine Desktop-Verknüpfung an und ersetzt bei einem Update die vorhandene Installation. Einstellungen und Datenbank bleiben unter `%USERPROFILE%\.praktiKST` und werden mit einer portablen Kopie geteilt. Damit ist die erste Stufe von [Issue #61](https://github.com/praktimarc/kst4contest/issues/61) umgesetzt.
 
 ### Geändert

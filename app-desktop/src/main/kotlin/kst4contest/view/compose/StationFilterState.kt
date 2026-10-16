@@ -18,6 +18,7 @@ enum class StationFilter {
     NEW_BANDS,
     AIRSCOUT_NEXT_5_MIN,
     MAX_QRB,
+    MIN_QRB,
     QTF,
     SEARCH_TEXT,
     HIDE_INACTIVE,
@@ -32,6 +33,17 @@ enum class StationFilter {
     HIDE_WORKED_6,
     HIDE_WORKED_3,
 }
+
+/**
+ * What a QRB field of the filter bar makes of the text typed into it: a distance in km, or
+ * `null` when the text is none.
+ *
+ * `toDouble` alone also reads "NaN" and "Infinity", and a pasted "Infinity" as the minimum
+ * hid every station while "NaN" let every one through. A negative distance means nothing
+ * either. All of these are refused, so the field keeps its last valid value (#21).
+ */
+internal fun parseQrbKm(text: String): Double? =
+    text.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 }
 
 /** The bands the "hide worked" row offers, under the labels the bar shows. */
 enum class WorkedBandFilter(val label: String, val filter: StationFilter, val modelBand: kst4contest.model.Band) {
@@ -99,6 +111,16 @@ class StationFilterState {
     /** Only meaningful while [maxQrbEnabled]; a distance alone filters nothing. */
     var maxQrbKm: Double by mutableStateOf(0.0)
 
+    var minQrbEnabled: Boolean
+        get() = isOn(StationFilter.MIN_QRB)
+        set(value) = switch(StationFilter.MIN_QRB, value)
+
+    /**
+     * Only meaningful while [minQrbEnabled]. Exclusive: a station exactly this far away is
+     * hidden, so that "QRB > 300" and "QRB <= 300" split the list without overlap (#21).
+     */
+    var minQrbKm: Double by mutableStateOf(0.0)
+
     var qtfEnabled: Boolean
         get() = isOn(StationFilter.QTF)
         set(value) = switch(StationFilter.QTF, value)
@@ -129,6 +151,23 @@ class StationFilterState {
         get() = switched.filterValues { it }.keys
 
     fun isOn(filter: StationFilter): Boolean = switched[filter] == true
+
+    /**
+     * Whether a station [qrb] km away passes the distance filters that are switched on.
+     *
+     * Both on make a range: `min < qrb <= max`. A station without a known distance is
+     * hidden as soon as either is on — `null` is unknown, not zero, and an unknown distance
+     * can be in neither range.
+     */
+    fun acceptsQrb(qrb: Double?): Boolean {
+        val max = isOn(StationFilter.MAX_QRB)
+        val min = isOn(StationFilter.MIN_QRB)
+        if (!max && !min) return true
+        if (qrb == null) return false
+        if (max && qrb > maxQrbKm) return false
+        if (min && qrb <= minQrbKm) return false
+        return true
+    }
 
     fun setHideWorkedOn(band: WorkedBandFilter, hide: Boolean) = switch(band.filter, hide)
 
