@@ -281,18 +281,30 @@ class ComposeWindowHost(
                      * comfort: these tables are wider than the default window, so an
                      * operator who widens it once must not have to do it again.
                      */
+                    /*
+                     * The last size and position this host cut the window down to. Neither
+                     * is the operator's choice: the size must not be written back as the
+                     * stored size, and the position must not count as a move.
+                     */
+                    val fit = remember { FitRecord() }
+
                     if (onResized != null) {
                         LaunchedEffect(windowState) {
                             /*
                              * A secondary window skips the opening size: it may be the
                              * screen-clamped one, and writing that back would shrink the
                              * stored size for good because the window once opened on a
-                             * smaller screen. The main window keeps writing it, as before.
+                             * smaller screen. The main window keeps writing it, as before,
+                             * unless it was opened at a stored position, where the size may
+                             * be clamped the same way. A size this host fitted the window to
+                             * is skipped for the same reason.
                              */
                             snapshotFlow { windowState.size }
-                                .drop(if (isMainWindow) 0 else 1)
+                                .drop(if (isMainWindow && placed == null) 0 else 1)
                                 .collect { size ->
-                                    if (size.width.isSpecified && size.height.isSpecified) {
+                                    if (size.width.isSpecified && size.height.isSpecified
+                                        && !fit.isFittedSize(size.width.value.roundToInt(), size.height.value.roundToInt())
+                                    ) {
                                         onResized(size.width.value, size.height.value)
                                     }
                                 }
@@ -307,7 +319,7 @@ class ComposeWindowHost(
                          * opted in. Only moves are stored, never the window manager's
                          * nudges, so a restored window cannot drift a little on every start.
                          */
-                        val tracker = MoveTracker(placed?.location)
+                        var tracker = MoveTracker(placed?.location)
                         snapshotFlow { windowState.position }.collect { position ->
                             if (position is WindowPosition.Absolute
                                 && windowState.placement == ComposeWindowPlacement.Floating
@@ -318,6 +330,14 @@ class ComposeWindowHost(
                                     position.y.value.roundToInt(),
                                 )
                                 val size = windowState.size
+                                /*
+                                 * The host's own fit is a new anchor, not a move; the window
+                                 * manager may still nudge it within the tolerance.
+                                 */
+                                if (fit.bounds?.location == now) {
+                                    tracker = MoveTracker(now)
+                                    return@collect
+                                }
                                 tracker.observe(now)?.let { moved ->
                                     if (!isMainWindow) {
                                         movedTo = moved
@@ -354,9 +374,10 @@ class ComposeWindowHost(
                                         size.width.value.roundToInt(),
                                         size.height.value.roundToInt(),
                                     ),
-                                )?.let { fit ->
-                                    windowState.size = DpSize(fit.width.dp, fit.height.dp)
-                                    windowState.position = WindowPosition(fit.x.dp, fit.y.dp)
+                                )?.let { fitted ->
+                                    fit.bounds = fitted
+                                    windowState.size = DpSize(fitted.width.dp, fitted.height.dp)
+                                    windowState.position = WindowPosition(fitted.x.dp, fitted.y.dp)
                                 }
                             }
                         }
@@ -443,6 +464,17 @@ internal const val MOVE_TOLERANCE_PX = 48
 
 /** How long a window must rest after a move before it is cut down to a smaller screen. */
 private const val FIT_SETTLE_MILLIS = 500L
+
+/**
+ * What the host last cut a window down to, so the size and position it set itself are not
+ * taken for the operator's. Only touched on the window's event thread.
+ */
+internal class FitRecord {
+    var bounds: java.awt.Rectangle? = null
+
+    fun isFittedSize(width: Int, height: Int): Boolean =
+        bounds?.let { it.width == width && it.height == height } ?: false
+}
 
 /** Whether [now] is far enough from [opened] to be the operator's move rather than a nudge. */
 internal fun movedAway(opened: Point, now: Point): Boolean =
