@@ -292,12 +292,29 @@ echo "==> Built $DMG"
 
 echo "==> Step 4/4: verification"
 
+# stapler talks to Apple's CloudKit ticket service. On the hosted Intel runners
+# that connection drops now and then ("The network connection was lost.",
+# exit 68) although the ticket is fine, so a lost connection is retried.
+with_retries() {
+    local attempt=1 max_attempts=5 delay=20
+    until "$@"; do
+        if [ "$attempt" -ge "$max_attempts" ]; then
+            echo "    giving up after $attempt attempts: $*" >&2
+            return 1
+        fi
+        echo "    attempt $attempt failed, retrying in ${delay}s: $*" >&2
+        sleep "$delay"
+        attempt=$((attempt + 1))
+        delay=$((delay * 2))
+    done
+}
+
 if [ ${#NOTARY_ARGS[@]} -gt 0 ]; then
     echo "    submitting for notarization (waits for Apple's verdict)"
     # Without a timeout a stalled submission would hang a CI job forever.
     xcrun notarytool submit "$DMG" "${NOTARY_ARGS[@]}" --wait --timeout 30m
     echo "    stapling ticket"
-    xcrun stapler staple "$DMG"
+    with_retries xcrun stapler staple "$DMG"
 else
     echo "    no notarization credentials set, skipping notarization"
 fi
@@ -333,7 +350,7 @@ spctl --assess --type execute --verbose=4 "$SHIPPED_APP" || true
 
 if [ ${#NOTARY_ARGS[@]} -gt 0 ]; then
     echo "--- stapler validate ---"
-    xcrun stapler validate "$DMG"
+    with_retries xcrun stapler validate "$DMG"
 fi
 
 echo
