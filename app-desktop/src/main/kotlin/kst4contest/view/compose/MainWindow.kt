@@ -205,6 +205,8 @@ private fun MessageColumn(
                     ownQrgMain = state.ownQrgMain,
                     ownQrgSecond = state.ownQrgSecond,
                     antennaQtf = state.antennaQtf,
+                    antennaQtf2 = state.antennaQtf2,
+                    so2rEnabled = state.surroundings.so2rEnabled,
                     modifier = Modifier.fillMaxWidth(),
                 )
             },

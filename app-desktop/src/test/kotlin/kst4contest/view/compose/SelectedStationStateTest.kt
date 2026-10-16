@@ -259,4 +259,57 @@ class SelectedStationStateTest {
 
         assertTrue(session.failMarked.isEmpty())
     }
+
+    @Test
+    fun `antenna 2 is offered only with SO2R and turns rotator 2`() {
+        val headings2 = mutableListOf<Double>()
+        var offered = false
+        val state = SelectedStationState(
+            propagateNotQrv = { },
+            createSked = { _, _, _, _ -> true },
+            turnAntennaTo = { },
+            turnSecondAntennaTo = { headings2.add(it) },
+            secondAntennaOffered = { offered },
+        )
+        state.select(member("DL1ABC").apply { setQTFdirection(145.7) })
+
+        assertFalse(state.showsSecondAntenna)
+        offered = true
+        assertTrue(state.showsSecondAntenna)
+        assertTrue(state.canTurnSecondAntenna)
+
+        state.turnSecondAntenna()
+
+        assertEquals(listOf(145.7), headings2)
+    }
+
+    @Test
+    fun `antenna 2 is greyed out without a heading`() {
+        val state = SelectedStationState(
+            propagateNotQrv = { },
+            createSked = { _, _, _, _ -> true },
+            turnSecondAntennaTo = { },
+            secondAntennaOffered = { true },
+        )
+        state.select(member("DL1ABC"))
+
+        assertTrue(state.showsSecondAntenna)
+        assertFalse(state.canTurnSecondAntenna)
+    }
+
+    @Test
+    fun `antenna 2 offer follows the surroundings flag without a new selection`() {
+        val surroundings = MainWindowSurroundings()
+        val state = SelectedStationState(
+            propagateNotQrv = { },
+            createSked = { _, _, _, _ -> true },
+            turnSecondAntennaTo = { },
+            secondAntennaOffered = { surroundings.secondAntennaOffered },
+        )
+        state.select(member("DL1ABC"))
+
+        assertFalse(state.showsSecondAntenna)
+        surroundings.secondAntennaOffered = true
+        assertTrue(state.showsSecondAntenna)
+    }
 }

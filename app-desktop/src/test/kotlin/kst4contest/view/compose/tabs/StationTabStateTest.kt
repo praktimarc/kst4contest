@@ -19,13 +19,104 @@ class StationTabStateTest(@TempDir private val tempDir: Path) {
         var mainApplied: ChatCategory? = null
         var secondApplied: ChatCategory? = null
         var secondWasApplied = false
+        val secondRotatorCalls = mutableListOf<Unit>()
         val draft = SettingsDraft()
         val state = StationTabState(
             prefs,
             draft,
             { mainApplied = it },
             { secondApplied = it; secondWasApplied = true },
+            applySecondRotator = { secondRotatorCalls.add(Unit) },
         )
+    }
+
+    @Test
+    fun `rotator 2 settings restart it once per apply however many changed`() {
+        val s = Session()
+
+        s.state.stn_pstRotator2Enabled = true
+        s.state.stn_pstRotator2Host = "10.0.0.7"
+        s.state.stn_pstRotator2Port = 12020
+        val outcome = s.draft.apply()
+
+        assertTrue(outcome.isClean, outcome.failures.toString())
+        assertEquals(12020, s.prefs.getStn_pstRotator2Port())
+        assertEquals(1, s.secondRotatorCalls.size)
+    }
+
+    @Test
+    fun `rotator 2 on the port of rotator 1 is refused and stays in the draft`() {
+        val s = Session()
+        s.state.stn_pstRotatorPort = 12040
+
+        s.state.stn_pstRotator2Port = 12040
+        val outcome = s.draft.apply()
+
+        assertEquals(1, outcome.failedWrites.size)
+        assertTrue(outcome.failedWrites.single().contains("12040"), outcome.failedWrites.toString())
+        assertEquals(12010, s.prefs.getStn_pstRotator2Port())
+        assertEquals(12040, s.state.stn_pstRotator2Port, "the refused value is still shown")
+    }
+
+    @Test
+    fun `rotator 1 onto the port of rotator 2 is refused while SO2R and rotator 2 are on`() {
+        val s = Session()
+        s.prefs.setTrxSynch_so2rEnabled(true)
+        s.prefs.setStn_pstRotator2Enabled(true)
+
+        s.state.stn_pstRotatorPort = 12010
+        val outcome = s.draft.apply()
+
+        assertEquals(1, outcome.failedWrites.size, outcome.failedWrites.toString())
+        assertTrue(outcome.failedWrites.single().contains("12010"), outcome.failedWrites.toString())
+        assertNotEquals(12010, s.prefs.getStn_pstRotatorPort())
+    }
+
+    @Test
+    fun `rotator 1 onto the port of rotator 2 is accepted without SO2R`() {
+        val s = Session()
+        s.prefs.setStn_pstRotator2Enabled(true)
+
+        s.state.stn_pstRotatorPort = 12010
+        val outcome = s.draft.apply()
+
+        assertTrue(outcome.isClean, outcome.failures.toString())
+        assertEquals(12010, s.prefs.getStn_pstRotatorPort())
+    }
+
+    @Test
+    fun `rotator 1 onto the port of rotator 2 is accepted while rotator 2 is off`() {
+        val s = Session()
+        s.prefs.setTrxSynch_so2rEnabled(true)
+
+        s.state.stn_pstRotatorPort = 12010
+        val outcome = s.draft.apply()
+
+        assertTrue(outcome.isClean, outcome.failures.toString())
+    }
+
+    @Test
+    fun `adjacent rotator ports are refused in both directions and distant ones accepted`() {
+        for (p2 in intArrayOf(12041, 12039)) {
+            val s = Session()
+            s.state.stn_pstRotatorPort = 12040
+            s.state.stn_pstRotator2Port = p2
+            val outcome = s.draft.apply()
+            assertEquals(1, outcome.failedWrites.size, "rotor 2 on $p2: ${outcome.failedWrites}")
+        }
+        for (p1 in intArrayOf(12011, 12009)) {
+            val s = Session()
+            s.prefs.setTrxSynch_so2rEnabled(true)
+            s.prefs.setStn_pstRotator2Enabled(true)
+            s.state.stn_pstRotatorPort = p1
+            val outcome = s.draft.apply()
+            assertEquals(1, outcome.failedWrites.size, "rotor 1 on $p1: ${outcome.failedWrites}")
+        }
+        val s = Session()
+        s.prefs.setTrxSynch_so2rEnabled(true)
+        s.prefs.setStn_pstRotator2Enabled(true)
+        s.state.stn_pstRotatorPort = 12030
+        assertTrue(s.draft.apply().isClean)
     }
 
     @Test

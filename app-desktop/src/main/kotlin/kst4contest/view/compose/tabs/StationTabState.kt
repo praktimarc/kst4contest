@@ -39,6 +39,11 @@ class StationTabState(
      * follow it while the tab is open; the default suits a state built without a session.
      */
     private val connectionState: () -> On4KstConnectionState = { On4KstConnectionState.DISCONNECTED },
+    /**
+     * Restarts or stops rotator 2 to match the stored settings; shared by this tab and the
+     * TRX synch tab through [SECOND_ROTATOR], so it runs once per apply.
+     */
+    private val applySecondRotator: () -> Unit = {},
 ) {
 
     var loginChatCategoryMain: ChatCategory?
@@ -164,7 +169,47 @@ class StationTabState(
 
     var stn_pstRotatorHost: String by draft.setting({ prefs.getStn_pstRotatorHost() }) { prefs.setStn_pstRotatorHost(it) }
 
-    var stn_pstRotatorPort: Int by draft.setting({ prefs.getStn_pstRotatorPort() }) { prefs.setStn_pstRotatorPort(it) }
+    /**
+     * Refused on apply when it clashes with rotor 2's port as it will be stored, but only
+     * while rotor 2 is in use (SO2R on and rotor 2 enabled), so a station without SO2R is
+     * never held back by rotor 2's default port. See [portsClash].
+     */
+    var stn_pstRotatorPort: Int by draft.setting({ prefs.getStn_pstRotatorPort() }) { port ->
+        if (prefs.isTrxSynch_so2rEnabled() && stn_pstRotator2Enabled) {
+            require(!portsClash(port, stn_pstRotator2Port)) { CurrentStrings.get().stationRotator2PortClash(port.toString()) }
+        }
+        prefs.setStn_pstRotatorPort(port)
+    }
+
+    var stn_pstRotator2Enabled: Boolean by draft.setting(
+        { prefs.isStn_pstRotator2Enabled() },
+        effectKey = SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { prefs.setStn_pstRotator2Enabled(it) }
+
+    var stn_pstRotator2Host: String by draft.setting(
+        { prefs.getStn_pstRotator2Host() },
+        effectKey = SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { prefs.setStn_pstRotator2Host(it) }
+
+    /**
+     * Refused on apply when it is the same as or adjacent to rotator 1's port as it will be
+     * stored (see [portsClash]). Compared with the drafted value of rotator 1, so changing
+     * both in one apply is judged by the result, not by the order of the edits.
+     */
+    var stn_pstRotator2Port: Int by draft.setting(
+        { prefs.getStn_pstRotator2Port() },
+        effectKey = SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { port ->
+        require(!portsClash(port, stn_pstRotatorPort)) { CurrentStrings.get().stationRotator2PortClash(port.toString()) }
+        prefs.setStn_pstRotator2Port(port)
+    }
+
+    /** Whether the rotator 2 block is active; follows the stored SO2R switch. */
+    val so2rEnabled: Boolean
+        get() = prefs.isTrxSynch_so2rEnabled()
 
     var stn_qtfDefault: Double by draft.setting({ prefs.getStn_qtfDefault() }) { prefs.setStn_qtfDefault(it) }
 
@@ -235,6 +280,15 @@ class StationTabState(
     }
 
     companion object {
+        /** The effect key of everything that restarts rotator 2; shared with the TRX synch tab. */
+        const val SECOND_ROTATOR: String = "secondRotator"
+
+        /**
+         * Whether two PSTRotator ports collide: the same port, or one apart because
+         * PSTRotator answers on port + 1, which would be the other client's local port.
+         */
+        fun portsClash(a: Int, b: Int): Boolean = kotlin.math.abs(a - b) <= 1
+
         /**
          * Reads an own ground elevation entry: empty means "elevation model" (NaN), a
          * number in the accepted range is taken, anything else is refused with null.

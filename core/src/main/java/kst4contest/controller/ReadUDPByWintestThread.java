@@ -2,6 +2,7 @@ package kst4contest.controller;
 
 import kst4contest.ApplicationConstants;
 import kst4contest.model.ChatMember;
+import kst4contest.model.ChatPreferences;
 import kst4contest.model.ThreadStateMessage;
 
 import java.io.BufferedWriter;
@@ -466,12 +467,13 @@ public class ReadUDPByWintestThread extends Thread {
     }
 
     /**
-     * Parses a Win-Test STATUS packet and optionally updates MYQRG.
+     * Parses a Win-Test STATUS packet and routes it to a radio.
      *
      * <p>The packet is tokenised while preserving quoted station names.
-     * The configured station-name filter is applied before any frequency is
-     * processed. An empty filter accepts STATUS packets from every Win-Test
-     * station.</p>
+     * {@code RadioSlotRouter} decides before any frequency is processed: radio 1
+     * updates MYQRG, radio 2 (only with SO2R) updates SECONDQRG, and a packet
+     * from any other station is ignored. An empty radio 1 station name accepts
+     * STATUS packets from every Win-Test station.</p>
      *
      * <p>The main frequency is read from token 7. If pass-frequency use is
      * enabled and token 11 contains a valid frequency, the pass frequency is
@@ -480,7 +482,8 @@ public class ReadUDPByWintestThread extends Thread {
      *
      * @param msg complete Win-Test STATUS packet
      */
-    private void parseStatus(String msg) {
+    /* package-private for tests */
+    void parseStatus(String msg) {
         try {
             ArrayList<String> parts = new ArrayList<>();
             Matcher matcher = STATUS_TOKEN_PATTERN.matcher(msg);
@@ -501,13 +504,13 @@ public class ReadUDPByWintestThread extends Thread {
             }
 
             String stationName = parts.get(1);
-            String stationFilter = client
-                    .getChatPreferences()
-                    .getLogsynch_wintestNetworkStationNameOfWintestClient1();
-
-            if (stationFilter != null
-                    && !stationFilter.isBlank()
-                    && !stationName.equalsIgnoreCase(stationFilter)) {
+            ChatPreferences prefs = client.getChatPreferences();
+            java.util.Optional<RadioSlot> slot = RadioSlotRouter.forWinTestStation(
+                    prefs.isTrxSynch_so2rEnabled(),
+                    stationName,
+                    prefs.getLogsynch_wintestNetworkStationNameOfWintestClient1(),
+                    prefs.getLogsynch_wintestNetworkStationNameOfWintestClient2());
+            if (slot.isEmpty()) {
                 return;
             }
 
@@ -564,15 +567,9 @@ public class ReadUDPByWintestThread extends Thread {
                             ? formattedPassQrg
                             : formattedMainQrg;
 
-            if (client
-                    .getChatPreferences()
-                    .isLogsynch_wintestQrgSyncEnabled()) {
-                client.uiDispatcher().runOnUi(
-                        () -> client
-                                .getChatPreferences()
-                                .getMYQRGFirstCat()
-                                .set(qrgToSet)
-                );
+            if (prefs.isLogsynch_wintestQrgSyncEnabled()) {
+                RadioSlot target = slot.get();
+                client.uiDispatcher().runOnUi(() -> target.qrgIn(prefs).set(qrgToSet));
             }
 
             System.out.println(

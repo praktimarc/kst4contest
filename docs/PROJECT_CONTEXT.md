@@ -278,6 +278,7 @@ section records only the durable architecture and operational boundaries.
 
 ## Important Decisions and Workarounds
 
+- SO2R (issue #46): `RadioSlot` FIRST/SECOND; `RadioSlotRouter` assigns RadioInfo by `RadioNr` and Win-Test STATUS by station name, everything to FIRST while `trxSynch_so2rEnabled` is off. Radio 2 writes SECONDQRG and `actualQTF2`. Rotator logic lives in `RotatorControl`, one per radio; the compatibility retry is unchanged. MO2R and multi-PC are separate projects and need their own design.
 - **Settings take effect with Apply, not while they are edited** (release 1.50,
   `docs/superpowers/specs/2026-10-16-settings-apply-drafts-design.md`): the settings window
   stages every edit in a `SettingsDraft` that the tab states read through; Apply/Close, Save

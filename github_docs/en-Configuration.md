@@ -238,7 +238,7 @@ Further information about text variables: [Macros and Variables](en-Macros-and-V
 
 ### Multiple Loggers or Radios
 
-Every enabled QRG source writes to the same `MYQRG` value. KST4Contest does not currently assign incoming `RadioInfo` or `STATUS` packets to a particular radio or chat category.
+Without SO2R, every enabled QRG source writes to the same `MYQRG` value. KST4Contest does not assign incoming `RadioInfo` or `STATUS` packets to a particular radio or chat category.
 
 If the general RadioInfo listener and Win-Test synchronisation are enabled at the same time, the most recently processed packet therefore determines the displayed QRG. The same applies when several logging applications send frequency packets to one KST4Contest instance.
 
@@ -250,6 +250,16 @@ For a setup containing several radios:
 - If two completely independent QRG synchronisations are required, two separate KST4Contest instances provide the clearer arrangement.
 
 In other words, combining several Worked sources is useful. Combining several simultaneously transmitting frequency sources merely creates a contest over which packet arrived last.
+
+### SO2R: Keeping Two Radios Apart
+
+The option **SO2R: keep two radios apart (radio 2 writes SECONDQRG)** makes KST4Contest assign frequency packets to the respective radio. It is off by default; without SO2R everything behaves as described in the sections above.
+
+- **N1MM+, DXLog.net, UCXLog:** assignment uses the `RadioNr` field of the `RadioInfo` packet. Nothing needs to be configured. Radio 1 updates `MYQRG`, radio 2 updates `SECONDQRG`.
+- **Win-Test:** there is no `RadioNr` here, so one station name per radio is entered, for example `STN1` for radio 1 in the existing station filter and `STN2` in the field **Win-Test station name of radio 2**. The field is greyed out without SO2R.
+- **Second PSTRotator:** after **Apply**, the **Station** tab shows the section **PSTRotator 2 (SO2R)** with a switch, host and port. The second instance needs its own port, for example `12010`; it answers on `12011`. The same port as PSTRotator 1, or one next to it, is refused on Apply. The second rotator starts with the ON4KST session.
+- **Operation:** the selected-station panel gets **Turn ant2 to ...** next to **Turn ant1**, and the send line shows a display-only QTF2 field for the second antenna. The tooltip of `SECONDQRG` names radio 2.
+- **QTF filters:** the QTF filters of the station list still follow rotator 1.
 
 Click **Save Settings** after completing the configuration.
 
@@ -715,7 +725,7 @@ A possible reply is:
 [KST4C Automsg] QRG is: 144.300.00
 ```
 
-The values come from the same QRG fields used by `MYQRG` and `SECONDQRG`. The primary QRG may be entered manually or updated through [TRX synchronisation](#trx-sync-settings). The second category uses the value configured or entered for that category.
+The values come from the same QRG fields used by `MYQRG` and `SECONDQRG`. The primary QRG may be entered manually or updated through [TRX synchronisation](#trx-sync-settings). The second category uses the value configured or entered for that category; with SO2R, radio 2 writes this field (`SECONDQRG`).
 
 If no QRG is available for the incoming category, KST4Contest does not send an incomplete reply. A message containing `QRG is:` without a frequency would technically answer the request while providing no useful information. It is therefore rejected before reaching the transmit queue.
 

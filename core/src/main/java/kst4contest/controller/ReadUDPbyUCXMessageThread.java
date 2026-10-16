@@ -515,6 +515,15 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 							continue;
 						}
 
+						Node radioNrNode = element.getElementsByTagName("RadioNr").item(0);
+						String radioNr = radioNrNode == null ? null : radioNrNode.getTextContent();
+						java.util.Optional<RadioSlot> slot = RadioSlotRouter.forRadioInfo(
+								client.getChatPreferences().isTrxSynch_so2rEnabled(), radioNr);
+						if (slot.isEmpty()) {
+							System.out.println("[ReadUDPFromUCX, warning]: RadioInfo for unknown RadioNr \"" + radioNr + "\" ignored");
+							continue;
+						}
+
 						String qrg = freqNode.getTextContent();
 						String mode = modeNode.getTextContent();
 
@@ -561,8 +570,9 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //						this.client.getChatPreferences().getMYQRGFirstCat().set(formattedQRG);
 
 						final String finalFormattedQRG = formattedQRG;
+						final RadioSlot target = slot.get();
 						helper_runOnFxThread(() ->
-								this.client.getChatPreferences().getMYQRGFirstCat().set(finalFormattedQRG)
+								target.qrgIn(this.client.getChatPreferences()).set(finalFormattedQRG)
 						);
 
 //						System.out.println("[ReadUDPbyUCXTh: ] Radioinfo processed: " + formattedQRG);

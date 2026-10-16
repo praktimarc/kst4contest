@@ -56,6 +56,10 @@ enum class SelectedMessageFilter(val label: String) {
  *        whether it was accepted
  * @param turnAntennaTo turns the antenna to an azimuth in degrees, which is what
  *        `ChatController.rotateTo` does; null where no rotator can be driven
+ * @param turnSecondAntennaTo the same for antenna 2 (rotator 2); null where it cannot be driven
+ * @param secondAntennaOffered whether SO2R with rotator 2 is configured right now; called on
+ *        every draw, so the supplied lambda has to read Compose state for the button to
+ *        follow a settings Apply
  */
 class SelectedStationState(
     private val propagateNotQrv: (ChatMember) -> Unit,
@@ -66,6 +70,8 @@ class SelectedStationState(
     private val detectBands: (ChatMember) -> String = { "" },
     private val resolveDefaultSkedBand: (ChatMember) -> Band? = { null },
     private val turnAntennaTo: ((Double) -> Unit)? = null,
+    private val turnSecondAntennaTo: ((Double) -> Unit)? = null,
+    private val secondAntennaOffered: () -> Boolean = { false },
 ) {
 
     var selected: ChatMember? by mutableStateOf(null)
@@ -114,6 +120,20 @@ class SelectedStationState(
     fun turnAntenna() {
         val heading = selected?.getQTFdirection() ?: return
         if (heading.isFinite()) turnAntennaTo?.invoke(heading)
+    }
+
+    /** SO2R with rotator 2 is configured, so the second turn button is offered at all. */
+    val showsSecondAntenna: Boolean
+        get() = turnSecondAntennaTo != null && secondAntennaOffered()
+
+    /** Needs the button to be offered and a finite heading to the selected station. */
+    val canTurnSecondAntenna: Boolean
+        get() = showsSecondAntenna && selected?.getQTFdirection()?.isFinite() == true
+
+    /** Turns antenna 2 to the selected station's heading; does nothing when it cannot. */
+    fun turnSecondAntenna() {
+        val heading = selected?.getQTFdirection() ?: return
+        if (heading.isFinite() && showsSecondAntenna) turnSecondAntennaTo?.invoke(heading)
     }
 
     fun select(member: ChatMember?) {

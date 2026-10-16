@@ -188,6 +188,12 @@ fun SelectedStationPanel(
                     strings.selectedTurnAntenna(state.selected?.callSignRaw.orEmpty()),
                     enabled = state.canTurnAntenna,
                 ) { state.turnAntenna() }
+                if (state.showsSecondAntenna) {
+                    Form.button(
+                        strings.selectedTurnAntenna2(state.selected?.callSignRaw.orEmpty()),
+                        enabled = state.canTurnSecondAntenna,
+                    ) { state.turnSecondAntenna() }
+                }
                 Form.button(strings.selectedLookupQrz, enabled = state.canLookUp) {
                     openInBrowser.accept(state.qrzComUrl())
                 }

@@ -3099,6 +3099,9 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 		MainMenuState menu = new MainMenuState();
 		MainWindowSurroundings surroundings = new MainWindowSurroundings(menu);
+		surroundings.setSo2rEnabled(chatcontroller.getChatPreferences().isTrxSynch_so2rEnabled());
+		surroundings.setSecondAntennaOffered(chatcontroller.getChatPreferences().isTrxSynch_so2rEnabled()
+				&& chatcontroller.getChatPreferences().isStn_pstRotator2Enabled());
 
 		SelectedStationState selectedStation = new SelectedStationState(
 				member -> {
@@ -3164,9 +3167,14 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					return resolveDefaultSkedBand(member, enabledBands);
 				},
 				azimuth -> {
-					chatcontroller.rotateTo(azimuth);
+					chatcontroller.rotateTo(kst4contest.controller.RadioSlot.FIRST, azimuth);
 					return kotlin.Unit.INSTANCE;
-				});
+				},
+				azimuth -> {
+					chatcontroller.rotateTo(kst4contest.controller.RadioSlot.SECOND, azimuth);
+					return kotlin.Unit.INSTANCE;
+				},
+				surroundings::getSecondAntennaOffered);
 
 		if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToMe()) {
 			selectedStation.setMessageFilter(SelectedMessageFilter.PM_TO_ME);
@@ -3991,6 +3999,20 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					+ detectionProblem.getMessage());
 			return null;
 		}
+	}
+
+	/** Pushes the stored SO2R switches to the main window so it shows or hides the radio 2 controls. */
+	@Override
+	public void refreshSo2rState() {
+		runOnUi(() -> {
+			if (composeMainWindowState == null) {
+				return;
+			}
+			kst4contest.model.ChatPreferences preferences = chatcontroller.getChatPreferences();
+			MainWindowSurroundings target = composeMainWindowState.getSurroundings();
+			target.setSo2rEnabled(preferences.isTrxSynch_so2rEnabled());
+			target.setSecondAntennaOffered(preferences.isTrxSynch_so2rEnabled() && preferences.isStn_pstRotator2Enabled());
+		});
 	}
 
 	/**

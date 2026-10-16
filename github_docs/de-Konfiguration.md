@@ -184,7 +184,7 @@ Weitere Informationen zu den Textvariablen: [Makros und Variablen](de-Makros-und
 
 ### Mehrere Logger oder Funkgeräte
 
-Alle aktivierten QRG-Quellen schreiben in denselben Wert `MYQRG`. KST4Contest ordnet eingehende `RadioInfo`- oder `STATUS`-Pakete derzeit weder einem bestimmten Funkgerät noch einer Chat-Kategorie zu.
+Ohne SO2R schreiben alle aktivierten QRG-Quellen in denselben Wert `MYQRG`. KST4Contest ordnet eingehende `RadioInfo`- oder `STATUS`-Pakete weder einem bestimmten Funkgerät noch einer Chat-Kategorie zu.
 
 Sind der allgemeine RadioInfo-Listener und die Win-Test-Synchronisation gleichzeitig aktiviert, bestimmt deshalb das zuletzt verarbeitete Paket die angezeigte QRG. Dasselbe gilt, wenn mehrere Logger ihre Frequenzpakete an dieselbe KST4Contest-Instanz senden.
 
@@ -196,6 +196,16 @@ Für ein Setup mit mehreren Funkgeräten gilt daher:
 - Werden zwei vollständig unabhängige QRG-Synchronisationen benötigt, sind zwei getrennte KST4Contest-Instanzen die eindeutigere Lösung.
 
 Anders ausgedrückt: Mehrere Worked-Quellen lassen sich sinnvoll zusammenführen. Mehrere gleichzeitig sendende Frequenzquellen erzeugen dagegen keine zusätzliche Information, sondern lediglich einen Wettbewerb darum, welches Paket zuletzt angekommen ist.
+
+### SO2R: zwei Funkgeräte getrennt führen
+
+Mit der Option **SO2R: zwei Geräte getrennt führen (Gerät 2 schreibt SECONDQRG)** ordnet KST4Contest die Frequenzpakete dem jeweiligen Funkgerät zu. Die Option ist standardmäßig aus; ohne SO2R verhält sich alles wie in den Abschnitten oben beschrieben.
+
+- **N1MM+, DXLog.net, UCXLog:** Die Zuordnung erfolgt über das Feld `RadioNr` im `RadioInfo`-Paket. Dafür ist nichts einzustellen. Gerät 1 setzt `MYQRG`, Gerät 2 setzt `SECONDQRG`.
+- **Win-Test:** Hier gibt es kein `RadioNr`, deshalb wird je Gerät ein Stationsname eingetragen, zum Beispiel `STN1` für Gerät 1 im bisherigen Stationsfilter und `STN2` im Feld **Win-Test-Stationsname von Gerät 2**. Das Feld ist ohne SO2R ausgegraut.
+- **Zweiter PSTRotator:** Nach **Apply** erscheint im Reiter **Station** der Abschnitt **PSTRotator 2 (SO2R)** mit Schalter, Host und Port. Die zweite Instanz braucht einen eigenen Port, zum Beispiel `12010`; sie antwortet dann auf `12011`. Derselbe Port wie bei PSTRotator 1 oder ein direkt benachbarter wird beim Übernehmen abgelehnt. Der zweite Rotor startet mit der ON4KST-Sitzung.
+- **Bedienung:** Im Bereich der gewählten Station steht neben **Antenne 1 drehen** nun **Antenne 2 drehen …**, und in der Sendezeile zeigt ein reines Anzeigefeld QTF2 die Richtung der zweiten Antenne. Der Tooltip von `SECONDQRG` nennt Gerät 2.
+- **QTF-Filter:** Die QTF-Filter der Stationsliste folgen weiterhin Rotor 1.
 
 Nach Abschluss der Konfiguration **Save Settings** verwenden.
 
@@ -715,7 +725,7 @@ Eine mögliche Antwort lautet:
 [KST4C Automsg] QRG is: 144.300.00
 ```
 
-Die Werte stammen aus denselben QRG-Feldern, die auch von `MYQRG` und `SECONDQRG` verwendet werden. Die Haupt-QRG kann manuell eingetragen oder durch die [TRX-Synchronisation](#trx-sync-einstellungen) aktualisiert werden. Für die zweite Kategorie wird der dort konfigurierte beziehungsweise manuell eingetragene Wert verwendet.
+Die Werte stammen aus denselben QRG-Feldern, die auch von `MYQRG` und `SECONDQRG` verwendet werden. Die Haupt-QRG kann manuell eingetragen oder durch die [TRX-Synchronisation](#trx-sync-einstellungen) aktualisiert werden. Für die zweite Kategorie wird der dort konfigurierte beziehungsweise manuell eingetragene Wert verwendet; mit SO2R schreibt Funkgerät 2 dieses Feld (`SECONDQRG`).
 
 Ist für die betreffende Kategorie keine QRG vorhanden, sendet KST4Contest keine unvollständige Antwort. Eine Nachricht wie `QRG is:` ohne Frequenz würde zwar auf die Frage reagieren, dem Anfragenden aber keine Information liefern. Sie wird deshalb bereits vor der Übergabe an die Sendequeue verworfen.
 

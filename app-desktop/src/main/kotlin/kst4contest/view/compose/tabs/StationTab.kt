@@ -96,6 +96,19 @@ fun StationTab(state: StationTabState, onRefused: (String) -> Unit = {}) {
             Form.int(strings.stationRotatorPort, state.stn_pstRotatorPort) { state.stn_pstRotatorPort = it }
         }
 
+        /*
+         * Only with SO2R, as stored: Form.check and Form.int have no disabled state, and a
+         * rotator 2 switch without SO2R would do nothing. Switching SO2R on shows the block
+         * after Apply.
+         */
+        if (state.so2rEnabled) {
+            Form.section(strings.stationRotator2Section) {
+                Form.check(strings.stationRotator2Enabled, state.stn_pstRotator2Enabled) { state.stn_pstRotator2Enabled = it }
+                Form.text(strings.stationRotator2Host, state.stn_pstRotator2Host) { state.stn_pstRotator2Host = it }
+                Form.int(strings.stationRotator2Port, state.stn_pstRotator2Port) { state.stn_pstRotator2Port = it }
+            }
+        }
+
         Form.section(strings.stationPathSection) {
             Form.decimal(strings.stationOwnTxPower, state.stn_pathAnalysisOwnTxPowerWatts) { state.stn_pathAnalysisOwnTxPowerWatts = it }
             Form.decimal(strings.stationOwnAntennaGain, state.stn_pathAnalysisOwnAntennaGainDbi) { state.stn_pathAnalysisOwnAntennaGainDbi = it }

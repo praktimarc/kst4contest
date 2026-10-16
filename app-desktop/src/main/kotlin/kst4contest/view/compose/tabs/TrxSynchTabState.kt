@@ -20,6 +20,9 @@ import kst4contest.view.compose.setting
  * Win-Test STATUS data. [QRG_SOURCE_HINT_KEY] names the text the tab shows so an operator
  * cannot read a checked box as "my QRG is being kept current".
  *
+ * @param applySecondRotator restarts or stops rotator 2 to match the stored SO2R and rotator 2
+ *   switches, once per apply. Declared before [applyOwnQrgFollower] so callers passing the
+ *   follower as a trailing lambda keep binding to it.
  * @param applyOwnQrgFollower attaches the own-QRG follower when any source is enabled
  *   and detaches it otherwise, once per apply however many sources changed; maps to attachOwnQrgFollower()/detachOwnQrgFollower()
  *   plus the tooltip on the own-QRG field. Not a ChatPreferences setter, so no coverage
@@ -28,6 +31,7 @@ import kst4contest.view.compose.setting
 class TrxSynchTabState(
     private val prefs: ChatPreferences,
     private val draft: SettingsDraft,
+    private val applySecondRotator: () -> Unit = {},
     private val applyOwnQrgFollower: (Boolean) -> Unit,
 ) {
 
@@ -61,6 +65,22 @@ class TrxSynchTabState(
     var logsynch_wintestNetworkStationNameOfWintestClient1: String
         get() = stationFilter
         set(value) { stationFilter = value.trim() }
+
+    /** SO2R: radio 2 gets SECONDQRG and, with its own switch, rotator 2. */
+    var trxSynch_so2rEnabled: Boolean by draft.setting(
+        { prefs.isTrxSynch_so2rEnabled() },
+        effectKey = StationTabState.SECOND_ROTATOR,
+        effect = { applySecondRotator() },
+    ) { prefs.setTrxSynch_so2rEnabled(it) }
+
+    private var stationRadio2: String by draft.setting(
+        { prefs.getLogsynch_wintestNetworkStationNameOfWintestClient2() },
+    ) { prefs.setLogsynch_wintestNetworkStationNameOfWintestClient2(it) }
+
+    /** Win-Test station of radio 2; empty sends nothing to radio 2. Staged trimmed. */
+    var logsynch_wintestNetworkStationNameOfWintestClient2: String
+        get() = stationRadio2
+        set(value) { stationRadio2 = value.trim() }
 
     /* Read from the stored values: it runs on apply, after both switches are written. */
     private fun applyFollower() {

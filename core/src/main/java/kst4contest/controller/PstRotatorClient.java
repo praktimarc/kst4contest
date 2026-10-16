@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 public class PstRotatorClient implements Runnable {
 
     private ThreadStatusCallback callBackToController;
-    private String ThreadNickName = "PSTRotator";
+    private final String ThreadNickName;
 
     private static final Logger LOGGER = Logger.getLogger(PstRotatorClient.class.getName());
     private static final int BUFFER_SIZE = 1024;
@@ -38,20 +38,34 @@ public class PstRotatorClient implements Runnable {
      * @param listener Callback für den Chatcontroller
      */
     public PstRotatorClient(String host, int remotePort, PstRotatorEventListener listener, ThreadStatusCallback callBack) {
-        // Laut Manual antwortet PSTRotator oft auf Port+1.
-        // Wir binden uns also standardmäßig auf remotePort + 1.
-        this(host, remotePort, remotePort + 1, listener, callBack);
+        this(host, remotePort, "PSTRotator", listener, callBack);
+    }
+
+    /**
+     * @param threadNickName name of the status button and the listener thread, so two
+     *        rotators can be told apart in the status bar
+     */
+    public PstRotatorClient(String host, int remotePort, String threadNickName,
+                            PstRotatorEventListener listener, ThreadStatusCallback callBack) {
+        // PSTRotator answers on the configured port + 1.
+        this(host, remotePort, remotePort + 1, threadNickName, listener, callBack);
     }
 
     /**
      * alternative constructor for seting the remote port explicitely
      */
     public PstRotatorClient(String host, int remotePort, int localPort, PstRotatorEventListener listener, ThreadStatusCallback callBack) {
+        this(host, remotePort, localPort, "PSTRotator", listener, callBack);
+    }
+
+    private PstRotatorClient(String host, int remotePort, int localPort, String threadNickName,
+                             PstRotatorEventListener listener, ThreadStatusCallback callBack) {
         this.callBackToController = callBack;
         this.host = host;
         this.remotePort = remotePort;
         this.localPort = localPort;
         this.listener = listener;
+        this.ThreadNickName = threadNickName;
     }
 
     /**

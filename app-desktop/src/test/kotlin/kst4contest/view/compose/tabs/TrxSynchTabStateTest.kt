@@ -15,7 +15,25 @@ class TrxSynchTabStateTest(@TempDir private val tempDir: Path) {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val followerCalls = mutableListOf<Boolean>()
         val draft = SettingsDraft()
-        val state by lazy { TrxSynchTabState(prefs, draft) { followerCalls.add(it) } }
+        val secondRotatorCalls = mutableListOf<Unit>()
+        val state by lazy {
+            TrxSynchTabState(prefs, draft, applySecondRotator = { secondRotatorCalls.add(Unit) }) { followerCalls.add(it) }
+        }
+    }
+
+    @Test
+    fun `the SO2R switch and the second Win-Test station wait for apply and restart rotator 2 once`() {
+        val s = Session()
+
+        s.state.trxSynch_so2rEnabled = true
+        s.state.logsynch_wintestNetworkStationNameOfWintestClient2 = "  STN2 "
+
+        assertFalse(s.prefs.isTrxSynch_so2rEnabled())
+        s.draft.apply()
+
+        assertTrue(s.prefs.isTrxSynch_so2rEnabled())
+        assertEquals("STN2", s.prefs.getLogsynch_wintestNetworkStationNameOfWintestClient2())
+        assertEquals(1, s.secondRotatorCalls.size)
     }
 
     @Test
