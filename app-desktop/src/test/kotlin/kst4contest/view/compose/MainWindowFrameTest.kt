@@ -1,6 +1,7 @@
 package kst4contest.view.compose
 
 import kst4contest.controller.On4KstConnectionState
+import kst4contest.model.ChatCategory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -130,7 +131,7 @@ class MainWindowFrameTest {
     @Test
     fun `the title carries the live connection line once the chat is usable`() {
         val line = MainWindowFrame.onlineChatState(
-            mainCategory = "2: 144/432 MHz",
+            mainCategory = ChatCategory(ChatCategory.VUHF),
             secondCategory = null,
             callSign = "DN5PW",
             name = "Testing",
@@ -151,8 +152,8 @@ class MainWindowFrameTest {
     @Test
     fun `both categories are named when the second chat is logged in`() {
         val line = MainWindowFrame.onlineChatState(
-            mainCategory = "2: 144/432 MHz",
-            secondCategory = "3: Microwave",
+            mainCategory = ChatCategory(ChatCategory.VUHF),
+            secondCategory = ChatCategory(ChatCategory.MICROWAVE),
             callSign = "DN5PW",
             name = "",
             locator = "JO50JP",
@@ -161,12 +162,24 @@ class MainWindowFrameTest {
             messagesTotal = 1,
         )
 
-        assertTrue(line.startsWith("Connected to: 2: 144/432 MHz and 3: Microwave as DN5PW"), line)
+        assertEquals(
+            "Connected to: 2: 144/432 MHz and 3: Microwave as DN5PW () in JO50JP " +
+                "(1 users online, 1 shown), 1 messages total.",
+            line,
+        )
+    }
+
+    @Test
+    fun `without a main category the title does not name an empty one`() {
+        assertEquals(
+            MainWindowFrame.offlineChatState(On4KstConnectionState.ONLINE),
+            MainWindowFrame.onlineChatState(null, null, "DN5PW", "x", "JO50JP", 1, 1, 1),
+        )
     }
 
     @Test
     fun `large counts are not grouped by locale`() {
-        val line = MainWindowFrame.onlineChatState("2", null, "DN5PW", "x", "JO50JP", 1234, 1200, 23456)
+        val line = MainWindowFrame.onlineChatState(ChatCategory(ChatCategory.VUHF), null, "DN5PW", "x", "JO50JP", 1234, 1200, 23456)
 
         assertTrue(line.contains("(1234 users online, 1200 shown), 23456 messages total."), line)
     }

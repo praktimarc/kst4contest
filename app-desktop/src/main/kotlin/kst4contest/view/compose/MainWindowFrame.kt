@@ -1,6 +1,7 @@
 package kst4contest.view.compose
 
 import kst4contest.controller.On4KstConnectionState
+import kst4contest.model.ChatCategory
 
 /** How big the main window opens. */
 data class MainWindowSize(val heightDp: Double, val widthDp: Double)
@@ -76,16 +77,22 @@ object MainWindowFrame {
      * "Connected to: 2: 144/432 MHz as DO1JKS (Johannes 70/2) in JN59MU (106 users online,
      * 106 shown), 14 messages total."
      *
-     * Counts are passed as text so MessageFormat does not group them by locale.
+     * Counts are passed as text so MessageFormat does not group them by locale. Without a
+     * main category there is nothing to name, so the line falls back to the offline wording
+     * for ONLINE instead of reading "Connected to:  as ...".
      *
-     * @param mainCategory the main chat category, as its toString reads
+     * @param mainCategory the main chat category, null when none is configured
      * @param secondCategory the second category, null when it is not logged in
+     * @param callSign the login callsign
+     * @param name the login name of the main category
+     * @param locator the login locator
+     * @param usersOnline every station in the chat
      * @param shown the stations the filters let through
-     * @param messagesTotal every chat message held, public and directed
+     * @param messagesTotal every chat message held, the global list behind the public tab
      */
     fun onlineChatState(
-        mainCategory: Any?,
-        secondCategory: Any?,
+        mainCategory: ChatCategory?,
+        secondCategory: ChatCategory?,
         callSign: String?,
         name: String?,
         locator: String?,
@@ -93,9 +100,15 @@ object MainWindowFrame {
         shown: Int,
         messagesTotal: Int,
     ): String {
+        if (mainCategory == null) {
+            return offlineChatState(On4KstConnectionState.ONLINE)
+        }
         val strings = kst4contest.view.i18n.CurrentStrings.get()
-        val main = mainCategory?.toString().orEmpty()
-        val categories = if (secondCategory == null) main else strings.titleBothCategories(main, secondCategory.toString())
+        val categories = if (secondCategory == null) {
+            mainCategory.toString()
+        } else {
+            strings.titleBothCategories(mainCategory.toString(), secondCategory.toString())
+        }
         return strings.titleOnline(
             categories,
             callSign.orEmpty(),

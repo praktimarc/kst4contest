@@ -112,12 +112,16 @@ object MainWindowHost {
                  * the JavaFX one did: "Connected to: 2: 144/432 MHz as DN5PW in JO50JP
                  * (73 users online, 73 shown), 29 messages total." A captured string would
                  * say "disconnected" for the life of the session. The counts are Compose
-                 * state, so the title moves with every station and message.
+                 * state, so the title moves with every station and message. visibleRows
+                 * costs nothing extra: it is cached per change, and the station table
+                 * reads the same list anyway.
                  */
                 val state = currentState
                 MainWindowFrame.title(
-                    chatState = MainWindowFrame.chatState(state?.surroundings?.connectionState) {
-                        val prefs = state!!.prefs
+                    chatState = if (state == null) {
+                        MainWindowFrame.offlineChatState(null)
+                    } else MainWindowFrame.chatState(state.surroundings.connectionState) {
+                        val prefs = state.prefs
                         MainWindowFrame.onlineChatState(
                             mainCategory = prefs.getLoginChatCategoryMain(),
                             secondCategory = prefs.getLoginChatCategorySecond()
