@@ -16,6 +16,12 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 ### Neu
 
+- **Neue Oberfläche:** Die Oberfläche ist von JavaFX auf Compose Multiplatform umgestellt. Alle Fenster — Hauptfenster, Stationskarte, Einstellungen, Monitor, Update-Fenster und Dialoge — sind neu aufgebaut; Bedienung und Anordnung bleiben, wie sie waren. Das Programm braucht keine JavaFX-Laufzeit mehr.
+
+- **Deutsch und Englisch:** Die Oberfläche gibt es auf Deutsch und Englisch. Die Sprache wird im Reiter **GUI** unter **Sprache** gewählt; Vorgabe ist die Systemsprache. Der Wechsel wirkt sofort, ohne Neustart. Rufzeichen und Fachkürzel wie **Call** und **Act** bleiben unübersetzt.
+
+- **Farben einstellbar:** Im neuen Reiter **Farben** lassen sich die Farben für das helle und das dunkle Design einzeln anpassen. Das Fenster warnt, wenn eine Kombination schwer lesbar wird, und bietet Wege zurück zum vorherigen Stand oder zur Auslieferung. Wer lieber direkt in der Stilvorlage arbeitet, kann sie dort bearbeiten.
+
 - **Operator-Profile:** Jedes Profil hat seine eigene `preferences.xml` und damit eigene fachliche Einstellungen und einen eigenen Layoutstand. Verwaltet werden Profile im neuen Reiter **Profiles** des Einstellungsfensters: anlegen, duplizieren, umbenennen, löschen und aktivieren.
 
 - **Gemeinsame oder eigene gearbeitete Stationen:** Pro Profil wird entschieden, ob es eine eigene Worked-Datenbank bekommt oder die gemeinsame Stationsdatenbank benutzt. Eine Multi-OP-Station mit einem einzigen Stationslog teilt den Worked-Status, zwei OMs mit verschiedenen Rufzeichen an einem Rechner trennen ihn.

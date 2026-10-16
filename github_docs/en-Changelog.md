@@ -16,6 +16,12 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 ### New
 
+- **New user interface:** the interface moved from JavaFX to Compose Multiplatform. All windows — main window, station map, settings, monitor, update window and dialogs — are rebuilt; operation and layout stay as they were. The program no longer needs a JavaFX runtime.
+
+- **German and English:** the interface is available in German and English. The language is chosen on the **GUI** tab under **Language**; the default is the system language. Switching takes effect at once, without a restart. Callsigns and technical abbreviations such as **Call** and **Act** stay untranslated.
+
+- **Adjustable colours:** on the new **Colours** tab, the colours of the light and the dark design can be adjusted one by one. The window warns when a combination becomes hard to read and offers ways back to the previous state or to the shipped colours. The stylesheet can also be edited by hand from there.
+
 - **Operator profiles:** every profile has its own `preferences.xml`, and therefore its own settings and its own window layout. Profiles are managed on the new **Profiles** tab of the settings window: create, duplicate, rename, delete and activate.
 
 - **Shared or own worked stations:** each profile decides whether it gets its own worked database or uses the common station database. A multi operator station with a single station log shares the worked state; two operators with different callsigns on one computer keep it apart.
