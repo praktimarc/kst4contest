@@ -127,13 +127,29 @@ class WindowPlacementTest {
     }
 
     @Test
-    fun `a title bar that is mostly past the edge but still grabbable keeps its position`() {
+    fun `a title bar that is mostly past the edge but still grabbable is pulled back in`() {
         val main = Rectangle(100, 100, 1200, 800)
 
-        /* 120 px of the title bar remain on the primary screen. */
+        /* 120 px of the title bar remain on the primary screen: the spot counts, the overhang goes. */
         val placed = WindowPlacement.place(listOf(primary), main, Point(1800, 300), 800, 600)
 
-        assertEquals(Rectangle(1800, 300, 800, 600), placed)
+        assertEquals(Rectangle(1920 - 800, 300, 800, 600), placed)
+    }
+
+    @Test
+    fun `a remembered window hanging into the task bar is lifted above it`() {
+        val main = Rectangle(100, 100, 1200, 800)
+
+        val placed = WindowPlacement.place(listOf(primary), main, Point(400, 700), 800, 600)
+
+        assertEquals(Rectangle(400, 1040 - 600, 800, 600), placed)
+    }
+
+    @Test
+    fun `a remembered window that fits stays exactly where it was`() {
+        val placed = WindowPlacement.place(listOf(primary, left), null, Point(-1100, 200), 800, 600)
+
+        assertEquals(Rectangle(-1100, 200, 800, 600), placed)
     }
 
     @Test
@@ -150,7 +166,7 @@ class WindowPlacementTest {
     fun `a remembered window is cut down to the screen it is on`() {
         val placed = WindowPlacement.place(listOf(primary, left), null, Point(-1200, 100), 2000, 600)
 
-        assertEquals(Rectangle(-1200, 100, 1280, 600), placed)
+        assertEquals(Rectangle(-1280, 100, 1280, 600), placed)
     }
 
     @Test

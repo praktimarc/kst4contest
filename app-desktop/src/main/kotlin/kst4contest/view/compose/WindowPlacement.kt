@@ -19,9 +19,14 @@ data class ScreenArea(val bounds: Rectangle, val usable: Rectangle)
  * Where a secondary window opens, decided without touching AWT (issue #59).
  *
  * The rule: a window the operator moved during this session reopens where it was moved to,
- * as long as its title bar can still be reached on a connected screen. Otherwise it opens
- * centred on the screen the main window is on. Either way its size is cut down to the
- * usable area of the screen it lands on, so no button sits past the edge.
+ * as long as its title bar can still be reached on a connected screen — shifted just far
+ * enough to lie wholly within that screen's usable area. Otherwise it opens centred on the
+ * screen the main window is on. Either way its size is cut down to the usable area of the
+ * screen it lands on, so no button sits past the edge.
+ *
+ * The cut-down size is only the opening size. The host does not write it back, so the
+ * stored size survives a stay on a smaller screen; a resize the operator makes there is
+ * an ordinary resize and is saved.
  *
  * Before this, every secondary window got the platform's default position, which on a
  * multi-monitor desk is the primary screen — the station map opened on a screen the
@@ -70,13 +75,7 @@ object WindowPlacement {
         if (remembered != null) {
             val screen = screenShowingTitleBar(screens, remembered, width)
             if (screen != null) {
-                val usable = usableArea(screen)
-                return Rectangle(
-                    remembered.x,
-                    remembered.y,
-                    clamp(width, usable.width),
-                    clamp(height, usable.height),
-                )
+                return keptWithin(usableArea(screen), remembered, width, height)
             }
         }
 
@@ -96,6 +95,21 @@ object WindowPlacement {
         return Rectangle(
             usable.x + (usable.width - w) / 2,
             usable.y + (usable.height - h) / 2,
+            w,
+            h,
+        )
+    }
+
+    /**
+     * The window at [position], cut down to fit [usable] and shifted the least distance
+     * that puts it wholly inside. The cut comes first, so the shift always has room.
+     */
+    fun keptWithin(usable: Rectangle, position: Point, width: Int, height: Int): Rectangle {
+        val w = clamp(width, usable.width)
+        val h = clamp(height, usable.height)
+        return Rectangle(
+            position.x.coerceIn(usable.x, usable.x + usable.width - w),
+            position.y.coerceIn(usable.y, usable.y + usable.height - h),
             w,
             h,
         )

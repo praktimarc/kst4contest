@@ -292,13 +292,8 @@ class ComposeWindowHost(
 
                     if (!isMainWindow) {
                         LaunchedEffect(windowState) {
-                            /*
-                             * The baseline a move is measured against. Without a placement of
-                             * our own it is the first position the platform reports, so a
-                             * window that opened before the main window existed is not taken
-                             * as moved merely because the platform chose a spot for it.
-                             */
-                            var openedAt: Point? = placed?.location
+                            /* One tracker per opening; the rule is in MoveTracker. */
+                            val tracker = MoveTracker(placed?.location)
                             snapshotFlow { windowState.position }.collect { position ->
                                 if (position is WindowPosition.Absolute
                                     && windowState.placement == ComposeWindowPlacement.Floating
@@ -308,12 +303,7 @@ class ComposeWindowHost(
                                         position.x.value.roundToInt(),
                                         position.y.value.roundToInt(),
                                     )
-                                    val baseline = openedAt
-                                    if (baseline == null) {
-                                        openedAt = now
-                                    } else if (movedAway(baseline, now)) {
-                                        movedTo = now
-                                    }
+                                    tracker.observe(now)?.let { movedTo = it }
                                 }
                             }
                         }
@@ -401,6 +391,63 @@ internal const val MOVE_TOLERANCE_PX = 48
 /** Whether [now] is far enough from [opened] to be the operator's move rather than a nudge. */
 internal fun movedAway(opened: Point, now: Point): Boolean =
     abs(now.x - opened.x) > MOVE_TOLERANCE_PX || abs(now.y - opened.y) > MOVE_TOLERANCE_PX
+
+/**
+ * Tells the operator's moves of one opened window from the window manager's, fed with every
+ * floating position the window reports.
+ *
+ * - **Placed by the host** ([placedAt] not null): the anchor is that placement. Reports
+ *   within [MOVE_TOLERANCE_PX] of it are the window manager's nudge and are ignored. This
+ *   also holds when the window was reopened at its remembered spot, so a decoration nudge
+ *   cannot make it drift a little further on every opening.
+ * - **Once a report has left the tolerance**, the operator is moving the window, and from
+ *   then on every report is taken — including a move back to near where it opened, which
+ *   would otherwise leave the stale far-away spot remembered.
+ * - **Not placed by the host** (opened before the main window existed): the platform picks
+ *   the spot, and it may report a provisional position before its real placement. So the
+ *   anchor is not trusted until it has settled: every report replaces it until one lands
+ *   within the tolerance of the previous one. A window manager's placement jump is
+ *   therefore a new anchor, not a move. The price: a single far jump by the operator
+ *   before any second report — a keyboard "move to other monitor" right after opening —
+ *   is taken as the anchor too, and the window then simply opens on the main window's
+ *   screen next time, which is the default anyway. A time-based settle was the
+ *   alternative; it would need a clock in a rule that is otherwise pure, and a drag
+ *   produces a stream of close reports that settles the anchor on its own.
+ *
+ * @param placedAt where the host placed the window, or null when the platform did
+ */
+internal class MoveTracker(placedAt: Point?) {
+
+    private var anchor: Point? = placedAt
+    private var settled = placedAt != null
+    private var moving = false
+
+    /**
+     * @param now the position the window reports
+     * @return the position to remember as the operator's choice, or null to remember nothing
+     */
+    fun observe(now: Point): Point? {
+        if (moving) {
+            return now
+        }
+
+        val current = anchor
+        if (!settled || current == null) {
+            if (current != null && !movedAway(current, now)) {
+                settled = true
+            } else {
+                anchor = now
+            }
+            return null
+        }
+
+        if (movedAway(current, now)) {
+            moving = true
+            return now
+        }
+        return null
+    }
+}
 
 /**
  * The application icon, so these windows are not the only ones in the taskbar showing
