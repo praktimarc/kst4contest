@@ -963,6 +963,8 @@ Aus den Höhenpunkten berechnet KST4Contest unter anderem:
 
 Die eingestellte eigene Antennenhöhe wird zur lokalen Geländehöhe addiert. Für die Gegenstation wird derzeit eine feste angenommene Antennenhöhe von 10 Metern über Grund verwendet.
 
+Standardmäßig endet die Strecke am höchsten Punkt des Locatorfelds der Gegenstation, nicht in dessen Mitte; die lokale Geländehöhe lässt sich durch die tatsächliche Höhe des eigenen Standorts ersetzen. Beide Einstellungen sind unter [Streckenanalyse und Link-Budget](de-Konfiguration#streckenanalyse-und-link-budget) beschrieben.
+
 Bewegst du die Maus über das Profil, wird der dazugehörige Abfragepunkt zusätzlich auf der Karte markiert. Dadurch lässt sich ein auffälliger Berg oder Geländeeinschnitt leichter einer geografischen Position zuordnen.
 
 ### Welche Frequenz wird für die Berechnung verwendet?

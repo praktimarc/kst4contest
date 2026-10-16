@@ -26,6 +26,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Windows installer:** next to the portable ZIP package, stable releases now also ship an MSI installer for Windows (`KST4Contest-v<version>-windows-x64.msi`). It installs KST4Contest for the current user account without administrator rights, adds a Start menu entry and a desktop shortcut, and replaces the existing installation on an update. Settings and database stay under `%USERPROFILE%\.praktiKST` and are shared with a portable copy. This implements the first stage of [Issue #61](https://github.com/praktimarc/kst4contest/issues/61).
 
+- **Own site height and highest point of the remote square in the path analysis:** the **Station** tab has two new settings in its path-analysis section. **Own ground height ASL, metres** replaces the elevation-model value at the own locator centre by the height of the actual site; left empty, the elevation model decides as before. **Target station on the highest point of its locator square**, on by default, ends the path at the highest of 25 sampled points of the remote locator square instead of at its centre, because contest stations usually operate from the high ground of their square. The lookup costs one additional request to the elevation service per remote square and session; if it fails, the analysis uses the square centre as before.
+
 ### Changed
 
 - **The terrain profile cache is separate:** computed terrain profiles now live in their own shared file `terrainprofilecache.db` and are stored per owner. Previously the whole cache was dropped whenever the callsign or locator changed, which would have discarded every computed profile on each profile switch.

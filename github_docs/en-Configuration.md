@@ -68,12 +68,20 @@ The station map uses several values from the **Station** tab to calculate the te
 | Setting | Use |
 |---|---|
 | **Own antenna height AGL** | Height of the local antenna above the surrounding terrain in metres |
+| **Own ground height ASL, metres** | Optional: ground elevation of the own site above sea level. Leave empty to use the elevation model |
 | **Own TX power W** | Local transmit power in watts |
 | **Own ant. gain dBi** | Gain of the local antenna in dBi |
 | **DX OM TX power W** | Assumed transmit power of the remote station in watts |
 | **DX OM ant. gain dBi** | Assumed antenna gain of the remote station in dBi |
+| **Target station on the highest point of its locator square** | Ends the path at the highest point of the remote locator square instead of at its centre (on by default) |
 
 **AGL** means *Above Ground Level*. Do not enter the height above sea level. The terrain elevation at the local station already comes from the elevation profile; KST4Contest adds the configured antenna height to this value.
+
+This field is for the antenna height above ground only; the height of the site above sea level, if you want to set it, has its own field, described next.
+
+The elevation profile takes the local terrain elevation at the centre of the own locator square. If the actual site lies noticeably higher or lower, for example on a hill at the edge of the square, enter its ground elevation in **Own ground height ASL, metres** (**ASL**: *Above Sea Level*). KST4Contest then uses this value instead of the elevation model and still adds the antenna height on top. Values from -500 to 9000 metres are accepted. An empty field restores the elevation model. The own position on the map and in the profile remains the locator centre.
+
+A locator only tells which square a remote station is in, not where in it. Contest stations usually operate from the high ground of their square, so with **Target station on the highest point of its locator square** switched on, KST4Contest samples the remote square on a grid of 5 x 5 points, takes the highest of them and ends the path there, at that point's position and elevation. The lookup needs one request to the online elevation service per remote locator square; the result is kept until KST4Contest is closed. If the lookup fails, the analysis uses the centre of the square as before and tries again a few minutes later.
 
 For the remote station, KST4Contest currently uses a fixed antenna height of 10 metres above the local terrain. Its transmit power and antenna gain come from the two **DX OM** fields. These values are deliberately assumptions: ON4KST provides neither the actual antenna height nor the complete station data of the remote operator.
 
