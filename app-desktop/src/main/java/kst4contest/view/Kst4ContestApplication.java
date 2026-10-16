@@ -3164,9 +3164,15 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					return resolveDefaultSkedBand(member, enabledBands);
 				},
 				azimuth -> {
-					chatcontroller.rotateTo(azimuth);
+					chatcontroller.rotateTo(kst4contest.controller.RadioSlot.FIRST, azimuth);
 					return kotlin.Unit.INSTANCE;
-				});
+				},
+				azimuth -> {
+					chatcontroller.rotateTo(kst4contest.controller.RadioSlot.SECOND, azimuth);
+					return kotlin.Unit.INSTANCE;
+				},
+				() -> chatcontroller.getChatPreferences().isTrxSynch_so2rEnabled()
+						&& chatcontroller.getChatPreferences().isStn_pstRotator2Enabled());
 
 		if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToMe()) {
 			selectedStation.setMessageFilter(SelectedMessageFilter.PM_TO_ME);

@@ -158,6 +158,8 @@ fun ChatInputRow(
     ownQrgMain: ObservedValue<String>,
     ownQrgSecond: ObservedValue<String>,
     antennaQtf: ObservedValue<Double>,
+    antennaQtf2: ObservedValue<Double>,
+    so2rEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -195,13 +197,26 @@ fun ChatInputRow(
         InlineCommittedField(
             stored = ownQrgSecond.value.orEmpty(),
             onCommit = { prefs.getMYQRGSecondCat().set(it) },
-            tooltip = kst4contest.view.i18n.CurrentStrings.get().chatSecondQrgTooltip,
+            tooltip = if (so2rEnabled) {
+                kst4contest.view.i18n.CurrentStrings.get().chatSecondQrgTooltipSo2r
+            } else {
+                kst4contest.view.i18n.CurrentStrings.get().chatSecondQrgTooltip
+            },
         )
         InlineCommittedField(
             stored = antennaQtf.value?.toString().orEmpty(),
             onCommit = { text -> text.toDoubleOrNull()?.let { prefs.getActualQTF().set(it) } },
             tooltip = kst4contest.view.i18n.CurrentStrings.get().chatQtfTooltip,
         )
+        if (so2rEnabled) {
+            // Display only: rotator 2 writes it, the operator does not.
+            InlineCommittedField(
+                stored = antennaQtf2.value?.takeIf { it.isFinite() }?.toString().orEmpty(),
+                onCommit = { },
+                tooltip = kst4contest.view.i18n.CurrentStrings.get().chatQtf2Tooltip,
+                editable = false,
+            )
+        }
     }
 }
 
@@ -218,6 +233,7 @@ private fun InlineCommittedField(
     stored: String,
     onCommit: (String) -> Unit,
     tooltip: String,
+    editable: Boolean = true,
 ) {
     var draft by remember(stored) { mutableStateOf(stored) }
 
@@ -225,6 +241,7 @@ private fun InlineCommittedField(
         CompactTextField(
             value = draft,
             onValueChange = { draft = it },
+            enabled = editable,
             modifier = Modifier
                 .width(QRG_FIELD_WIDTH)
                 .onFocusChanged { focus ->

@@ -75,13 +75,14 @@ class MainWindowState(
     val snippets = RosterMirror(prefs.getLst_txtSnipList())
 
     /**
-     * The three small fields beside the send controls. Mirrored rather than read straight
-     * from the preferences, because all three move without the operator touching them: the
+     * The four small fields beside the send controls. Mirrored rather than read straight
+     * from the preferences, because all of them move without the operator touching them: the
      * rotator writes the heading, and the frequency follower writes the own QRG.
      */
     val ownQrgMain = ObservedValue(prefs.getMYQRGFirstCat())
     val ownQrgSecond = ObservedValue(prefs.getMYQRGSecondCat())
     val antennaQtf = ObservedValue(prefs.getActualQTF())
+    val antennaQtf2 = ObservedValue(prefs.getActualQTF2())
 
     /**
      * Stops following the preferences. Called when this state is dropped — a profile switch
@@ -92,6 +93,7 @@ class MainWindowState(
         ownQrgMain.release()
         ownQrgSecond.release()
         antennaQtf.release()
+        antennaQtf2.release()
     }
 
     companion object {
