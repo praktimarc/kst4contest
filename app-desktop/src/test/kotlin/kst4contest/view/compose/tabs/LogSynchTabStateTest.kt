@@ -11,11 +11,10 @@ import java.nio.file.Path
 
 class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
 
-    private inner class Session(detected: String? = null) {
+    private inner class Session {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         var restarts = 0
         var stops = 0
-        val detectedBroadcast = detected
         val draft = SettingsDraft()
 
         fun state() = LogSynchTabState(
@@ -23,7 +22,6 @@ class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
             draft,
             restartWintestListener = { restarts++ },
             stopWintestListener = { stops++ },
-            detectWintestBroadcastAddress = { detectedBroadcast },
         )
     }
 
@@ -163,7 +161,6 @@ class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
             s.prefs, s.draft,
             restartWintestListener = { s.restarts++; portAtRestart = s.prefs.getLogsynch_wintestNetworkPort() },
             stopWintestListener = { s.stops++ },
-            detectWintestBroadcastAddress = { null },
         )
 
         state.logsynch_wintestNetworkListenerEnabled = true
@@ -172,37 +169,5 @@ class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
 
         assertEquals(1, s.restarts)
         assertEquals(9874, portAtRestart)
-    }
-
-    @Test
-    fun `a still-default broadcast address is replaced by the detected one`() {
-        val s = Session(detected = "192.168.178.255")
-        s.prefs.setLogsynch_wintestNetworkBroadcastAddress("255.255.255.255")
-
-        s.state()
-
-        assertEquals("192.168.178.255", s.prefs.getLogsynch_wintestNetworkBroadcastAddress(),
-            "the JavaFX window auto-detected the subnet broadcast while the stored "
-                + "value was still the catch-all default")
-    }
-
-    @Test
-    fun `a broadcast address the operator chose is never overwritten`() {
-        val s = Session(detected = "192.168.178.255")
-        s.prefs.setLogsynch_wintestNetworkBroadcastAddress("10.0.0.255")
-
-        s.state()
-
-        assertEquals("10.0.0.255", s.prefs.getLogsynch_wintestNetworkBroadcastAddress())
-    }
-
-    @Test
-    fun `a failed detection leaves the default in place`() {
-        val s = Session(detected = null)
-        s.prefs.setLogsynch_wintestNetworkBroadcastAddress("255.255.255.255")
-
-        s.state()
-
-        assertEquals("255.255.255.255", s.prefs.getLogsynch_wintestNetworkBroadcastAddress())
     }
 }

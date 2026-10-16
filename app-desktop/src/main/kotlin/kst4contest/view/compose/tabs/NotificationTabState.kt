@@ -88,23 +88,13 @@ class NotificationTabState(
     val notify_DXCSrv_SpottersCallSign: String
         get() = spotterCallSign
 
+    /*
+     * Stored as a prefix string, so an unreadable value is possible. It is shown as 144 here
+     * and written back as 144 by repairStoredSettings before the window is built -- never
+     * from this read, which runs during composition.
+     */
     private var fallbackBand: Band by draft.setting(
-        {
-            /*
-             * Stored as a prefix string, so an unreadable value is possible; reading it
-             * repairs the stored value to 144, which is what the JavaFX window did when it
-             * built the combo box (Kst4ContestApplication:11349). The repair is no edit of
-             * the operator's and is written at once.
-             */
-            val stored = Band.fromPrefix(prefs.getNotify_optionalFrequencyPrefix().get())
-
-            if (stored == null) {
-                prefs.setNotify_optionalFrequencyPrefix(Band.B_144.prefix)
-                Band.B_144
-            } else {
-                stored
-            }
-        },
+        { Band.fromPrefix(prefs.getNotify_optionalFrequencyPrefix().get()) ?: Band.B_144 },
     ) { prefs.setNotify_optionalFrequencyPrefix(it.prefix) }
 
     /** The band a spot falls back to when its frequency carries no band information. */

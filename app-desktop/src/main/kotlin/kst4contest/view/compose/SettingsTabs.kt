@@ -37,6 +37,7 @@ import kst4contest.view.compose.tabs.TrxSynchTab
 import kst4contest.view.compose.tabs.TrxSynchTabState
 import kst4contest.view.compose.tabs.WorkedDatabaseTab
 import kst4contest.view.compose.tabs.WorkedDatabaseTabState
+import kst4contest.view.compose.tabs.repairStoredSettings
 
 /**
  * The work the settings window needs from the main window.
@@ -133,6 +134,9 @@ fun buildSettingsTabs(
 
     val prefs = controller.chatPreferences
 
+    // Once, before any tab reads: see repairStoredSettings for why not inside the tabs.
+    repairStoredSettings(prefs, host::detectWintestBroadcastAddress)
+
     val stationState = StationTabState(
         prefs,
         draft,
@@ -185,7 +189,6 @@ fun buildSettingsTabs(
         draft,
         restartWintestListener = { controller.restartWintestUdpListenerIfEnabled() },
         stopWintestListener = { controller.stopWintestUdpListener() },
-        detectWintestBroadcastAddress = host::detectWintestBroadcastAddress,
     )
 
     val workedDatabaseState = WorkedDatabaseTabState(

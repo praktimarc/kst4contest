@@ -47,7 +47,11 @@ class SynchTabsScreenTest {
         }
         var restarts = 0
         var stops = 0
-        val state = LogSynchTabState(prefs, ImmediateDraft(), { restarts++ }, { stops++ }, { detected })
+        val state = run {
+            // What the settings window does once before it builds the tabs.
+            repairStoredSettings(prefs) { detected }
+            LogSynchTabState(prefs, ImmediateDraft(), { restarts++ }, { stops++ })
+        }
     }
 
     @Test
@@ -64,7 +68,7 @@ class SynchTabsScreenTest {
     }
 
     @Test
-    fun logSynchWritesThroughAndStartsTheWinTestListener() = runComposeUiTest {
+    fun logSynchStoresItsFieldsAndStartsTheWinTestListener() = runComposeUiTest {
         val s = LogSynch(preferences())
         showTab { LogSynchTab(s.state) }
 
@@ -98,7 +102,7 @@ class SynchTabsScreenTest {
     // ------------------------------------------------------------------ TRX synch
 
     @Test
-    fun trxSynchWritesThroughAndSwitchesTheQrgFollower() = runComposeUiTest {
+    fun trxSynchStoresItsFieldsAndSwitchesTheQrgFollower() = runComposeUiTest {
         val prefs = preferences()
         val follower = mutableListOf<Boolean>()
         val state = TrxSynchTabState(prefs, ImmediateDraft()) { follower += it }

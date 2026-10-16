@@ -127,7 +127,7 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `the band-upgrade hints write through`() {
+    fun `the band-upgrade hints reach the preferences`() {
         val s = Session()
         val state = s.state()
 
@@ -232,15 +232,15 @@ class NotificationTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `an unsupported stored prefix falls back to 144 and is written back`() {
-        val s = Session()
+    fun `an unsupported stored prefix is shown as 144 without writing anything`() {
+        val s = Session(SettingsDraft())
         s.prefs.setNotify_optionalFrequencyPrefix("4711")
 
         val state = s.state()
 
         assertEquals(Band.B_144, state.notify_optionalFrequencyPrefix)
-        assertEquals("144", s.prefs.getNotify_optionalFrequencyPrefix().get(),
-            "the JavaFX window repaired the stored value the same way")
+        assertEquals("4711", s.prefs.getNotify_optionalFrequencyPrefix().get(),
+            "reading the tab wrote the preferences; repairStoredSettings does that, once")
     }
 
     @Test

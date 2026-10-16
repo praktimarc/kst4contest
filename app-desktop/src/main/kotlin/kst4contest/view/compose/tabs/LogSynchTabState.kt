@@ -11,15 +11,14 @@ import kst4contest.view.compose.setting
  * applies them. The log file path is the exception: it changes through a file chooser,
  * an action, and is written when chosen.
  *
- * Two things this tab controlled are not settings at all but effects on the running
- * session, and no coverage test can see them because they are not ChatPreferences
- * setters. They are taken as callbacks rather than from a ChatController so the rules
- * stay testable without opening a database:
+ * One thing this tab controls is not a setting at all but an effect on the running session,
+ * and no coverage test can see it because it is not a ChatPreferences setter: the Win-Test
+ * UDP listener is started, stopped or rebound when its switch or its port is applied -- once
+ * per apply, see [applyWintestListener]. It is taken as callbacks rather than from a
+ * ChatController so the rules stay testable without opening a database.
  *
- *  - the Win-Test UDP listener is started, stopped or rebound when its switch or its port
- *    is applied -- once per apply, see [applyWintestListener];
- *  - the Win-Test broadcast address is auto-detected while it is still the catch-all
- *    default, which the JavaFX window did while building the settings pane.
+ * The broadcast address the JavaFX window auto-detected while building the pane is detected
+ * by repairStoredSettings now, before the window is built, not by this state.
  *
  * Ports, transports and framing are untouched: the accepted values, the defaults and
  * the moment a socket is rebound are the ones the JavaFX window had.
@@ -27,20 +26,13 @@ import kst4contest.view.compose.setting
  * @param restartWintestListener rebinds the Win-Test UDP listener; maps to
  *   ChatController.restartWintestUdpListenerIfEnabled()
  * @param stopWintestListener maps to ChatController.stopWintestUdpListener()
- * @param detectWintestBroadcastAddress the detected subnet broadcast address, or null
- *   when none could be determined; maps to detectPreferredWintestBroadcastAddress()
  */
 class LogSynchTabState(
     private val prefs: ChatPreferences,
     private val draft: SettingsDraft,
     private val restartWintestListener: () -> Unit,
     private val stopWintestListener: () -> Unit,
-    private val detectWintestBroadcastAddress: () -> String?,
 ) {
-
-    init {
-        autoDetectBroadcastAddressWhileStillDefault()
-    }
 
     var logsynch_fileBasedWkdCallInterpreterEnabled: Boolean by draft.setting(
         { prefs.isLogsynch_fileBasedWkdCallInterpreterEnabled() },
@@ -116,26 +108,6 @@ class LogSynchTabState(
      */
     private fun applyWintestListener() {
         if (prefs.isLogsynch_wintestNetworkListenerEnabled()) restartWintestListener() else stopWintestListener()
-    }
-
-    /**
-     * Replaces the catch-all default 255.255.255.255 with the detected subnet
-     * broadcast address. An address the operator or a previous detection chose is
-     * left alone, and a failed detection keeps the default: guessing an address here
-     * would send SKED packets somewhere nobody is listening.
-     */
-    private fun autoDetectBroadcastAddressWhileStillDefault() {
-        if (prefs.getLogsynch_wintestNetworkBroadcastAddress() != DEFAULT_BROADCAST_ADDRESS) {
-            return
-        }
-        val detected = try {
-            detectWintestBroadcastAddress()
-        } catch (probeFailure: RuntimeException) {
-            null
-        }
-        if (detected != null && detected.isNotBlank()) {
-            prefs.setLogsynch_wintestNetworkBroadcastAddress(detected)
-        }
     }
 
     companion object {
