@@ -40,6 +40,42 @@ class SelectedStationStateTest {
     private fun member(call: String) = ChatMember().apply { callSign = call }
 
     @Test
+    fun turnAntennaSendsTheSelectedStationsHeading() {
+        val headings = mutableListOf<Double>()
+        val state = SelectedStationState(
+            propagateNotQrv = { },
+            createSked = { _, _, _, _ -> true },
+            turnAntennaTo = { headings.add(it) },
+        )
+        val station = member("DL1ABC")
+        station.setQTFdirection(145.7)
+        state.select(station)
+
+        assertTrue(state.canTurnAntenna)
+        state.turnAntenna()
+
+        assertEquals(listOf(145.7), headings)
+    }
+
+    @Test
+    fun turnAntennaIsUnavailableWithoutARotatorOrAHeading() {
+        val withoutRotator = SelectedStationState(propagateNotQrv = { }, createSked = { _, _, _, _ -> true })
+        withoutRotator.select(member("DL1ABC").apply { setQTFdirection(145.7) })
+        assertFalse(withoutRotator.canTurnAntenna)
+
+        val headings = mutableListOf<Double>()
+        val withoutHeading = SelectedStationState(
+            propagateNotQrv = { },
+            createSked = { _, _, _, _ -> true },
+            turnAntennaTo = { headings.add(it) },
+        )
+        withoutHeading.select(member("DL1ABC"))
+        assertFalse(withoutHeading.canTurnAntenna)
+        withoutHeading.turnAntenna()
+        assertTrue(headings.isEmpty())
+    }
+
+    @Test
     fun `without a selection there is nothing to act on`() {
         val state = Session().state()
 

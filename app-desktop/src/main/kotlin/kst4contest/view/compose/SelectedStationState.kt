@@ -54,6 +54,8 @@ enum class SelectedMessageFilter(val label: String) {
  *        `propagateNotQrvStateToActiveMembers` does
  * @param createSked takes the station, the minutes, the band and the mode; returns
  *        whether it was accepted
+ * @param turnAntennaTo turns the antenna to an azimuth in degrees, which is what
+ *        `ChatController.rotateTo` does; null where no rotator can be driven
  */
 class SelectedStationState(
     private val propagateNotQrv: (ChatMember) -> Unit,
@@ -63,6 +65,7 @@ class SelectedStationState(
     private val onMessageFilterChange: (SelectedMessageFilter?) -> Unit = { },
     private val detectBands: (ChatMember) -> String = { "" },
     private val resolveDefaultSkedBand: (ChatMember) -> Band? = { null },
+    private val turnAntennaTo: ((Double) -> Unit)? = null,
 ) {
 
     var selected: ChatMember? by mutableStateOf(null)
@@ -102,6 +105,16 @@ class SelectedStationState(
 
     val canLookUp: Boolean
         get() = !selected?.callSign.isNullOrBlank()
+
+    /** Needs a rotator to drive and a finite heading to the selected station. */
+    val canTurnAntenna: Boolean
+        get() = turnAntennaTo != null && selected?.getQTFdirection()?.isFinite() == true
+
+    /** Turns the antenna to the selected station's heading; does nothing when it cannot. */
+    fun turnAntenna() {
+        val heading = selected?.getQTFdirection() ?: return
+        if (heading.isFinite()) turnAntennaTo?.invoke(heading)
+    }
 
     fun select(member: ChatMember?) {
         if (selected?.callSignRaw != member?.callSignRaw) {

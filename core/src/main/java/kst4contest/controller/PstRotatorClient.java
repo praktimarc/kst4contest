@@ -6,6 +6,7 @@ import kst4contest.model.ThreadStateMessage;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -192,8 +193,24 @@ public class PstRotatorClient implements Runnable {
     // Öffentliche Steuermethoden
 
     public void setAzimuth(double degrees) {
-        // Formatierung ohne unnötige Nachkommastellen, falls nötig
-        sendCommand("AZIMUTH", String.valueOf((int) degrees));
+        sendCommand("AZIMUTH", formatAzimuth(degrees));
+    }
+
+    /**
+     * Formats an azimuth with one decimal and a dot as separator, independent of the
+     * default locale, wrapped into [0, 360): 360.0 is sent as 0.0, -10 as 350.0. The
+     * azimuth used to be truncated to whole degrees, so 145.7 turned the antenna to 145.
+     *
+     * @throws IllegalArgumentException for NaN or an infinite value, which has no heading
+     */
+    static String formatAzimuth(double degrees) {
+        if (!Double.isFinite(degrees)) {
+            throw new IllegalArgumentException("Azimuth is not a finite number: " + degrees);
+        }
+        double rounded = Math.round(degrees * 10.0) / 10.0;
+        double wrapped = ((rounded % 360.0) + 360.0) % 360.0;
+        // Rounding can leave a tiny negative remainder that would print as -0.0.
+        return String.format(Locale.ROOT, "%.1f", wrapped == 0.0 ? 0.0 : wrapped);
     }
 
     public void setElevation(double degrees) {

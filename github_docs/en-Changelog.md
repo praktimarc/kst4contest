@@ -32,6 +32,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **The default login callsign is empty:** if `preferences.xml` has no login callsign, the field now stays empty instead of falling back to a callsign compiled into the program. A newly created profile therefore deliberately starts without credentials.
 
+- **PSTRotator azimuth with one decimal:** the azimuth sent to PSTRotator used to be cut to whole degrees, so a station at 145.7° turned the antenna to 145°. It is now rounded to one decimal, always with a dot as separator.
+
 - **Dark mode per profile:** on the **GUI** tab each operator profile sets under **Design** whether KST4Contest starts light or dark. The entries in the **Windows** menu still switch quickly, but only for the running session. The colour scheme now also covers the update window and the top candidates list.
 
 ### Fixed

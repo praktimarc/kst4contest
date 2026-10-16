@@ -108,8 +108,8 @@ class PstRotatorClientLoopbackTest {
 		client.setTrackingMode(true);
 		client.setTrackingMode(false);
 
-		// The azimuth is truncated to whole degrees; the elevation is not.
-		assertEquals("<PST><AZIMUTH>145</AZIMUTH></PST>", receiveCommand());
+		// The azimuth keeps one decimal; it used to be truncated to whole degrees.
+		assertEquals("<PST><AZIMUTH>145.7</AZIMUTH></PST>", receiveCommand());
 		assertEquals("<PST><ELEVATION>10.5</ELEVATION></PST>", receiveCommand());
 		assertEquals("<PST><STOP>1</STOP></PST>", receiveCommand());
 		assertEquals("<PST><PARK>1</PARK></PST>", receiveCommand());
