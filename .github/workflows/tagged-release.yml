@@ -867,7 +867,9 @@ jobs:
           fetch-depth: 0
 
       # GitHub's generated release notes list merged pull requests only. Commits
-      # pushed directly to main are added here as their own section:
+      # pushed directly to main are added here as their own section, and the
+      # message of an annotated tag opens the body:
+      #   <tag message>          (annotated tags only; signature dropped)
       #   ## What's Changed
       #   ### Commits on main   (first-parent commits, no merges, no bots)
       #   ### Merged PRs        (GitHub's generated PR list)
@@ -892,6 +894,19 @@ jobs:
           RANGE="$TAG"
           [ -n "$PREVIOUS_TAG" ] && RANGE="${PREVIOUS_TAG}..${TAG}"
 
+          # actions/checkout can leave the triggering tag as a lightweight ref, so
+          # fetch the tag object itself before reading its message.
+          git fetch --force origin "refs/tags/${TAG}:refs/tags/${TAG}"
+          # A lightweight tag has no message of its own (its "message" would be the
+          # commit's); only an annotated tag contributes. contents:subject and
+          # contents:body leave out an SSH or GPG signature.
+          : > tag-message.md
+          if [ "$(git cat-file -t "refs/tags/${TAG}")" = "tag" ]; then
+            git for-each-ref "refs/tags/${TAG}" \
+              --format='%(contents:subject)%0a%0a%(contents:body)' > tag-message.md
+          fi
+          echo "Tag message:"; cat tag-message.md
+
           # --first-parent keeps the commits made directly on main; commits inside
           # pull requests are covered by the PR list. Squash-merged PRs end in
           # "(#123)" and are listed by GitHub as well.
@@ -913,6 +928,7 @@ jobs:
           import re
 
           commits = open("direct-commits.md", encoding="utf-8").read().strip()
+          tag_message = open("tag-message.md", encoding="utf-8").read().strip()
           generated = open("generated-notes.md", encoding="utf-8").read()
 
           # GitHub's body: "## What's Changed" with the PR list, optionally
@@ -932,6 +948,8 @@ jobs:
                   rest.append(line)
 
           parts = []
+          if tag_message:
+              parts.append(tag_message)
           if commits or prs:
               parts.append("## What's Changed")
               if commits:
