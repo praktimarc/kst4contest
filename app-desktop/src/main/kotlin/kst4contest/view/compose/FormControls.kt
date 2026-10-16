@@ -319,34 +319,38 @@ object Form {
     }
 
     @Composable
-    fun int(label: String, value: Int, onChange: (Int) -> Unit) {
-        var draft by remember(value) { mutableStateOf(value.toString()) }
-
-        labelled(label) {
-            CompactTextField(
-                value = draft,
-                onValueChange = { typed ->
-                    draft = typed
-                    typed.trim().toIntOrNull()?.let(onChange)
-                },
-                isError = draft.trim().toIntOrNull() == null,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-    }
+    fun int(label: String, value: Int, onChange: (Int) -> Unit) =
+        number(label, value, { it.trim().toIntOrNull() }, onChange)
 
     @Composable
-    fun decimal(label: String, value: Double, onChange: (Double) -> Unit) {
-        var draft by remember(value) { mutableStateOf(value.toString()) }
+    fun decimal(label: String, value: Double, onChange: (Double) -> Unit) =
+        number(label, value, { it.trim().replace(',', '.').toDoubleOrNull() }, onChange)
+
+    /**
+     * The number field behind [int] and [decimal].
+     *
+     * The text follows the stored value only when that value is not what the operator's own
+     * text already says. A settings draft is Compose state, so the value an entry stages comes
+     * straight back as [value]; resetting the text to `value.toString()` then would turn a
+     * typed "1" into "1.0" before the next digit, and "135,5" could never be typed.
+     */
+    @Composable
+    private fun <N> number(label: String, value: N, parse: (String) -> N?, onChange: (N) -> Unit) {
+        // The last text typed. A plain holder: it only seeds the text below, nothing draws it.
+        val typed = remember { arrayOf(value.toString()) }
+        var draft by remember(value) {
+            mutableStateOf(if (parse(typed[0]) == value) typed[0] else value.toString())
+        }
 
         labelled(label) {
             CompactTextField(
                 value = draft,
-                onValueChange = { typed ->
-                    draft = typed
-                    typed.trim().replace(',', '.').toDoubleOrNull()?.let(onChange)
+                onValueChange = { entered ->
+                    typed[0] = entered
+                    draft = entered
+                    parse(entered)?.let(onChange)
                 },
-                isError = draft.trim().replace(',', '.').toDoubleOrNull() == null,
+                isError = parse(draft) == null,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

@@ -15,6 +15,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -298,6 +300,19 @@ fun DataTable(
 
                         else -> changed()
                     }
+                }
+
+                /*
+                 * Inside the settings window a row still being edited is committed before the
+                 * draft is applied: a click on "Apply/Close prefs" leaves the focus in the row,
+                 * see SettingsDraft.registerTypedEntry. Only an edited row; committing an
+                 * untouched one would report a change that was never made.
+                 */
+                val settingsDraft = LocalSettingsDraft.current
+                val pendingEdit = rememberUpdatedState { if (draft != entry.text) commit() }
+                DisposableEffect(settingsDraft, entry.key) {
+                    val registration = settingsDraft?.registerTypedEntry { pendingEdit.value() }
+                    onDispose { registration?.close() }
                 }
 
                 val isSelected = state.selectedIndex == index

@@ -2,15 +2,15 @@ package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
 import kst4contest.view.compose.EditableListState
+import kst4contest.view.compose.SettingsDraft
 
 /**
  * State of the shortcuts-and-snippets tab: the two single-column lists from
  * `grdPnlShorts`.
  *
- * Both lists write through to their roster on every committed change. The JavaFX
- * tables did the same — their Add buttons called `mutate` on the roster directly —
- * and the shortcut buttons above the message field are rebuilt from the roster, so
- * a list that only wrote on Save would leave those buttons stale.
+ * Every committed change of a list is staged in the window's [SettingsDraft]. Applying
+ * it fills the roster and rebuilds what is built from it -- the shortcut buttons above the
+ * message field, the snippet menus -- once per apply, however many edits went before.
  *
  * @param refreshShortcutButtons rebuilds the button row above the message field,
  *        as `refreshShortcutButtons` did after every edit commit and move.
@@ -19,6 +19,7 @@ import kst4contest.view.compose.EditableListState
  */
 class ShortcutsTabState(
     private val prefs: ChatPreferences,
+    private val draft: SettingsDraft,
     private val refreshShortcutButtons: () -> Unit,
     private val refreshTextSnippetContextMenus: () -> Unit,
 ) {
@@ -27,16 +28,26 @@ class ShortcutsTabState(
 
     val snippets = EditableListState(prefs.getLst_txtSnipList().snapshot())
 
-    /** Fills the shortcut roster and rebuilds the buttons built from it. */
+    /** Stages the shortcut list; applying it fills the roster and rebuilds the buttons. */
     fun commitShortcuts() {
-        shortcuts.commitTo(prefs.getLst_txtShortCutBtnList())
-        refreshShortcutButtons()
+        draft.stage(
+            SHORTCUTS,
+            shortcuts.texts.toList(),
+            live = { prefs.getLst_txtShortCutBtnList().snapshot() },
+            write = { shortcuts.commitTo(prefs.getLst_txtShortCutBtnList()) },
+            effect = refreshShortcutButtons,
+        )
     }
 
-    /** Fills the snippet roster and rebuilds the context menus built from it. */
+    /** Stages the snippet list; applying it fills the roster and rebuilds the menus. */
     fun commitSnippets() {
-        snippets.commitTo(prefs.getLst_txtSnipList())
-        refreshTextSnippetContextMenus()
+        draft.stage(
+            SNIPPETS,
+            snippets.texts.toList(),
+            live = { prefs.getLst_txtSnipList().snapshot() },
+            write = { snippets.commitTo(prefs.getLst_txtSnipList()) },
+            effect = refreshTextSnippetContextMenus,
+        )
     }
 
     companion object {
@@ -47,5 +58,8 @@ class ShortcutsTabState(
          */
         const val NEW_ENTRY_TEMPLATE =
             "CHANGE THIS TEXT VIA DOUBLECLICK or remove by deleting all text. Then hit enter key"
+
+        private const val SHORTCUTS = "ShortcutsTabState.shortcuts"
+        private const val SNIPPETS = "ShortcutsTabState.snippets"
     }
 }

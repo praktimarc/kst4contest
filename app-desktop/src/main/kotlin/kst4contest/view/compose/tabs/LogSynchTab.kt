@@ -17,8 +17,8 @@ import kst4contest.view.compose.Form
  * The Log synch tab: how worked callsigns reach KST4Contest — by polling a log file, by
  * UDP from N1MM+/QARTEST/UCXLog/DXLog, and by the Win-Test network.
  *
- * No confirmation callback: LogSynchTabState writes through to ChatPreferences, the way
- * the JavaFX controls did. "Save settings" persists, it does not collect.
+ * The controls stage their edits in the window's draft (see LogSynchTabState); the file
+ * chooser writes the chosen path at once.
  *
  * Labels, units and default hints are the JavaFX ones. The Win-Test port field is
  * disabled while its listener is off, as it was there.
@@ -75,9 +75,8 @@ fun LogSynchTab(state: LogSynchTabState) {
                 value = state.logsynch_wintestNetworkPort.toString(),
                 enabled = state.logsynch_wintestNetworkListenerEnabled,
                 accepts = { it.trim().toIntOrNull() != null },
+                // The socket is rebound when the port is applied, not per digit.
                 onAccepted = { state.logsynch_wintestNetworkPort = it.trim().toInt(); revision++ },
-                // Rebinding the socket belongs to the finished entry, not to every digit.
-                onCommit = { state.commitWintestNetworkPort() },
             )
 
             GuardedTextField(

@@ -3,6 +3,8 @@ package kst4contest.view.compose.tabs
 import kst4contest.controller.ChatController
 import kst4contest.model.ChatPreferences
 import kst4contest.view.i18n.CurrentStrings
+import kst4contest.view.compose.SettingsDraft
+import kst4contest.view.compose.setting
 
 /**
  * State of the beacon tab: the two CQ templates and the one interval they share.
@@ -10,34 +12,57 @@ import kst4contest.view.i18n.CurrentStrings
  * The two commit methods are the ports of `applyBeaconTextSetting` and
  * `applySharedBeaconInterval`. Both returned nothing and opened an alert; here they
  * return the refusal text instead, so the tab decides how to show it and a test can
- * read it.
+ * read it. An accepted value is staged in the window's [SettingsDraft] and takes effect
+ * when the operator applies it; a refused one never gets there.
  *
  * @param validateBeaconTemplate throws IllegalArgumentException with the reason,
  *        the contract of `ChatController.validateBeaconTemplate`.
- * @param restartBeaconTimer called only after the interval actually changed; the
- *        JavaFX code restarted the shared timer there and nowhere else.
+ * @param restartBeaconTimer called when a changed interval is applied; the JavaFX code
+ *        restarted the shared timer there and nowhere else.
  */
 class BeaconTabState(
     private val prefs: ChatPreferences,
+    private val draft: SettingsDraft,
     private val validateBeaconTemplate: (String) -> Unit,
     private val restartBeaconTimer: () -> Unit,
     val mainCategoryName: String,
     val secondCategoryName: String,
 ) {
 
-    var bcn_beaconsEnabledMainCat: Boolean
-        get() = prefs.isBcn_beaconsEnabledMainCat()
-        set(value) { prefs.setBcn_beaconsEnabledMainCat(value) }
+    var bcn_beaconsEnabledMainCat: Boolean by draft.setting(
+        { prefs.isBcn_beaconsEnabledMainCat() },
+    ) { prefs.setBcn_beaconsEnabledMainCat(it) }
 
-    var bcn_beaconsEnabledSecondCat: Boolean
-        get() = prefs.isBcn_beaconsEnabledSecondCat()
-        set(value) { prefs.setBcn_beaconsEnabledSecondCat(value) }
+    var bcn_beaconsEnabledSecondCat: Boolean by draft.setting(
+        { prefs.isBcn_beaconsEnabledSecondCat() },
+    ) { prefs.setBcn_beaconsEnabledSecondCat(it) }
+
+    private var textMainCat: String by draft.setting(
+        { prefs.getBcn_beaconTextMainCat() },
+    ) { prefs.setBcn_beaconTextMainCat(it) }
+
+    private var textSecondCat: String by draft.setting(
+        { prefs.getBcn_beaconTextSecondCat() },
+    ) { prefs.setBcn_beaconTextSecondCat(it) }
+
+    /*
+     * Both stored intervals written together, as applySharedBeaconInterval did. The
+     * second-category value is legacy XML which nothing reads any more, but it is written
+     * to keep the two in step.
+     */
+    private var interval: Int by draft.setting(
+        { prefs.getBcn_beaconIntervalInMinutesMainCat() },
+        effect = { restartBeaconTimer() },
+    ) { minutes ->
+        prefs.setBcn_beaconIntervalInMinutesMainCat(minutes)
+        prefs.setBcn_beaconIntervalInMinutesSecondCat(minutes)
+    }
 
     val beaconTextMainCat: String
-        get() = prefs.getBcn_beaconTextMainCat()
+        get() = textMainCat
 
     val beaconTextSecondCat: String
-        get() = prefs.getBcn_beaconTextSecondCat()
+        get() = textSecondCat
 
     /**
      * The interval both categories share, never below the minimum.
@@ -50,16 +75,16 @@ class BeaconTabState(
     val beaconIntervalMinutes: Int
         get() = maxOf(
             ChatController.MIN_BEACON_INTERVAL_MINUTES,
-            prefs.getBcn_beaconIntervalInMinutesMainCat(),
+            interval,
         )
 
-    /** @return null when stored, otherwise the reason it was refused. */
+    /** @return null when staged, otherwise the reason it was refused. */
     fun commitBeaconTextMainCat(template: String): String? =
-        commitBeaconText(template) { prefs.setBcn_beaconTextMainCat(it) }
+        commitBeaconText(template) { textMainCat = it }
 
-    /** @return null when stored, otherwise the reason it was refused. */
+    /** @return null when staged, otherwise the reason it was refused. */
     fun commitBeaconTextSecondCat(template: String): String? =
-        commitBeaconText(template) { prefs.setBcn_beaconTextSecondCat(it) }
+        commitBeaconText(template) { textSecondCat = it }
 
     private fun commitBeaconText(template: String, store: (String) -> Unit): String? {
         try {
@@ -78,9 +103,9 @@ class BeaconTabState(
     }
 
     /**
-     * Applies the shared interval to both categories and restarts the timer.
+     * Stages the shared interval for both categories; applying it restarts the timer.
      *
-     * @return null when applied, otherwise the reason it was refused.
+     * @return null when staged, otherwise the reason it was refused.
      */
     fun commitBeaconInterval(entered: String): String? {
         val minutes = entered.trim().toIntOrNull()
@@ -89,16 +114,7 @@ class BeaconTabState(
             return CurrentStrings.get().beaconIntervalTooShort(ChatController.MIN_BEACON_INTERVAL_MINUTES.toString())
         }
 
-        prefs.setBcn_beaconIntervalInMinutesMainCat(minutes)
-
-        /*
-         * The second-category value is legacy XML which nothing reads any more, but
-         * it is written to keep the two in step, exactly as applySharedBeaconInterval
-         * did.
-         */
-        prefs.setBcn_beaconIntervalInMinutesSecondCat(minutes)
-
-        restartBeaconTimer()
+        interval = minutes
         return null
     }
 }

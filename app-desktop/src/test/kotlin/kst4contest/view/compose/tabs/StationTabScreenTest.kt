@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.runComposeUiTest
 import androidx.compose.runtime.mutableStateOf
 import kst4contest.controller.On4KstConnectionState
@@ -19,6 +21,7 @@ import kst4contest.model.ChatCategory
 import kst4contest.model.ChatPreferences
 import kst4contest.observe.UiDispatcher
 import kst4contest.view.compose.MainWindowSurroundings
+import kst4contest.view.compose.SettingsDraft
 import kst4contest.view.feed.ConnectionStateFeed
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -60,7 +63,8 @@ class StationTabScreenTest {
         }
         val mainApplied = mutableListOf<ChatCategory?>()
         val link = mutableStateOf(On4KstConnectionState.DISCONNECTED)
-        val state = StationTabState(prefs, { mainApplied += it }, { }, { link.value })
+        val draft = SettingsDraft()
+        val state = StationTabState(prefs, draft, { mainApplied += it }, { }, { link.value })
     }
 
     @Test
@@ -77,9 +81,11 @@ class StationTabScreenTest {
         checkBeside("10 GHz").assertIsOff()
     }
 
+    /* The credentials write through; every other field waits for Apply. */
     @Test
-    fun editingTheTextFieldsWritesThroughToThePreferences() = runComposeUiTest {
+    fun editingTheTextFieldsStagesAllButTheCredentials() = runComposeUiTest {
         val s = Session(preferences())
+        val storedHost = s.prefs.stn_on4kstServersDns
         showTab { StationTab(s.state) }
 
         type("Callsign", "DO5AMF")
@@ -88,6 +94,10 @@ class StationTabScreenTest {
 
         assertEquals("DO5AMF", s.prefs.stn_loginCallSign)
         assertEquals("JO51IJ", s.prefs.stn_loginLocatorMainCat)
+        assertEquals(storedHost, s.prefs.stn_on4kstServersDns, "the host took effect before Apply")
+        fieldBeside("Server host name").assertTextEquals("www.on4kst.info")
+
+        runOnIdle { s.draft.apply() }
         assertEquals("www.on4kst.info", s.prefs.stn_on4kstServersDns)
         fieldBeside("Callsign").assertTextEquals("DO5AMF")
     }
@@ -99,12 +109,38 @@ class StationTabScreenTest {
         showTab { StationTab(s.state) }
 
         type("Server port", "23000")
+        runOnIdle { s.draft.apply() }
         assertEquals(23000, s.prefs.stn_on4kstServersPort)
 
         type("Server port", "23x")
+        runOnIdle { s.draft.apply() }
         assertEquals(23000, s.prefs.stn_on4kstServersPort, "an unparsable port was written")
 
         type("QTF", "135,5")
+        runOnIdle { s.draft.apply() }
+        assertEquals(135.5, s.prefs.stn_qtfDefault, 1e-9)
+    }
+
+    /*
+     * The draft is Compose state, so a staged number comes straight back to its field. The
+     * field must keep the operator's text rather than redraw the number: "1" shown as "1.0"
+     * before the next key would make "135,5" impossible to type.
+     */
+    @Test
+    fun aDecimalCanBeTypedKeyByKey() = runComposeUiTest {
+        val s = Session(preferences())
+        showTab { StationTab(s.state) }
+
+        val field = fieldBeside("QTF")
+        field.performScrollTo().performClick()
+        field.performTextReplacement("")
+        "135,5".forEach { key ->
+            field.performTextInput(key.toString())
+            waitForIdle()
+        }
+
+        field.assertTextEquals("135,5")
+        runOnIdle { s.draft.apply() }
         assertEquals(135.5, s.prefs.stn_qtfDefault, 1e-9)
     }
 
@@ -114,11 +150,34 @@ class StationTabScreenTest {
         showTab { StationTab(s.state) }
 
         toggle("10 GHz")
-        assertTrue(s.prefs.isStn_bandActive10G)
         checkBeside("10 GHz").assertIsOn()
+        assertFalse(s.prefs.isStn_bandActive10G, "the box took effect before Apply")
 
         toggle("144 MHz")
+        runOnIdle { s.draft.apply() }
+        assertTrue(s.prefs.isStn_bandActive10G)
         assertFalse(s.prefs.isStn_bandActive144)
+    }
+
+    /*
+     * In a contest the session is up. Everything but the credentials stays editable then,
+     * and an edit still waits for Apply.
+     */
+    @Test
+    fun theDraftedFieldsCanBeEditedWhileConnected() = runComposeUiTest {
+        val s = Session(preferences())
+        s.link.value = On4KstConnectionState.ONLINE
+        showTab { StationTab(s.state) }
+
+        fieldBeside("Callsign").assertIsNotEnabled()
+        fieldBeside("Server port").assertIsEnabled()
+        toggle("10 GHz")
+        type("Server port", "23005")
+
+        assertFalse(s.prefs.isStn_bandActive10G)
+        runOnIdle { s.draft.apply() }
+        assertTrue(s.prefs.isStn_bandActive10G)
+        assertEquals(23005, s.prefs.stn_on4kstServersPort)
     }
 
     @Test
@@ -181,7 +240,7 @@ class StationTabScreenTest {
             override fun isUiThread(): Boolean = true
         }
         val feed = ConnectionStateFeed(surroundings, immediately)
-        val state = StationTabState(preferences(), { }, { }, { surroundings.connectionState })
+        val state = StationTabState(preferences(), SettingsDraft(), { }, { }, { surroundings.connectionState })
         showTab { StationTab(state) }
 
         fieldBeside("Callsign").assertIsEnabled()

@@ -1,6 +1,8 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -17,7 +19,7 @@ class MessageHandlingTabStateTest(@TempDir private val tempDir: Path) {
         prefs.setMessageHandling_autoAnswerToQRGRequestEnabled(true)
         prefs.setMessageHandling_autoAnswerTextMainCat("qrv 144.300")
 
-        val state = MessageHandlingTabState(prefs)
+        val state = MessageHandlingTabState(prefs, ImmediateDraft())
 
         assertTrue(state.autoAnswerEnabled)
         assertTrue(state.autoAnswerToQRGRequestEnabled)
@@ -25,11 +27,45 @@ class MessageHandlingTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
+    fun `an edit waits for apply, and the recording follows only then`() {
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
+        val draft = SettingsDraft()
+        val recording = mutableListOf<Boolean>()
+        val state = MessageHandlingTabState(prefs, draft) { recording += it }
+
+        state.autoAnswerText = "qrv 432.200"
+        state.debugModeToFileEnabled = !prefs.isMessageHandling_debugModeToFileEnabled()
+        val wanted = state.debugModeToFileEnabled
+
+        assertEquals("qrv 432.200", state.autoAnswerText, "the tab shows the edit")
+        assertTrue(recording.isEmpty(), "the recording followed before Apply")
+
+        draft.apply()
+
+        assertEquals("qrv 432.200", prefs.getMessageHandling_autoAnswerTextSecondCat())
+        assertEquals(listOf(wanted), recording)
+    }
+
+    @Test
+    fun `a discarded edit changes nothing`() {
+        val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
+        prefs.setMessageHandling_autoAnswerEnabled(false)
+        val draft = SettingsDraft()
+        val state = MessageHandlingTabState(prefs, draft)
+
+        state.autoAnswerEnabled = true
+        draft.discard()
+
+        assertFalse(prefs.isMessageHandling_autoAnswerEnabled())
+        assertFalse(state.autoAnswerEnabled)
+    }
+
+    @Test
     fun `one checkbox drives both category flags`() {
         // The JavaFX window offered a single checkbox and wrote both preferences from
         // it; keeping only the main one would leave the second chat on its old value.
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state = MessageHandlingTabState(prefs)
+        val state = MessageHandlingTabState(prefs, ImmediateDraft())
 
         state.autoAnswerEnabled = true
 
@@ -45,7 +81,7 @@ class MessageHandlingTabStateTest(@TempDir private val tempDir: Path) {
     @Test
     fun `one text field drives both category texts`() {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state = MessageHandlingTabState(prefs)
+        val state = MessageHandlingTabState(prefs, ImmediateDraft())
 
         state.autoAnswerText = "qrv 432.200"
 
@@ -56,7 +92,7 @@ class MessageHandlingTabStateTest(@TempDir private val tempDir: Path) {
     @Test
     fun `the QRG reply flag writes through on its own`() {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state = MessageHandlingTabState(prefs)
+        val state = MessageHandlingTabState(prefs, ImmediateDraft())
 
         state.autoAnswerToQRGRequestEnabled = true
 

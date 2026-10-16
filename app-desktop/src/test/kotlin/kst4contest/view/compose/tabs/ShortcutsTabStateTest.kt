@@ -1,6 +1,8 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertSame
@@ -10,13 +12,18 @@ import java.nio.file.Path
 
 class ShortcutsTabStateTest(@TempDir private val tempDir: Path) {
 
-    private inner class Session {
+    /*
+     * The rules are pinned with a draft that applies at once; what the draft changes is
+     * pinned by the tests that pass a real one.
+     */
+    private inner class Session(val draft: SettingsDraft = ImmediateDraft()) {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         var shortcutRefreshes = 0
         var snippetRefreshes = 0
 
         fun state() = ShortcutsTabState(
             prefs,
+            draft,
             refreshShortcutButtons = { shortcutRefreshes++ },
             refreshTextSnippetContextMenus = { snippetRefreshes++ },
         )
@@ -35,7 +42,42 @@ class ShortcutsTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `a new shortcut lands at the top and reaches the roster at once`() {
+    fun `a list edit waits for apply and rebuilds the buttons once`() {
+        val s = Session(SettingsDraft())
+        s.prefs.getLst_txtShortCutBtnList().setAll(listOf("alt"))
+        val state = s.state()
+
+        state.shortcuts.addAtTop("cq")
+        state.commitShortcuts()
+        state.shortcuts.addAtTop("tnx")
+        state.commitShortcuts()
+
+        assertEquals(listOf("alt"), s.prefs.getLst_txtShortCutBtnList().snapshot(),
+            "the list took effect before Apply")
+        assertEquals(0, s.shortcutRefreshes)
+
+        s.draft.apply()
+
+        assertEquals(listOf("tnx", "cq", "alt"), s.prefs.getLst_txtShortCutBtnList().snapshot())
+        assertEquals(1, s.shortcutRefreshes)
+    }
+
+    @Test
+    fun `a discarded list edit leaves the roster alone`() {
+        val s = Session(SettingsDraft())
+        s.prefs.getLst_txtSnipList().setAll(listOf("73"))
+        val state = s.state()
+
+        state.snippets.commitAt(0, "")
+        state.commitSnippets()
+        s.draft.discard()
+
+        assertEquals(listOf("73"), s.prefs.getLst_txtSnipList().snapshot())
+        assertEquals(0, s.snippetRefreshes)
+    }
+
+    @Test
+    fun `a new shortcut lands at the top and reaches the roster`() {
         val s = Session()
         s.prefs.getLst_txtShortCutBtnList().setAll(listOf("alt"))
         val state = s.state()

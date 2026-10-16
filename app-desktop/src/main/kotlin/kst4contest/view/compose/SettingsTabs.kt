@@ -118,6 +118,8 @@ interface SettingsHost {
  * @param connectionState the session state as Compose state reads it; the Station tab
  *        locks the login fields from it. The controller's own getter is not observable,
  *        so a tab reading it would stay on whatever the link was when the window opened.
+ * @param draft the edits of this opening of the window; every tab state stages into it,
+ *        and the button bar applies it
  */
 fun buildSettingsTabs(
     controller: ChatController,
@@ -126,12 +128,14 @@ fun buildSettingsTabs(
     paletteStore: PaletteStore,
     languageStore: kst4contest.view.i18n.LanguageStore,
     connectionState: () -> On4KstConnectionState,
+    draft: SettingsDraft,
 ): List<SettingsTab> {
 
     val prefs = controller.chatPreferences
 
     val stationState = StationTabState(
         prefs,
+        draft,
         applyMainCategory = { category -> controller.setChatCategoryMain(category) },
         applySecondCategory = { category -> controller.setChatCategorySecondChat(category) },
         connectionState = connectionState,
@@ -139,20 +143,22 @@ fun buildSettingsTabs(
 
     val notificationState = NotificationTabState(
         prefs,
+        draft,
         controller.lstNotify_QSOSniffer_sniffedCallSignList,
-        applyDxClusterServerEnabled = { enabled ->
+        applyDxClusterServer = {
             /*
              * Starting a server that nothing can reach yet is pointless, so the JavaFX
              * checkbox only touched the server while the session was logged in; the
-             * flag alone decides what happens at the next login.
+             * flag alone decides what happens at the next login. Restarted rather than
+             * started when enabled: the same call then binds a changed port, and a server
+             * that was not running is simply started.
              */
             if (controller.isConnectedAndLoggedIn) {
-                if (enabled) controller.startDxClusterServerIfEnabled() else controller.stopDxClusterServer()
-            }
-        },
-        applyDxClusterServerPort = {
-            if (controller.isConnectedAndLoggedIn && prefs.isNotify_dxClusterServerEnabled()) {
-                controller.restartDxClusterServerIfEnabled()
+                if (prefs.isNotify_dxClusterServerEnabled()) {
+                    controller.restartDxClusterServerIfEnabled()
+                } else {
+                    controller.stopDxClusterServer()
+                }
             }
         },
         broadcastTestSpot = { spot -> deliverTestSpot(controller, spot) },
@@ -160,12 +166,14 @@ fun buildSettingsTabs(
 
     val shortcutsState = ShortcutsTabState(
         prefs,
+        draft,
         refreshShortcutButtons = host::refreshShortcutButtonsFromSettings,
         refreshTextSnippetContextMenus = host::refreshTextSnippetContextMenusFromSettings,
     )
 
     val beaconState = BeaconTabState(
         prefs,
+        draft,
         validateBeaconTemplate = { template -> controller.validateBeaconTemplate(template) },
         restartBeaconTimer = { controller.restartBeaconTimer() },
         mainCategoryName = categoryName(controller.chatCategoryMain, kst4contest.view.i18n.CurrentStrings.get().settingsCategoryMainFallback),
@@ -174,6 +182,7 @@ fun buildSettingsTabs(
 
     val logSynchState = LogSynchTabState(
         prefs,
+        draft,
         restartWintestListener = { controller.restartWintestUdpListenerIfEnabled() },
         stopWintestListener = { controller.stopWintestUdpListener() },
         detectWintestBroadcastAddress = host::detectWintestBroadcastAddress,
@@ -213,12 +222,12 @@ fun buildSettingsTabs(
     return listOf(
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabStation }) { StationTab(stationState) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabLogSynch }) { LogSynchTab(logSynchState) },
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabTrxSynch }) { TrxSynchTab(TrxSynchTabState(prefs, host::applyOwnQrgFollower)) },
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabAirscout }) { AirscoutTab(AirscoutTabState(prefs)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabTrxSynch }) { TrxSynchTab(TrxSynchTabState(prefs, draft, host::applyOwnQrgFollower)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabAirscout }) { AirscoutTab(AirscoutTabState(prefs, draft)) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabNotification }) { NotificationTab(notificationState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabShortcuts }) { ShortcutsTab(shortcutsState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabBeacon }) { BeaconTab(beaconState, reportRefusal) },
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabMessageHandling }) { MessageHandlingTab(MessageHandlingTabState(prefs, host::applyDebugModeToFile)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabMessageHandling }) { MessageHandlingTab(MessageHandlingTabState(prefs, draft, host::applyDebugModeToFile)) },
         /*
          * Selecting this tab re-read the database in the JavaFX window; the list is a
          * snapshot and would otherwise show what was true when the window opened.
@@ -227,7 +236,7 @@ fun buildSettingsTabs(
             { kst4contest.view.i18n.CurrentStrings.get().tabWorkedDatabase },
             onSelected = { controller.refreshWorkedStateAndDatabaseListFromDatabase() },
         ) { WorkedDatabaseTab(workedDatabaseState) },
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabGui }) { GuiOptionsTab(GuiOptionsTabState(prefs, languageStore)) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabGui }) { GuiOptionsTab(GuiOptionsTabState(prefs, draft, languageStore)) },
         /*
          * Appended last on purpose so no established tab position shifts, the reason
          * the JavaFX tab gave for the same placement.
@@ -291,13 +300,21 @@ private fun categoryName(category: kst4contest.model.ChatCategory?, fallback: St
  * Built here because it needs the controller for its state and the host for its
  * actions, and because it belongs with the tabs it sits under. The `close` action comes
  * from the window itself: only the window can end its own Compose application.
+ *
+ * Three buttons apply the [draft] before they act. "Apply/Close prefs" applies and closes,
+ * "Save settings" applies and writes the file, and Connect applies before it connects: the
+ * session would otherwise use the stored server or second-chat switch rather than the one
+ * the tab shows. An entry a field refuses while it is committed for the apply stops the
+ * button there, so the operator sees why instead of a closed window or a saved file.
  */
 fun settingsButtons(
     controller: ChatController,
     host: SettingsHost,
     notices: SettingsNotices,
+    draft: SettingsDraft,
 ): @Composable (close: () -> Unit) -> Unit {
     val barState = ConnectionBarState(controller.chatPreferences, controller)
+
 
     return { close ->
         /*
@@ -311,24 +328,51 @@ fun settingsButtons(
         ConnectionBar(
             state = barState,
             onConnect = {
-                val refusal = host.connectFromSettings()
-                if (refusal != null) notices.problem(refusal)
+                if (applyRefusing(draft, notices)) {
+                    val refusal = host.connectFromSettings()
+                    if (refusal != null) notices.problem(refusal)
+                }
                 revision++
             },
-            onSave = {
-                val target = host.savePreferencesFromSettings()
-                if (target == null) {
-                    notices.problem(kst4contest.view.i18n.CurrentStrings.get().settingsWriteFailed)
-                } else {
-                    notices.info(kst4contest.view.i18n.CurrentStrings.get().settingsWrittenTo(target))
-                }
-            },
-            onApplyAndClose = close,
+            onSave = { applyAndSave(draft, notices, host::savePreferencesFromSettings) },
+            onApplyAndClose = { if (applyRefusing(draft, notices)) close() },
             onDisconnectAndCloseChat = host::disconnectAndCloseChatFromSettings,
             onDisconnectOnly = {
                 host.disconnectOnlyFromSettings()
                 revision++
             },
         )
+    }
+}
+
+/**
+ * Applies [draft] and tells whether the button may go on: false when a field refused the
+ * entry it still held. The refusal is then the notice on screen, and the caller stops rather
+ * than closing the window over it or saving past it.
+ *
+ * Any problem notice counts, not only one raised by this apply. The click on the button can
+ * itself take the focus from the field, and the field then commits -- and is refused --
+ * before the button's action runs. A problem notice from earlier cannot be standing here:
+ * its dialog covers the window, so the button could not have been clicked.
+ */
+internal fun applyRefusing(draft: SettingsDraft, notices: SettingsNotices): Boolean {
+    draft.apply()
+    return notices.current !is SettingsNotice.Problem
+}
+
+/**
+ * The work of "Save settings": apply the draft, then write the file, then say where it went.
+ * The window stays open.
+ *
+ * @param save writes the preferences and returns the file, or null when it could not
+ */
+internal fun applyAndSave(draft: SettingsDraft, notices: SettingsNotices, save: () -> String?) {
+    if (!applyRefusing(draft, notices)) return
+
+    val target = save()
+    if (target == null) {
+        notices.problem(kst4contest.view.i18n.CurrentStrings.get().settingsWriteFailed)
+    } else {
+        notices.info(kst4contest.view.i18n.CurrentStrings.get().settingsWrittenTo(target))
     }
 }

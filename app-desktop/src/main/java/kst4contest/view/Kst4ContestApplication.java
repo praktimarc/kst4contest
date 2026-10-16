@@ -1,4 +1,5 @@
 package kst4contest.view;
+import kst4contest.view.compose.SettingsDraft;
 import kst4contest.view.compose.SettingsHost;
 import kst4contest.view.compose.SettingsNotices;
 import kst4contest.view.compose.SettingsTabsKt;
@@ -3751,10 +3752,17 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 */
 	private void openSettingsWindow() {
 
+		/*
+		 * One draft per opening: the tabs stage into it, the buttons apply it, and the window
+		 * asks about it when closed with edits pending.
+		 */
+		SettingsDraft draft = new SettingsDraft();
+
 		SettingsWindow.show(
 				SettingsTabsKt.buildSettingsTabs(chatcontroller, this, settingsNotices, paletteStore, languageStore,
-						this::settingsConnectionState),
+						this::settingsConnectionState, draft),
 				settingsNotices,
+				draft,
 				chatcontroller.getChatPreferences().isGUI_darkModeActive(),
 				SETTINGS_WINDOW_FONT_SIZE_SP,
 				paletteStore,
@@ -3767,7 +3775,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					requestLayoutSave();
 					return kotlin.Unit.INSTANCE;
 				},
-				SettingsTabsKt.settingsButtons(chatcontroller, this, settingsNotices));
+				SettingsTabsKt.settingsButtons(chatcontroller, this, settingsNotices, draft));
 	}
 
 	/*

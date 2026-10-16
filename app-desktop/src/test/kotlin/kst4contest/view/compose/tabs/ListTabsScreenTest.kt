@@ -13,6 +13,7 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.runComposeUiTest
 import kst4contest.model.ChatMember
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
 import kst4contest.observe.SimpleRoster
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -54,7 +55,7 @@ class ListTabsScreenTest {
         }
         var shortcutRefreshes = 0
         var snippetRefreshes = 0
-        val state = ShortcutsTabState(prefs, { shortcutRefreshes++ }, { snippetRefreshes++ })
+        val state = ShortcutsTabState(prefs, ImmediateDraft(), { shortcutRefreshes++ }, { snippetRefreshes++ })
     }
 
     @Test

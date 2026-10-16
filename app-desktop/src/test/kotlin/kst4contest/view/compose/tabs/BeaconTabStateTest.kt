@@ -2,6 +2,8 @@ package kst4contest.view.compose.tabs
 
 import kst4contest.controller.ChatController
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -13,13 +15,21 @@ import java.nio.file.Path
 
 class BeaconTabStateTest(@TempDir private val tempDir: Path) {
 
-    private inner class Session(private val templateRefusal: String? = null) {
+    /*
+     * The rules are pinned with a draft that applies at once; what the draft changes is
+     * pinned by the tests that pass a real one.
+     */
+    private inner class Session(
+        private val templateRefusal: String? = null,
+        val draft: SettingsDraft = ImmediateDraft(),
+    ) {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         var timerRestarts = 0
         var validated = mutableListOf<String>()
 
         fun state() = BeaconTabState(
             prefs,
+            draft,
             validateBeaconTemplate = { template ->
                 validated.add(template)
                 templateRefusal?.let { throw IllegalArgumentException(it) }
@@ -31,7 +41,46 @@ class BeaconTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `the enable flags write through at once`() {
+    fun `beacon edits wait for apply, and the timer restarts only then`() {
+        val s = Session(draft = SettingsDraft())
+        s.prefs.setBcn_beaconIntervalInMinutesMainCat(5)
+        s.prefs.setBcn_beaconsEnabledMainCat(false)
+        val state = s.state()
+
+        state.bcn_beaconsEnabledMainCat = true
+        assertNull(state.commitBeaconTextMainCat("CQ MYCALL"))
+        assertNull(state.commitBeaconInterval("7"))
+
+        assertFalse(s.prefs.isBcn_beaconsEnabledMainCat(), "an edit took effect before Apply")
+        assertEquals(5, s.prefs.getBcn_beaconIntervalInMinutesMainCat())
+        assertEquals(0, s.timerRestarts, "the timer restarted before Apply")
+        assertEquals(7, state.beaconIntervalMinutes, "the tab shows the edit")
+        assertEquals("CQ MYCALL", state.beaconTextMainCat)
+
+        s.draft.apply()
+
+        assertTrue(s.prefs.isBcn_beaconsEnabledMainCat())
+        assertEquals("CQ MYCALL", s.prefs.getBcn_beaconTextMainCat())
+        assertEquals(7, s.prefs.getBcn_beaconIntervalInMinutesSecondCat())
+        assertEquals(1, s.timerRestarts)
+    }
+
+    @Test
+    fun `discarded beacon edits leave the timer and the templates alone`() {
+        val s = Session(draft = SettingsDraft())
+        s.prefs.setBcn_beaconTextMainCat("CQ MYCALL")
+        val state = s.state()
+
+        state.commitBeaconTextMainCat("CQ MYCALL MYQRG")
+        state.commitBeaconInterval("9")
+        s.draft.discard()
+
+        assertEquals("CQ MYCALL", s.prefs.getBcn_beaconTextMainCat())
+        assertEquals(0, s.timerRestarts)
+    }
+
+    @Test
+    fun `the enable flags write through on apply`() {
         val s = Session()
         val state = s.state()
 

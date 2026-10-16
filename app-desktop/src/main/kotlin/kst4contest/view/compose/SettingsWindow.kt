@@ -29,6 +29,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,9 +113,7 @@ class SettingsNotices {
  * most once — a second instance would let two windows write the same preferences
  * against each other.
  *
- * Saving does not collect values. Every control writes into ChatPreferences as it
- * changes; the button bar only persists, which is what the JavaFX "Save settings"
- * button did.
+ * The controls stage their edits in a [SettingsDraft]; the button bar applies it.
  */
 object SettingsWindow {
 
@@ -140,6 +139,8 @@ object SettingsWindow {
     fun close() = host.close()
 
     /**
+     * @param draft the edits of this opening of the window; the tabs and the buttons were
+     *        built with the same one
      * @param buttons the bottom button row; it receives the action that closes the
      *        window, because only the window itself can end its Compose application
      */
@@ -147,6 +148,7 @@ object SettingsWindow {
     fun show(
         tabs: List<SettingsTab>,
         notices: SettingsNotices,
+        draft: SettingsDraft,
         darkMode: Boolean,
         baseFontSizeSp: Float,
         /**
@@ -164,6 +166,12 @@ object SettingsWindow {
         onResized: (Float, Float) -> Unit,
         buttons: @Composable (close: () -> Unit) -> Unit,
     ) {
+        if (host.isOpen) {
+            // Raises the open window; the new draft belongs to no window and is dropped.
+            host.raise()
+            return
+        }
+
         host.show(
             title = { kst4contest.view.i18n.CurrentStrings.get().settingsWindowTitle },
             darkMode = darkMode,
@@ -174,64 +182,71 @@ object SettingsWindow {
             heightDp = heightDp,
             onResized = onResized,
         ) { close ->
-            SettingsContent(tabs, notices, buttons, close)
+            SettingsContent(tabs, notices, buttons, close, draft)
         }
     }
 }
 
+/**
+ * @param draft the edits waiting to be applied. Provided to the tabs, so a field still holding
+ *        a typed entry can be committed into it before an apply.
+ */
 @Composable
 internal fun SettingsContent(
     tabs: List<SettingsTab>,
     notices: SettingsNotices,
     buttons: @Composable (close: () -> Unit) -> Unit,
     close: () -> Unit,
+    draft: SettingsDraft = SettingsDraft(),
 ) {
     var selected by remember { mutableStateOf(0) }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SettingsTabStrip(
-                tabs = tabs,
-                selectedIndex = selected,
-                onSelect = { index ->
-                    selected = index
-                    tabs[index].onSelected?.invoke()
-                },
-            )
+    CompositionLocalProvider(LocalSettingsDraft provides draft) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SettingsTabStrip(
+                    tabs = tabs,
+                    selectedIndex = selected,
+                    onSelect = { index ->
+                        selected = index
+                        tabs[index].onSelected?.invoke()
+                    },
+                )
 
-            /*
-             * One scroll region for the whole window, with a scrollbar beside it. The
-             * tabs used to scroll each for themselves, and none of them could show a
-             * bar: a tab does not know the window it sits in, so content simply ended
-             * mid-form with nothing to say that more was below.
-             */
-            val scroll = rememberScrollState()
+                /*
+                 * One scroll region for the whole window, with a scrollbar beside it. The
+                 * tabs used to scroll each for themselves, and none of them could show a
+                 * bar: a tab does not know the window it sits in, so content simply ended
+                 * mid-form with nothing to say that more was below.
+                 */
+                val scroll = rememberScrollState()
 
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scroll)
-                        .padding(end = Density.SCROLLBAR_GUTTER),
-                ) {
-                    tabs.getOrNull(selected)?.content?.invoke()
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(scroll)
+                            .padding(end = Density.SCROLLBAR_GUTTER),
+                    ) {
+                        tabs.getOrNull(selected)?.content?.invoke()
+                    }
+
+                    VerticalScrollbar(
+                        adapter = rememberScrollbarAdapter(scroll),
+                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                        style = LocalScrollbarStyle.current.copy(
+                            /* Muted on purpose: a bar in the accent colour shouts. */
+                            unhoverColor = MaterialTheme.colorScheme.outline,
+                            hoverColor = MaterialTheme.colorScheme.onSurface,
+                        ),
+                    )
                 }
 
-                VerticalScrollbar(
-                    adapter = rememberScrollbarAdapter(scroll),
-                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                    style = LocalScrollbarStyle.current.copy(
-                        /* Muted on purpose: a bar in the accent colour shouts. */
-                        unhoverColor = MaterialTheme.colorScheme.outline,
-                        hoverColor = MaterialTheme.colorScheme.onSurface,
-                    ),
-                )
+                buttons(close)
             }
-
-            buttons(close)
         }
     }
 

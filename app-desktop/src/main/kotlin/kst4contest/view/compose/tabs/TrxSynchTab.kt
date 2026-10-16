@@ -20,8 +20,7 @@ import kst4contest.view.compose.Form
  * QRG update needs an enabled source *and* valid incoming RadioInfo or Win-Test STATUS
  * data, so a checked box must not read as "my QRG is being kept current".
  *
- * No confirmation callback: TrxSynchTabState writes through to ChatPreferences, the way
- * the JavaFX controls did.
+ * The controls stage their edits in the window's draft (see TrxSynchTabState).
  */
 @Composable
 fun TrxSynchTab(state: TrxSynchTabState) {

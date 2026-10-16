@@ -1,6 +1,7 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.SettingsDraft
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -15,9 +16,11 @@ class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
         var restarts = 0
         var stops = 0
         val detectedBroadcast = detected
+        val draft = SettingsDraft()
 
         fun state() = LogSynchTabState(
             prefs,
+            draft,
             restartWintestListener = { restarts++ },
             stopWintestListener = { stops++ },
             detectWintestBroadcastAddress = { detectedBroadcast },
@@ -44,23 +47,44 @@ class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `writing reaches the preferences at once, without a confirmation step`() {
-        // The JavaFX window had no value-collecting confirmation: each control wrote
-        // straight into ChatPreferences, and "Save settings" only persisted them.
+    fun `an edit waits for apply, the chosen log file does not`() {
         val s = Session()
+        s.prefs.setLogsynch_ucxUDPWkdCallListenerPort(12060)
+        s.prefs.setLogsynch_fileBasedWkdCallInterpreterEnabled(false)
         val state = s.state()
 
         state.logsynch_fileBasedWkdCallInterpreterEnabled = true
         state.logsynch_fileBasedWkdCallInterpreterFileNameReadOnly = "/home/op/log.adi"
         state.logsynch_ucxUDPWkdCallListenerEnabled = true
-        state.logsynch_ucxUDPWkdCallListenerPort = 12060
-        state.logsynch_wintestNetworkPort = 9871
+        state.logsynch_ucxUDPWkdCallListenerPort = 12061
+        state.logsynch_wintestNetworkPort = 9879
+
+        // The file chooser is an action: the chosen path is written when chosen.
+        assertEquals("/home/op/log.adi", s.prefs.getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly())
+        assertFalse(s.prefs.isLogsynch_fileBasedWkdCallInterpreterEnabled(), "an edit took effect before Apply")
+        assertEquals(12060, s.prefs.getLogsynch_ucxUDPWkdCallListenerPort())
+        assertEquals(12061, state.logsynch_ucxUDPWkdCallListenerPort, "the tab shows the edit")
+
+        s.draft.apply()
 
         assertTrue(s.prefs.isLogsynch_fileBasedWkdCallInterpreterEnabled())
-        assertEquals("/home/op/log.adi", s.prefs.getLogsynch_fileBasedWkdCallInterpreterFileNameReadOnly())
         assertTrue(s.prefs.isLogsynch_ucxUDPWkdCallListenerEnabled())
-        assertEquals(12060, s.prefs.getLogsynch_ucxUDPWkdCallListenerPort())
-        assertEquals(9871, s.prefs.getLogsynch_wintestNetworkPort())
+        assertEquals(12061, s.prefs.getLogsynch_ucxUDPWkdCallListenerPort())
+        assertEquals(9879, s.prefs.getLogsynch_wintestNetworkPort())
+    }
+
+    @Test
+    fun `a discarded edit changes nothing and touches no listener`() {
+        val s = Session()
+        val state = s.state()
+        val enabled = s.prefs.isLogsynch_wintestNetworkListenerEnabled()
+
+        state.logsynch_wintestNetworkListenerEnabled = !enabled
+        state.logsynch_wintestNetworkPort = 9879
+        s.draft.discard()
+
+        assertEquals(enabled, s.prefs.isLogsynch_wintestNetworkListenerEnabled())
+        assertEquals(0, s.restarts + s.stops)
     }
 
     @Test
@@ -68,60 +92,86 @@ class LogSynchTabStateTest(@TempDir private val tempDir: Path) {
         // The JavaFX fields committed getText().trim(); a stray space in a station
         // name or a broadcast address is a protocol value, not decoration.
         val s = Session()
+        s.prefs.setLogsynch_wintestNetworkStationNameOfKST("KST")
         val state = s.state()
 
-        state.logsynch_wintestNetworkStationNameOfKST = "  KST  "
-        state.logsynch_wintestNetworkBroadcastAddress = " 192.168.1.255 "
+        state.logsynch_wintestNetworkStationNameOfKST = "KST "
+        assertFalse(s.draft.hasPendingChanges, "a trailing space is no change")
 
-        assertEquals("KST", s.prefs.getLogsynch_wintestNetworkStationNameOfKST())
+        state.logsynch_wintestNetworkStationNameOfKST = "  KST2  "
+        state.logsynch_wintestNetworkBroadcastAddress = " 192.168.1.255 "
+        s.draft.apply()
+
+        assertEquals("KST2", s.prefs.getLogsynch_wintestNetworkStationNameOfKST())
         assertEquals("192.168.1.255", s.prefs.getLogsynch_wintestNetworkBroadcastAddress())
     }
 
     @Test
-    fun `enabling the Win-Test listener starts it and disabling stops it`() {
+    fun `applying the Win-Test switch starts or stops the listener`() {
         val s = Session()
+        s.prefs.setLogsynch_wintestNetworkListenerEnabled(false)
         val state = s.state()
 
         state.logsynch_wintestNetworkListenerEnabled = true
+        assertEquals(0, s.restarts, "the listener followed the box before Apply")
+        s.draft.apply()
 
         assertTrue(s.prefs.isLogsynch_wintestNetworkListenerEnabled())
         assertEquals(1, s.restarts, "the running listener must follow the setting")
 
         state.logsynch_wintestNetworkListenerEnabled = false
+        s.draft.apply()
 
         assertFalse(s.prefs.isLogsynch_wintestNetworkListenerEnabled())
         assertEquals(1, s.stops)
     }
 
     @Test
-    fun `a committed port change rebinds the listener only while it is enabled`() {
-        // Deliberately not on every keystroke: the port write goes through at once,
-        // but rebinding a UDP socket is bound to the commit, as the JavaFX field's
-        // focus-lost handler did.
+    fun `an applied port change rebinds the listener only while it is enabled`() {
         val s = Session()
-        val state = s.state()
-
         /*
          * Switched off explicitly: ChatPreferences ships
          * logsynch_wintestNetworkListenerEnabled = true (ChatPreferences.java:254), so
          * a fresh configuration already listens.
          */
-        state.logsynch_wintestNetworkListenerEnabled = false
-        val restartsAfterDisable = s.restarts
+        s.prefs.setLogsynch_wintestNetworkListenerEnabled(false)
+        val state = s.state()
 
         state.logsynch_wintestNetworkPort = 9872
-        assertEquals(restartsAfterDisable, s.restarts, "a keystroke must not rebind the socket")
+        s.draft.apply()
+        assertEquals(0, s.restarts, "a disabled listener has nothing to rebind")
 
-        state.commitWintestNetworkPort()
-        assertEquals(restartsAfterDisable, s.restarts, "a disabled listener has nothing to rebind")
-
-        state.logsynch_wintestNetworkListenerEnabled = true
-        val restartsAfterEnable = s.restarts
+        s.prefs.setLogsynch_wintestNetworkListenerEnabled(true)
         state.logsynch_wintestNetworkPort = 9873
-        state.commitWintestNetworkPort()
+        assertEquals(0, s.restarts, "a keystroke must not rebind the socket")
+        s.draft.apply()
 
         assertEquals(9873, s.prefs.getLogsynch_wintestNetworkPort())
-        assertEquals(restartsAfterEnable + 1, s.restarts)
+        assertEquals(1, s.restarts)
+    }
+
+    /*
+     * Switch and port in one apply: one restart, on the new port. Two restarts in a row can
+     * fail on the port the first has not released yet.
+     */
+    @Test
+    fun `switch and port applied together rebind once, on the new port`() {
+        val s = Session()
+        s.prefs.setLogsynch_wintestNetworkListenerEnabled(false)
+        var portAtRestart = -1
+        val state = LogSynchTabState(
+            s.prefs, s.draft,
+            restartWintestListener = { s.restarts++; portAtRestart = s.prefs.getLogsynch_wintestNetworkPort() },
+            stopWintestListener = { s.stops++ },
+            detectWintestBroadcastAddress = { null },
+        )
+
+        state.logsynch_wintestNetworkListenerEnabled = true
+        state.logsynch_wintestNetworkPort = 9874
+        s.draft.apply()
+
+        assertEquals(1, s.restarts)
+        assertEquals(9874, portAtRestart)
     }
 
     @Test

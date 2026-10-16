@@ -1,6 +1,8 @@
 package kst4contest.view.compose.tabs
 
 import kst4contest.model.ChatPreferences
+import kst4contest.view.compose.ImmediateDraft
+import kst4contest.view.compose.SettingsDraft
 import kst4contest.view.i18n.LanguageStore
 import kst4contest.view.i18n.LanguageStoreFactory
 import kst4contest.view.i18n.SYSTEM_LANGUAGE
@@ -36,12 +38,14 @@ class GuiOptionsTabStateTest(@TempDir private val tempDir: Path) {
          * open windows. A store wired to anything else would pass a weaker test.
          */
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state = GuiOptionsTabState(prefs, LanguageStoreFactory.create(prefs, Locale.UK))
+        val draft = SettingsDraft()
+        val state = GuiOptionsTabState(prefs, draft, LanguageStoreFactory.create(prefs, Locale.UK))
 
         state.language = "de"
 
         assertEquals("de", state.language)
-        assertEquals("de", prefs.guiOptions_language)
+        assertEquals("de", prefs.guiOptions_language, "the language switches at once, without Apply")
+        assertFalse(draft.hasPendingChanges)
     }
 
 
@@ -50,16 +54,29 @@ class GuiOptionsTabStateTest(@TempDir private val tempDir: Path) {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         prefs.setGUI_darkModeActiveByDefault(true)
 
-        assertTrue(GuiOptionsTabState(prefs, languageStore()).gUI_darkModeActiveByDefault)
+        assertTrue(GuiOptionsTabState(prefs, SettingsDraft(), languageStore()).gUI_darkModeActiveByDefault)
     }
 
     @Test
-    fun `writing reaches the preferences at once`() {
+    fun `an edit waits for apply, and discarding drops it`() {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state = GuiOptionsTabState(prefs, languageStore())
+        val draft = SettingsDraft()
+        val state = GuiOptionsTabState(prefs, draft, languageStore())
+
+        state.gUI_darkModeActiveByDefault = !prefs.isGUI_darkModeActiveByDefault()
+        state.guiOptions_defaultFilterPublicMsgs = true
+        state.guiOptions_showFreshCallHintInBandColumns = true
+
+        assertFalse(prefs.isGuiOptions_defaultFilterPublicMsgs(), "an edit took effect before Apply")
+        assertTrue(state.guiOptions_defaultFilterPublicMsgs, "the tab shows the edit")
+
+        val darkBefore = prefs.isGUI_darkModeActiveByDefault()
+        draft.discard()
+        assertEquals(darkBefore, prefs.isGUI_darkModeActiveByDefault())
 
         state.guiOptions_defaultFilterPublicMsgs = true
         state.guiOptions_showFreshCallHintInBandColumns = true
+        draft.apply()
 
         assertTrue(prefs.isGuiOptions_defaultFilterPublicMsgs())
         assertTrue(prefs.isGuiOptions_showFreshCallHintInBandColumns())
@@ -71,7 +88,7 @@ class GuiOptionsTabStateTest(@TempDir private val tempDir: Path) {
         // one. Turning them into a radio group would take a combination away that
         // an operator may have configured.
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
-        val state = GuiOptionsTabState(prefs, languageStore())
+        val state = GuiOptionsTabState(prefs, ImmediateDraft(), languageStore())
 
         state.guiOptions_defaultFilterPublicMsgs = true
         state.guiOptions_defaultFilterPmToMe = true
