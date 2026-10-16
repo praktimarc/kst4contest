@@ -36,7 +36,7 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **Dark Mode pro Profil:** Im Reiter **GUI** legt jedes Operator-Profil unter **Design** fest, ob KST4Contest hell oder dunkel startet. Die Menüeinträge unter **Windows** schalten weiterhin schnell um, gelten aber nur für die laufende Sitzung. Das Farbschema erfasst jetzt auch das Update-Fenster und die Liste der Top-Kandidaten.
 
-- **Einstellungen wirken erst mit Übernehmen:** Änderungen im Einstellungsfenster wirken nicht mehr während der Eingabe, sondern erst mit **Übernehmen/Schließen** oder **Einstellungen speichern**; **Verbinden** übernimmt sie ebenfalls vorher. Das gilt auch während einer laufenden Sitzung. Wer das Fenster mit offenen Änderungen schließt, wird gefragt, ob sie übernommen oder verworfen werden sollen. Farben, Sprache und die Anmeldedaten im Reiter **Station** wirken wie bisher sofort.
+- **Einstellungen wirken erst mit Übernehmen:** Änderungen im Einstellungsfenster wirken nicht mehr während der Eingabe, sondern erst mit **Übernehmen/Schließen** oder **Einstellungen speichern**; **Verbinden** übernimmt sie ebenfalls vorher. Das gilt auch während einer laufenden Sitzung. Wer mit offenen Änderungen das Fenster schließt, das Profil wechselt oder das Programm beendet, wird zuerst gefragt, ob sie übernommen oder verworfen werden sollen, oder kann zurück. Farben, Sprache und die Anmeldedaten im Reiter **Station** wirken wie bisher sofort.
 
 ### Behoben
 

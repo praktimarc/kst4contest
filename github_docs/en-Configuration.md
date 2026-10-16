@@ -4,7 +4,7 @@
 
 After the first start, the **settings window** opens – this is the central starting point for all configuration. It is recommended to keep the settings window open during operation (e.g. to quickly toggle the beacon on and off).
 
-> **Important**: Changes in the settings window take effect when you click **Apply/Close prefs** or **Save Settings**; **Connect** applies them first as well. Closing the window with changes pending asks whether to apply or discard them. Colours, the language and the login data on the **Station** tab take effect immediately.
+> **Important**: Changes in the settings window take effect when you click **Apply/Close prefs** or **Save Settings**; **Connect** applies them first as well. Closing the window, switching the operator profile or exiting with changes pending first asks whether to apply or discard them, or to go back. Colours, the language and the login data on the **Station** tab take effect immediately.
 >
 > Use **Save Settings** for functional settings which should remain in effect after the next start. KST4Contest saves layout changes such as window sizes, divider positions and table-column widths automatically. The shared file is `~/.praktiKST/preferences.xml` on Linux and macOS and `%USERPROFILE%\.praktiKST\preferences.xml` (or `C:\Users\<Username>\.praktiKST\preferences.xml`) on Windows.
 
@@ -1005,7 +1005,7 @@ The **Profiles** tab in the settings window lists all profiles with their name, 
 
 ### Switching profiles while running
 
-**File > Switch operator profile...**, or the button on the **Profiles** tab, switches without restarting the program. After a confirmation the ON4KST connection is closed and the user interface is rebuilt with the settings and layout of the selected profile. The layout of the previous profile is saved first; settings not yet confirmed with **Save Settings** are lost.
+**File > Switch operator profile...**, or the button on the **Profiles** tab, switches without restarting the program. After a confirmation the ON4KST connection is closed and the user interface is rebuilt with the settings and layout of the selected profile. If the settings window still holds changes that were not applied, KST4Contest first asks whether to apply them to the current profile, discard them, or cancel the switch. The layout of the previous profile is saved first; settings not yet confirmed with **Save Settings** are lost.
 
 Once more than one profile exists, the main window title also shows the profile name.
 

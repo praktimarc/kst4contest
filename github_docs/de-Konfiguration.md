@@ -4,7 +4,7 @@
 
 Nach dem ersten Start öffnet sich das **Einstellungsfenster** – dieses ist der zentrale Ausgangspunkt für alle Konfigurationen. Es empfiehlt sich, das Einstellungsfenster während des Betriebs geöffnet zu lassen (z. B. um den Beacon schnell ein- und auszuschalten).
 
-> **Wichtig**: Änderungen im Einstellungsfenster wirken, sobald **Apply/Close prefs** oder **Save Settings** gedrückt wird; **Connect** übernimmt sie ebenfalls vorher. Wer das Fenster mit offenen Änderungen schließt, wird gefragt, ob sie übernommen oder verworfen werden sollen. Farben, Sprache und die Anmeldedaten im Reiter **Station** wirken sofort.
+> **Wichtig**: Änderungen im Einstellungsfenster wirken, sobald **Apply/Close prefs** oder **Save Settings** gedrückt wird; **Connect** übernimmt sie ebenfalls vorher. Wer mit offenen Änderungen das Fenster schließt, das Profil wechselt oder das Programm beendet, wird zuerst gefragt, ob sie übernommen oder verworfen werden sollen, oder kann zurück. Farben, Sprache und die Anmeldedaten im Reiter **Station** wirken sofort.
 >
 > Fachliche Einstellungen mit **„Save Settings"** sichern, wenn sie beim nächsten Start wieder gelten sollen. Layoutänderungen wie Fenstergrößen, Divider-Positionen und Tabellenbreiten speichert KST4Contest automatisch. Die gemeinsame Datei liegt unter Linux und macOS in `~/.praktiKST/preferences.xml` und unter Windows in `%USERPROFILE%\.praktiKST\preferences.xml` (bzw. `C:\Users\<Benutzername>\.praktiKST\preferences.xml`).
 
@@ -948,7 +948,7 @@ Der Reiter **Profiles** im Einstellungsfenster zeigt alle Profile mit Name, Art 
 
 ### Profil im laufenden Betrieb wechseln
 
-**File → Switch operator profile...** oder die Schaltfläche im Reiter **Profiles** wechseln ohne Programmneustart. Nach einer Sicherheitsabfrage wird die ON4KST-Verbindung getrennt und die Oberfläche mit den Einstellungen und dem Layout des gewählten Profils neu aufgebaut. Der Layoutstand des bisherigen Profils wird vorher gesichert; noch nicht mit **Save Settings** bestätigte fachliche Änderungen gehen dabei verloren.
+**File → Switch operator profile...** oder die Schaltfläche im Reiter **Profiles** wechseln ohne Programmneustart. Nach einer Sicherheitsabfrage wird die ON4KST-Verbindung getrennt und die Oberfläche mit den Einstellungen und dem Layout des gewählten Profils neu aufgebaut. Hält das Einstellungsfenster noch nicht übernommene Änderungen, fragt KST4Contest zuerst, ob sie auf das bisherige Profil übernommen, verworfen oder der Wechsel abgebrochen werden soll. Der Layoutstand des bisherigen Profils wird vorher gesichert; noch nicht mit **Save Settings** bestätigte fachliche Änderungen gehen dabei verloren.
 
 Sobald mehr als ein Profil existiert, zeigt die Titelzeile des Hauptfensters zusätzlich den Profilnamen.
 

@@ -33,12 +33,25 @@ bearbeiten, dann anwenden oder verwerfen.
    ausstehenden Änderungen: Übernehmen, Verwerfen oder zurück zum Fenster. Ohne ausstehende
    Änderungen schließt es wie bisher.
 5. Ungültige Eingaben werden wie bisher am Feld abgewiesen und erreichen den Entwurf nie.
+   Steht beim Übernehmen, Speichern oder Verbinden noch ungültiger Text in einem Feld (rot),
+   gilt das als Abweisung: nichts wird angewendet, das Fenster bleibt offen, die Meldung nennt
+   das Feld. Sonst ginge still der letzte gültige Wert in Kraft, den der Operateur nicht mehr
+   sieht — und Verwerfen wäre nicht mehr möglich, weil die übrigen Änderungen schon wirkten.
+   Erst wenn kein Feld etwas abweist, wird angewendet.
 6. **Verbinden** wendet ebenfalls zuerst an. Sonst verbände der Knopf mit dem gespeicherten
    statt mit dem sichtbaren Serverport oder Zweitchat-Häkchen — der Operateur sieht den einen
    Wert und bekommt den anderen.
-7. Ein Schließen von außen — Profilwechsel, Programmende — verwirft den Entwurf. Beim
-   Profilwechsel gehört er zu Einstellungen, die gleich ersetzt werden; ihn auf das neue
-   Profil anzuwenden, wäre falsch.
+7. **Profilwechsel und Programmende** stellen dieselbe Frage, bevor sie weitergehen
+   (`SettingsWindow.settleThen`): Übernehmen wendet die Änderungen auf das **bisherige**
+   Profil an — das, in dem sie gemacht wurden — und setzt den Wechsel bzw. das Beenden fort;
+   Verwerfen setzt ohne sie fort; Zurück bricht Wechsel bzw. Beenden ab. Ohne offene
+   Änderungen geht es sofort und wie bisher weiter. Erst der anschließende Abbau
+   (`SettingsWindow.close`) und ein JVM-Shutdown-Hook verwerfen ohne Frage.
+8. **Scheitert beim Anwenden ein Schreibvorgang oder eine Wirkung**, laufen alle übrigen
+   trotzdem; die Fehler stehen danach in einer Problem-Meldung, das Fenster bleibt offen. Eine
+   Einstellung, deren Schreibvorgang scheiterte, bleibt im Entwurf, ihre Wirkung läuft nicht.
+   Speichern schreibt die Datei, wenn alle Schreibvorgänge gelangen, auch wenn eine Wirkung
+   scheiterte — deren Einstellung ist gespeichert und gehört in die Datei.
 
 ## Was sofort wirkt, wie bisher
 
@@ -50,8 +63,15 @@ bearbeiten, dann anwenden oder verwerfen.
 - **Aktionen**: Profil anlegen, duplizieren, umbenennen, löschen, aktivieren; die Aktionen
   der Worked-Datenbank; der Test-Spot des DX-Clusters; die „Choose…"-Dateiauswahl;
   der Export des Stylesheets. Das sind Handlungen, keine Werte.
-- Die automatische Erkennung der Win-Test-Broadcastadresse beim Bau des Reiters. Sie ist
-  keine Eingabe des Operateurs.
+- **Reparaturen gespeicherter Werte** (`repairStoredSettings`), einmal beim Öffnen des
+  Fensters, bevor ein Reiter gebaut wird: eine unlesbare Ausweichband-Vorgabe des
+  DX-Clusters wird zu 144, und die Win-Test-Broadcastadresse wird, solange sie noch der
+  Platzhalter 255.255.255.255 ist, durch die erkannte Subnetz-Adresse ersetzt. Beides schrieb
+  schon das JavaFX-Fenster beim Aufbau, beides ist keine Eingabe des Operateurs und hat
+  nichts zum Übernehmen oder Verwerfen — darum direkt in `ChatPreferences`. Früher geschah
+  das in den Reiterzuständen, eines davon beim Lesen während der Komposition; Compose liest
+  wann es will, und ein Schreiben dort ist leicht zu übersehen. Jetzt gibt es dafür einen
+  bekannten Zeitpunkt, und kein Reiterzustand schreibt beim Lesen oder Bauen.
 
 Unverändert bleiben das Format von `preferences.xml` und die Knöpfe der Verbindungsleiste.
 
@@ -65,7 +85,8 @@ Schlüssel:
 draft.stage(key, value, live = { prefs.getX() }, write = { prefs.setX(it) },
             effect = ::restartSomething, effectKey = "something")
 draft.valueOf(key) { prefs.getX() }   // Entwurfswert oder der gespeicherte
-draft.apply()                          // Schreiben, dann Wirkungen
+draft.commitTypedEntries()            // getippter Text der Felder → Entwurf, oder Abweisungen
+draft.apply()                          // Schreiben, dann Wirkungen; liefert die Fehlschläge
 draft.discard()
 draft.hasPendingChanges                // Compose-Zustand
 ```
@@ -124,11 +145,17 @@ hätten.
 ## Fäden
 
 Alles läuft auf dem AWT-Ereignisfaden, wie bisher die sofortigen Änderungen: Knopfdruck,
-Dialogwahl, Menüeintrag. Das X-Schließen wartet nicht blockierend; es setzt nur einen Zustand,
-den das Fenster beim nächsten Zeichnen als Frage oder als Schließen ausführt.
+Dialogwahl, Menüeintrag. Gewartet wird dort nie. `requestClose` und `settleThen` übernehmen
+den getippten Text gleich auf dem Ereignisfaden — ein minimiertes Fenster zeichnet nicht, eine
+Entscheidung bis zum nächsten Bild könnte ewig warten — und gehen ohne offene Änderungen sofort
+weiter. Gibt es etwas zu fragen, heben sie das Fenster nach vorn und setzen nur einen Zustand;
+die Frage erscheint beim nächsten Bild, und die Fortsetzung (Wechsel, Beenden) läuft aus dem
+Rückruf des Dialogs, über `EventQueue.invokeLater`, nicht im Klick-Handler selbst.
 
 ## Prüfung
 
-Pro Reiter: nur Übernehmen ändert die Einstellungen; Verwerfen ändert nichts; Speichern
-wendet an und schreibt; X mit ausstehenden Änderungen fragt; Bearbeiten während einer
+Pro Einstellung (`DraftedSettingsTableTest`, mit echtem Entwurf): unverändert nach der
+Eingabe, geändert nach Übernehmen, unverändert nach Verwerfen. Pro Fenster: Speichern wendet
+an und schreibt; X, Profilwechsel und Programmende fragen bei offenen Änderungen; Zurück
+bricht ab; ungültiger Text und Fehlschläge halten das Fenster offen; Bearbeiten während einer
 Sitzung geht.
