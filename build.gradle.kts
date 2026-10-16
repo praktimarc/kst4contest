@@ -72,34 +72,55 @@ subprojects {
      * Tests never see the operator's real home directory. ApplicationFileUtils resolves the
      * application folder below user.home, and the no-argument ChatPreferences constructor
      * seeds preferences.xml there when it is missing; a test that slipped through would
-     * create or rewrite files in ~/.praktiKST of whoever runs the build. The test JVM gets a
-     * scratch home under build/ instead, emptied before each run. Tests that need their own
-     * profile directory still set user.home themselves and restore it afterwards.
+     * create or rewrite files in ~/.praktiKST of whoever runs the build. Each test task's JVM
+     * gets its own scratch home, build/test-user-home/<task name>, emptied before the task
+     * runs, so one test task can never wipe another's. Tests that need their own profile
+     * directory still set user.home themselves and restore it afterwards.
      *
-     * The redirection alone would hide the mistake, so the task also fails if a test left a
-     * preferences.xml in the scratch home: tests are expected to use ChatPreferences(Path)
-     * with a @TempDir. The opt-in ON4KST practice tests, which deliberately read the real
-     * profile, need -Don4kst.live=true, which this task does not forward; they skip here
-     * either way and are meant to be run from an IDE.
+     * The redirection alone would hide the mistake, so every test task is finalized by
+     * checkTestUserHome, which fails the build if a preferences.xml was left in any scratch
+     * home: tests are expected to use ChatPreferences(Path) with a @TempDir. It is a
+     * finalizer and not a doLast because a doLast is skipped when a test fails, and a
+     * failing test must not hide the stray file. The check stays deliberately narrow: other
+     * files land in the scratch .praktiKST by design, for example the sound files
+     * PlayAudioUtils seeds from the bundled resources, and absorbing those is what the
+     * redirection is for. Only preferences.xml marks a test that should have used its own file.
+     *
+     * The opt-in ON4KST practice tests, which deliberately read the real profile, need
+     * -Don4kst.live=true, which the test task does not forward; they skip here either way
+     * and are meant to be run from an IDE.
      */
-    tasks.withType<Test>().configureEach {
-        useJUnitPlatform()
-
-        val testUserHome = layout.buildDirectory.dir("test-user-home").get().asFile
-        systemProperty("user.home", testUserHome.absolutePath)
-        doFirst {
-            testUserHome.deleteRecursively()
-            testUserHome.mkdirs()
-        }
+    val testUserHomeRoot = layout.buildDirectory.dir("test-user-home").get().asFile
+    val checkTestUserHome = tasks.register("checkTestUserHome") {
+        description = "Fails if a test wrote preferences.xml into its scratch user.home"
+        group = "verification"
         doLast {
-            val strayPreferences = testUserHome.resolve(".praktiKST/preferences.xml")
-            if (strayPreferences.exists()) {
+            val strayPreferences = testUserHomeRoot.listFiles().orEmpty()
+                .map { it.resolve(".praktiKST/preferences.xml") }
+                .filter { it.exists() }
+            if (strayPreferences.isNotEmpty()) {
                 throw GradleException(
-                    "A test wrote $strayPreferences: it used the user profile instead of " +
-                        "ChatPreferences(Path) with a @TempDir"
+                    "A test wrote ${strayPreferences.joinToString()}: it used the user " +
+                        "profile instead of ChatPreferences(Path) with a @TempDir"
                 )
             }
         }
+    }
+
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+
+        val testUserHome = testUserHomeRoot.resolve(name)
+        systemProperty("user.home", testUserHome.absolutePath)
+        doFirst {
+            // deleteRecursively() reports failure instead of throwing. A file left over
+            // from an earlier run would later be blamed on this one, so stop here.
+            if (!testUserHome.deleteRecursively()) {
+                throw GradleException("Could not empty the test user.home $testUserHome")
+            }
+            testUserHome.mkdirs()
+        }
+        finalizedBy(checkTestUserHome)
     }
 
     // XML for CI to read, HTML for people. Gradle does not wire the report after the test
