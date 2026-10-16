@@ -50,6 +50,8 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **UCXLog-Pakete werden nicht mehr abgeschnitten:** Nach einem kurzen UDP-Paket las der Empfänger für UCXLog-kompatible Logprogramme jedes längere Folgepaket nur bis zur Länge des kurzen, sodass Logeinträge unvollständig ankommen konnten. Außerdem schließt das Trennen den Socket des Empfängers jetzt sofort, statt bis zum nächsten Timeout zu warten. UCXLog-Pakete und Antworten von AirScout werden jetzt immer als UTF-8 dekodiert statt im Standardzeichensatz des Systems, sodass Umlaute in Stationsnamen und Operator-Rufzeichen unter Windows nicht mehr verstümmelt ankommen. Damit ist [Issue #115](https://github.com/praktimarc/kst4contest/issues/115) behoben.
 
+- **UCXLog/DXLog-Empfänger läuft weiter:** Eine nicht beschreibbare Sicherungsdatei für empfangene QSOs oder ein RadioInfo-Paket ohne Frequenz oder Betriebsart hielt den Empfänger für UCXLog-kompatible Logprogramme bis zum nächsten Neustart an, sodass weder gearbeitete Stationen noch QRG-Änderungen ankamen. Jetzt wird der Sicherungseintrag beziehungsweise das unvollständige Paket übersprungen, und der Empfänger empfängt weiter. Jeder andere unerwartete Fehler beim Verarbeiten eines Pakets verwirft jetzt nur dieses Paket und erscheint als Statusmeldung, statt den Empfänger anzuhalten.
+
 ### Hinweise zur Aktualisierung
 
 - Bestehende Installationen werden **nicht** verändert: `preferences.xml` und `praktiKST.db` bleiben genau dort liegen, wo sie sind, und werden zum Profil **Default**. Es wird keine Datei verschoben oder kopiert.

@@ -44,6 +44,26 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 		this.callBackToController = callback;
 	}
 
+	/**
+	 * Creates a listener on a socket that is already bound. Tests use this to
+	 * listen on an ephemeral loopback port; the application binds the configured
+	 * port itself through the public constructor.
+	 *
+	 * @param boundSocket bound datagram socket this thread takes ownership of
+	 * @param client controller that receives the parsed responses
+	 * @param callback thread-status sink
+	 */
+	ReadUDPbyAirScoutMessageThread(
+			DatagramSocket boundSocket,
+			ChatController client,
+			ThreadStatusCallback callback
+	) {
+		this.socket = boundSocket;
+		this.localPort = boundSocket.getLocalPort();
+		this.client = client;
+		this.callBackToController = callback;
+	}
+
 	@Override
 	public void interrupt() {
 		super.interrupt();
@@ -108,9 +128,11 @@ public class ReadUDPbyAirScoutMessageThread extends Thread {
 		);
 
 		try {
-			socket = new DatagramSocket(null);
-			socket.setReuseAddress(true);
-			socket.bind(new InetSocketAddress(localPort));
+			if (socket == null) {
+				socket = new DatagramSocket(null);
+				socket.setReuseAddress(true);
+				socket.bind(new InetSocketAddress(localPort));
+			}
 			socket.setSoTimeout(3000);
 
 			while (!Thread.currentThread().isInterrupted()) {

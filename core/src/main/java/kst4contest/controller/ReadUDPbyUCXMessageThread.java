@@ -263,7 +263,26 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 			}
 
 			if (!timeOutIndicator) {
-				processUCXUDPMessage(received);
+				/*
+				 * Safety net: one malformed or unexpected packet must not end the
+				 * listener. The packet is dropped and the loop keeps receiving.
+				 */
+				try {
+					processUCXUDPMessage(received);
+				} catch (RuntimeException exception) {
+					System.out.println("[ReadUDPFromUCX, warning]: packet dropped after unexpected error: "
+							+ exception);
+					exception.printStackTrace();
+					ThreadStateMessage droppedPacketMessage = new ThreadStateMessage(this.ThreadNickName, true,
+							"packet dropped after error: " + exception, false);
+					try {
+						callBackToController.onThreadStatus(ThreadNickName, droppedPacketMessage);
+					} catch (RuntimeException callbackException) {
+						// A failing status callback must not end the listener either.
+						System.out.println("[ReadUDPFromUCX, warning]: status callback failed: "
+								+ callbackException);
+					}
+				}
 			} else {
 				//dont process the empty message
 			}
@@ -281,8 +300,6 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 	}
 
 	public String processUCXUDPMessage(String udpPacketToProcess) {
-
-		File logUDPMessageToThisFile;
 
 		String udpMsg = helper_extractXmlPayload(udpPacketToProcess);
 
@@ -463,24 +480,9 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 						}
 						
 
-						logUDPMessageToThisFile = new File(this.client.getChatPreferences()
-								.getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup());
-
-						FileWriter fileWriterPersistUDPToFile = null;
-						BufferedWriter bufwrtrRawMSGOut;
-
-						try {
-							fileWriterPersistUDPToFile = new FileWriter(logUDPMessageToThisFile, true);
-
-						} catch (IOException e1) {
-							e1.printStackTrace();
-						}
-
-						bufwrtrRawMSGOut = new BufferedWriter(fileWriterPersistUDPToFile);
-
-						bufwrtrRawMSGOut.write("\n" + workedCall.toString());
-						bufwrtrRawMSGOut.flush();
-						bufwrtrRawMSGOut.close();
+						appendToUdpBackupFile(this.client.getChatPreferences()
+								.getLogSynch_storeWorkedCallSignsFileNameUDPMessageBackup(),
+								"\n" + workedCall.toString());
 
 					}
 				}
@@ -506,8 +508,15 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 
 						Element element = (Element) node;
 
-						String qrg = element.getElementsByTagName("Freq").item(0).getTextContent();
-						String mode = element.getElementsByTagName("Mode").item(0).getTextContent();
+						Node freqNode = element.getElementsByTagName("Freq").item(0);
+						Node modeNode = element.getElementsByTagName("Mode").item(0);
+						if (freqNode == null || modeNode == null) {
+							System.out.println("[ReadUDPFromUCX, warning]: RadioInfo without Freq or Mode ignored");
+							continue;
+						}
+
+						String qrg = freqNode.getTextContent();
+						String mode = modeNode.getTextContent();
 
 //						System.out.println("QRG Length: " + qrg.length() + " // " + qrg);
 
@@ -593,6 +602,28 @@ public class ReadUDPbyUCXMessageThread extends Thread {
 //		System.out.println("[ReadUDPbyUCXTh: ] worked size = removeThisActions" );
 
 		return "";
+	}
+
+	/**
+	 * Appends one line to the UDP backup file. The backup is a convenience copy:
+	 * the QSO has already been applied and stored when this runs, so a missing,
+	 * empty or unwritable path is logged and the write is skipped.
+	 *
+	 * @param backupFilePath configured backup file path, may be null or blank
+	 * @param text text to append
+	 */
+	private void appendToUdpBackupFile(String backupFilePath, String text) {
+		if (backupFilePath == null || backupFilePath.isBlank()) {
+			System.out.println("[ReadUDPFromUCX, warning]: no UDP backup file configured, backup write skipped");
+			return;
+		}
+
+		try (BufferedWriter backupWriter = new BufferedWriter(new FileWriter(new File(backupFilePath), true))) {
+			backupWriter.write(text);
+		} catch (IOException exception) {
+			System.out.println("[ReadUDPFromUCX, warning]: cannot write UDP backup file \""
+					+ backupFilePath + "\": " + exception.getMessage());
+		}
 	}
 
 	public boolean terminateConnection() throws IOException {
