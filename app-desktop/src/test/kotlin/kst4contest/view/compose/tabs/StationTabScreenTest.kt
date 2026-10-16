@@ -17,6 +17,9 @@ import androidx.compose.runtime.mutableStateOf
 import kst4contest.controller.On4KstConnectionState
 import kst4contest.model.ChatCategory
 import kst4contest.model.ChatPreferences
+import kst4contest.observe.UiDispatcher
+import kst4contest.view.compose.MainWindowSurroundings
+import kst4contest.view.feed.ConnectionStateFeed
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -161,5 +164,35 @@ class StationTabScreenTest {
         runOnIdle { s.link.value = On4KstConnectionState.DISCONNECTED }
         waitForIdle()
         credentials.forEach { fieldBeside(it).assertIsEnabled() }
+    }
+
+    /*
+     * The application hands the tab `surroundings.connectionState`, which ConnectionStateFeed
+     * fills from the controller's callback. The application class itself cannot be built in
+     * a test -- it needs a controller with its database, the windows and the update service --
+     * so this drives the same chain from the feed on: a pushed state reaches the drawn tab
+     * without anything rebuilding it.
+     */
+    @Test
+    fun theLoginFieldsFollowWhatTheConnectionFeedPushes() = runComposeUiTest {
+        val surroundings = MainWindowSurroundings()
+        val immediately = object : UiDispatcher {
+            override fun runOnUi(task: Runnable) = task.run()
+            override fun isUiThread(): Boolean = true
+        }
+        val feed = ConnectionStateFeed(surroundings, immediately)
+        val state = StationTabState(preferences(), { }, { }, { surroundings.connectionState })
+        showTab { StationTab(state) }
+
+        fieldBeside("Callsign").assertIsEnabled()
+
+        runOnIdle { feed.push(On4KstConnectionState.AUTHENTICATING, null) }
+        waitForIdle()
+        fieldBeside("Callsign").assertIsNotEnabled()
+
+        // An absent state reads as DISCONNECTED in the feed, and unlocks the fields.
+        runOnIdle { feed.push(null, null) }
+        waitForIdle()
+        fieldBeside("Callsign").assertIsEnabled()
     }
 }

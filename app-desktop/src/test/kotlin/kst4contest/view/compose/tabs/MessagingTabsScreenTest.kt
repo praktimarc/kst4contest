@@ -1,5 +1,6 @@
 package kst4contest.view.compose.tabs
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertTextEquals
@@ -175,6 +176,53 @@ class MessagingTabsScreenTest {
         assertEquals(0, s.restarts, "opening the tab restarted the beacon timer")
         assertTrue(s.refusals.isEmpty(), "opening the tab reported: ${s.refusals}")
         assertEquals("cq %foo%", s.prefs.bcn_beaconTextMainCat)
+    }
+
+    /*
+     * The tab reads the interval from a plain preference getter, so nothing recomposes it
+     * after Enter commits. Compared with that stale value, leaving the field afterwards
+     * looked like a second edit and restarted the timer again.
+     */
+    @Test
+    fun enterAndThenLeavingTheFieldRestartsTheTimerOnce() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        showTab { BeaconTab(s.state) { s.refusals += it } }
+
+        typeAndCommit("Interval in whole minutes", "9")
+        fieldBeside("Beacon message").performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat)
+        assertEquals(1, s.restarts, "one edit restarted the beacon timer more than once")
+    }
+
+    /*
+     * Pins what happens to a typed but uncommitted entry when the field leaves the screen
+     * while it has the focus -- the settings window switching to another tab, or closing.
+     * Compose clears the focus of a removed focused node and reports that to the field as a
+     * focus loss, so the entry is committed, exactly once. That was so before the field
+     * learned to tell a real focus loss from its first attachment, and must stay so: an
+     * operator who typed a value and switched tabs expects it to count.
+     */
+    @Test
+    fun aFieldRemovedWhileTypingCommitsTheEntryOnce() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        val visible = mutableStateOf(true)
+        showTab { if (visible.value) BeaconTab(s.state) { s.refusals += it } }
+
+        val field = fieldBeside("Interval in whole minutes")
+        field.performScrollTo().performClick()
+        waitForIdle()
+        field.performTextReplacement("9")
+        waitForIdle()
+        runOnIdle { visible.value = false }
+        waitForIdle()
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat, "the typed entry was lost")
+        assertEquals(1, s.restarts)
+        assertTrue(s.refusals.isEmpty(), "a valid entry was refused: ${s.refusals}")
     }
 
     /** Leaving the field commits what was typed, without Enter, and restarts the timer once. */

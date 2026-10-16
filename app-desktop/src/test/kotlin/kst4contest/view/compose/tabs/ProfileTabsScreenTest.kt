@@ -224,6 +224,26 @@ class ProfileTabsScreenTest {
         assertEquals(mapOf(false to "", true to ""), c.stored, "passing through a field wrote an override")
     }
 
+    /*
+     * The field shows the colour in upper case. Typing the same colour in lower case names
+     * no other colour, so it is no edit and must not become an override of itself.
+     */
+    @Test
+    fun theSameColourInOtherCaseIsNoChange() = runComposeUiTest {
+        val c = Colours(directory)
+        show(c)
+        val accent = c.labelOf(PaletteRole.ACCENT, "Accent")
+        val shown = c.state.roles().single { it.role == PaletteRole.ACCENT }.hex
+
+        typeAndCommit(accent, shown.lowercase())
+        fieldBeside(c.labelOf(PaletteRole.TEXT, "Text")).performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(mapOf(false to "", true to ""), c.stored, "an unchanged colour was written as an override")
+        assertEquals(PaletteSource.SHIPPED, c.state.roles().single { it.role == PaletteRole.ACCENT }.source)
+        assertTrue(c.refusals.isEmpty(), "the colour was refused: ${c.refusals}")
+    }
+
     /** Leaving the field still commits what was typed, without Enter. */
     @Test
     fun aTypedColourIsCommittedWhenTheFieldIsLeft() = runComposeUiTest {

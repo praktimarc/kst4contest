@@ -3731,12 +3731,6 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	}
 
 	/**
-	 * Opens the settings window, or does nothing when it is already open.
-	 *
-	 * <p>This window carries the Connect button and is therefore the way into the chat,
-	 * which is why it is opened once at startup as the JavaFX window was.</p>
-	 */
-	/**
 	 * The session state the settings window shows, read from the main window's Compose state
 	 * so the Station tab's login fields follow it while the window is open. Before that state
 	 * exists the controller's value is the best there is.
@@ -3749,6 +3743,12 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 		return current == null ? On4KstConnectionState.DISCONNECTED : current;
 	}
 
+	/**
+	 * Opens the settings window, or does nothing when it is already open.
+	 *
+	 * <p>This window carries the Connect button and is therefore the way into the chat,
+	 * which is why it is opened once at startup as the JavaFX window was.</p>
+	 */
 	private void openSettingsWindow() {
 
 		SettingsWindow.show(
