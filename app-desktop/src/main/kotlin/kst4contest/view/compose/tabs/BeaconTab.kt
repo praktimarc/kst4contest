@@ -31,6 +31,7 @@ fun BeaconTab(state: BeaconTabState, onRefused: (String) -> Unit) {
                 stored = state.beaconTextMainCat,
                 commit = state::commitBeaconTextMainCat,
                 onRefused = onRefused,
+                current = { state.beaconTextMainCat },
             )
         }
 
@@ -43,6 +44,7 @@ fun BeaconTab(state: BeaconTabState, onRefused: (String) -> Unit) {
                 stored = state.beaconTextSecondCat,
                 commit = state::commitBeaconTextSecondCat,
                 onRefused = onRefused,
+                current = { state.beaconTextSecondCat },
             )
         }
 
@@ -52,6 +54,12 @@ fun BeaconTab(state: BeaconTabState, onRefused: (String) -> Unit) {
                 stored = state.beaconIntervalMinutes.toString(),
                 commit = state::commitBeaconInterval,
                 onRefused = onRefused,
+                /*
+                 * Compared as the number commitBeaconInterval stores, so " 9" or "09" after
+                 * Enter does not count as a second edit and restart the timer again.
+                 */
+                isUnchanged = { typed, now -> typed.trim().toIntOrNull()?.toString() == now },
+                current = { state.beaconIntervalMinutes.toString() },
             )
         }
     }

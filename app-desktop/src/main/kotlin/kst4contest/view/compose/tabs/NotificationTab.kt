@@ -77,12 +77,18 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
                 stored = state.notify_dxclusterServerPort.toString(),
                 commit = state::commitDxClusterServerPort,
                 onRefused = onRefused,
+                // Compared as the number commitDxClusterServerPort stores.
+                isUnchanged = { typed, now -> typed.trim().toIntOrNull()?.toString() == now },
+                current = { state.notify_dxclusterServerPort.toString() },
             )
             Form.committed(
                 label = strings.notificationSpotterCallsign,
                 stored = state.notify_DXCSrv_SpottersCallSign,
                 commit = state::commitSpotterCallSign,
                 onRefused = onRefused,
+                // commitSpotterCallSign stores the callsign trimmed and in upper case.
+                isUnchanged = { typed, now -> typed.trim().equals(now, ignoreCase = true) },
+                current = { state.notify_DXCSrv_SpottersCallSign },
             )
             /*
              * Shows the band prefix, as the JavaFX ComboBox did: the prefix is what the

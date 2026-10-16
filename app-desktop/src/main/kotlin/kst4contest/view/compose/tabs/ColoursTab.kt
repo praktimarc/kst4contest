@@ -124,7 +124,8 @@ fun ColoursTab(
                      * case ignored -- so retyping the shown colour in lower case is no edit
                      * and does not turn it into an override of itself.
                      */
-                    isUnchanged = { draft, committed -> draft.trim().equals(committed.trim(), ignoreCase = true) },
+                    isUnchanged = { typed, now -> typed.trim().equals(now.trim(), ignoreCase = true) },
+                    current = { state.roles().single { it.role == row.role }.hex },
                 )
             }
         }

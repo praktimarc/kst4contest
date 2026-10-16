@@ -117,12 +117,19 @@ object Form {
      * closed -- commits a typed entry once: Compose reports the cleared focus to the
      * field as a focus loss.
      *
-     * @param stored the value currently stored; the draft falls back to the value last
-     *        committed when an entry is refused, which is what those fields did with setText
+     * @param stored the value stored when the caller composed; the draft starts from it
      * @param commit returns null when the value was accepted, otherwise the reason
      * @param onRefused shown to the operator; the JavaFX fields opened an alert
-     * @param isUnchanged whether the draft names the value last committed; textual by
-     *        default, looser where two spellings mean one value, as with colours
+     * @param isUnchanged whether the draft names the stored value. Textual by default,
+     *        looser where two spellings mean one value, as with colours. It must agree
+     *        with what [commit] stores: a draft that commit would store as `c` has to count
+     *        as unchanged against `c`, or leaving the field after Enter commits it again.
+     * @param current the value stored right now, read when the field commits. The draft
+     *        is judged against it, and falls back to it on a refusal (what the JavaFX
+     *        fields did with setText). Callers whose [stored] comes from a plain getter
+     *        pass that getter: nothing recomposes them after a commit, so [stored] alone
+     *        goes stale -- after Enter it still names the old value, and once the
+     *        preference is reset behind the field it names the new one by coincidence only.
      */
     @Composable
     fun committed(
@@ -130,19 +137,10 @@ object Form {
         stored: String,
         commit: (String) -> String?,
         onRefused: (String) -> Unit,
-        isUnchanged: (draft: String, committed: String) -> Boolean = { draft, committed -> draft == committed },
+        isUnchanged: (draft: String, stored: String) -> Boolean = { typed, now -> typed == now },
+        current: () -> String = { stored },
     ) {
         var draft by remember(stored) { mutableStateOf(stored) }
-
-        /*
-         * The value this field last committed, or [stored] until it commits. Compared with
-         * this rather than with [stored], because most callers read [stored] from plain
-         * preference getters: nothing recomposes the caller after a commit, so [stored] would
-         * still name the old value and leaving the field after Enter would commit again --
-         * restarting the beacon timer a second time for one edit. Reset whenever the caller
-         * does recompose with a new [stored]. A plain holder: nothing is drawn from it.
-         */
-        val lastCommitted = remember(stored) { arrayOf(stored) }
 
         /*
          * Whether the field has held the focus since it was last committed. onFocusChanged
@@ -159,14 +157,12 @@ object Form {
              * into an override of itself, restart the beacon timer, or report a stored value
              * the rule refuses although the operator only passed through the field.
              */
-            if (isUnchanged(draft, lastCommitted[0])) return
+            if (isUnchanged(draft, current())) return
 
             val refusal = commit(draft)
             if (refusal != null) {
                 onRefused(refusal)
-                draft = lastCommitted[0]
-            } else {
-                lastCommitted[0] = draft
+                draft = current()
             }
         }
 

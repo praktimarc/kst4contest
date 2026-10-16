@@ -225,6 +225,41 @@ class MessagingTabsScreenTest {
         assertTrue(s.refusals.isEmpty(), "a valid entry was refused: ${s.refusals}")
     }
 
+    /*
+     * The stored value can change under a field without the field's own key changing: the
+     * field commits 9 over 5, nothing recomposes the tab, then a profile switch puts 5 back
+     * and the tab recomposes with 5 -- the same `stored` it was first drawn with. The field
+     * still shows 9, so leaving it must commit 9 again; judged against what the field itself
+     * last committed, it looked unchanged and the shown value silently differed from the
+     * stored one.
+     */
+    @Test
+    fun aValueResetBehindTheFieldIsCommittedAgainWhenTheFieldIsLeft() = runComposeUiTest {
+        val s = Beacon(preferences())
+        s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        val generation = mutableStateOf(0)
+        val reportA: (String) -> Unit = { s.refusals += it }
+        val reportB: (String) -> Unit = { s.refusals += it }
+        // A different callback per generation, so bumping it recomposes BeaconTab itself.
+        showTab { BeaconTab(s.state, if (generation.value % 2 == 0) reportA else reportB) }
+
+        typeAndCommit("Interval in whole minutes", "9")
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat)
+
+        runOnIdle {
+            s.prefs.bcn_beaconIntervalInMinutesMainCat = 5
+            generation.value++
+        }
+        waitForIdle()
+        fieldBeside("Interval in whole minutes").assertTextEquals("9")
+
+        fieldBeside("Beacon message").performScrollTo().performClick()
+        waitForIdle()
+
+        assertEquals(9, s.prefs.bcn_beaconIntervalInMinutesMainCat, "the shown 9 was not committed again")
+        assertEquals(2, s.restarts)
+    }
+
     /** Leaving the field commits what was typed, without Enter, and restarts the timer once. */
     @Test
     fun aTypedIntervalIsCommittedWhenTheFieldIsLeft() = runComposeUiTest {
