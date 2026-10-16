@@ -145,7 +145,7 @@ class StationTabScreenTest {
     }
 
     @Test
-    fun aBandCheckboxWritesThrough() = runComposeUiTest {
+    fun aBandCheckboxIsStagedAndApplied() = runComposeUiTest {
         val s = Session(preferences())
         showTab { StationTab(s.state) }
 

@@ -80,7 +80,7 @@ class BeaconTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `the enable flags write through on apply`() {
+    fun `the enable flags reach the preferences`() {
         val s = Session()
         val state = s.state()
 

@@ -90,7 +90,7 @@ class MessageHandlingTabStateTest(@TempDir private val tempDir: Path) {
     }
 
     @Test
-    fun `the QRG reply flag writes through on its own`() {
+    fun `the QRG reply flag is stored on its own`() {
         val prefs = ChatPreferences(tempDir.resolve("preferences.xml"))
         val state = MessageHandlingTabState(prefs, ImmediateDraft())
 

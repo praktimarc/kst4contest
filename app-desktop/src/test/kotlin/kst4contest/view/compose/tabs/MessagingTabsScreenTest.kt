@@ -316,7 +316,7 @@ class MessagingTabsScreenTest {
     }
 
     @Test
-    fun notificationWritesThroughAndStartsTheClusterServer() = runComposeUiTest {
+    fun notificationStoresItsFieldsAndStartsTheClusterServer() = runComposeUiTest {
         val s = Notification(preferences())
         showTab { NotificationTab(s.state) { s.refusals += it } }
 
