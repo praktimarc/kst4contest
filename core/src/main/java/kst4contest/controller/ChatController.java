@@ -316,6 +316,44 @@ public class ChatController implements ThreadStatusCallback {
 			rotatorCommandScheduler,
 			azimuth -> runOnUi(() -> chatPreferences.getActualQTF().set(azimuth)));
 
+	/** Rotator of radio 2; only with SO2R and its own switch. */
+	private final RotatorControl rotator2 = new RotatorControl(
+			"PSTRotator2",
+			control -> startPstRotatorClient(control, chatPreferences.getStn_pstRotator2Host(),
+					chatPreferences.getStn_pstRotator2Port(), "PSTRotator2"),
+			rotatorCommandScheduler,
+			azimuth -> runOnUi(() -> chatPreferences.getActualQTF2().set(azimuth)));
+
+	/** Test seam: the rotator of radio 2. */
+	RotatorControl secondRotator() {
+		return rotator2;
+	}
+
+	static boolean secondRotatorWanted(ChatPreferences prefs) {
+		return prefs.isTrxSynch_so2rEnabled() && prefs.isStn_pstRotator2Enabled();
+	}
+
+	/** Turns the antenna of [slot]; radio 2 only does something while its rotator runs. */
+	public void rotateTo(RadioSlot slot, double azimuth) {
+		(slot == RadioSlot.SECOND ? rotator2 : rotator1).rotateTo(azimuth);
+	}
+
+	/**
+	 * Follows the settings for rotator 2 after Apply: always stopped first, so a changed
+	 * host or port is bound anew, and started again only while a session runs. Without it,
+	 * QTF2 shows nothing rather than a stale heading.
+	 */
+	public void reconfigureSecondRotator() {
+		rotator2.stop();
+		if (secondRotatorWanted(chatPreferences)) {
+			if (!isDisconnected()) {
+				rotator2.start();
+			}
+		} else {
+			runOnUi(() -> chatPreferences.getActualQTF2().set(Double.NaN));
+		}
+	}
+
 	/**
 	 * Opens one PSTRotator connection whose position reports go to [control]. The
 	 * returned link is what RotatorControl drives; stopping it also stops the polling.
@@ -802,6 +840,8 @@ public class ChatController implements ThreadStatusCallback {
 
             rotator1.stopRotation();
             rotator1.stop();
+            rotator2.stopRotation();
+            rotator2.stop();
 
 			try {
 
@@ -910,6 +950,8 @@ public class ChatController implements ThreadStatusCallback {
 			}
 			rotator1.stopRotation();
 			rotator1.stop();
+			rotator2.stopRotation();
+			rotator2.stop();
 
 			releaseBackgroundExecutors();
 		}
@@ -3433,6 +3475,9 @@ private SimpleRoster<String>
 			} else {
 				System.out.println("[ChatController, info]: PSTRotator disabled by user preference -> not starting rotator client.");
 			}
+			if (secondRotatorWanted(chatPreferences) && !rotator2.isRunning()) {
+				rotator2.start();
+			}
 
 			/**
 			 * DX cluster service running config
@@ -3614,6 +3659,9 @@ private SimpleRoster<String>
 
 		if (chatPreferences.isStn_pstRotatorEnabled() && !rotator1.isRunning()) {
 			initRotor();
+		}
+		if (secondRotatorWanted(chatPreferences) && !rotator2.isRunning()) {
+			rotator2.start();
 		}
 		startDxClusterServerIfEnabled();
 		on4KstConnectionManager.start();
