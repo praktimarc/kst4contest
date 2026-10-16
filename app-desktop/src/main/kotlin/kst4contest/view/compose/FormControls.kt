@@ -126,10 +126,10 @@ object Form {
      *        as unchanged against `c`, or leaving the field after Enter commits it again.
      * @param current the value stored right now, read when the field commits. The draft
      *        is judged against it, and falls back to it on a refusal (what the JavaFX
-     *        fields did with setText). Callers whose [stored] comes from a plain getter
-     *        pass that getter: nothing recomposes them after a commit, so [stored] alone
-     *        goes stale -- after Enter it still names the old value, and once the
-     *        preference is reset behind the field it names the new one by coincidence only.
+     *        fields did with setText). Required, because [stored] alone goes stale when it
+     *        comes from a plain getter: nothing recomposes the caller after a commit, so
+     *        after Enter it still names the old value, and once the preference is reset
+     *        behind the field it names the new one by coincidence only.
      */
     @Composable
     fun committed(
@@ -138,7 +138,7 @@ object Form {
         commit: (String) -> String?,
         onRefused: (String) -> Unit,
         isUnchanged: (draft: String, stored: String) -> Boolean = { typed, now -> typed == now },
-        current: () -> String = { stored },
+        current: () -> String,
     ) {
         var draft by remember(stored) { mutableStateOf(stored) }
 

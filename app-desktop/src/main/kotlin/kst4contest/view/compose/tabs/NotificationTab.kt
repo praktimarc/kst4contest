@@ -87,7 +87,7 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
                 commit = state::commitSpotterCallSign,
                 onRefused = onRefused,
                 // commitSpotterCallSign stores the callsign trimmed and in upper case.
-                isUnchanged = { typed, now -> typed.trim().equals(now, ignoreCase = true) },
+                isUnchanged = { typed, now -> typed.trim().uppercase(java.util.Locale.ROOT) == now },
                 current = { state.notify_DXCSrv_SpottersCallSign },
             )
             /*
