@@ -184,6 +184,10 @@ fun SelectedStationPanel(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
                 Form.button(strings.selectedShowPathInAs, onClick = onShowPathInAirScout)
                 Form.button("🗺 Show on map", onClick = onShowOnMap)
+                Form.button(
+                    strings.selectedTurnAntenna(state.selected?.callSignRaw.orEmpty()),
+                    enabled = state.canTurnAntenna,
+                ) { state.turnAntenna() }
                 Form.button(strings.selectedLookupQrz, enabled = state.canLookUp) {
                     openInBrowser.accept(state.qrzComUrl())
                 }

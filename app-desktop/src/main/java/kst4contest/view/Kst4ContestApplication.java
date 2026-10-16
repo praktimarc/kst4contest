@@ -3135,6 +3135,10 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 					if (member == null) return null;
 					java.util.EnumSet<Band> enabledBands = kst4contest.logic.BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences());
 					return resolveDefaultSkedBand(member, enabledBands);
+				},
+				azimuth -> {
+					chatcontroller.rotateTo(azimuth);
+					return kotlin.Unit.INSTANCE;
 				});
 
 		if (chatcontroller.getChatPreferences().isGuiOptions_defaultFilterPmToMe()) {

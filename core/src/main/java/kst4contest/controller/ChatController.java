@@ -331,6 +331,13 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 	 *
 	 * @param azimuth required antenna azimuth in degrees
 	 */
+	/**
+	 * How close the reported position must be to count as "reached". The target carries a
+	 * decimal, while many rotor controllers report whole degrees: with 0.5 a target of 145.7
+	 * and a report of 145 would count as missed and could trigger the retry.
+	 */
+	static final double ROTATOR_REACHED_TOLERANCE_DEGREES = 1.0;
+
 	public void rotateTo(double azimuth) {
 		if (!Double.isFinite(azimuth)) {
 			LOGGER.log(
@@ -399,7 +406,7 @@ public class ChatController implements ThreadStatusCallback, PstRotatorEventList
 		double currentAzimuth = lastReportedRotatorAzimuth;
 
 		if (Double.isFinite(currentAzimuth)
-				&& angularDistance(currentAzimuth, targetAzimuth) < 0.5) {
+				&& angularDistance(currentAzimuth, targetAzimuth) < ROTATOR_REACHED_TOLERANCE_DEGREES) {
 
 			LOGGER.log(
 					Level.FINE,

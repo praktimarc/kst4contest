@@ -198,15 +198,19 @@ public class PstRotatorClient implements Runnable {
 
     /**
      * Formats an azimuth with one decimal and a dot as separator, independent of the
-     * default locale; a value that rounds up to 360.0 is sent as 0.0. The azimuth used to
-     * be truncated to whole degrees, so 145.7 turned the antenna to 145.
+     * default locale, wrapped into [0, 360): 360.0 is sent as 0.0, -10 as 350.0. The
+     * azimuth used to be truncated to whole degrees, so 145.7 turned the antenna to 145.
+     *
+     * @throws IllegalArgumentException for NaN or an infinite value, which has no heading
      */
     static String formatAzimuth(double degrees) {
-        double rounded = Math.round(degrees * 10.0) / 10.0;
-        if (rounded >= 360.0) {
-            rounded -= 360.0;
+        if (!Double.isFinite(degrees)) {
+            throw new IllegalArgumentException("Azimuth is not a finite number: " + degrees);
         }
-        return String.format(Locale.ROOT, "%.1f", rounded);
+        double rounded = Math.round(degrees * 10.0) / 10.0;
+        double wrapped = ((rounded % 360.0) + 360.0) % 360.0;
+        // Rounding can leave a tiny negative remainder that would print as -0.0.
+        return String.format(Locale.ROOT, "%.1f", wrapped == 0.0 ? 0.0 : wrapped);
     }
 
     public void setElevation(double degrees) {

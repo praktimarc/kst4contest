@@ -1,12 +1,13 @@
 package kst4contest.controller;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
 
-/** The azimuth sent to PSTRotator: one decimal, dot separator, never 360. */
+/** The azimuth sent to PSTRotator: one decimal, dot separator, within [0, 360). */
 class PstRotatorClientAzimuthFormatTest {
 
 	@Test
@@ -27,6 +28,21 @@ class PstRotatorClientAzimuthFormatTest {
 	void aValueRoundingUpTo360IsSentAsZero() {
 		assertEquals("0.0", PstRotatorClient.formatAzimuth(359.96));
 		assertEquals("359.9", PstRotatorClient.formatAzimuth(359.94));
+	}
+
+	@Test
+	void wrapsAnyFiniteValueIntoOneTurn() {
+		assertEquals("0.0", PstRotatorClient.formatAzimuth(720.0));
+		assertEquals("10.0", PstRotatorClient.formatAzimuth(370.0));
+		assertEquals("350.0", PstRotatorClient.formatAzimuth(-10.0));
+		assertEquals("0.0", PstRotatorClient.formatAzimuth(-0.0));
+	}
+
+	@Test
+	void refusesAValueWithoutAHeading() {
+		assertThrows(IllegalArgumentException.class, () -> PstRotatorClient.formatAzimuth(Double.NaN));
+		assertThrows(IllegalArgumentException.class,
+				() -> PstRotatorClient.formatAzimuth(Double.POSITIVE_INFINITY));
 	}
 
 	@Test
