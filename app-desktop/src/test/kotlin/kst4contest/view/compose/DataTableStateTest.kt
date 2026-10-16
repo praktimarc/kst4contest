@@ -322,6 +322,26 @@ class DataTableStateTest {
 
         assertSame(kept, table.selectedRow)
     }
+
+    /**
+     * The filter reads fields of the row objects, which change in place: a station's QRB,
+     * its worked flags, its last activity. forceRedraw is how the application says so, and
+     * the cached visible rows must be filtered again after it (#21).
+     */
+    @Test
+    fun `a redraw filters rows again whose fields changed in place`() {
+        val table = stationTable()
+        val moving = Station("DN9APW", 100)
+        table.replaceRows(listOf(moving, Station("DO5AMF", 400)))
+        table.rowFilter = { it.qrb > 300 }
+        assertEquals(listOf("DO5AMF"), table.visibleRows.map { it.callSign })
+
+        moving.qrb = 500
+        table.forceRedraw()
+
+        assertEquals(listOf("DN9APW", "DO5AMF"), table.visibleRows.map { it.callSign }.sorted(),
+            "the cached rows from before the change were handed back")
+    }
 }
 
 /**

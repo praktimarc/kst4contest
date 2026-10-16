@@ -4,7 +4,9 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.isToggleable
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -412,5 +414,60 @@ class StationMapWindowScreenTest {
         onNodeWithTag(StationMapWindow.MAP_CANVAS_TAG).performClick()
         waitForIdle()
         assertEquals(emptyList<ChatMember?>(), selectorCalls, "the hidden station still had a marker")
+    }
+
+    /** A station whose QRB changed in place leaves the map after the redraw, as it leaves the list. */
+    @Test
+    fun aRedrawAfterAFieldChangedFiltersTheMapAgain() = runComposeUiTest {
+        val state = windowState(prefs())
+        val moving = station("DL1MOVE", 2, locator = "JO50JP").apply { qrb = 500.0 }
+        val stay = station("DL2STAY", 2, locator = "JO62QM").apply { qrb = 800.0 }
+        state.stationFilter.minQrbKm = 300.0
+        state.stationFilter.minQrbEnabled = true
+        state.stations.rowFilter = { state.stationFilter.acceptsQrb(it.qrb) }
+
+        show(state, listOf(moving, stay), mapLookingAt("JO50JP", zoom = 12f))
+        onNodeWithText("Showing 2 visible stations | filtered view active").assertExists()
+
+        runOnIdle {
+            moving.qrb = 100.0
+            state.stations.forceRedraw()
+        }
+        waitForIdle()
+
+        onNodeWithText("Showing 1 visible stations | filtered view active").assertExists()
+    }
+
+    /**
+     * A selected station the filters hide has no marker, and so nothing to analyse: no
+     * request goes out and the analysis does not sit at "Loading" with an empty target (#21).
+     * The visible station beside it is the control: selecting it does ask and does load.
+     */
+    @Test
+    fun aSelectedStationTheFiltersHideGetsNoPathAnalysis() = runComposeUiTest {
+        val state = windowState(prefs(pathAnalysisVisible = true))
+        val hidden = station("DL1HIDE", 2, locator = "JO50JP").apply { qrb = 100.0 }
+        val shown = station("DL2SHOW", 2, locator = "JO62QM").apply { qrb = 800.0 }
+        state.stationFilter.minQrbKm = 300.0
+        state.stationFilter.minQrbEnabled = true
+        state.stations.rowFilter = { state.stationFilter.acceptsQrb(it.qrb) }
+        val analysis = RecordingPathAnalysis()
+        val mapState = mapLookingAt(ownLocator, zoom = 9f)
+        val home = Location(ownLocator)
+
+        show(state, listOf(hidden, shown), mapState, analysis)
+
+        runOnIdle { state.selectedStation.select(hidden) }
+        waitForIdle()
+
+        assertEquals(emptyList<ChatMember>(), analysis.requested, "a hidden station was analysed")
+        onAllNodesWithText("Loading", substring = true).assertCountEquals(0)
+        assertEquals(home.longitude.toDegrees(), mapState.centerLon, 1e-9, "the map panned to a hidden station")
+
+        runOnIdle { state.selectedStation.select(shown) }
+        waitForIdle()
+
+        assertEquals(listOf(shown), analysis.requested)
+        assertEquals(true, onAllNodesWithText("Loading", substring = true).fetchSemanticsNodes().isNotEmpty())
     }
 }
