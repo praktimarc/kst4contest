@@ -1,6 +1,7 @@
 package kst4contest.view.compose
 
 import kst4contest.controller.On4KstConnectionState
+import kst4contest.model.ChatCategory
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -123,36 +124,79 @@ class MainWindowFrameTest {
      * The title carries the whole connection line while the chat is usable.
      *
      * The JavaFX window did that -- "Connected to: 2: 144/432 MHz as DN5PW (Testing) in
-     * JO50JP (73 users online, 73 shown), 29 messages total." -- and the Compose window
-     * opened with a fixed "KST4Contest (Compose)" instead, which told a tiling window
-     * manager nothing and told the operator less.
+     * JO50JP (73 users online, 73 shown), 29 messages total." The first Compose title took
+     * the connection manager's diagnostic instead and read "ON4KST session is authenticated
+     * and synchronized" for the whole contest.
      */
     @Test
     fun `the title carries the live connection line once the chat is usable`() {
-        val detail = "Connected to: 2: 144/432 MHz  as DN5PW (Testing) in JO50JP " +
-            "(73 users online, 73 shown), 29 messages total."
+        val line = MainWindowFrame.onlineChatState(
+            mainCategory = ChatCategory(ChatCategory.VUHF),
+            secondCategory = null,
+            callSign = "DN5PW",
+            name = "Testing",
+            locator = "JO50JP",
+            usersOnline = 73,
+            shown = 70,
+            messagesTotal = 29,
+        )
 
-        assertEquals(detail, MainWindowFrame.chatState(On4KstConnectionState.ONLINE, detail))
+        assertEquals(
+            "Connected to: 2: 144/432 MHz as DN5PW (Testing) in JO50JP " +
+                "(73 users online, 70 shown), 29 messages total.",
+            line,
+        )
+        assertEquals(line, MainWindowFrame.chatState(On4KstConnectionState.ONLINE) { line })
+    }
+
+    @Test
+    fun `both categories are named when the second chat is logged in`() {
+        val line = MainWindowFrame.onlineChatState(
+            mainCategory = ChatCategory(ChatCategory.VUHF),
+            secondCategory = ChatCategory(ChatCategory.MICROWAVE),
+            callSign = "DN5PW",
+            name = "",
+            locator = "JO50JP",
+            usersOnline = 1,
+            shown = 1,
+            messagesTotal = 1,
+        )
+
+        assertEquals(
+            "Connected to: 2: 144/432 MHz and 3: Microwave as DN5PW () in JO50JP " +
+                "(1 users online, 1 shown), 1 messages total.",
+            line,
+        )
+    }
+
+    @Test
+    fun `without a main category the title does not name an empty one`() {
+        assertEquals(
+            MainWindowFrame.offlineChatState(On4KstConnectionState.ONLINE),
+            MainWindowFrame.onlineChatState(null, null, "DN5PW", "x", "JO50JP", 1, 1, 1),
+        )
+    }
+
+    @Test
+    fun `large counts are not grouped by locale`() {
+        val line = MainWindowFrame.onlineChatState(ChatCategory(ChatCategory.VUHF), null, "DN5PW", "x", "JO50JP", 1234, 1200, 23456)
+
+        assertTrue(line.contains("(1234 users online, 1200 shown), 23456 messages total."), line)
     }
 
     @Test
     fun `an unusable chat says what it is doing instead`() {
         assertEquals(
             MainWindowFrame.offlineChatState(On4KstConnectionState.CONNECTING),
-            MainWindowFrame.chatState(On4KstConnectionState.CONNECTING, "ignored while connecting"),
+            MainWindowFrame.chatState(On4KstConnectionState.CONNECTING) { error("not online") },
         )
     }
 
     @Test
-    fun `a blank detail falls through rather than leaving the title empty`() {
-        // The feed substitutes the state name for a blank detail, but it may not have run yet.
-        assertEquals(
-            MainWindowFrame.offlineChatState(On4KstConnectionState.ONLINE),
-            MainWindowFrame.chatState(On4KstConnectionState.ONLINE, "   "),
-        )
+    fun `no state at all reads as disconnected without building the online line`() {
         assertEquals(
             MainWindowFrame.offlineChatState(null),
-            MainWindowFrame.chatState(null, null),
+            MainWindowFrame.chatState(null) { error("not online") },
         )
     }
 }
