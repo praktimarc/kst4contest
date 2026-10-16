@@ -341,7 +341,7 @@ private fun ProfileDialogs(
                         )
                     }
                 },
-                confirmButton = { TextButton(onClick = { onWorkedData(shared) }) { Text("Apply") } },
+                confirmButton = { TextButton(onClick = { onWorkedData(shared) }) { Text(strings.dialogApply) } },
                 dismissButton = { TextButton(onClick = onDismiss) { Text(strings.dialogCancel) } },
             )
         }

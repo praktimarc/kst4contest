@@ -16,13 +16,13 @@ object SelectedStationMessageColumns {
         ),
         DataColumn(
             id = "call-tx",
-            title = "Sender",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnSender },
             value = { MonitorColumns.callSignOf(it.sender) },
             weight = 0.8f,
         ),
         DataColumn(
             id = "call-rx",
-            title = "Receiver",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnReceiver },
             value = { MonitorColumns.callSignOf(it.receiver) },
             weight = 0.8f,
         ),

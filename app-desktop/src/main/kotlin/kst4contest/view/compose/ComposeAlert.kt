@@ -274,7 +274,7 @@ object ComposeAlert {
                     AlertContent(
                         header = header,
                         body = body,
-                        buttons = alertButtons("OK", null, ConfirmKind.OK_DONE, BUTTON_ORDER_LINUX),
+                        buttons = alertButtons(CurrentStrings.get().alertOk, null, ConfirmKind.OK_DONE, BUTTON_ORDER_LINUX),
                         onPressed = { dialog.dispose() },
                         link = linkText to linkTarget,
                     )

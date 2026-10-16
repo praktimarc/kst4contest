@@ -127,7 +127,7 @@ fun SelectedStationPanel(
                     }
                 }
 
-                Form.check("all", activeNotQrvBands.all { state.isTaggedNotQrv(it) }) {
+                Form.check(strings.selectedNotQrvAll, activeNotQrvBands.all { state.isTaggedNotQrv(it) }) {
                     state.tagNotQrvAll(it)
                 }
             }
@@ -183,7 +183,7 @@ fun SelectedStationPanel(
         Form.section(strings.selectedLookUpAndShow) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Density.BUTTON_GAP)) {
                 Form.button(strings.selectedShowPathInAs, onClick = onShowPathInAirScout)
-                Form.button("🗺 Show on map", onClick = onShowOnMap)
+                Form.button(strings.selectedShowOnMap, onClick = onShowOnMap)
                 Form.button(
                     strings.selectedTurnAntenna(state.selected?.callSignRaw.orEmpty()),
                     enabled = state.canTurnAntenna,

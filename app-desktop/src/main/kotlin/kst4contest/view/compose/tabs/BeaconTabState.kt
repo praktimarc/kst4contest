@@ -2,6 +2,7 @@ package kst4contest.view.compose.tabs
 
 import kst4contest.controller.ChatController
 import kst4contest.model.ChatPreferences
+import kst4contest.view.i18n.CurrentStrings
 
 /**
  * State of the beacon tab: the two CQ templates and the one interval they share.
@@ -69,7 +70,7 @@ class BeaconTabState(
              * so a refused template that replaced a working one would silently stop
              * the beacon instead of reporting anything.
              */
-            return "The beacon message is invalid: " + refusal.message
+            return CurrentStrings.get().beaconInvalidMessage(refusal.message.orEmpty())
         }
 
         store(template)
@@ -85,8 +86,7 @@ class BeaconTabState(
         val minutes = entered.trim().toIntOrNull()
 
         if (minutes == null || minutes < ChatController.MIN_BEACON_INTERVAL_MINUTES) {
-            return "Enter a whole beacon interval of at least " +
-                ChatController.MIN_BEACON_INTERVAL_MINUTES + " minute."
+            return CurrentStrings.get().beaconIntervalTooShort(ChatController.MIN_BEACON_INTERVAL_MINUTES.toString())
         }
 
         prefs.setBcn_beaconIntervalInMinutesMainCat(minutes)

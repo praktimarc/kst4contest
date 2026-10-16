@@ -223,7 +223,7 @@ object Form {
                         .heightIn(min = Density.FIELD_MIN_HEIGHT),
                 ) {
                     Text(
-                        draft.value?.let(describe) ?: "not selected",
+                        draft.value?.let(describe) ?: kst4contest.view.i18n.LocalStrings.current.formNotSelected,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -267,7 +267,7 @@ object Form {
                     modifier = Modifier.heightIn(min = Density.FIELD_MIN_HEIGHT),
                 ) {
                     Text(
-                        draft.value?.let(describe) ?: "not selected",
+                        draft.value?.let(describe) ?: kst4contest.view.i18n.LocalStrings.current.formNotSelected,
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

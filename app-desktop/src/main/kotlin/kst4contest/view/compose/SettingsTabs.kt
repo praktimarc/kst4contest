@@ -264,18 +264,18 @@ fun buildSettingsTabs(
  */
 private fun deliverTestSpot(controller: ChatController, spot: ChatMember): String? {
     if (!controller.isConnectedAndLoggedIn || !controller.chatPreferences.isNotify_dxClusterServerEnabled()) {
-        return "Connect KST4Contest and enable the local DX Cluster server first."
+        return kst4contest.view.i18n.CurrentStrings.get().settingsSpotNeedsConnection
     }
 
     val server = controller.dxClusterServer
-        ?: return "Connect KST4Contest and enable the local DX Cluster server first."
+        ?: return kst4contest.view.i18n.CurrentStrings.get().settingsSpotNeedsConnection
 
     if (!server.hasConnectedClients()) {
-        return "No DX Cluster client is connected to KST4Contest."
+        return kst4contest.view.i18n.CurrentStrings.get().settingsSpotNoClient
     }
 
     if (!server.broadcastSingleDXClusterEntryToLoggers(spot)) {
-        return "The test spot could not be delivered."
+        return kst4contest.view.i18n.CurrentStrings.get().settingsSpotNotDelivered
     }
 
     return null
@@ -318,14 +318,9 @@ fun settingsButtons(
             onSave = {
                 val target = host.savePreferencesFromSettings()
                 if (target == null) {
-                    notices.problem(
-                        "The configuration file could not be written. The settings stay " +
-                            "active for this session."
-                    )
+                    notices.problem(kst4contest.view.i18n.CurrentStrings.get().settingsWriteFailed)
                 } else {
-                    notices.info(
-                        "Settings are stored as default to the xml config file:\n" + target
-                    )
+                    notices.info(kst4contest.view.i18n.CurrentStrings.get().settingsWrittenTo(target))
                 }
             },
             onApplyAndClose = close,

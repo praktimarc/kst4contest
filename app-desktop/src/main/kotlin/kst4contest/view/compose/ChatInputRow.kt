@@ -181,7 +181,7 @@ fun ChatInputRow(
         )
 
         Form.button(text = "TX", onClick = { state.send() })
-        Form.button(text = "clear", onClick = { state.clear() })
+        Form.button(text = kst4contest.view.i18n.LocalStrings.current.chatClear, onClick = { state.clear() })
 
         VerticalRule()
 

@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import kst4contest.controller.OperatorProfileManagementService
 import kst4contest.model.OperatorProfile
 import kst4contest.model.OperatorProfileSelection
+import kst4contest.view.i18n.CurrentStrings
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -57,7 +58,7 @@ class ProfilesTabState(
     }
 
     val activeProfileName: String
-        get() = activeSelection()?.profile?.displayName ?: "unknown"
+        get() = activeSelection()?.profile?.displayName ?: CurrentStrings.get().profilesUnknown
 
     val preferencesPath: String
         get() = activeSelection()?.preferencesAbsolutePath ?: ""
@@ -90,9 +91,7 @@ class ProfilesTabState(
         }
 
         val created = service.createProfile(name.trim(), sharedWorkedDatabase)
-            ?: return ProfileNotice.Error(
-                "The profile could not be created. The profile registry could not be written."
-            )
+            ?: return ProfileNotice.Error(CurrentStrings.get().profilesCreateFailed)
 
         refresh()
         selected = created
@@ -101,10 +100,7 @@ class ProfilesTabState(
          * Said explicitly because a new profile that cannot log in looks broken
          * otherwise: callsign and password are deliberately not copied or invented.
          */
-        return ProfileNotice.Info(
-            "The profile \"" + created.displayName + "\" was created without callsign and " +
-                "password. Enter them on the Station tab after switching to it."
-        )
+        return ProfileNotice.Info(CurrentStrings.get().profilesCreatedWithoutCredentials(created.displayName))
     }
 
     fun duplicateSelected(name: String): ProfileNotice? {
@@ -115,7 +111,7 @@ class ProfilesTabState(
         }
 
         val duplicate = service.duplicateProfile(profile, name)
-            ?: return ProfileNotice.Error("The profile could not be duplicated.")
+            ?: return ProfileNotice.Error(CurrentStrings.get().profilesDuplicateFailed)
 
         refresh()
         selected = duplicate
@@ -124,7 +120,7 @@ class ProfilesTabState(
 
     /** The suggested name of a duplicate, the one the JavaFX dialog pre-filled. */
     fun duplicateNameSuggestion(): String =
-        selected?.let { "Copy of " + it.displayName } ?: ""
+        selected?.let { CurrentStrings.get().profilesCopyOf(it.displayName) } ?: ""
 
     fun renameSelected(name: String): ProfileNotice? {
         val profile = selected ?: return notASelection()
@@ -142,20 +138,16 @@ class ProfilesTabState(
         val profile = selected ?: return notASelection()
 
         if (profile.isRootProfile) {
-            return ProfileNotice.Error(
-                "The default profile uses the files of the installation itself and cannot be deleted."
-            )
+            return ProfileNotice.Error(CurrentStrings.get().profilesRootNotDeletable)
         }
 
         if (isActive(profile)) {
-            return ProfileNotice.Error(
-                "The profile currently in use cannot be deleted. Switch to another profile first."
-            )
+            return ProfileNotice.Error(CurrentStrings.get().profilesActiveNotDeletable)
         }
 
         if (!service.deleteProfile(profile)) {
             refresh()
-            return ProfileNotice.Error("The profile could not be deleted.")
+            return ProfileNotice.Error(CurrentStrings.get().profilesDeleteFailed)
         }
 
         refresh()
@@ -164,22 +156,18 @@ class ProfilesTabState(
 
     /** The folder the deletion confirmation names, and what happens to worked stations. */
     fun describeDeletion(profile: OperatorProfile): String =
-        "The following folder is removed permanently:\n" +
-            service.getProfileDirectory(profile) + "\n\n" +
+        CurrentStrings.get().profilesDeletionFolder(service.getProfileDirectory(profile).toString()) + "\n\n" +
             if (profile.isSharedWorkedDatabase) {
-                "The common station worked stations are not touched."
+                CurrentStrings.get().profilesDeletionKeepsShared
             } else {
-                "The worked stations of this profile are deleted as well."
+                CurrentStrings.get().profilesDeletionRemovesOwn
             }
 
     fun changeWorkedDataModeOfSelected(sharedWorkedDatabase: Boolean): ProfileNotice? {
         val profile = selected ?: return notASelection()
 
         if (profile.isRootProfile) {
-            return ProfileNotice.Error(
-                "The default profile always uses the common station worked stations, because " +
-                    "that database is the one of the installation itself."
-            )
+            return ProfileNotice.Error(CurrentStrings.get().profilesRootAlwaysShared)
         }
 
         if (sharedWorkedDatabase == profile.isSharedWorkedDatabase) {
@@ -190,7 +178,7 @@ class ProfilesTabState(
         refresh()
 
         if (isActive(profile)) {
-            return ProfileNotice.Info("The change takes effect after switching to this profile again.")
+            return ProfileNotice.Info(CurrentStrings.get().profilesChangeAfterSwitch)
         }
 
         return null
@@ -200,7 +188,7 @@ class ProfilesTabState(
         val profile = selected ?: return notASelection()
 
         if (isActive(profile)) {
-            return ProfileNotice.Info("This profile is already active.")
+            return ProfileNotice.Info(CurrentStrings.get().profilesAlreadyActive)
         }
 
         requestActivation(profile)
@@ -217,7 +205,7 @@ class ProfilesTabState(
     }
 
     private fun notASelection(): ProfileNotice =
-        ProfileNotice.Info("Select a profile in the table first.")
+        ProfileNotice.Info(CurrentStrings.get().profilesSelectFirst)
 
     companion object {
 
@@ -230,9 +218,9 @@ class ProfilesTabState(
          */
         fun describeWorkedDataMode(profile: OperatorProfile): String =
             if (profile.isRootProfile || profile.isSharedWorkedDatabase) {
-                "common station database"
+                CurrentStrings.get().profilesSharedDatabase
             } else {
-                "own database"
+                CurrentStrings.get().profilesOwnDatabase
             }
 
         /** Blank for a profile never used, rather than an epoch date. */

@@ -65,7 +65,7 @@ object StationColumns {
         add(DataColumn(id = "qrg", title = "QRG", value = { it.frequency?.get().orEmpty() }, weight = 0.8f))
         add(DataColumn(
             id = "airscout",
-            title = "AP [minutes / pot%]",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnAirplane },
             value = { AirplaneCell.format(it.airPlaneReflectInfo) },
             accent = { _, rendered -> AirplaneCell.accentFor(rendered) },
             comparator = compareBy(AirplaneCell.order) { it.airPlaneReflectInfo },
@@ -74,7 +74,7 @@ object StationColumns {
         add(DataColumn(id = "tropo", title = "Tropo", value = tropoOf, weight = 0.7f))
         add(DataColumn(
             id = "score",
-            title = "Score",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnScore },
             value = { priorityScoreOf(it).toInt().toString() },
             comparator = compareBy { priorityScoreOf(it) },
             weight = 0.6f,
@@ -113,7 +113,7 @@ object StationColumns {
         add(DataColumn(id = "not-qrv", title = "NOT QRV @", value = { qrvBands(it, activeBands) }, weight = 1.6f))
         add(DataColumn(
             id = "category",
-            title = "Category",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnCategory },
             value = { member ->
                 member.chatCategory?.let { it.getChatCategoryName(it.categoryNumber) }.orEmpty()
             },

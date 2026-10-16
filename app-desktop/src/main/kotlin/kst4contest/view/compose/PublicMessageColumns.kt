@@ -26,7 +26,7 @@ object PublicMessageColumns {
         DataColumn(id = "name", title = { kst4contest.view.i18n.CurrentStrings.get().columnName }, value = { it.sender?.name.orEmpty() }),
         DataColumn(
             id = "last-qrg",
-            title = "Last QRG",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnLastQrg },
             value = { MessageFormats.paddedQrg(MonitorColumns.frequencyOf(it.sender)) },
             weight = 0.8f,
         ),
@@ -38,7 +38,7 @@ object PublicMessageColumns {
         ),
         DataColumn(
             id = "category",
-            title = "Category",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnCategory },
             value = { message ->
                 message.sender?.chatCategory
                     ?.let { it.getChatCategoryName(it.categoryNumber) }

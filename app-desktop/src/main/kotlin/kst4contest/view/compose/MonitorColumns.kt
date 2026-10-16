@@ -51,7 +51,7 @@ object MonitorColumns {
          */
         DataColumn(
             id = "category",
-            title = "Category",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnCategory },
             value = { message ->
                 message.sender?.chatCategory
                     ?.let { it.getChatCategoryName(it.categoryNumber) }

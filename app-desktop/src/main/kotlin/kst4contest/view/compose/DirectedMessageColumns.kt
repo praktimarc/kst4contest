@@ -54,7 +54,7 @@ object DirectedMessageColumns {
         ),
         DataColumn(
             id = "airscout",
-            title = "AP [minutes / pot%]",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnAirplane },
             value = { AirplaneCell.format(it.sender?.airPlaneReflectInfo) },
             accent = { _, rendered -> AirplaneCell.accentFor(rendered) },
             comparator = compareBy(AirplaneCell.order) { it.sender?.airPlaneReflectInfo },
@@ -62,7 +62,7 @@ object DirectedMessageColumns {
         ),
         DataColumn(
             id = "category",
-            title = "Category",
+            title = { kst4contest.view.i18n.CurrentStrings.get().columnCategory },
             value = { message ->
                 message.chatCategory
                     ?.let { it.getChatCategoryName(it.categoryNumber) }
