@@ -36,6 +36,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Dark mode per profile:** on the **GUI** tab each operator profile sets under **Design** whether KST4Contest starts light or dark. The entries in the **Windows** menu still switch quickly, but only for the running session. The colour scheme now also covers the update window and the top candidates list.
 
+- **Settings take effect with Apply:** changes in the settings window no longer take effect while they are typed, but with **Apply/Close prefs** or **Save settings**; **Connect** applies them first as well. This also works during a running session. Closing the window with changes pending asks whether to apply or discard them. Colours, language and the login data on the **Station** tab still take effect immediately.
+
 ### Fixed
 
 - **Consistent font size:** on macOS and Linux JavaFX uses a slightly larger default font than on Windows, which cut off labels in fixed-size controls. KST4Contest now uses the same base font size on all systems; nothing changes on Windows.

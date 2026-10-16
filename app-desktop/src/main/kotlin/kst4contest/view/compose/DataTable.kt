@@ -242,7 +242,7 @@ class EditableListState(
  * reject it and put the stored value back.
  *
  * @param onChanged called after every committed change — add, edit, removal, move.
- *        The lists write through, so this is where the roster is filled.
+ *        The settings tabs stage the list here; applying the draft fills the roster.
  * @param onRefused shown to the operator when a rule refuses an edit; the JavaFX
  *        tables opened an alert here.
  * @param onAdd replaces the default "insert the template at the top" behaviour.
