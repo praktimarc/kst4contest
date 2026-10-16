@@ -111,6 +111,9 @@ object Form {
      * every prefix of a valid entry, so the draft lives here until the operator leaves
      * the field or presses Enter.
      *
+     * Only an edited draft is committed: drawing the field, or entering and leaving it
+     * without typing, commits nothing.
+     *
      * @param stored the value currently stored; the draft falls back to it when an
      *        entry is refused, which is what those fields did with setText
      * @param commit returns null when the value was accepted, otherwise the reason
@@ -125,7 +128,23 @@ object Form {
     ) {
         var draft by remember(stored) { mutableStateOf(stored) }
 
+        /*
+         * Whether the field has held the focus since it was last committed. onFocusChanged
+         * also fires when the modifier is first attached, with "not focused"; reading that
+         * as a focus loss committed every such field the moment its tab was opened. Only a
+         * change from focused to unfocused is the operator leaving the field. A plain holder,
+         * not state: nothing is drawn from it.
+         */
+        val hadFocus = remember { booleanArrayOf(false) }
+
         fun commitDraft() {
+            /*
+             * An untouched draft is no edit. Committing it anyway would turn a shipped colour
+             * into an override of itself, restart the beacon timer, or report a stored value
+             * the rule refuses although the operator only passed through the field.
+             */
+            if (draft == stored) return
+
             val refusal = commit(draft)
             if (refusal != null) {
                 onRefused(refusal)
@@ -139,7 +158,14 @@ object Form {
                 onValueChange = { draft = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onFocusChanged { focus -> if (!focus.isFocused) commitDraft() }
+                    .onFocusChanged { focus ->
+                        if (focus.isFocused) {
+                            hadFocus[0] = true
+                        } else if (hadFocus[0]) {
+                            hadFocus[0] = false
+                            commitDraft()
+                        }
+                    }
                     .onKeyEvent { event ->
                         if (event.type == KeyEventType.KeyUp && event.key == Key.Enter) {
                             commitDraft()

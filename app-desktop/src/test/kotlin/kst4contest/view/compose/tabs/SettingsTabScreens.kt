@@ -113,3 +113,25 @@ internal fun ComposeUiTest.typeAndCommit(label: String, text: String, occurrence
     field.performKeyInput { pressKey(Key.Enter) }
     waitForIdle()
 }
+
+/**
+ * Types into a field that commits on leaving it, then leaves it the way the operator does:
+ * by clicking into the field beside [leaveTo]. No Enter is pressed, so only the focus loss
+ * can commit the entry.
+ */
+@OptIn(ExperimentalTestApi::class)
+internal fun ComposeUiTest.typeAndLeave(
+    label: String,
+    text: String,
+    leaveTo: String,
+    occurrence: Int = 0,
+    leaveToOccurrence: Int = 0,
+) {
+    val field = fieldBeside(label, occurrence)
+    field.performScrollTo().performClick()
+    waitForIdle()
+    field.performTextReplacement(text)
+    waitForIdle()
+    fieldBeside(leaveTo, leaveToOccurrence).performScrollTo().performClick()
+    waitForIdle()
+}

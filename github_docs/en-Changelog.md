@@ -54,6 +54,8 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **UCXLog/DXLog listener keeps running:** an unwritable backup file for received QSOs or a RadioInfo packet without frequency or mode used to stop the listener for UCXLog-compatible loggers until the next restart, so neither worked stations nor QRG updates arrived any more. The backup entry or the incomplete packet is now skipped, and the listener keeps receiving. Any other unexpected error while processing a packet now drops only that packet and shows a status message instead of stopping the listener.
 
+- **Opening a settings tab no longer changes anything:** fields that apply their value only when you leave them or press Enter treated the first drawing of the tab as leaving the field. Merely opening **Colours** turned all six colours into your own changes (marked "changed" instead of "shipped" or "from file"), and after **Save settings** these permanently hid the profile's stylesheet file. Opening **Beacon** restarted the beacon timer and reported a stored beacon message that is not valid; opening **Notification** applied the port and the spotter callsign again. Now only an actual edit is applied, when you leave the field or press Enter, as before.
+
 ### Upgrade notes
 
 - Existing installations are **not** modified: `preferences.xml` and `praktiKST.db` stay exactly where they are and become the **Default** profile. No file is moved or copied.
