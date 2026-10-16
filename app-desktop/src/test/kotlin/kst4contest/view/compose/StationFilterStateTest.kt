@@ -220,6 +220,20 @@ class StationFilterStateTest {
     }
 
     @Test
+    fun `a QRB field reads plain distances`() {
+        assertEquals(300.0, parseQrbKm("300"))
+        assertEquals(12.5, parseQrbKm("12.5"))
+        assertEquals(0.0, parseQrbKm("0"))
+    }
+
+    @Test
+    fun `a QRB field refuses what is no distance`() {
+        listOf("NaN", "Infinity", "-Infinity", "-5", "abc", "").forEach {
+            assertNull(parseQrbKm(it), "\"$it\" was taken as a distance")
+        }
+    }
+
+    @Test
     fun `a search text filters while it is there and stops when it is cleared`() {
         val filters = StationFilterState()
 

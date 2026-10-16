@@ -34,6 +34,17 @@ enum class StationFilter {
     HIDE_WORKED_3,
 }
 
+/**
+ * What a QRB field of the filter bar makes of the text typed into it: a distance in km, or
+ * `null` when the text is none.
+ *
+ * `toDouble` alone also reads "NaN" and "Infinity", and a pasted "Infinity" as the minimum
+ * hid every station while "NaN" let every one through. A negative distance means nothing
+ * either. All of these are refused, so the field keeps its last valid value (#21).
+ */
+internal fun parseQrbKm(text: String): Double? =
+    text.toDoubleOrNull()?.takeIf { it.isFinite() && it >= 0.0 }
+
 /** The bands the "hide worked" row offers, under the labels the bar shows. */
 enum class WorkedBandFilter(val label: String, val filter: StationFilter, val modelBand: kst4contest.model.Band) {
     B_50("50", StationFilter.HIDE_WORKED_50, kst4contest.model.Band.B_50),

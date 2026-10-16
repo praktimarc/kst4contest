@@ -88,7 +88,7 @@ fun StationFilterBar(
                         CompactTextField(
                             value = if (filters.maxQrbKm.rem(1) == 0.0) filters.maxQrbKm.toInt().toString() else filters.maxQrbKm.toString(),
                             onValueChange = {
-                                val parsed = it.toDoubleOrNull()
+                                val parsed = parseQrbKm(it)
                                 if (parsed != null) {
                                     filters.maxQrbKm = parsed
                                     if (filters.maxQrbEnabled) onChanged()
@@ -112,7 +112,7 @@ fun StationFilterBar(
                         CompactTextField(
                             value = if (filters.minQrbKm.rem(1) == 0.0) filters.minQrbKm.toInt().toString() else filters.minQrbKm.toString(),
                             onValueChange = {
-                                val parsed = it.toDoubleOrNull()
+                                val parsed = parseQrbKm(it)
                                 if (parsed != null) {
                                     filters.minQrbKm = parsed
                                     if (filters.minQrbEnabled) onChanged()

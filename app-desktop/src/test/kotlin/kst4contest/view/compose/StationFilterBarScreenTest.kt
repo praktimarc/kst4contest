@@ -90,6 +90,24 @@ class StationFilterBarScreenTest {
         assertFalse(bar.filters.acceptsQrb(650.0))
     }
 
+    /** A pasted "Infinity" as the minimum hid every station, a "NaN" let every one through. */
+    @Test
+    fun theQrbFieldsKeepTheirValueWhenTheTextIsNoDistance() = runComposeUiTest {
+        val bar = showBar()
+        type(maxLabel, "500")
+        type(minLabel, "200")
+
+        listOf("Infinity", "NaN", "-5").forEach { text ->
+            type(maxLabel, text)
+            type(minLabel, text)
+        }
+
+        assertEquals(500.0, bar.filters.maxQrbKm)
+        assertEquals(200.0, bar.filters.minQrbKm)
+        fieldBeside(maxLabel).assertTextEquals("500")
+        fieldBeside(minLabel).assertTextEquals("200")
+    }
+
     @Test
     fun resettingTheFiltersUnticksTheMinimumQrb() = runComposeUiTest {
         val bar = showBar()
