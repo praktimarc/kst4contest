@@ -204,6 +204,9 @@ public class ChatPreferences {
 	boolean stn_pstRotatorEnabled = false;
 	String stn_pstRotatorHost = "127.0.0.1";
 	int stn_pstRotatorPort = 12000;
+	boolean stn_pstRotator2Enabled = false;
+	String stn_pstRotator2Host = "127.0.0.1";
+	int stn_pstRotator2Port = 12010;
 
 	boolean stn_loginAFKState = false; //always start as here
 	/*
@@ -255,6 +258,7 @@ public class ChatPreferences {
 	ChatCategory loginChatCategorySecond = new ChatCategory(3);
 	boolean loginToSecondChatEnabled;
 	MutableValue<Double> actualQTF = new SimpleValue<>(360.0); // will be updated by user at runtime!
+	MutableValue<Double> actualQTF2 = new SimpleValue<>(Double.NaN); // heading of rotator 2 (SO2R), NaN when unknown
 
 	boolean stn_bandActive50;
 	boolean stn_bandActive70;
@@ -277,6 +281,7 @@ public class ChatPreferences {
 
 	String logsynch_wintestNetworkStationNameOfKST = "KST4Contest";
 	String logsynch_wintestNetworkStationNameOfWintestClient1 = "STN1";
+	String logsynch_wintestNetworkStationNameOfWintestClient2 = "";
 	boolean logsynch_wintestNetworkSimulationEnabled = false;
 	int logsynch_wintestNetworkStationIDOfKST = 55555;
 	int logsynch_wintestNetworkPort = 9871;
@@ -297,6 +302,7 @@ public class ChatPreferences {
 	MutableValue<String> MYQRGSecondCat = new SimpleValue<>(); // own qrg will be set by user entry or ucxlog if trx Synch is activated
 
 	boolean trxSynch_ucxLogUDPListenerEnabled = false;
+	boolean trxSynch_so2rEnabled = false;
 
 	/**
 	 * AirScout prefs
@@ -643,6 +649,14 @@ public class ChatPreferences {
 
 	public void setLogsynch_wintestNetworkStationNameOfWintestClient1(String logsynch_wintestNetworkStationNameOfWintestClient1) {
 		this.logsynch_wintestNetworkStationNameOfWintestClient1 = logsynch_wintestNetworkStationNameOfWintestClient1;
+	}
+
+	public String getLogsynch_wintestNetworkStationNameOfWintestClient2() {
+		return logsynch_wintestNetworkStationNameOfWintestClient2;
+	}
+
+	public void setLogsynch_wintestNetworkStationNameOfWintestClient2(String name) {
+		this.logsynch_wintestNetworkStationNameOfWintestClient2 = name == null ? "" : name.trim();
 	}
 
 	public boolean isLogsynch_wintestNetworkSimulationEnabled() {
@@ -1057,6 +1071,31 @@ public class ChatPreferences {
 		}
 	}
 
+	public boolean isStn_pstRotator2Enabled() {
+		return stn_pstRotator2Enabled;
+	}
+
+	public void setStn_pstRotator2Enabled(boolean enabled) {
+		this.stn_pstRotator2Enabled = enabled;
+	}
+
+	public String getStn_pstRotator2Host() {
+		return stn_pstRotator2Host;
+	}
+
+	public void setStn_pstRotator2Host(String host) {
+		this.stn_pstRotator2Host = host == null || host.isBlank() ? "127.0.0.1" : host.trim();
+	}
+
+	public int getStn_pstRotator2Port() {
+		return stn_pstRotator2Port;
+	}
+
+	/** PSTRotator answers on port + 1, so 65535 is not usable. */
+	public void setStn_pstRotator2Port(int port) {
+		this.stn_pstRotator2Port = port < 1 || port > 65534 ? 12010 : port;
+	}
+
 	public MutableValue<String> getNotify_optionalFrequencyPrefix() {
 		return notify_optionalFrequencyPrefix;
 	}
@@ -1375,6 +1414,11 @@ public class ChatPreferences {
 		return actualQTF;
 	}
 
+	/** Heading reported by rotator 2; NaN while there is none. Display only. */
+	public MutableValue<Double> getActualQTF2() {
+		return actualQTF2;
+	}
+
 	public void setActualQTF(MutableValue<Double> actualQTF) {
 		this.actualQTF = actualQTF;
 	}
@@ -1471,6 +1515,14 @@ public class ChatPreferences {
 
 	public void setTrxSynch_ucxLogUDPListenerEnabled(boolean trxSynch_ucxLogUDPListenerEnabled) {
 		this.trxSynch_ucxLogUDPListenerEnabled = trxSynch_ucxLogUDPListenerEnabled;
+	}
+
+	public boolean isTrxSynch_so2rEnabled() {
+		return trxSynch_so2rEnabled;
+	}
+
+	public void setTrxSynch_so2rEnabled(boolean enabled) {
+		this.trxSynch_so2rEnabled = enabled;
 	}
 
 	public void setNotify_optionalFrequencyPrefix(String notify_optionalFrequencyPrefix) {
@@ -1809,6 +1861,18 @@ public class ChatPreferences {
 			stn_pstRotatorPort.setTextContent(Integer.toString(this.stn_pstRotatorPort));
 			station.appendChild(stn_pstRotatorPort);
 
+			Element stn_pstRotator2Enabled = doc.createElement("stn_pstRotator2Enabled");
+			stn_pstRotator2Enabled.setTextContent(this.stn_pstRotator2Enabled + "");
+			station.appendChild(stn_pstRotator2Enabled);
+
+			Element stn_pstRotator2Host = doc.createElement("stn_pstRotator2Host");
+			stn_pstRotator2Host.setTextContent(this.stn_pstRotator2Host);
+			station.appendChild(stn_pstRotator2Host);
+
+			Element stn_pstRotator2Port = doc.createElement("stn_pstRotator2Port");
+			stn_pstRotator2Port.setTextContent(Integer.toString(this.stn_pstRotator2Port));
+			station.appendChild(stn_pstRotator2Port);
+
 
 			/**
 			 * LOGSYNCH
@@ -1846,6 +1910,10 @@ public class ChatPreferences {
 			Element logsynch_wintestNetworkStationNameOfWintestClient1 = doc.createElement("logsynch_wintestNetworkStationNameOfWintestClient1");
 			logsynch_wintestNetworkStationNameOfWintestClient1.setTextContent(this.logsynch_wintestNetworkStationNameOfWintestClient1);
 			logsynch.appendChild(logsynch_wintestNetworkStationNameOfWintestClient1);
+
+			Element logsynch_wintestNetworkStationNameOfWintestClient2 = doc.createElement("logsynch_wintestNetworkStationNameOfWintestClient2");
+			logsynch_wintestNetworkStationNameOfWintestClient2.setTextContent(this.logsynch_wintestNetworkStationNameOfWintestClient2);
+			logsynch.appendChild(logsynch_wintestNetworkStationNameOfWintestClient2);
 
 			Element logsynch_wintestNetworkSimulationEnabled = doc.createElement("logsynch_wintestNetworkSimulationEnabled");
 			logsynch_wintestNetworkSimulationEnabled.setTextContent(this.logsynch_wintestNetworkSimulationEnabled + "");
@@ -1894,6 +1962,10 @@ public class ChatPreferences {
 			Element trxSynch_ucxLogUDPListenerEnabled = doc.createElement("trxSynch_ucxLogUDPListenerEnabled");
 			trxSynch_ucxLogUDPListenerEnabled.setTextContent(this.isTrxSynch_ucxLogUDPListenerEnabled()+"");
 			trxSynchUCX.appendChild(trxSynch_ucxLogUDPListenerEnabled);
+
+			Element trxSynch_so2rEnabled = doc.createElement("trxSynch_so2rEnabled");
+			trxSynch_so2rEnabled.setTextContent(this.trxSynch_so2rEnabled + "");
+			trxSynchUCX.appendChild(trxSynch_so2rEnabled);
 
 			Element trxSynch_defaultMYQRGValue = doc.createElement("trxSynch_defaultMYQRGValue");
 			trxSynch_defaultMYQRGValue.setTextContent(this.getMYQRGFirstCat().get());
@@ -2666,6 +2738,11 @@ public class ChatPreferences {
 						)
 				);
 
+				// Added in release 1.50 for SO2R; absent in older files.
+				stn_pstRotator2Enabled = getBoolean(stationEl, stn_pstRotator2Enabled, "stn_pstRotator2Enabled");
+				setStn_pstRotator2Host(getText(stationEl, stn_pstRotator2Host, "stn_pstRotator2Host"));
+				setStn_pstRotator2Port(getInt(stationEl, stn_pstRotator2Port, "stn_pstRotator2Port"));
+
 			}
 
 			/**
@@ -2704,6 +2781,10 @@ public class ChatPreferences {
 						logsynchEl,
 						logsynch_wintestNetworkStationNameOfWintestClient1,
 						"logsynch_wintestNetworkStationNameOfWintestClient1");
+				setLogsynch_wintestNetworkStationNameOfWintestClient2(getText(
+						logsynchEl,
+						logsynch_wintestNetworkStationNameOfWintestClient2,
+						"logsynch_wintestNetworkStationNameOfWintestClient2"));
 				logsynch_wintestNetworkSimulationEnabled = getBoolean(
 						logsynchEl,
 						logsynch_wintestNetworkSimulationEnabled,
@@ -2763,6 +2844,7 @@ public class ChatPreferences {
 						trxSynchEl,
 						trxSynch_ucxLogUDPListenerEnabled,
 						"trxSynch_ucxLogUDPListenerEnabled");
+				trxSynch_so2rEnabled = getBoolean(trxSynchEl, trxSynch_so2rEnabled, "trxSynch_so2rEnabled");
 
 				String qrg1 = getText(trxSynchEl, null, "trxSynch_defaultMYQRGValue");
 				if (qrg1 != null) {
