@@ -25,31 +25,31 @@ fun GuiOptionsTab(state: GuiOptionsTabState) {
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Form.section(strings.guiStartupDesign) {
-            Form.check("Start in the evening design", state.gUI_darkModeActiveByDefault) {
+            Form.check(strings.guiStartInEveningDesign, state.gUI_darkModeActiveByDefault) {
                 state.gUI_darkModeActiveByDefault = it
             }
         }
 
         Form.flowingSection(strings.guiStartupFilters) {
-            Form.check("Public messages", state.guiOptions_defaultFilterPublicMsgs) {
+            Form.check(strings.guiFilterPublic, state.guiOptions_defaultFilterPublicMsgs) {
                 state.guiOptions_defaultFilterPublicMsgs = it
             }
-            Form.check("Private messages to me", state.guiOptions_defaultFilterPmToMe) {
+            Form.check(strings.guiFilterPmToMe, state.guiOptions_defaultFilterPmToMe) {
                 state.guiOptions_defaultFilterPmToMe = it
             }
-            Form.check("Private messages to others", state.guiOptions_defaultFilterPmToOther) {
+            Form.check(strings.guiFilterPmToOthers, state.guiOptions_defaultFilterPmToOther) {
                 state.guiOptions_defaultFilterPmToOther = it
             }
-            Form.check("No filter", state.guiOptions_defaultFilterNothing) {
+            Form.check(strings.guiFilterNothing, state.guiOptions_defaultFilterNothing) {
                 state.guiOptions_defaultFilterNothing = it
             }
         }
 
         Form.flowingSection(strings.guiBandColumnHints) {
-            Form.check("Mark a callsign seen for the first time", state.guiOptions_showFreshCallHintInBandColumns) {
+            Form.check(strings.guiHintFreshCall, state.guiOptions_showFreshCallHintInBandColumns) {
                 state.guiOptions_showFreshCallHintInBandColumns = it
             }
-            Form.check("Mark a worked large grid field", state.guiOptions_showGrossFieldWorkedHintInBandColumns) {
+            Form.check(strings.guiHintLargeGridWorked, state.guiOptions_showGrossFieldWorkedHintInBandColumns) {
                 state.guiOptions_showGrossFieldWorkedHintInBandColumns = it
             }
         }

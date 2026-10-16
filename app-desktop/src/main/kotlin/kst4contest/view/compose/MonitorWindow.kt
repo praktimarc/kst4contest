@@ -61,7 +61,7 @@ object MonitorWindow {
         onResized: (Float, Float) -> Unit,
     ) {
         host.show(
-            title = { "Cluster & QSO of the other" },
+            title = { kst4contest.view.i18n.CurrentStrings.get().monitorTitle },
             darkMode = darkMode,
             baseFontSizeSp = baseFontSizeSp,
             paletteStore = paletteStore,
@@ -97,7 +97,7 @@ internal fun MonitorContent(
             HorizontalDivider(thickness = Density.HAIRLINE)
 
             Text(
-                "QSO of the other",
+                kst4contest.view.i18n.LocalStrings.current.messagesQsoOfTheOther,
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(top = 4.dp),
             )

@@ -9,6 +9,7 @@ import kst4contest.view.GuiUtils
 import kst4contest.view.compose.CommitOutcome
 import kst4contest.view.compose.EditableListState
 import kst4contest.view.compose.EntryRule
+import kst4contest.view.i18n.CurrentStrings
 import java.util.Locale
 
 /**
@@ -106,8 +107,7 @@ class NotificationTabState(
         val port = entered.trim().toIntOrNull()
 
         if (port == null || port < 1 || port > 65535) {
-            return "\"" + entered.trim() + "\" is not a valid TCP port. " +
-                "Enter a value from 1 to 65535."
+            return CurrentStrings.get().notificationInvalidPort(entered.trim())
         }
 
         prefs.setNotify_dxclusterServerPort(port)
@@ -130,7 +130,7 @@ class NotificationTabState(
         val spotterCallSign = entered.trim().uppercase(Locale.ROOT)
 
         if (!GuiUtils.isCallSignSyntax(spotterCallSign)) {
-            return "\"" + spotterCallSign + "\" is not a valid spotter callsign."
+            return CurrentStrings.get().notificationInvalidSpotter(spotterCallSign)
         }
 
         prefs.setNotify_DXCSrv_SpottersCallSign(spotterCallSign)
@@ -151,7 +151,7 @@ class NotificationTabState(
         }
 
         if (verdict !is CommitOutcome.Stored) {
-            return "Please enter a valid callsign."
+            return CurrentStrings.get().notificationInvalidCallsign
         }
 
         /*
@@ -202,11 +202,11 @@ class NotificationTabState(
         )
 
         if (baseCall == null || !GuiUtils.isCallSignSyntax(baseCall)) {
-            return CommitOutcome.Refused("Please enter a valid callsign.")
+            return CommitOutcome.Refused(CurrentStrings.get().notificationInvalidCallsign)
         }
 
         if (others.any { it != null && it.equals(baseCall, ignoreCase = true) }) {
-            return CommitOutcome.Refused("This base callsign is already in the monitoring list.")
+            return CommitOutcome.Refused(CurrentStrings.get().notificationAlreadyMonitored)
         }
 
         return CommitOutcome.Stored(baseCall)

@@ -103,7 +103,7 @@ internal fun FilePathRow(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
-            Form.button("Choose...") { choosing = true }
+            Form.button(kst4contest.view.i18n.LocalStrings.current.formChoose) { choosing = true }
         }
     }
 

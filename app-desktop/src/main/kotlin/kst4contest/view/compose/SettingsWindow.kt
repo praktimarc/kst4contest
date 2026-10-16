@@ -247,7 +247,7 @@ internal fun SettingsContent(
                 )
             },
             text = { Text(notice.message) },
-            confirmButton = { TextButton(onClick = notices::dismiss) { Text("OK") } },
+            confirmButton = { TextButton(onClick = notices::dismiss) { Text(kst4contest.view.i18n.LocalStrings.current.dialogOk) } },
         )
     }
 }
