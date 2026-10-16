@@ -303,7 +303,7 @@ class ComposeWindowHost(
                                 .drop(if (isMainWindow && placed == null) 0 else 1)
                                 .collect { size ->
                                     if (size.width.isSpecified && size.height.isSpecified
-                                        && !fit.isFittedSize(size.width.value.roundToInt(), size.height.value.roundToInt())
+                                        && !fit.takeSize(size.width.value.roundToInt(), size.height.value.roundToInt())
                                     ) {
                                         onResized(size.width.value, size.height.value)
                                     }
@@ -334,7 +334,7 @@ class ComposeWindowHost(
                                  * The host's own fit is a new anchor, not a move; the window
                                  * manager may still nudge it within the tolerance.
                                  */
-                                if (fit.bounds?.location == now) {
+                                if (fit.takePosition(now)) {
                                     tracker = MoveTracker(now)
                                     return@collect
                                 }
@@ -375,7 +375,7 @@ class ComposeWindowHost(
                                         size.height.value.roundToInt(),
                                     ),
                                 )?.let { fitted ->
-                                    fit.bounds = fitted
+                                    fit.record(fitted)
                                     windowState.size = DpSize(fitted.width.dp, fitted.height.dp)
                                     windowState.position = WindowPosition(fitted.x.dp, fitted.y.dp)
                                 }
@@ -467,13 +467,47 @@ private const val FIT_SETTLE_MILLIS = 500L
 
 /**
  * What the host last cut a window down to, so the size and position it set itself are not
- * taken for the operator's. Only touched on the window's event thread.
+ * taken for the operator's. Each is consumed by the first report that follows: a matching
+ * report is the fit echoing back, any other report is the operator's and clears it, so a
+ * stale record cannot swallow a later resize or move. Only touched on the window's event
+ * thread.
  */
 internal class FitRecord {
-    var bounds: java.awt.Rectangle? = null
+    private var pendingPosition: Point? = null
+    private var pendingWidth = 0
+    private var pendingHeight = 0
+    private var sizePending = false
 
-    fun isFittedSize(width: Int, height: Int): Boolean =
-        bounds?.let { it.width == width && it.height == height } ?: false
+    fun record(bounds: java.awt.Rectangle) {
+        pendingPosition = bounds.location
+        pendingWidth = bounds.width
+        pendingHeight = bounds.height
+        sizePending = true
+    }
+
+    /**
+     * Whether [now] is the fitted position reported back. Compared with the move
+     * tolerance, because dp rounding under display scaling and a window manager's nudge
+     * both shift it slightly.
+     */
+    fun takePosition(now: Point): Boolean {
+        val pending = pendingPosition ?: return false
+        pendingPosition = null
+        return !movedAway(pending, now)
+    }
+
+    /** Whether this size is the fitted one reported back, allowing for dp rounding. */
+    fun takeSize(width: Int, height: Int): Boolean {
+        if (!sizePending) {
+            return false
+        }
+        sizePending = false
+        return abs(width - pendingWidth) <= SIZE_ROUNDING_PX && abs(height - pendingHeight) <= SIZE_ROUNDING_PX
+    }
+
+    private companion object {
+        const val SIZE_ROUNDING_PX = 2
+    }
 }
 
 /** Whether [now] is far enough from [opened] to be the operator's move rather than a nudge. */
