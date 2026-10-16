@@ -33,10 +33,12 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -164,6 +166,19 @@ object Form {
                 onRefused(refusal)
                 draft = current()
             }
+        }
+
+        /*
+         * Inside the settings window the draft can commit this field without a focus change:
+         * a click on "Apply/Close prefs" leaves the focus in the field, and the entry would
+         * otherwise reach the draft only when the closing window removed the field. Through
+         * an updated state, because commitDraft closes over this composition's parameters.
+         */
+        val settingsDraft = LocalSettingsDraft.current
+        val latestCommit = rememberUpdatedState(::commitDraft)
+        DisposableEffect(settingsDraft) {
+            val entry = settingsDraft?.registerTypedEntry { latestCommit.value() }
+            onDispose { entry?.close() }
         }
 
         labelled(label) {
