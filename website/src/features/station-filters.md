@@ -36,6 +36,7 @@ KST4Contest therefore allows spatial, operating and propagation-related conditio
 
 - **Show only QTF** keeps stations inside the selected antenna direction and configured beamwidth.
 - **Show only QRB [km] <=** limits the list to the entered distance.
+- **Show only QRB [km] >** hides stations up to the entered distance; with both on, the list shows a distance range.
 
 ### Operating filters
 
