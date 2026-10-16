@@ -26,6 +26,19 @@ object StationColumns {
     /** The heading the ten worked columns sit under. */
     const val WORKED_GROUP = "worked"
 
+    /**
+     * The identity a station row is drawn and selected under: the callsign and the chat
+     * category. The category is part of it because the same callsign can be in two chats at
+     * once, and AGENTS.md makes the category part of the chat identity; keyed by callsign
+     * alone, the two rows collided (fixed in 21251377).
+     *
+     * Kept here rather than inline at the one call site so the station list can be tested
+     * with the key it really uses. The text is exactly what the inline Java expression
+     * produced, including "null" for a missing callsign.
+     */
+    fun rowKey(member: ChatMember): String =
+        "${member.callSign}|${member.chatCategory?.categoryNumber ?: ""}"
+
     fun all(
         tropoOf: (ChatMember) -> String,
         priorityScoreOf: (ChatMember) -> Double,

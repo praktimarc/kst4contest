@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.testTag
 import kst4contest.model.Band
 import kst4contest.view.compose.DataTable
 import kst4contest.view.compose.Form
@@ -134,6 +135,7 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
                         onValueChange = { entered = it },
                         singleLine = true,
                         label = { Text(strings.notificationCallsign) },
+                        modifier = Modifier.testTag(MONITORED_CALLSIGN_FIELD_TAG),
                     )
                 }
             },
@@ -149,3 +151,6 @@ fun NotificationTab(state: NotificationTabState, onRefused: (String) -> Unit) {
         )
     }
 }
+
+/** Marks the callsign field of the add-to-monitoring dialog, so a test can type into it. */
+internal const val MONITORED_CALLSIGN_FIELD_TAG = "monitored-callsign-field"

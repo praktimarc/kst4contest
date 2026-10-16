@@ -3034,8 +3034,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 						member -> parseTableDouble(formatPriorityScore(member)),
 						(member, band, worked) -> formatBandCellStatus(member, band, worked),
 						BandOpportunityResolver.getEnabledStationBands(chatcontroller.getChatPreferences())),
-				RowKeys.INSTANCE.byValue(member -> member.getCallSign() + "|"
-						+ (member.getChatCategory() == null ? "" : member.getChatCategory().getCategoryNumber())),
+				RowKeys.INSTANCE.byValue(StationColumns.INSTANCE::rowKey),
 				"compose-stations",
 				widths);
 

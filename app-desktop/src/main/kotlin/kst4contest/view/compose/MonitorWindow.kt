@@ -75,8 +75,9 @@ object MonitorWindow {
     }
 }
 
+/** Internal rather than private so the window's body can be drawn headless in a test. */
 @Composable
-private fun MonitorContent(
+internal fun MonitorContent(
     clusterTable: DataTableState<ClusterMessage>,
     qsoTable: DataTableState<ChatMessage>,
 ) {

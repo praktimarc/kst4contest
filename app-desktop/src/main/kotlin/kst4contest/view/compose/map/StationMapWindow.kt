@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -59,8 +60,6 @@ object StationMapWindow {
             heightDp = heightDp,
             onResized = onResized,
         ) { _ ->
-            val strings = LocalStrings.current
-
             val window = this.window
             androidx.compose.runtime.LaunchedEffect(window) { window?.minimumSize = java.awt.Dimension(900, 600) }
             val tileFetcher = remember { TileFetcher() }
@@ -73,6 +72,37 @@ object StationMapWindow {
             androidx.compose.runtime.DisposableEffect(tileFetcher) {
                 onDispose { tileFetcher.close() }
             }
+
+            Content(mainWindowState = mainWindowState, tileFetcher = tileFetcher)
+        } // host.show content
+    }
+
+    /**
+     * The window's body, without the window.
+     *
+     * Split out of [show] so it can be drawn headless in a test, with a tile fetcher that
+     * stays off the network and the user's tile cache, a roster that is not the running
+     * application's, and a [MapState] the test can read. The defaults are exactly what
+     * [show] used inline before the split.
+     *
+     * @param chatMembers the roster a marker click looks its station up in; a marker stands
+     *        for a raw callsign, and this is where its category variants come from
+     * @param mapState where the map is looking
+     * @param pathAnalysis asked each time the selection changes; null means there is no
+     *        running application, and then the map neither pans nor analyses, exactly as
+     *        when no chat controller existed before the split
+     */
+    @Composable
+    internal fun Content(
+        mainWindowState: MainWindowState,
+        tileFetcher: TileFetcher,
+        chatMembers: () -> List<kst4contest.model.ChatMember> = {
+            ApplicationRuntimeLauncher.getCurrent()?.chatController?.lst_chatMemberList?.snapshot().orEmpty()
+        },
+        mapState: MapState = remember { MapState() },
+        pathAnalysis: () -> MapPathAnalysis? = ::runtimePathAnalysis,
+    ) {
+            val strings = LocalStrings.current
 
             /*
              * The fetcher is plain Java state, so nothing about it recomposes on its
@@ -118,7 +148,9 @@ object StationMapWindow {
             }
 
             var pathAnalysisResult by remember { mutableStateOf<PathAnalysisResult?>(null) }
-            val mapState = remember { MapState() }
+
+            // Read through updated state so a caller passing a new lambda is never served a stale one.
+            val currentPathAnalysis by rememberUpdatedState(pathAnalysis)
 
             LaunchedEffect(selectedMember) {
                 if (selectedMember == null) {
@@ -126,8 +158,8 @@ object StationMapWindow {
                     return@LaunchedEffect
                 }
                 
-                val chatController = ApplicationRuntimeLauncher.getCurrent()?.chatController
-                if (chatController != null) {
+                val analysis = currentPathAnalysis()
+                if (analysis != null) {
                     val selectedSnapshot = markers.find { it.callSignRaw() == selectedMember.callSignRaw }
                     
                     if (selectedSnapshot != null && selectedSnapshot.hasUsablePosition()) {
@@ -155,13 +187,7 @@ object StationMapWindow {
                         selectedSnapshot?.callSignRaw() ?: ""
                     )
                     
-                    val overrideBand: kst4contest.model.Band? = null
-                    
-                    chatController.reachabilityService.requestPathAnalysisForMap(
-                        selectedMember,
-                        selectedSnapshot,
-                        overrideBand
-                    ) { result ->
+                    analysis.request(selectedMember, selectedSnapshot) { result ->
                         pathAnalysisResult = result
                     }
                 }
@@ -277,10 +303,8 @@ object StationMapWindow {
                             maxQrbKm = maxQrbKm,
                             darkMode = isDarkTheme,
                             onMarkerClicked = { snapshot ->
-                                val chatController = ApplicationRuntimeLauncher.getCurrent()?.chatController
-                                val variants = chatController?.lst_chatMemberList?.snapshot()
-                                    ?.filter { it.callSignRaw == snapshot.callSignRaw() }
-                                    .orEmpty()
+                                val variants = chatMembers()
+                                    .filter { it.callSignRaw == snapshot.callSignRaw() }
                                 /*
                                  * A marker stands for a raw callsign, not a category. Keep the
                                  * category already selected when it is one of the variants.
@@ -298,7 +322,7 @@ object StationMapWindow {
                                     mainWindowState.chatInput.prepareCq(member.callSign ?: "", forceOverwrite = true)
                                 }
                             },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize().testTag(MAP_CANVAS_TAG)
                         )
 
                         MapOverlayControls(
@@ -361,8 +385,10 @@ object StationMapWindow {
                 } // main layout column
             } // window column
             } // Surface
-        } // host.show content
-    }
+    } // Content
+
+    /** Marks the map canvas so a test can click a marker on it. */
+    internal const val MAP_CANVAS_TAG = "station-map-canvas"
 
     @JvmStatic
     fun applyDarkMode(darkMode: Boolean) {
@@ -394,6 +420,37 @@ object StationMapWindow {
                 heightDp = 700f,
                 onResized = { w, h -> }
             )
+        }
+    }
+}
+
+/**
+ * Asks for the path analysis of the station selected on the map.
+ *
+ * The seam between the map window and the running application: the window pans to the
+ * station and starts the analysis only when there is one to ask, which a test supplies
+ * without building a chat controller.
+ */
+internal fun interface MapPathAnalysis {
+    fun request(
+        member: kst4contest.model.ChatMember,
+        snapshot: kst4contest.view.map.MapCallsignRawSnapshot?,
+        onResult: (PathAnalysisResult) -> Unit,
+    )
+}
+
+/**
+ * The running application's reachability service, or null before there is one.
+ *
+ * Looked up on every call, as the window did inline: a profile switch replaces the runtime.
+ * No band override -- the map always analyses on the automatically resolved band.
+ */
+private fun runtimePathAnalysis(): MapPathAnalysis? {
+    val chatController = ApplicationRuntimeLauncher.getCurrent()?.chatController ?: return null
+
+    return MapPathAnalysis { member, snapshot, onResult ->
+        chatController.reachabilityService.requestPathAnalysisForMap(member, snapshot, null) { result ->
+            onResult(result)
         }
     }
 }
