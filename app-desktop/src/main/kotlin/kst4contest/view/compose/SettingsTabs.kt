@@ -307,8 +307,9 @@ private fun categoryName(category: kst4contest.model.ChatCategory?, fallback: St
  * Three buttons apply the [draft] before they act. "Apply/Close prefs" applies and closes,
  * "Save settings" applies and writes the file, and Connect applies before it connects: the
  * session would otherwise use the stored server or second-chat switch rather than the one
- * the tab shows. An entry a field refuses while it is committed for the apply stops the
- * button there, so the operator sees why instead of a closed window or a saved file.
+ * the tab shows. A field that refuses what it holds stops the button before anything is
+ * applied, so the operator sees why instead of a closed window or a saved file, and can
+ * still discard. A write or effect that fails is named in a problem notice.
  */
 fun settingsButtons(
     controller: ChatController,
@@ -317,7 +318,6 @@ fun settingsButtons(
     draft: SettingsDraft,
 ): @Composable (close: () -> Unit) -> Unit {
     val barState = ConnectionBarState(controller.chatPreferences, controller)
-
 
     return { close ->
         /*
@@ -331,14 +331,14 @@ fun settingsButtons(
         ConnectionBar(
             state = barState,
             onConnect = {
-                if (applyRefusing(draft, notices)) {
+                if (applyChecked(draft, notices)) {
                     val refusal = host.connectFromSettings()
                     if (refusal != null) notices.problem(refusal)
                 }
                 revision++
             },
             onSave = { applyAndSave(draft, notices, host::savePreferencesFromSettings) },
-            onApplyAndClose = { if (applyRefusing(draft, notices)) close() },
+            onApplyAndClose = { if (applyChecked(draft, notices)) close() },
             onDisconnectAndCloseChat = host::disconnectAndCloseChatFromSettings,
             onDisconnectOnly = {
                 host.disconnectOnlyFromSettings()
@@ -349,33 +349,71 @@ fun settingsButtons(
 }
 
 /**
- * Applies [draft] and tells whether the button may go on: false when a field refused the
- * entry it still held. The refusal is then the notice on screen, and the caller stops rather
- * than closing the window over it or saving past it.
+ * Commits what the fields still hold and tells whether all of it was accepted. On a refusal
+ * the reason is the notice on screen and nothing has been applied yet, so the operator can
+ * still correct the field or discard everything.
  *
- * Any problem notice counts, not only one raised by this apply. The click on the button can
- * itself take the focus from the field, and the field then commits -- and is refused --
+ * A problem notice already standing counts as a refusal too. The click on a button can
+ * itself take the focus from a field, which then commits -- and is refused, reporting it --
  * before the button's action runs. A problem notice from earlier cannot be standing here:
- * its dialog covers the window, so the button could not have been clicked.
+ * its dialog covers the window, so nothing in it could have been clicked.
  */
-internal fun applyRefusing(draft: SettingsDraft, notices: SettingsNotices): Boolean {
-    draft.apply()
+internal fun typedEntriesAccepted(draft: SettingsDraft, notices: SettingsNotices): Boolean {
+    val refusals = draft.commitTypedEntries()
+    if (refusals.isNotEmpty()) {
+        notices.problem(refusals.joinToString("\n"))
+        return false
+    }
     return notices.current !is SettingsNotice.Problem
 }
 
 /**
- * The work of "Save settings": apply the draft, then write the file, then say where it went.
- * The window stays open.
+ * Checks the typed entries, then applies [draft], and tells whether the caller may go on:
+ * false on a refusal (nothing applied) or when a write or an effect failed (the rest
+ * applied, the failures named in a problem notice).
+ */
+internal fun applyChecked(draft: SettingsDraft, notices: SettingsNotices): Boolean {
+    if (!typedEntriesAccepted(draft, notices)) return false
+
+    val outcome = draft.apply()
+    if (!outcome.isClean) {
+        notices.problem(applyFailedText(outcome))
+        return false
+    }
+    return true
+}
+
+/**
+ * The work of "Save settings": check the typed entries, apply the draft, write the file, say
+ * where it went. The window stays open.
+ *
+ * A failed effect does not stop the file: its setting was stored, and the file should hold
+ * it. A failed write does, because the file would then miss what the window shows.
  *
  * @param save writes the preferences and returns the file, or null when it could not
  */
 internal fun applyAndSave(draft: SettingsDraft, notices: SettingsNotices, save: () -> String?) {
-    if (!applyRefusing(draft, notices)) return
+    if (!typedEntriesAccepted(draft, notices)) return
 
+    val outcome = draft.apply()
+    if (outcome.failedWrites.isNotEmpty()) {
+        notices.problem(applyFailedText(outcome))
+        return
+    }
+
+    val strings = kst4contest.view.i18n.CurrentStrings.get()
     val target = save()
-    if (target == null) {
-        notices.problem(kst4contest.view.i18n.CurrentStrings.get().settingsWriteFailed)
-    } else {
-        notices.info(kst4contest.view.i18n.CurrentStrings.get().settingsWrittenTo(target))
+    when {
+        target == null -> notices.problem(
+            listOfNotNull(
+                outcome.takeIf { !it.isClean }?.let(::applyFailedText),
+                strings.settingsWriteFailed,
+            ).joinToString("\n\n")
+        )
+        !outcome.isClean -> notices.problem(applyFailedText(outcome) + "\n\n" + strings.settingsWrittenTo(target))
+        else -> notices.info(strings.settingsWrittenTo(target))
     }
 }
+
+private fun applyFailedText(outcome: ApplyOutcome): String =
+    kst4contest.view.i18n.CurrentStrings.get().settingsApplyFailed(outcome.failures.joinToString("\n"))

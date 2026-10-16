@@ -18,7 +18,8 @@ import kst4contest.view.compose.SettingsNotice
 import kst4contest.view.compose.SettingsNotices
 import kst4contest.view.compose.SettingsTab
 import kst4contest.view.compose.applyAndSave
-import kst4contest.view.compose.applyRefusing
+import kst4contest.view.compose.SettingsWindow
+import kst4contest.view.compose.applyChecked
 import kst4contest.view.compose.awaitGone
 import kst4contest.view.compose.awaitNode
 import kst4contest.view.compose.inDialog
@@ -36,7 +37,7 @@ import java.nio.file.Path
  * Drawn with the Beacon tab because it has all three kinds of control that matter here: a
  * checkbox, a field that commits on Enter or focus loss, and an effect (the timer restart).
  * The button bar is a stand-in: the real one needs a ChatController, which opens a database;
- * it calls the same [applyRefusing] and [applyAndSave] this one does.
+ * it calls the same [applyChecked] and [applyAndSave] this one does.
  */
 @OptIn(ExperimentalTestApi::class)
 class SettingsApplyScreenTest {
@@ -44,7 +45,7 @@ class SettingsApplyScreenTest {
     @TempDir
     lateinit var directory: Path
 
-    private inner class Window(refuse: Boolean = false) {
+    private inner class Window(refuse: Boolean = false, timerFails: Boolean = false) {
         val prefs = ChatPreferences(directory.resolve("preferences.xml")).apply {
             bcn_beaconIntervalInMinutesMainCat = 5
             isBcn_beaconsEnabledMainCat = false
@@ -58,21 +59,33 @@ class SettingsApplyScreenTest {
             prefs,
             draft,
             validateBeaconTemplate = { if (refuse) throw IllegalArgumentException("no variable %foo%") },
-            restartBeaconTimer = { restarts++ },
+            restartBeaconTimer = {
+                restarts++
+                if (timerFails) throw IllegalStateException("timer gone")
+            },
             mainCategoryName = "Microwave",
             secondCategoryName = "144/432 MHz",
         )
-        val tabs = listOf(SettingsTab("Beacon") { BeaconTab(state, notices::problem) })
+        val station = StationTabState(prefs, draft, { }, { })
+        val airscout = AirscoutTabState(prefs, draft)
+        val tabs = listOf(
+            SettingsTab("Beacon") {
+                androidx.compose.foundation.layout.Column {
+                    BeaconTab(state, notices::problem)
+                    StationTab(station)
+                }
+            },
+        )
     }
 
-    private fun androidx.compose.ui.test.ComposeUiTest.show(w: Window) {
+    private fun androidx.compose.ui.test.ComposeUiTest.show(w: Window, tabs: List<SettingsTab> = w.tabs) {
         setContent {
             Kst4ContestTheme(darkMode = false, baseFontSizeSp = 12f) {
                 SettingsContent(
-                    tabs = w.tabs,
+                    tabs = tabs,
                     notices = w.notices,
                     buttons = { close ->
-                        Form.button(APPLY_AND_CLOSE) { if (applyRefusing(w.draft, w.notices)) close() }
+                        Form.button(APPLY_AND_CLOSE) { if (applyChecked(w.draft, w.notices)) close() }
                     },
                     close = { w.closed = true },
                     draft = w.draft,
@@ -145,6 +158,85 @@ class SettingsApplyScreenTest {
 
         assertFalse(w.closed, "the window closed over a refused entry")
         assertTrue(w.notices.current is SettingsNotice.Problem)
+    }
+
+    /*
+     * A refusal stops the apply before anything goes into effect: the valid edit beside the
+     * refused one is still pending, so the operator can still discard everything.
+     */
+    @Test
+    fun aRefusalAppliesNothingSoDiscardIsStillPossible() = runComposeUiTest {
+        val w = Window()
+        show(w)
+        toggle("Send the beacon in this category")
+        type("Server port", "23x")
+
+        onNodeWithText(APPLY_AND_CLOSE).performClick()
+        waitForIdle()
+
+        assertFalse(w.closed)
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat, "the valid edit went into effect despite the refusal")
+        assertTrue(w.draft.hasPendingChanges)
+        runOnIdle { w.notices.dismiss() }
+
+        runOnIdle { w.draft.discard() }
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat)
+    }
+
+    /*
+     * A number field showing text that does not parse holds the last valid value in the draft.
+     * Applying that value would put something into effect the operator no longer sees.
+     */
+    @Test
+    fun anInvalidNumberRefusesTheApplyAndNamesTheField() = runComposeUiTest {
+        val w = Window()
+        val storedPort = w.prefs.stn_on4kstServersPort
+        show(w)
+
+        type("Server port", "23005")
+        type("Server port", "23x")
+        onNodeWithText(APPLY_AND_CLOSE).performClick()
+        waitForIdle()
+
+        assertFalse(w.closed, "the window closed with the old port applied")
+        assertEquals(storedPort, w.prefs.stn_on4kstServersPort)
+        val notice = w.notices.current
+        assertTrue(notice is SettingsNotice.Problem && notice.message.contains("Server port") &&
+            notice.message.contains("23x"), "the notice does not name the field: $notice")
+    }
+
+    /* The same for the guarded fields of the external interfaces. */
+    @Test
+    fun anInvalidGuardedEntryRefusesTheApplyAndNamesTheField() = runComposeUiTest {
+        val w = Window()
+        show(w, listOf(SettingsTab("Airscout") { AirscoutTab(w.airscout) }))
+
+        type(AIRSCOUT_PORT, "0")
+        onNodeWithText(APPLY_AND_CLOSE).performClick()
+        waitForIdle()
+
+        assertFalse(w.closed)
+        val notice = w.notices.current
+        assertTrue(notice is SettingsNotice.Problem && notice.message.contains(AIRSCOUT_PORT),
+            "the notice does not name the field: $notice")
+    }
+
+    /* A failing effect is reported, the window stays open, and the other changes are in. */
+    @Test
+    fun aFailingEffectIsReportedAndTheRestIsApplied() = runComposeUiTest {
+        val w = Window(timerFails = true)
+        show(w)
+        toggle("Send the beacon in this category")
+        typeAndCommit("Interval in whole minutes", "9")
+
+        onNodeWithText(APPLY_AND_CLOSE).performClick()
+        waitForIdle()
+
+        assertFalse(w.closed, "the failure was closed away")
+        assertTrue(w.prefs.isBcn_beaconsEnabledMainCat)
+        assertEquals(9, w.prefs.bcn_beaconIntervalInMinutesMainCat)
+        val notice = w.notices.current
+        assertTrue(notice is SettingsNotice.Problem && notice.message.contains("timer gone"), "$notice")
     }
 
     @Test
@@ -265,6 +357,116 @@ class SettingsApplyScreenTest {
         assertTrue(closed)
     }
 
+    /*
+     * A profile switch or the exit asks the same question. Apply applies the edits to the
+     * profile still in force and goes on; the window itself is left to the teardown.
+     */
+    @Test
+    fun aSwitchOrExitAsksAndApplyGoesOnWithTheEditsApplied() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.closeRequest.request { wentOn = true } }
+        awaitNode(inDialog("Apply")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertTrue(w.prefs.isBcn_beaconsEnabledMainCat)
+        assertTrue(wentOn)
+        assertFalse(w.closed, "the window closed itself instead of leaving that to the teardown")
+    }
+
+    @Test
+    fun goingBackCancelsTheSwitchOrExit() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.closeRequest.request { wentOn = true } }
+        awaitNode(inDialog("Back to the settings")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertFalse(wentOn, "the switch or exit went ahead after Back")
+        assertTrue(w.draft.hasPendingChanges)
+    }
+
+    @Test
+    fun discardingGoesOnWithNothingApplied() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.closeRequest.request { wentOn = true } }
+        awaitNode(inDialog("Discard")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertTrue(wentOn)
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat)
+    }
+
+    @Test
+    fun aRefusalAtTheQuestionStopsTheSwitchOrExit() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+        toggle("Send the beacon in this category")
+
+        runOnIdle { w.closeRequest.request { wentOn = true } }
+        awaitNode(inDialog(PENDING_QUESTION))
+        type("Server port", "23x")
+        awaitNode(inDialog("Apply")).performClick()
+        awaitGone(inDialog(PENDING_QUESTION))
+
+        assertFalse(wentOn, "went on over a refused entry")
+        assertFalse(w.prefs.isBcn_beaconsEnabledMainCat, "applied despite the refusal")
+    }
+
+    @Test
+    fun withNothingPendingTheSwitchOrExitGoesOnAtOnce() = runComposeUiTest {
+        val w = Window()
+        var wentOn = false
+        show(w)
+
+        runOnIdle { w.closeRequest.request { wentOn = true } }
+        waitForIdle()
+
+        assertTrue(wentOn)
+        assertFalse(w.closed)
+    }
+
+    /* Without a settings window there is nothing to ask: the action runs at once, synchronously. */
+    @Test
+    fun settleThenRunsAtOnceWithoutAnOpenWindow() {
+        var ran = false
+        SettingsWindow.settleThen { ran = true }
+        assertTrue(ran)
+    }
+
+    /* A failed effect does not keep the file from being written; its setting was stored. */
+    @Test
+    fun saveStillWritesWhenOnlyAnEffectFailed() {
+        val prefs = ChatPreferences(directory.resolve("preferences.xml"))
+        prefs.bcn_beaconIntervalInMinutesMainCat = 5
+        val draft = SettingsDraft()
+        val notices = SettingsNotices()
+        val state = BeaconTabState(prefs, draft, { }, { throw IllegalStateException("timer gone") }, "Microwave", "144/432 MHz")
+        var saved = false
+
+        state.commitBeaconInterval("9")
+        applyAndSave(draft, notices) {
+            saved = true
+            "preferences.xml"
+        }
+
+        assertTrue(saved)
+        val notice = notices.current
+        assertTrue(notice is SettingsNotice.Problem && notice.message.contains("timer gone") &&
+            notice.message.contains("preferences.xml"), "$notice")
+    }
+
     /* Save applies first, so the file holds what the window shows; the window stays open. */
     @Test
     fun saveAppliesBeforeItWrites() {
@@ -288,7 +490,8 @@ class SettingsApplyScreenTest {
 
     private companion object {
         const val APPLY_AND_CLOSE = "Apply/Close prefs"
+        const val AIRSCOUT_PORT = "AirScout UDP port [9872] — reconnect after changing:"
         const val PENDING_QUESTION =
-            "Some settings have been changed but not applied yet. Apply them before the window closes?"
+            "Some settings have been changed but not applied yet. Apply them first?"
     }
 }

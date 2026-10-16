@@ -5,7 +5,9 @@ package kst4contest.view.compose
  *
  * For the tests that pin a tab state's own rules -- validation, normalisation, which effect
  * an edit triggers -- without the draft in between. The draft itself is pinned by
- * SettingsDraftTest, and each tab's drafted behaviour by SettingsDraftTabsTest.
+ * SettingsDraftTest, and that every drafted setting really waits for Apply by
+ * DraftedSettingsTableTest. A failed write or effect throws here, so a test cannot pass
+ * over one unnoticed.
  */
 internal class ImmediateDraft : SettingsDraft() {
 
@@ -18,6 +20,7 @@ internal class ImmediateDraft : SettingsDraft() {
         effect: (() -> Unit)?,
     ) {
         super.stage(key, value, live, write, effectKey, effect)
-        apply()
+        val outcome = apply()
+        check(outcome.isClean) { "apply failed: ${outcome.failures}" }
     }
 }

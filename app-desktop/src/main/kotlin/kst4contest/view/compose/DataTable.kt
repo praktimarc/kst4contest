@@ -306,12 +306,16 @@ fun DataTable(
                  * Inside the settings window a row still being edited is committed before the
                  * draft is applied: a click on "Apply/Close prefs" leaves the focus in the row,
                  * see SettingsDraft.registerTypedEntry. Only an edited row; committing an
-                 * untouched one would report a change that was never made.
+                 * untouched one would report a change that was never made. A refusal is reported
+                 * by commit() through onRefused, so the registration answers null.
                  */
                 val settingsDraft = LocalSettingsDraft.current
                 val pendingEdit = rememberUpdatedState { if (draft != entry.text) commit() }
                 DisposableEffect(settingsDraft, entry.key) {
-                    val registration = settingsDraft?.registerTypedEntry { pendingEdit.value() }
+                    val registration = settingsDraft?.registerTypedEntry {
+                        pendingEdit.value()
+                        null
+                    }
                     onDispose { registration?.close() }
                 }
 

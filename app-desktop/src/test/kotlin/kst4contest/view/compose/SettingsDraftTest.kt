@@ -132,16 +132,39 @@ class SettingsDraftTest {
     }
 
     @Test
-    fun `a failing effect still leaves the draft empty`() {
+    fun `a failing effect is reported and the other effects still run`() {
         val draft = SettingsDraft()
-        var stored = 0
+        val log = mutableListOf<String>()
+        var a = 0
+        var b = 0
 
-        draft.stage("k", 1, live = { stored }, write = { stored = it }, effect = { error("socket refused") })
+        draft.stage("a", 1, live = { a }, write = { a = it }, effect = { error("socket refused") })
+        draft.stage("b", 1, live = { b }, write = { b = it }, effect = { log += "timer" })
+        val outcome = draft.apply()
 
-        runCatching { draft.apply() }
+        assertEquals(1, a, "the write before the failing effect happened")
+        assertEquals(listOf("timer"), log, "one failing effect stopped the others")
+        assertEquals(listOf("a: socket refused"), outcome.failedEffects)
+        assertTrue(outcome.failedWrites.isEmpty())
+        assertFalse(draft.hasPendingChanges, "a stored setting would be applied a second time")
+    }
 
-        assertEquals(1, stored)
-        assertFalse(draft.hasPendingChanges, "a half-applied draft would be applied a second time")
+    @Test
+    fun `a failing write stays pending, skips its effect, and the rest is applied`() {
+        val draft = SettingsDraft()
+        val log = mutableListOf<String>()
+        var b = 0
+
+        draft.stage("a", 1, live = { 0 }, write = { error("disk full") }, effect = { log += "effect a" })
+        draft.stage("b", 1, live = { b }, write = { b = it }, effect = { log += "effect b" })
+        val outcome = draft.apply()
+
+        assertEquals(1, b)
+        assertEquals(listOf("effect b"), log, "an effect ran for a value that was never stored")
+        assertEquals(listOf("a: disk full"), outcome.failedWrites)
+        assertFalse(outcome.isClean)
+        assertTrue(draft.hasPendingChanges, "the failed setting was dropped")
+        assertEquals(1, draft.valueOf("a") { 0 })
     }
 
     private class TwoSettings(draft: SettingsDraft, val log: MutableList<String>) {
@@ -178,16 +201,22 @@ class SettingsDraftTest {
     }
 
     @Test
-    fun `typed entries are committed before apply`() {
+    fun `typed entries are committed on request and report their refusals`() {
         val draft = SettingsDraft()
         var stored = 0
         val entry = draft.registerTypedEntry {
             draft.stage("k", 5, live = { stored }, write = { stored = it })
+            null
         }
+        draft.registerTypedEntry { "Port: \"98x\" is not a valid entry." }
 
-        draft.apply()
-        assertEquals(5, stored, "a field still holding the focus lost its entry on Apply")
+        val refusals = draft.commitTypedEntries()
 
+        assertEquals(listOf("Port: \"98x\" is not a valid entry."), refusals)
+        assertTrue(draft.hasPendingChanges, "the accepted entry was not staged")
+        assertEquals(0, stored, "committing an entry applied it")
+
+        draft.discard()
         entry.close()
         draft.commitTypedEntries()
         assertFalse(draft.hasPendingChanges, "a removed field was still committed")

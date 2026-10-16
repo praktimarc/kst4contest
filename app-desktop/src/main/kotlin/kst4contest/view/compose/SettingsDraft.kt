@@ -50,7 +50,7 @@ open class SettingsDraft {
      */
     private val order = mutableListOf<String>()
 
-    private val typedEntries = mutableListOf<() -> Unit>()
+    private val typedEntries = mutableListOf<() -> String?>()
 
     /** Whether anything waits to be applied. Compose state: a composition reading it follows. */
     val hasPendingChanges: Boolean
@@ -99,7 +99,7 @@ open class SettingsDraft {
     }
 
     /**
-     * Writes every change, then runs every effect, then forgets them.
+     * Writes every change, then runs every effect, then forgets what was written.
      *
      * Writes come first, in the order the settings were first changed, so that each effect
      * sees the finished state: enabling the Win-Test listener and moving its port in one go
@@ -107,28 +107,51 @@ open class SettingsDraft {
      * each effect key once: two restarts of one socket in quick succession can fail on the
      * port the first one has not released yet.
      *
-     * Typed entries still held by a field are committed first; see [registerTypedEntry].
+     * Every write and every effect runs on its own: one that throws is recorded and the rest
+     * still run, so a socket that cannot be rebound does not leave the beacon timer or the
+     * next setting unapplied. A change whose write failed stays in the draft, and its effect
+     * does not run -- it would act on a value that was never stored. A failed effect's write
+     * did happen, so that change is gone from the draft like every other.
      *
-     * The draft is empty afterwards even when an effect throws: applying a half-applied draft
-     * a second time would write and restart again.
+     * Typed entries still held by a field are not committed here; the caller does that first
+     * and decides on a refusal before anything is applied, see [commitTypedEntries].
+     *
+     * @return what could not be done; empty when everything went through
      */
-    fun apply() {
-        commitTypedEntries()
+    fun apply(): ApplyOutcome {
+        val staged = order.mapNotNull { key -> changes[key]?.let { key to it } }
+        val failedWrites = mutableListOf<String>()
+        val failedKeys = HashSet<String>()
 
-        val staged = order.mapNotNull { changes[it] }
-        try {
-            staged.forEach { it.write() }
-
-            val ran = HashSet<String?>()
-            staged.forEach { change ->
-                val effect = change.effect ?: return@forEach
-                if (ran.add(change.effectKey)) {
-                    effect()
-                }
+        staged.forEach { (key, change) ->
+            try {
+                change.write()
+            } catch (failure: Exception) {
+                failedWrites += describe(key, failure)
+                failedKeys += key
             }
-        } finally {
-            clear()
         }
+
+        val failedEffects = mutableListOf<String>()
+        val ran = HashSet<String?>()
+        staged.forEach { (key, change) ->
+            val effect = change.effect ?: return@forEach
+            if (key in failedKeys || !ran.add(change.effectKey)) return@forEach
+            try {
+                effect()
+            } catch (failure: Exception) {
+                failedEffects += describe(change.effectKey ?: key, failure)
+            }
+        }
+
+        staged.forEach { (key, _) ->
+            if (key !in failedKeys) {
+                changes.remove(key)
+                order.remove(key)
+            }
+        }
+
+        return ApplyOutcome(failedWrites, failedEffects)
     }
 
     /** Forgets every change without writing anything. */
@@ -137,28 +160,55 @@ open class SettingsDraft {
     }
 
     /**
-     * Registers a field that holds typed text until the focus leaves it (Form.committed).
+     * Registers a field that holds typed text the draft has not seen yet: a field that commits
+     * on leaving it (Form.committed), a list row being edited, or a field whose text does not
+     * parse and therefore staged nothing.
      *
-     * Clicking a button does not take the focus from a text field, so without this an entry
-     * typed into such a field and followed straight by "Apply/Close prefs" would be committed
-     * only when the closing window removed the field -- into a draft nobody applies any more.
+     * Clicking a button does not reliably take the focus from a text field, so without this an
+     * entry typed into such a field and followed straight by "Apply/Close prefs" would be
+     * committed only when the closing window removed the field -- into a draft nobody applies
+     * any more. And a field showing invalid text in red would let Apply go ahead with the last
+     * valid value, which the operator no longer sees.
      *
+     * @param commit commits what the field holds and returns null, or returns the reason it
+     *        cannot be accepted -- worded for the operator, naming the field
      * @return closing it unregisters the field
      */
-    fun registerTypedEntry(commit: () -> Unit): AutoCloseable {
+    fun registerTypedEntry(commit: () -> String?): AutoCloseable {
         typedEntries += commit
         return AutoCloseable { typedEntries.remove(commit) }
     }
 
-    /** Commits what the registered fields hold, so it is staged, refused or found unchanged. */
-    fun commitTypedEntries() {
-        typedEntries.toList().forEach { it() }
-    }
+    /**
+     * Commits what the registered fields hold, so it is staged, found unchanged or refused.
+     *
+     * @return the refusals, empty when every field was accepted
+     */
+    fun commitTypedEntries(): List<String> =
+        typedEntries.toList().mapNotNull { it() }
+
+    private fun describe(key: String, failure: Exception): String =
+        key.substringAfterLast('.') + ": " + (failure.message ?: failure.javaClass.simpleName)
 
     private fun clear() {
         changes.clear()
         order.clear()
     }
+}
+
+/**
+ * What [SettingsDraft.apply] could not do, each entry worded as "setting: reason".
+ *
+ * @param failedWrites settings that could not be stored; they stay in the draft
+ * @param failedEffects effects that failed after their settings were stored
+ */
+class ApplyOutcome(val failedWrites: List<String>, val failedEffects: List<String>) {
+
+    val failures: List<String>
+        get() = failedWrites + failedEffects
+
+    val isClean: Boolean
+        get() = failures.isEmpty()
 }
 
 /**

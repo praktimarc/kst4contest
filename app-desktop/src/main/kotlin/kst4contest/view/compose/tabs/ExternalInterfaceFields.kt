@@ -12,6 +12,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +54,21 @@ internal fun GuardedTextField(
      * value such as a trailing space that is trimmed away, leaves the typed text alone.
      */
     var draft by remember(value) { mutableStateOf(value) }
+
+    /*
+     * A refused entry stages nothing, so the draft keeps the last accepted value while the
+     * field shows the refused text in red. Inside the settings window the field refuses the
+     * apply instead of letting that hidden value go into effect.
+     */
+    val strings = kst4contest.view.i18n.LocalStrings.current
+    val settingsDraft = kst4contest.view.compose.LocalSettingsDraft.current
+    val refusal = rememberUpdatedState {
+        if (accepts(draft)) null else strings.settingsInvalidEntry(label, draft)
+    }
+    DisposableEffect(settingsDraft) {
+        val entry = settingsDraft?.registerTypedEntry { refusal.value() }
+        onDispose { entry?.close() }
+    }
 
     LabelledRow(label) {
         CompactTextField(

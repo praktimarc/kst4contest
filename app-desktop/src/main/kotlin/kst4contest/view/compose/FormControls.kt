@@ -126,12 +126,12 @@ object Form {
      *        looser where two spellings mean one value, as with colours. It must agree
      *        with what [commit] stores: a draft that commit would store as `c` has to count
      *        as unchanged against `c`, or leaving the field after Enter commits it again.
-     * @param current the value stored right now, read when the field commits. The draft
-     *        is judged against it, and falls back to it on a refusal (what the JavaFX
-     *        fields did with setText). Required, because [stored] alone goes stale when it
-     *        comes from a plain getter: nothing recomposes the caller after a commit, so
-     *        after Enter it still names the old value, and once the preference is reset
-     *        behind the field it names the new one by coincidence only.
+     * @param current the value in force right now, read when the field commits: inside the
+     *        settings window the value staged in the draft, otherwise the stored one. The
+     *        typed text is judged against it, and falls back to it on a refusal (what the
+     *        JavaFX fields did with setText). Required, because [stored] alone goes stale
+     *        when it comes from a plain getter: nothing need recompose the caller after a
+     *        commit, so after Enter it can still name the old value.
      */
     @Composable
     fun committed(
@@ -170,14 +170,19 @@ object Form {
 
         /*
          * Inside the settings window the draft can commit this field without a focus change:
-         * a click on "Apply/Close prefs" leaves the focus in the field, and the entry would
+         * a click on "Apply/Close prefs" may leave the focus in the field, and the entry would
          * otherwise reach the draft only when the closing window removed the field. Through
          * an updated state, because commitDraft closes over this composition's parameters.
+         * A refusal is reported by commitDraft itself through onRefused, as on focus loss, so
+         * the registration answers null and the caller sees the refusal as the notice.
          */
         val settingsDraft = LocalSettingsDraft.current
         val latestCommit = rememberUpdatedState(::commitDraft)
         DisposableEffect(settingsDraft) {
-            val entry = settingsDraft?.registerTypedEntry { latestCommit.value() }
+            val entry = settingsDraft?.registerTypedEntry {
+                latestCommit.value()
+                null
+            }
             onDispose { entry?.close() }
         }
 
@@ -340,6 +345,21 @@ object Form {
         val typed = remember { arrayOf(value.toString()) }
         var draft by remember(value) {
             mutableStateOf(if (parse(typed[0]) == value) typed[0] else value.toString())
+        }
+
+        /*
+         * Text that does not parse stages nothing, so the draft still holds the last valid
+         * value while the field shows something else in red. Applying then would put a value
+         * into effect the operator no longer sees; the field refuses instead, naming itself.
+         */
+        val strings = kst4contest.view.i18n.LocalStrings.current
+        val settingsDraft = LocalSettingsDraft.current
+        val refusal = rememberUpdatedState {
+            if (parse(draft) == null) strings.settingsInvalidEntry(label, draft) else null
+        }
+        DisposableEffect(settingsDraft) {
+            val entry = settingsDraft?.registerTypedEntry { refusal.value() }
+            onDispose { entry?.close() }
         }
 
         labelled(label) {

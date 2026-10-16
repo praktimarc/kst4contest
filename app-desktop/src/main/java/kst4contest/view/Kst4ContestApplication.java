@@ -1986,11 +1986,20 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	 */
 	private void requestOperatorProfileSwitch(OperatorProfile targetProfile) {
 
-		if (targetProfile == null || !confirmOperatorProfileSwitch(targetProfile)) {
+		if (targetProfile == null) {
 			return;
 		}
 
-		ApplicationRuntimeLauncher.switchProfile(targetProfile);
+		/*
+		 * Settings edits not applied yet are asked about first: applied, they land in the
+		 * profile being left, which is the one they were made in; "back" cancels the switch.
+		 * Without pending edits this continues at once, as before.
+		 */
+		SettingsWindow.settleThen(() -> {
+			if (confirmOperatorProfileSwitch(targetProfile)) {
+				ApplicationRuntimeLauncher.switchProfile(targetProfile);
+			}
+		});
 	}
 
 	/**
@@ -2422,6 +2431,15 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 	private void closeWindowEvent() {
 		System.out.println("Window close request ...");
 
+		/*
+		 * Settings edits not applied yet are asked about before the quit question; "back"
+		 * cancels the exit. Without pending edits this continues at once, as before.
+		 */
+		SettingsWindow.settleThen(this::confirmAndExit);
+	}
+
+	/** Asks whether to quit, and quits on yes. */
+	private void confirmAndExit() {
 		/*
 		 * ConfirmKind.YES and not the default: the JavaFX dialog used ButtonType.YES here,
 		 * and JavaFX ordered YES ahead of CANCEL on Linux and Windows but behind it on
