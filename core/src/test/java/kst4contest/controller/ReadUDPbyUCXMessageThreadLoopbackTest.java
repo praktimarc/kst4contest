@@ -18,7 +18,9 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -302,6 +304,65 @@ class ReadUDPbyUCXMessageThreadLoopbackTest {
 
 		assertTrue(statusMessages.stream()
 				.anyMatch(message -> message.getRunningInformation().startsWith("packet dropped after error")));
+	}
+
+	/** Records what radio 2 receives. */
+	private final List<String> secondQrgWrites = new CopyOnWriteArrayList<>();
+	private final SimpleValue<String> secondQrg = new SimpleValue<>("");
+
+	@Test
+	void withSo2rRadioTwoGoesToTheSecondQrgAndLeavesMyQrgAlone(@TempDir Path tempDir) throws Exception {
+		givenRadioInfoMarkerEnabled();
+		givenSo2r(true);
+		List<String> firstWrites = new CopyOnWriteArrayList<>();
+		markerQrg.addListener(firstWrites::add);
+
+		sendThenAwaitMarker("<RadioInfo><RadioNr>2</RadioNr><Freq>43220000</Freq><Mode>SSB</Mode></RadioInfo>");
+
+		assertEquals(List.of("432.200.00"), secondQrgWrites);
+		assertEquals(List.of("1296.200.00"), firstWrites, "only the marker may write MYQRG");
+	}
+
+	@Test
+	void withSo2rARadioInfoWithoutRadioNumberIsRadioOne(@TempDir Path tempDir) throws Exception {
+		givenRadioInfoMarkerEnabled();
+		givenSo2r(true);
+		List<String> firstWrites = new CopyOnWriteArrayList<>();
+		markerQrg.addListener(firstWrites::add);
+
+		sendThenAwaitMarker("<RadioInfo><Freq>14420000</Freq><Mode>CW</Mode></RadioInfo>");
+
+		assertEquals(List.of("144.200.00", "1296.200.00"), firstWrites);
+		assertTrue(secondQrgWrites.isEmpty());
+	}
+
+	@Test
+	void withSo2rAnUnknownRadioNumberIsDroppedAndTheListenerKeepsRunning(@TempDir Path tempDir) throws Exception {
+		givenRadioInfoMarkerEnabled();
+		givenSo2r(true);
+
+		sendThenAwaitMarker("<RadioInfo><RadioNr>x</RadioNr><Freq>43220000</Freq><Mode>SSB</Mode></RadioInfo>");
+
+		assertTrue(secondQrgWrites.isEmpty());
+	}
+
+	@Test
+	void withoutSo2rRadioTwoStillWritesMyQrg(@TempDir Path tempDir) throws Exception {
+		givenRadioInfoMarkerEnabled();
+		givenSo2r(false);
+		List<String> firstWrites = new CopyOnWriteArrayList<>();
+		markerQrg.addListener(firstWrites::add);
+
+		sendThenAwaitMarker("<RadioInfo><RadioNr>2</RadioNr><Freq>43220000</Freq><Mode>SSB</Mode></RadioInfo>");
+
+		assertEquals(List.of("432.200.00", "1296.200.00"), firstWrites);
+		assertTrue(secondQrgWrites.isEmpty());
+	}
+
+	private void givenSo2r(boolean enabled) {
+		when(preferences.isTrxSynch_so2rEnabled()).thenReturn(enabled);
+		secondQrg.addListener(secondQrgWrites::add);
+		when(preferences.getMYQRGSecondCat()).thenReturn(secondQrg);
 	}
 
 	private CountDownLatch markerLatch() {
