@@ -72,12 +72,20 @@ Die Stationskarte verwendet mehrere Werte aus dem Reiter **Station**, um das Gel
 | Einstellung | Verwendung |
 |---|---|
 | **Own antenna height AGL** | Höhe der eigenen Antenne über dem lokalen Gelände in Metern |
+| **Eigene Standorthöhe über NN, Meter** | Optional: Geländehöhe des eigenen Standorts über dem Meeresspiegel. Leer lassen, um das Höhenmodell zu verwenden |
 | **Own TX power W** | Eigene Sendeleistung in Watt |
 | **Own ant. gain dBi** | Gewinn der eigenen Antenne in dBi |
 | **DX OM TX power W** | Angenommene Sendeleistung der Gegenstation in Watt |
 | **DX OM ant. gain dBi** | Angenommener Antennengewinn der Gegenstation in dBi |
+| **Gegenstation auf dem höchsten Punkt ihres Locatorfelds** | Lässt die Strecke am höchsten Punkt des Locatorfelds der Gegenstation enden statt in dessen Mitte (standardmäßig eingeschaltet) |
 
 **AGL** bedeutet *Above Ground Level*. Trage hier nicht die Höhe über dem Meeresspiegel ein. Die Geländehöhe am eigenen Standort stammt bereits aus dem Höhenprofil; KST4Contest addiert die konfigurierte Antennenhöhe zu diesem Wert.
+
+Dieses Feld nimmt nur die Antennenhöhe über Grund auf; für die Höhe des Standorts über dem Meeresspiegel gibt es ein eigenes Feld, das im nächsten Absatz beschrieben ist.
+
+Das Höhenprofil nimmt die Geländehöhe am Mittelpunkt des eigenen Locatorfelds. Liegt der tatsächliche Standort deutlich höher oder tiefer, etwa auf einem Hügel am Rand des Feldes, trägst du seine Geländehöhe unter **Eigene Standorthöhe über NN, Meter** ein. KST4Contest verwendet dann diesen Wert statt des Höhenmodells und addiert die Antennenhöhe weiterhin darauf. Zulässig sind Werte von -500 bis 9000 Metern. Ein leeres Feld stellt das Höhenmodell wieder her. Die eigene Position auf der Karte und im Profil bleibt der Locatormittelpunkt.
+
+Ein Locator sagt nur, in welchem Feld eine Gegenstation steht, nicht wo darin. Conteststationen arbeiten meist vom höchsten Punkt ihres Feldes aus. Ist **Gegenstation auf dem höchsten Punkt ihres Locatorfelds** eingeschaltet, tastet KST4Contest das Feld der Gegenstation mit einem Raster von 5 x 5 Punkten ab, nimmt den höchsten davon und lässt die Strecke dort enden, mit Position und Höhe dieses Punktes. Die Suche braucht je Locatorfeld der Gegenstation eine Anfrage an den Online-Höhendienst; das Ergebnis bleibt bis zum Beenden von KST4Contest erhalten. Schlägt die Suche fehl, rechnet die Analyse wie bisher mit der Feldmitte und versucht es einige Minuten später erneut.
 
 Für die Gegenstation verwendet KST4Contest derzeit eine feste Antennenhöhe von 10 Metern über dem lokalen Gelände. Sendeleistung und Antennengewinn der Gegenstation stammen aus den beiden **DX OM**-Feldern. Diese Werte sind bewusst nur Annahmen: Der ON4KST-Chat überträgt weder die tatsächliche Antennenhöhe noch die vollständigen Stationsdaten der Gegenstation.
 

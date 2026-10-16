@@ -143,4 +143,87 @@ class StationTabStateTest(@TempDir private val tempDir: Path) {
         assertTrue(prefs.isLoginToSecondChatEnabled())
         assertEquals(true, state.loginToSecondChatEnabled)
     }
+
+    @Test
+    fun `the own height above sea level reads empty while the elevation model decides`() {
+        val s = Session()
+
+        assertEquals("", s.state.stn_pathAnalysisOwnHeightAslText)
+
+        assertNull(s.state.commitOwnHeightAsl("312,5"))
+        assertTrue(s.prefs.getStn_pathAnalysisOwnHeightAslMeters().isNaN(), "a commit took effect before Apply")
+        assertEquals(312.5, s.state.stn_pathAnalysisOwnHeightAslMeters, 1e-9)
+        assertEquals("312,5", s.state.stn_pathAnalysisOwnHeightAslText, "the field keeps the committed spelling")
+
+        s.draft.apply()
+        assertEquals(312.5, s.prefs.getStn_pathAnalysisOwnHeightAslMeters(), 1e-9)
+        assertEquals("312,5", s.state.stn_pathAnalysisOwnHeightAslText)
+
+        assertNull(s.state.commitOwnHeightAsl("  "))
+        s.draft.apply()
+        assertTrue(s.prefs.getStn_pathAnalysisOwnHeightAslMeters().isNaN(), "clearing hands it back to the model")
+    }
+
+    @Test
+    fun `a discarded own height shows the stored value again`() {
+        val s = Session()
+        s.prefs.setStn_pathAnalysisOwnHeightAslMeters(400.0)
+
+        assertNull(s.state.commitOwnHeightAsl("250"))
+        assertEquals("250", s.state.stn_pathAnalysisOwnHeightAslText)
+
+        s.draft.discard()
+
+        assertEquals("400.0", s.state.stn_pathAnalysisOwnHeightAslText, "the discarded spelling is still shown")
+        assertEquals(400.0, s.prefs.getStn_pathAnalysisOwnHeightAslMeters(), 1e-9)
+    }
+
+    @Test
+    fun `an own height that does not parse or is out of range is not staged`() {
+        val s = Session()
+        assertNull(s.state.commitOwnHeightAsl("250"))
+
+        listOf("25x", "9500", "-600", "NaN").forEach { entry ->
+            val refusal = s.state.commitOwnHeightAsl(entry)
+            assertTrue(refusal != null && refusal.contains(entry), "no refusal naming \"$entry\": $refusal")
+            assertEquals(250.0, s.state.stn_pathAnalysisOwnHeightAslMeters, 1e-9, "\"$entry\" was staged")
+        }
+
+        s.draft.apply()
+        assertEquals(250.0, s.prefs.getStn_pathAnalysisOwnHeightAslMeters(), 1e-9)
+    }
+
+    @Test
+    fun `an own height draft is unchanged when it names the stored number`() {
+        assertTrue(StationTabState.isOwnHeightAslUnchanged("250", "250.0"))
+        assertTrue(StationTabState.isOwnHeightAslUnchanged("250,0", "250.0"))
+        assertTrue(StationTabState.isOwnHeightAslUnchanged(" ", ""))
+        assertFalse(StationTabState.isOwnHeightAslUnchanged("", "250.0"))
+        assertFalse(StationTabState.isOwnHeightAslUnchanged("250", ""))
+        assertFalse(StationTabState.isOwnHeightAslUnchanged("12.5", "12.0"))
+        assertFalse(StationTabState.isOwnHeightAslUnchanged("9500", "250.0"), "an unparsable draft must be committed and refused")
+    }
+
+    @Test
+    fun `parsing the own height`() {
+        assertTrue(StationTabState.parseOwnHeightAsl("")!!.isNaN())
+        assertEquals(-430.0, StationTabState.parseOwnHeightAsl("-430"))
+        assertEquals(8848.0, StationTabState.parseOwnHeightAsl(" 8848 "))
+        assertNull(StationTabState.parseOwnHeightAsl("9000.5"))
+        assertNull(StationTabState.parseOwnHeightAsl("-"))
+        assertNull(StationTabState.parseOwnHeightAsl("NaN"))
+    }
+
+    @Test
+    fun `the highest point switch waits in the draft until it is applied`() {
+        val s = Session()
+        assertTrue(s.state.stn_pathAnalysisDxHighestPointInSquare, "on by default")
+
+        s.state.stn_pathAnalysisDxHighestPointInSquare = false
+        assertTrue(s.prefs.isStn_pathAnalysisDxHighestPointInSquare(), "the switch took effect before Apply")
+        assertFalse(s.state.stn_pathAnalysisDxHighestPointInSquare)
+
+        s.draft.apply()
+        assertFalse(s.prefs.isStn_pathAnalysisDxHighestPointInSquare())
+    }
 }

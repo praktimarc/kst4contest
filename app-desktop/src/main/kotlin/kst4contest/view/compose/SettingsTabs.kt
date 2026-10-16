@@ -223,7 +223,7 @@ fun buildSettingsTabs(
      * so a tidier order or a shorter title would be a regression, not an improvement.
      */
     return listOf(
-        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabStation }) { StationTab(stationState) },
+        SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabStation }) { StationTab(stationState, reportRefusal) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabLogSynch }) { LogSynchTab(logSynchState) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabTrxSynch }) { TrxSynchTab(TrxSynchTabState(prefs, draft, host::applyOwnQrgFollower)) },
         SettingsTab({ kst4contest.view.i18n.CurrentStrings.get().tabAirscout }) { AirscoutTab(AirscoutTabState(prefs, draft)) },

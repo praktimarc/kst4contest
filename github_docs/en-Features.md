@@ -949,6 +949,8 @@ The profile combines:
 
 The configured **Own antenna height AGL** is added to the terrain elevation at the local station. For the remote station, KST4Contest currently assumes an antenna height of 10 metres above the local terrain.
 
+By default the path ends at the highest point of the remote station's locator square, not at its centre; the local terrain elevation can be replaced by the actual height of the own site. Both settings are described under [Path Analysis and Link Budget](en-Configuration#path-analysis-and-link-budget).
+
 Moving the mouse over the path profile marks the corresponding position on the map. This makes it easier to identify which hill or terrain section causes a reported obstruction.
 
 ### Frequency selection
