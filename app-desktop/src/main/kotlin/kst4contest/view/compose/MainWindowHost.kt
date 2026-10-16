@@ -16,7 +16,7 @@ import androidx.compose.runtime.setValue
  */
 object MainWindowHost {
 
-    private val host = ComposeWindowHost("main-window")
+    private val host = ComposeWindowHost("main-window", isMainWindow = true)
 
     @JvmStatic
     val isOpen: Boolean

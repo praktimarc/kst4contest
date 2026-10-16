@@ -2120,6 +2120,16 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 
 	}
 
+	/**
+	 * Hands the window hosts the active profile's stored window positions. Set on every
+	 * startup, so a profile switch replaces the previous profile's positions. The opt-in is
+	 * read on each call, so applying the setting takes effect without a restart.
+	 */
+	private void installWindowPositionMemory(ChatPreferences prefs) {
+		kst4contest.view.compose.WindowPlacementOnScreen.setMemory(
+				new kst4contest.view.compose.PreferencesWindowPositionMemory(prefs, this::requestLayoutSave));
+	}
+
 	private void requestLayoutSave() {
 		if (layoutAutosave != null) {
 			layoutAutosave.requestSave();
@@ -2163,6 +2173,7 @@ public class Kst4ContestApplication implements StatusUpdateListener, SettingsHos
 				.isMessageHandling_debugModeToFileEnabled());
 		layoutAutosave = new LayoutAutosave(
 				chatcontroller.getChatPreferences()::writeLayoutPreferencesToXmlFile, uiDispatcher);
+		installWindowPositionMemory(chatcontroller.getChatPreferences());
 		// Every profile starts with its own configured design; the menu quick switch only lasts for the session.
 		chatcontroller.getChatPreferences().setGUI_darkModeActive(
 				chatcontroller.getChatPreferences().isGUI_darkModeActiveByDefault());

@@ -76,5 +76,12 @@ fun GuiOptionsTab(state: GuiOptionsTabState) {
             )
         }
 
+        /* Appended after the language for the same reason: no section position moves. */
+        Form.section(strings.guiWindows) {
+            Form.check(strings.guiRememberWindowPositions, state.guiOptions_rememberWindowPositions) {
+                state.guiOptions_rememberWindowPositions = it
+            }
+        }
+
     }
 }

@@ -11,16 +11,25 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.loadImageBitmap
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
+import androidx.compose.ui.window.WindowPlacement as ComposeWindowPlacement
+import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import androidx.compose.ui.awt.ComposeWindow
 import java.awt.EventQueue
 import java.awt.Frame
+import java.awt.Point
 import java.awt.Toolkit
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.drop
 
 /**
  * A Compose window that lives beside the JavaFX application.
@@ -45,10 +54,20 @@ import java.util.concurrent.atomic.AtomicBoolean
  * - **It must follow a design switch.** The operator can change the design from the
  *   main window's menu while this window is open.
  *
+ * Every window but the main one also opens on the screen the operator is working on
+ * (issue #59): centred on the main window's screen, or where the operator moved it to
+ * earlier in the session — see [WindowPlacement] for the rule.
+ *
  * @param threadName names the thread in a stack dump, which is where one looks when a
- *        window will not close
+ *        window will not close. It is also the key of the window's stored position, so
+ *        renaming it forgets where the operator put the window.
+ * @param isMainWindow true for the main window only. It keeps the platform's placement
+ *        and publishes its frame, which is what every other window is placed against.
  */
-class ComposeWindowHost(private val threadName: String) {
+class ComposeWindowHost(
+    private val threadName: String,
+    private val isMainWindow: Boolean = false,
+) {
 
     private val open = AtomicBoolean(false)
     private val darkModeState = mutableStateOf(false)
@@ -60,6 +79,16 @@ class ComposeWindowHost(private val threadName: String) {
     /** The AWT frame behind the Compose window, held only so a second press can raise it. */
     @Volatile
     private var frame: ComposeWindow? = null
+
+    /**
+     * Where the operator moved this window to, for this session. Not persisted here: a
+     * stored position outlives the monitor layout it was made on, which is the very problem
+     * of issue #59. Keeping positions across restarts is the operator's opt-in, handled by
+     * [WindowPlacementOnScreen.memory] and used only on the very screen it was made on. Lives as long as the host, and the hosts are
+     * singletons, so it survives closing and reopening the window and a profile switch.
+     */
+    @Volatile
+    private var movedTo: Point? = null
 
     /** Whether the window is currently open, so a caller can tell without opening one. */
     val isOpen: Boolean
@@ -216,9 +245,34 @@ class ComposeWindowHost(private val threadName: String) {
                         return@application
                     }
 
+                    /*
+                     * Decided once per opening, on the event thread this composition runs
+                     * on — which is where the screens and the main window may be read.
+                     * Null keeps the platform's placement: always for the main window, and
+                     * for any window that opens before the main window exists.
+                     */
+                    val placed = remember {
+                        val width = widthDp.roundToInt()
+                        val height = heightDp.roundToInt()
+                        when {
+                            /*
+                             * The main window only ever uses a stored position; without
+                             * one the platform places it, as before.
+                             */
+                            isMainWindow -> WindowPlacementOnScreen.restore(threadName, width, height)
+                            /* This session's move is newer than anything stored. */
+                            movedTo != null -> WindowPlacementOnScreen.place(movedTo, width, height)
+                            else -> WindowPlacementOnScreen.restore(threadName, width, height)
+                                ?: WindowPlacementOnScreen.place(null, width, height)
+                        }
+                    }
+
                     val windowState = rememberWindowState(
-                        width = widthDp.dp,
-                        height = heightDp.dp,
+                        position = placed
+                            ?.let { WindowPosition(it.x.dp, it.y.dp) }
+                            ?: WindowPosition.PlatformDefault,
+                        width = placed?.width?.dp ?: widthDp.dp,
+                        height = placed?.height?.dp ?: heightDp.dp,
                     )
 
                     /*
@@ -227,11 +281,103 @@ class ComposeWindowHost(private val threadName: String) {
                      * comfort: these tables are wider than the default window, so an
                      * operator who widens it once must not have to do it again.
                      */
+                    /*
+                     * The last size and position this host cut the window down to. Neither
+                     * is the operator's choice: the size must not be written back as the
+                     * stored size, and the position must not count as a move.
+                     */
+                    val fit = remember { FitRecord() }
+
                     if (onResized != null) {
                         LaunchedEffect(windowState) {
-                            snapshotFlow { windowState.size }.collect { size ->
-                                if (size.width.isSpecified && size.height.isSpecified) {
-                                    onResized(size.width.value, size.height.value)
+                            /*
+                             * A secondary window skips the opening size: it may be the
+                             * screen-clamped one, and writing that back would shrink the
+                             * stored size for good because the window once opened on a
+                             * smaller screen. The main window keeps writing it, as before,
+                             * unless it was opened at a stored position, where the size may
+                             * be clamped the same way. A size this host fitted the window to
+                             * is skipped for the same reason.
+                             */
+                            snapshotFlow { windowState.size }
+                                .drop(if (isMainWindow && placed == null) 0 else 1)
+                                .collect { size ->
+                                    if (size.width.isSpecified && size.height.isSpecified
+                                        && !fit.takeSize(size.width.value.roundToInt(), size.height.value.roundToInt())
+                                    ) {
+                                        onResized(size.width.value, size.height.value)
+                                    }
+                                }
+                        }
+                    }
+
+                    LaunchedEffect(windowState) {
+                        /*
+                         * One tracker per opening; the rule is in MoveTracker. An operator
+                         * move is remembered for the session (secondary windows) and handed
+                         * to the stored positions, which keep it only when the operator
+                         * opted in. Only moves are stored, never the window manager's
+                         * nudges, so a restored window cannot drift a little on every start.
+                         */
+                        var tracker = MoveTracker(placed?.location)
+                        snapshotFlow { windowState.position }.collect { position ->
+                            if (position is WindowPosition.Absolute
+                                && windowState.placement == ComposeWindowPlacement.Floating
+                                && !windowState.isMinimized
+                            ) {
+                                val now = Point(
+                                    position.x.value.roundToInt(),
+                                    position.y.value.roundToInt(),
+                                )
+                                val size = windowState.size
+                                /*
+                                 * The host's own fit is a new anchor, not a move; the window
+                                 * manager may still nudge it within the tolerance.
+                                 */
+                                if (fit.takePosition(now)) {
+                                    tracker = MoveTracker(now)
+                                    return@collect
+                                }
+                                tracker.observe(now)?.let { moved ->
+                                    if (!isMainWindow) {
+                                        movedTo = moved
+                                    }
+                                    WindowPlacementOnScreen.store(
+                                        threadName,
+                                        moved,
+                                        if (size.width.isSpecified) size.width.value.roundToInt() else widthDp.roundToInt(),
+                                        if (size.height.isSpecified) size.height.value.roundToInt() else heightDp.roundToInt(),
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    LaunchedEffect(windowState) {
+                        /*
+                         * A window moved onto a smaller screen -- a laptop panel, a 640x480
+                         * field monitor -- is cut down to it, so no edge or button ends up out
+                         * of reach. Only once it has rested: resizing in the middle of a drag
+                         * would fight the window manager for the window.
+                         */
+                        snapshotFlow { windowState.position to windowState.size }.collectLatest { (position, size) ->
+                            delay(FIT_SETTLE_MILLIS)
+                            if (position is WindowPosition.Absolute
+                                && size.width.isSpecified && size.height.isSpecified
+                                && windowState.placement == ComposeWindowPlacement.Floating
+                                && !windowState.isMinimized
+                            ) {
+                                WindowPlacementOnScreen.fitted(
+                                    java.awt.Rectangle(
+                                        position.x.value.roundToInt(),
+                                        position.y.value.roundToInt(),
+                                        size.width.value.roundToInt(),
+                                        size.height.value.roundToInt(),
+                                    ),
+                                )?.let { fitted ->
+                                    fit.record(fitted)
+                                    windowState.size = DpSize(fitted.width.dp, fitted.height.dp)
+                                    windowState.position = WindowPosition(fitted.x.dp, fitted.y.dp)
                                 }
                             }
                         }
@@ -251,6 +397,9 @@ class ComposeWindowHost(private val threadName: String) {
                          */
                         DisposableEffect(window) {
                             frame = window
+                            if (isMainWindow) {
+                                WindowPlacementOnScreen.mainWindow = window
+                            }
                             /*
                              * The only place the handle is dropped. Clearing it again in
                              * the thread's finally block looks like a belt to this brace,
@@ -259,7 +408,12 @@ class ComposeWindowHost(private val threadName: String) {
                              * the late write would wipe a live handle and bring back the
                              * dead button this whole method exists to remove.
                              */
-                            onDispose { frame = null }
+                            onDispose {
+                                frame = null
+                                if (WindowPlacementOnScreen.mainWindow === window) {
+                                    WindowPlacementOnScreen.mainWindow = null
+                                }
+                            }
                         }
 
                         CompositionLocalProvider(
@@ -294,6 +448,126 @@ class ComposeWindowHost(private val threadName: String) {
 
     private companion object {
         const val CLOSE_TIMEOUT_MS = 2_000L
+    }
+}
+
+/**
+ * How far a window must have gone from where it was opened to count as moved by the
+ * operator.
+ *
+ * Not zero, because window managers nudge a new window on their own — by the decoration,
+ * or to keep it clear of a panel — and that nudge would otherwise be remembered as the
+ * operator's choice. The window would then stop following the main window to another
+ * screen, and on X11 reopening it would drift by the decoration each time.
+ */
+internal const val MOVE_TOLERANCE_PX = 48
+
+/** How long a window must rest after a move before it is cut down to a smaller screen. */
+private const val FIT_SETTLE_MILLIS = 500L
+
+/**
+ * What the host last cut a window down to, so the size and position it set itself are not
+ * taken for the operator's. Each is consumed by the first report that follows: a matching
+ * report is the fit echoing back, any other report is the operator's and clears it, so a
+ * stale record cannot swallow a later resize or move. Only touched on the window's event
+ * thread.
+ */
+internal class FitRecord {
+    private var pendingPosition: Point? = null
+    private var pendingWidth = 0
+    private var pendingHeight = 0
+    private var sizePending = false
+
+    fun record(bounds: java.awt.Rectangle) {
+        pendingPosition = bounds.location
+        pendingWidth = bounds.width
+        pendingHeight = bounds.height
+        sizePending = true
+    }
+
+    /**
+     * Whether [now] is the fitted position reported back. Compared with the move
+     * tolerance, because dp rounding under display scaling and a window manager's nudge
+     * both shift it slightly.
+     */
+    fun takePosition(now: Point): Boolean {
+        val pending = pendingPosition ?: return false
+        pendingPosition = null
+        return !movedAway(pending, now)
+    }
+
+    /** Whether this size is the fitted one reported back, allowing for dp rounding. */
+    fun takeSize(width: Int, height: Int): Boolean {
+        if (!sizePending) {
+            return false
+        }
+        sizePending = false
+        return abs(width - pendingWidth) <= SIZE_ROUNDING_PX && abs(height - pendingHeight) <= SIZE_ROUNDING_PX
+    }
+
+    private companion object {
+        const val SIZE_ROUNDING_PX = 2
+    }
+}
+
+/** Whether [now] is far enough from [opened] to be the operator's move rather than a nudge. */
+internal fun movedAway(opened: Point, now: Point): Boolean =
+    abs(now.x - opened.x) > MOVE_TOLERANCE_PX || abs(now.y - opened.y) > MOVE_TOLERANCE_PX
+
+/**
+ * Tells the operator's moves of one opened window from the window manager's, fed with every
+ * floating position the window reports.
+ *
+ * - **Placed by the host** ([placedAt] not null): the anchor is that placement. Reports
+ *   within [MOVE_TOLERANCE_PX] of it are the window manager's nudge and are ignored. This
+ *   also holds when the window was reopened at its remembered spot, so a decoration nudge
+ *   cannot make it drift a little further on every opening.
+ * - **Once a report has left the tolerance**, the operator is moving the window, and from
+ *   then on every report is taken — including a move back to near where it opened, which
+ *   would otherwise leave the stale far-away spot remembered.
+ * - **Not placed by the host** (opened before the main window existed): the platform picks
+ *   the spot, and it may report a provisional position before its real placement. So the
+ *   anchor is not trusted until it has settled: every report replaces it until one lands
+ *   within the tolerance of the previous one. A window manager's placement jump is
+ *   therefore a new anchor, not a move. The price: a single far jump by the operator
+ *   before any second report — a keyboard "move to other monitor" right after opening —
+ *   is taken as the anchor too, and the window then simply opens on the main window's
+ *   screen next time, which is the default anyway. A time-based settle was the
+ *   alternative; it would need a clock in a rule that is otherwise pure, and a drag
+ *   produces a stream of close reports that settles the anchor on its own.
+ *
+ * @param placedAt where the host placed the window, or null when the platform did
+ */
+internal class MoveTracker(placedAt: Point?) {
+
+    private var anchor: Point? = placedAt
+    private var settled = placedAt != null
+    private var moving = false
+
+    /**
+     * @param now the position the window reports
+     * @return the position to remember as the operator's choice, or null to remember nothing
+     */
+    fun observe(now: Point): Point? {
+        if (moving) {
+            return now
+        }
+
+        val current = anchor
+        if (!settled || current == null) {
+            if (current != null && !movedAway(current, now)) {
+                settled = true
+            } else {
+                anchor = now
+            }
+            return null
+        }
+
+        if (movedAway(current, now)) {
+            moving = true
+            return now
+        }
+        return null
     }
 }
 
