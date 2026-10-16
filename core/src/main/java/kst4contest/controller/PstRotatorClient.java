@@ -6,6 +6,7 @@ import kst4contest.model.ThreadStateMessage;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -192,8 +193,20 @@ public class PstRotatorClient implements Runnable {
     // Öffentliche Steuermethoden
 
     public void setAzimuth(double degrees) {
-        // Formatierung ohne unnötige Nachkommastellen, falls nötig
-        sendCommand("AZIMUTH", String.valueOf((int) degrees));
+        sendCommand("AZIMUTH", formatAzimuth(degrees));
+    }
+
+    /**
+     * Formats an azimuth with one decimal and a dot as separator, independent of the
+     * default locale; a value that rounds up to 360.0 is sent as 0.0. The azimuth used to
+     * be truncated to whole degrees, so 145.7 turned the antenna to 145.
+     */
+    static String formatAzimuth(double degrees) {
+        double rounded = Math.round(degrees * 10.0) / 10.0;
+        if (rounded >= 360.0) {
+            rounded -= 360.0;
+        }
+        return String.format(Locale.ROOT, "%.1f", rounded);
     }
 
     public void setElevation(double degrees) {

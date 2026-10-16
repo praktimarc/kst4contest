@@ -32,6 +32,8 @@ Mehrere Operateure an einem Rechner können jetzt eigene Rufzeichen, Locators un
 
 - **Rufzeichen-Vorgabe ist leer:** Fehlt in der `preferences.xml` ein Login-Rufzeichen, bleibt das Feld jetzt leer, statt auf ein im Programm hinterlegtes Rufzeichen zurückzufallen. Ein neu angelegtes Profil startet damit bewusst ohne Anmeldedaten.
 
+- **PSTRotator-Azimut mit einer Nachkommastelle:** Der an PSTRotator gesendete Azimut wurde bisher auf ganze Grad abgeschnitten, sodass eine Station bei 145,7° die Antenne auf 145° drehte. Jetzt wird er auf eine Nachkommastelle gerundet, immer mit Punkt als Trennzeichen.
+
 - **Dark Mode pro Profil:** Im Reiter **GUI** legt jedes Operator-Profil unter **Design** fest, ob KST4Contest hell oder dunkel startet. Die Menüeinträge unter **Windows** schalten weiterhin schnell um, gelten aber nur für die laufende Sitzung. Das Farbschema erfasst jetzt auch das Update-Fenster und die Liste der Top-Kandidaten.
 
 ### Behoben
