@@ -6,14 +6,20 @@ import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,8 +27,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import kst4contest.controller.On4KstConnectionState
 import kst4contest.utils.PlatformUtils
 import kst4contest.view.i18n.LocalStrings
@@ -163,7 +177,14 @@ private fun MenuTitle(menu: MenuSpec, rowState: MainMenuRowState) {
     val hovered by interactions.collectIsHoveredAsState()
     val open = rowState.openMenu == menu.title
 
-    Box {
+    /*
+     * Full bar height, so the popup anchored to this box starts at the bar's bottom edge
+     * rather than at the centred title text a few pixels above it.
+     */
+    Box(
+        modifier = Modifier.heightIn(min = Density.TAB_MIN_HEIGHT),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
             text = menu.title,
             style = MaterialTheme.typography.bodyMedium,
@@ -195,25 +216,83 @@ private fun MenuTitle(menu: MenuSpec, rowState: MainMenuRowState) {
                 ),
         )
 
-        DropdownMenu(expanded = open, onDismissRequest = rowState::close) {
-            menu.entries.forEach { entry ->
-                when (entry) {
-                    is MenuEntry.Item -> DropdownMenuItem(
-                        text = {
-                            Text(entry.label, style = MaterialTheme.typography.bodyMedium)
-                        },
-                        enabled = entry.enabled,
-                        onClick = { rowState.pick(entry.onClick) },
-                    )
+        /*
+         * A hand-rolled stand-in for Material3's DropdownMenu, because that one cannot open
+         * flush under a menu bar — see MenuRowPopupPositionProvider. Same dismissal (outside
+         * click and Escape come with a focusable popup), same MenuDefaults look; only the
+         * expand animation is gone, which a menu bar does not have anyway.
+         */
+        if (open) {
+            Popup(
+                popupPositionProvider = MenuRowPopupPositionProvider,
+                onDismissRequest = rowState::close,
+                properties = PopupProperties(focusable = true),
+            ) {
+                Surface(
+                    shape = MenuDefaults.shape,
+                    color = MenuDefaults.containerColor,
+                    tonalElevation = MenuDefaults.TonalElevation,
+                    shadowElevation = MenuDefaults.ShadowElevation,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(vertical = MENU_POPUP_VERTICAL_PADDING)
+                            .width(IntrinsicSize.Max)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        menu.entries.forEach { entry ->
+                            when (entry) {
+                                is MenuEntry.Item -> DropdownMenuItem(
+                                    text = {
+                                        Text(entry.label, style = MaterialTheme.typography.bodyMedium)
+                                    },
+                                    enabled = entry.enabled,
+                                    onClick = { rowState.pick(entry.onClick) },
+                                )
 
-                    MenuEntry.Separator ->
-                        HorizontalDivider(
-                            thickness = Density.HAIRLINE,
-                            color = palette.separatorLine,
-                        )
+                                MenuEntry.Separator ->
+                                    HorizontalDivider(
+                                        thickness = Density.HAIRLINE,
+                                        color = palette.separatorLine,
+                                    )
+                            }
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * Places a menu-bar menu: flush under its anchor, leading edges aligned.
+ *
+ * Material3's DropdownMenu cannot be told to do this. Its position provider refuses any
+ * position closer than 48 dp (`MenuVerticalMargin`) to the window's top edge, and a menu
+ * bar sits exactly there, so every menu opened pushed down to that margin — a visible gap
+ * below the bar. The margin is applied after the `offset` parameter and the provider is
+ * not replaceable, hence this one and the hand-rolled popup in [MenuTitle].
+ */
+internal object MenuRowPopupPositionProvider : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ): IntOffset {
+        val preferredX = when (layoutDirection) {
+            LayoutDirection.Ltr -> anchorBounds.left
+            LayoutDirection.Rtl -> anchorBounds.right - popupContentSize.width
+        }
+        val x = preferredX.coerceIn(0, maxOf(0, windowSize.width - popupContentSize.width))
+        val below = anchorBounds.bottom
+        val above = anchorBounds.top - popupContentSize.height
+        val y = when {
+            below + popupContentSize.height <= windowSize.height -> below
+            above >= 0 -> above
+            else -> maxOf(0, windowSize.height - popupContentSize.height)
+        }
+        return IntOffset(x, y)
     }
 }
 
@@ -221,3 +300,6 @@ private fun MenuTitle(menu: MenuSpec, rowState: MainMenuRowState) {
 private const val HOVER_ALPHA = 0.35f
 
 private val MENU_TITLE_VERTICAL_PADDING = androidx.compose.ui.unit.Dp(4f)
+
+/** Material3's DropdownMenuVerticalPadding, which is internal; keep the menus looking alike. */
+private val MENU_POPUP_VERTICAL_PADDING = 8.dp
