@@ -4,7 +4,7 @@
 
 Version history of KST4Contest / PraktiKST.
 
-Published Stable versions and their application packages are available under [GitHub Releases](https://github.com/praktimarc/kst4contest/releases). This page also lists changes from the current development version where they have already been implemented and tested.
+Published Stable versions and their application packages are available under [GitHub Releases](https://github.com/HamRadioOnline/kst4contest/releases). This page also lists changes from the current development version where they have already been implemented and tested.
 
 ---
 
@@ -12,7 +12,7 @@ Published Stable versions and their application packages are available under [Gi
 
 **Operator profiles**
 
-Several operators sharing one computer can now use their own callsigns, locators and layouts without overwriting each other's configuration. This implements [Issue #57](https://github.com/praktimarc/kst4contest/issues/57).
+Several operators sharing one computer can now use their own callsigns, locators and layouts without overwriting each other's configuration. This implements [Issue #57](https://github.com/HamRadioOnline/kst4contest/issues/57).
 
 ### New
 
@@ -30,15 +30,17 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Switching profiles while running:** **File > Switch operator profile...** closes the connection and rebuilds the user interface with the settings of the selected profile, without restarting the program.
 
-- **Minimum distance filter:** next to **Show only QRB [km] <=** the station filter bar has **Show only QRB [km] >**, which hides every station up to the entered distance. With both switched on, the list shows a distance range, for example only stations between 300 and 800 km. Stations without a known distance are hidden while either filter is on, and the station map follows the filter. Like the maximum, the value only lasts for the running session. This implements [Issue #21](https://github.com/praktimarc/kst4contest/issues/21).
+- **Minimum distance filter:** next to **Show only QRB [km] <=** the station filter bar has **Show only QRB [km] >**, which hides every station up to the entered distance. With both switched on, the list shows a distance range, for example only stations between 300 and 800 km. Stations without a known distance are hidden while either filter is on, and the station map follows the filter. Like the maximum, the value only lasts for the running session. This implements [Issue #21](https://github.com/HamRadioOnline/kst4contest/issues/21).
 
-- **Windows installer:** next to the portable ZIP package, stable releases now also ship an MSI installer for Windows (`KST4Contest-v<version>-windows-x64.msi`). It installs KST4Contest for the current user account without administrator rights, adds a Start menu entry and a desktop shortcut, and replaces the existing installation on an update. Settings and database stay under `%USERPROFILE%\.praktiKST` and are shared with a portable copy. This implements the first stage of [Issue #61](https://github.com/praktimarc/kst4contest/issues/61).
+- **Windows installer:** next to the portable ZIP package, stable releases now also ship an MSI installer for Windows (`KST4Contest-v<version>-windows-x64.msi`). It installs KST4Contest for the current user account without administrator rights, adds a Start menu entry and a desktop shortcut, and replaces the existing installation on an update. Settings and database stay under `%USERPROFILE%\.praktiKST` and are shared with a portable copy. This implements the first stage of [Issue #61](https://github.com/HamRadioOnline/kst4contest/issues/61).
 
 - **Own site height and highest point of the remote square in the path analysis:** the **Station** tab has two new settings in its path-analysis section. **Own ground height ASL, metres** replaces the elevation-model value at the own locator centre by the height of the actual site; left empty, the elevation model decides as before. **Target station on the highest point of its locator square**, on by default, ends the path at the highest of 25 sampled points of the remote locator square instead of at its centre, because contest stations usually operate from the high ground of their square. The lookup costs one additional request to the elevation service per remote square and session; if it fails, the analysis uses the square centre as before.
 
-- **SO2R with two radios:** the new option **SO2R** on the **TRX sync** tab (off by default) keeps two radios apart. N1MM, DXLog and UCXLog are assigned by `RadioNr`: radio 1 updates MYQRG, radio 2 updates SECONDQRG. For Win-Test, enter one station name per radio. A second PSTRotator (own host and port, on the **Station** tab) adds **Turn ant2** next to **Turn ant1** and a QTF2 field next to QTF. Without SO2R everything stays as before. This implements the first part of [Issue #46](https://github.com/praktimarc/kst4contest/issues/46).
+- **SO2R with two radios:** the new option **SO2R** on the **TRX sync** tab (off by default) keeps two radios apart. N1MM, DXLog and UCXLog are assigned by `RadioNr`: radio 1 updates MYQRG, radio 2 updates SECONDQRG. For Win-Test, enter one station name per radio. A second PSTRotator (own host and port, on the **Station** tab) adds **Turn ant2** next to **Turn ant1** and a QTF2 field next to QTF. Without SO2R everything stays as before. This implements the first part of [Issue #46](https://github.com/HamRadioOnline/kst4contest/issues/46).
 
 ### Changed
+
+- **New home on GitHub:** the project moved from the `praktimarc` account to the [HamRadioOnline](https://github.com/HamRadioOnline) GitHub organisation and now lives at [HamRadioOnline/kst4contest](https://github.com/HamRadioOnline/kst4contest). Old links to the repository, the releases, the issues and the wiki redirect to the new address. The Flatpak repository moved as well and now lives at `https://hamradioonline.github.io/kst4contest/`; existing Flatpak installations keep updating through the redirect of the old address, new setups use the new address from the installation manual. The AUR packages point to the new address too.
 
 - **The terrain profile cache is separate:** computed terrain profiles now live in their own shared file `terrainprofilecache.db` and are stored per owner. Previously the whole cache was dropped whenever the callsign or locator changed, which would have discarded every computed profile on each profile switch.
 
@@ -50,7 +52,7 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Settings take effect with Apply:** changes in the settings window no longer take effect while they are typed, but with **Apply/Close prefs** or **Save settings**; **Connect** applies them first as well. This also works during a running session. Closing the window, switching the operator profile or exiting with changes pending first asks whether to apply or discard them, or to go back. Colours, language and the login data on the **Station** tab still take effect immediately.
 
-- **Windows open on the main window's screen:** the station map, monitor, settings, update window, top candidates and the notice dialogs used to open on the primary screen, even when the main window was on another one or the primary screen was switched off. They now open centred on the screen the main window is currently on. A window that was moved during the running session reopens there next time, as long as its title bar can still be reached on a connected screen. With the new option **Reopen windows across restarts where they were last moved to** on the **GUI** tab (off by default), the main window and all other windows also keep their position across restarts; a stored position is only used when the very same screen (same place and resolution) is connected again. A window larger than the screen is reduced to its usable area, also when it is moved onto a smaller screen later, for example a 640x480 monitor; the stored window size stays unchanged. This fixes [Issue #59](https://github.com/praktimarc/kst4contest/issues/59).
+- **Windows open on the main window's screen:** the station map, monitor, settings, update window, top candidates and the notice dialogs used to open on the primary screen, even when the main window was on another one or the primary screen was switched off. They now open centred on the screen the main window is currently on. A window that was moved during the running session reopens there next time, as long as its title bar can still be reached on a connected screen. With the new option **Reopen windows across restarts where they were last moved to** on the **GUI** tab (off by default), the main window and all other windows also keep their position across restarts; a stored position is only used when the very same screen (same place and resolution) is connected again. A window larger than the screen is reduced to its usable area, also when it is moved onto a smaller screen later, for example a 640x480 monitor; the stored window size stays unchanged. This fixes [Issue #59](https://github.com/HamRadioOnline/kst4contest/issues/59).
 
 ### Fixed
 
@@ -60,13 +62,13 @@ Several operators sharing one computer can now use their own callsigns, locators
 
 - **Background resources are released:** the ON4KST supervisor thread, the sked reminder scheduler, the reachability executor, the PSTRotator retry scheduler and the map tile proxy are released when the chat controller is closed. They used to keep running until the program ended.
 
-- **AP column sorts numerically:** the **AP [minutes / pot%]** column in the user list and in the directed messages was sorted by its text, which put `13 (75%)` above `3 (50%)`. It now sorts by the minutes of the first aeroplane and, for equal minutes, by the better potential first; empty and `nil` cells go to the bottom in ascending order. This fixes [Issue #87](https://github.com/praktimarc/kst4contest/issues/87).
-- **No automatic cluster spots for worked stations:** the local DX Cluster server generated spots from directional opportunities without checking the worked state. A spot is no longer created when the station has already been worked on the band of the detected frequency; without per-band information the global worked state counts. Manual spots from the map and the test spot in the settings are unchanged. This fixes [Issue #91](https://github.com/praktimarc/kst4contest/issues/91).
-- **QSO monitoring no longer picks up foreign entries:** besides the list of monitored callsigns, `preferences.xml` carried a second list `snifferWords` that never appeared in the user interface. On loading, its entries were nevertheless added to QSO monitoring as callsigns. The dead list is removed; a `snifferWords` element in older files is ignored. This fixes [Issue #103](https://github.com/praktimarc/kst4contest/issues/103).
-- **No second-category locator any more:** internally there was a setting for a separate locator of the second chat category that appeared neither in the user interface nor in `preferences.xml`, so it always kept its compiled-in default. During login that default was compared with the station's locator and a warning was emitted that the second locator is ignored. ON4KST uses one locator per TCP session anyway; the setting and the warning are removed. This fixes [Issue #104](https://github.com/praktimarc/kst4contest/issues/104).
-- **Linux beta packages upgrade to the stable package:** DEB and RPM packages of a beta tag carried the same version number as the following stable package, so `dnf` and `dpkg` refused the upgrade as an equal version. Beta packages now carry a pre-release number (`1.50.0-0.beta.001`) below the stable package (`1.50.0-1`), and the release run aborts when the tag does not match `composePackageVersion`. This fixes [Issue #113](https://github.com/praktimarc/kst4contest/issues/113).
+- **AP column sorts numerically:** the **AP [minutes / pot%]** column in the user list and in the directed messages was sorted by its text, which put `13 (75%)` above `3 (50%)`. It now sorts by the minutes of the first aeroplane and, for equal minutes, by the better potential first; empty and `nil` cells go to the bottom in ascending order. This fixes [Issue #87](https://github.com/HamRadioOnline/kst4contest/issues/87).
+- **No automatic cluster spots for worked stations:** the local DX Cluster server generated spots from directional opportunities without checking the worked state. A spot is no longer created when the station has already been worked on the band of the detected frequency; without per-band information the global worked state counts. Manual spots from the map and the test spot in the settings are unchanged. This fixes [Issue #91](https://github.com/HamRadioOnline/kst4contest/issues/91).
+- **QSO monitoring no longer picks up foreign entries:** besides the list of monitored callsigns, `preferences.xml` carried a second list `snifferWords` that never appeared in the user interface. On loading, its entries were nevertheless added to QSO monitoring as callsigns. The dead list is removed; a `snifferWords` element in older files is ignored. This fixes [Issue #103](https://github.com/HamRadioOnline/kst4contest/issues/103).
+- **No second-category locator any more:** internally there was a setting for a separate locator of the second chat category that appeared neither in the user interface nor in `preferences.xml`, so it always kept its compiled-in default. During login that default was compared with the station's locator and a warning was emitted that the second locator is ignored. ON4KST uses one locator per TCP session anyway; the setting and the warning are removed. This fixes [Issue #104](https://github.com/HamRadioOnline/kst4contest/issues/104).
+- **Linux beta packages upgrade to the stable package:** DEB and RPM packages of a beta tag carried the same version number as the following stable package, so `dnf` and `dpkg` refused the upgrade as an equal version. Beta packages now carry a pre-release number (`1.50.0-0.beta.001`) below the stable package (`1.50.0-1`), and the release run aborts when the tag does not match `composePackageVersion`. This fixes [Issue #113](https://github.com/HamRadioOnline/kst4contest/issues/113).
 
-- **UCXLog packets are no longer cut off:** after a short UDP packet, the listener for UCXLog-compatible loggers read every longer following packet only up to the length of the short one, so log entries could arrive incomplete. In addition, disconnecting now closes the listener's socket immediately instead of waiting for the next timeout. UCXLog packets and AirScout replies are now always decoded as UTF-8 instead of the system default, so umlauts in station names and operator callsigns no longer turn into garbage on Windows. This fixes [Issue #115](https://github.com/praktimarc/kst4contest/issues/115).
+- **UCXLog packets are no longer cut off:** after a short UDP packet, the listener for UCXLog-compatible loggers read every longer following packet only up to the length of the short one, so log entries could arrive incomplete. In addition, disconnecting now closes the listener's socket immediately instead of waiting for the next timeout. UCXLog packets and AirScout replies are now always decoded as UTF-8 instead of the system default, so umlauts in station names and operator callsigns no longer turn into garbage on Windows. This fixes [Issue #115](https://github.com/HamRadioOnline/kst4contest/issues/115).
 
 - **UCXLog/DXLog listener keeps running:** an unwritable backup file for received QSOs or a RadioInfo packet without frequency or mode used to stop the listener for UCXLog-compatible loggers until the next restart, so neither worked stations nor QRG updates arrived any more. The backup entry or the incomplete packet is now skipped, and the listener keeps receiving. Any other unexpected error while processing a packet now drops only that packet and shows a status message instead of stopping the listener.
 
@@ -93,7 +95,7 @@ v1.43.1 contains the same functional changes as v1.43.0. It corrects the applica
 
 Users of v1.43.0 should install v1.43.1. The functionality is unchanged; the update only corrects the version metadata and release workflow.
 
-The corrected version is available as [Release v1.43.1](https://github.com/praktimarc/kst4contest/releases/tag/v1.43.1).
+The corrected version is available as [Release v1.43.1](https://github.com/HamRadioOnline/kst4contest/releases/tag/v1.43.1).
 
 ---
 
@@ -105,7 +107,7 @@ v1.43 concentrates on reliability around external log data and long-running cont
 
 ### Added
 
-- **Optional map clustering:** **Group nearby stations** immediately enables or disables spatial grouping at lower zoom levels. The stored setting changes neither the viewport nor the selected station; aggregation of active variants sharing one base callsign remains independent. This implements [Issue #79](https://github.com/praktimarc/kst4contest/issues/79).
+- **Optional map clustering:** **Group nearby stations** immediately enables or disables spatial grouping at lower zoom levels. The stored setting changes neither the viewport nor the selected station; aggregation of active variants sharing one base callsign remains independent. This implements [Issue #79](https://github.com/HamRadioOnline/kst4contest/issues/79).
 
 - **Automatic table-layout persistence:** Tables receive useful widths when their first meaningful contents arrive. Manually changed column widths, window sizes and relevant dividers are written to `preferences.xml` after a short delay. The main and monitor windows keep separate DXCluster and QSO-of-the-other layouts.
 
@@ -121,7 +123,7 @@ v1.43 concentrates on reliability around external log data and long-running cont
 
 - **Compact full-frequency recognition:** Complete frequencies without a decimal separator are accepted across the supported bands, with the final three digits interpreted as the kHz part. Bare three-digit numbers still require recognisable frequency context so that signal reports and unrelated numbers are not treated as QRGs.
 
-- **DXSpider-compatible spot format:** Local DX Cluster spots use a fixed 75-character payload line with the DX callsign in column 27, a 30-character comment field and UTC time in column 71. The format remains stable up to 24 GHz. Overlong DX callsigns are rejected and logged instead of being silently truncated. This resolves [Issue #86](https://github.com/praktimarc/kst4contest/issues/86).
+- **DXSpider-compatible spot format:** Local DX Cluster spots use a fixed 75-character payload line with the DX callsign in column 27, a 30-character comment field and UTC time in column 71. The format remains stable up to 24 GHz. Overlong DX callsigns are rejected and logged instead of being silently truncated. This resolves [Issue #86](https://github.com/HamRadioOnline/kst4contest/issues/86).
 
 - **Active ON4KST connection probe:** A quiet chat server is checked with an explicit session-wide probe before the connection is treated as dead. Heartbeats and probe frames retain the required CR/LF framing.
 
@@ -129,7 +131,7 @@ v1.43 concentrates on reliability around external log data and long-running cont
 
 ### Fixed
 
-- **Worked state after login:** Persisted SQLite Worked information is loaded and applied before each initial ON4KST user list is published. Reconnects, both categories and all active variants of a base callsign therefore start with the correct state. This resolves [Issue #85](https://github.com/praktimarc/kst4contest/issues/85).
+- **Worked state after login:** Persisted SQLite Worked information is loaded and applied before each initial ON4KST user list is published. Reconnects, both categories and all active variants of a base callsign therefore start with the correct state. This resolves [Issue #85](https://github.com/HamRadioOnline/kst4contest/issues/85).
 
 - **False disconnect during quiet periods:** A valid ON4KST connection is no longer closed merely because the server currently has no activity lines to send.
 
@@ -141,7 +143,7 @@ v1.43 concentrates on reliability around external log data and long-running cont
 
 - The AUR package definitions were updated for v1.43.0.
 
-The complete v1.43.0 functionality is available in [Release v1.43.0](https://github.com/praktimarc/kst4contest/releases/tag/v1.43.0). Because its embedded version metadata is inconsistent, v1.43.1 is the recommended package set.
+The complete v1.43.0 functionality is available in [Release v1.43.0](https://github.com/HamRadioOnline/kst4contest/releases/tag/v1.43.0). Because its embedded version metadata is inconsistent, v1.43.1 is the recommended package set.
 
 ---
 
@@ -239,9 +241,9 @@ v1.42 brings several previously separate calculations together. Band information
 
 - **No phantom chat members from UM3:** Historical or additional server messages no longer create user-list entries for stations which are not actually logged into the chat.
 
-- **Messages to callsigns with suffixes:** Several active variants of the same base callsign no longer overwrite each other. This resolves [Issue #73](https://github.com/praktimarc/kst4contest/issues/73).
+- **Messages to callsigns with suffixes:** Several active variants of the same base callsign no longer overwrite each other. This resolves [Issue #73](https://github.com/HamRadioOnline/kst4contest/issues/73).
 
-- **DX cluster locators:** The reporting and reported station no longer receive the same locator accidentally. This resolves [Issue #48](https://github.com/praktimarc/kst4contest/issues/48).
+- **DX cluster locators:** The reporting and reported station no longer receive the same locator accidentally. This resolves [Issue #48](https://github.com/HamRadioOnline/kst4contest/issues/48).
 
 - **Worked state in “QSO of the other”:** The Worked columns again use the correct transmitting and receiving station.
 
@@ -277,9 +279,9 @@ v1.42 brings several previously separate calculations together. Band information
 
 - Aircraft-scatter information from AirScout and the terrain analysis in the station map remain separate assessments.
 
-- More detailed configuration of station height, frequency and K factor is being tracked in [Issue #74](https://github.com/praktimarc/kst4contest/issues/74).
+- More detailed configuration of station height, frequency and K factor is being tracked in [Issue #74](https://github.com/HamRadioOnline/kst4contest/issues/74).
 
-The published version is available as [Release v1.42.0](https://github.com/praktimarc/kst4contest/releases/tag/v1.42.0).
+The published version is available as [Release v1.42.0](https://github.com/HamRadioOnline/kst4contest/releases/tag/v1.42.0).
 
 ---
 
@@ -292,7 +294,7 @@ The published version is available as [Release v1.42.0](https://github.com/prakt
 - The message input field was unexpectedly cleared after some time or during particular UI updates.
 - Filtering or selecting a station could move the input focus back to the send field unintentionally.
 
-The corrected version is available as [Release v1.41.1](https://github.com/praktimarc/kst4contest/releases/tag/v1.41.1).
+The corrected version is available as [Release v1.41.1](https://github.com/HamRadioOnline/kst4contest/releases/tag/v1.41.1).
 
 ---
 ## v1.41.0 (2026-07-01)

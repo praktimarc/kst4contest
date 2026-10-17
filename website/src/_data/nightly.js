@@ -1,4 +1,4 @@
-const REPO = "praktimarc/kst4contest";
+const REPO = "HamRadioOnline/kst4contest";
 const API = `https://api.github.com/repos/${REPO}`;
 const WORKFLOW_FILE = "nightly-artifacts.yml";
 const WORKFLOW_BASENAME = "nightly-artifacts";

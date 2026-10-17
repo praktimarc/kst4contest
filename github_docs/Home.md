@@ -39,7 +39,7 @@ Für den normalen Contestbetrieb ist die Stable-Version vorgesehen. Beta- und Ni
 
 - [Project website / Projektwebseite](https://kst4contest.hamradioonline.de/)
 - [Downloads](https://kst4contest.hamradioonline.de/download/)
-- [Source code / Quellcode](https://github.com/praktimarc/kst4contest)
-- [GitHub Releases](https://github.com/praktimarc/kst4contest/releases)
-- [Bug reports and feature requests / Fehler und Funktionswünsche](https://github.com/praktimarc/kst4contest/issues)
+- [Source code / Quellcode](https://github.com/HamRadioOnline/kst4contest)
+- [GitHub Releases](https://github.com/HamRadioOnline/kst4contest/releases)
+- [Bug reports and feature requests / Fehler und Funktionswünsche](https://github.com/HamRadioOnline/kst4contest/issues)
 - [Development roadmap / Entwicklungsstand](https://kst4contest.hamradioonline.de/roadmap/)

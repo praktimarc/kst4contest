@@ -4,7 +4,7 @@
 
 KST4Contest ist ein Desktop-Client für den [ON4KST-Chat](https://www.on4kst.org/chat/login.php), der für den Contest-Betrieb auf den VHF-, UHF- und SHF-Bändern entwickelt wurde. Er verbindet Chat, Stationsauswahl, Sked-Planung, Aircraft-Scatter-Daten und die Anbindung an weitere Programme in einer gemeinsamen Arbeitsoberfläche.
 
-Entwickelt wird KST4Contest von **DO5AMF (Marc Fröhlich)**, Operator bei DM5M und (seit Mai 2025) **DN9APW (Philipp Wagner)**. Der Quellcode ist öffentlich auf [GitHub](https://github.com/praktimarc/kst4contest) verfügbar.
+Entwickelt wird KST4Contest von **DO5AMF (Marc Fröhlich)**, Operator bei DM5M und (seit Mai 2025) **DN9APW (Philipp Wagner)**. Der Quellcode ist öffentlich auf [GitHub](https://github.com/HamRadioOnline/kst4contest) verfügbar.
 
 ---
 
@@ -55,7 +55,7 @@ Dieses Handbuch unterscheidet zwischen der veröffentlichten Stable-Version und 
 Die derzeit veröffentlichte Stable-Version ist **v1.42.0**. Funktionen oder Änderungen, die erst mit einer bestimmten Version hinzugekommen sind, werden ausdrücklich als **ab v1.42** gekennzeichnet. Funktionen, die es nur im aktuellen Entwicklungsstand gibt, sind als **Nightly** gekennzeichnet. Fehlt eine solche Kennzeichnung, bezieht sich die Beschreibung auf die Stable-Version.
 
 - [Stable, Beta und Nightly herunterladen](https://kst4contest.hamradioonline.de/download/)
-- [Veröffentlichte GitHub Releases](https://github.com/praktimarc/kst4contest/releases)
+- [Veröffentlichte GitHub Releases](https://github.com/HamRadioOnline/kst4contest/releases)
 - [Versionsgeschichte und aktueller Nightly-Stand](de-Changelog)
 
 Für einen Contest ist grundsätzlich die Stable-Version zu empfehlen. Nightly-Builds enthalten neuere Korrekturen und Funktionen, können sich aber zwischen zwei Builds verändern. Sie sind sinnvoll, wenn eine konkrete Änderung getestet werden soll. Der erste Versuch zehn Minuten vor Contestbeginn ist dagegen meistens eine recht effiziente Methode, gleichzeitig Software und Operator zu testen.
@@ -82,8 +82,8 @@ Für einen Contest ist grundsätzlich die Stable-Version zu empfehlen. Nightly-B
 ## Kontakt und Support
 
 - **Download:** [Stable, Beta und Nightly](https://kst4contest.hamradioonline.de/download/)
-- **Quellcode:** [praktimarc/kst4contest](https://github.com/praktimarc/kst4contest)
-- **Fehler und Funktionswünsche:** [GitHub Issues](https://github.com/praktimarc/kst4contest/issues)
+- **Quellcode:** [HamRadioOnline/kst4contest](https://github.com/HamRadioOnline/kst4contest)
+- **Fehler und Funktionswünsche:** [GitHub Issues](https://github.com/HamRadioOnline/kst4contest/issues)
 - **E-Mail:** praktimarc+kst4contest@gmail.com  
   Bitte nur für Themen verwenden, die KST4Contest betreffen.
 

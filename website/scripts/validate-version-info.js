@@ -148,11 +148,18 @@ function validateVersionInfo(xml, expectedStableVersion = "") {
         fail("<semanticVersion> is not a valid Stable version");
     }
 
+    // Feeds published before the move to the HamRadioOnline
+    // organisation still carry the old repository owner.
+    const releaseUrlPrefixes = [
+        "https://github.com/HamRadioOnline/"
+        + "kst4contest/releases/tag/",
+        "https://github.com/praktimarc/"
+        + "kst4contest/releases/tag/"
+    ];
     if (
         !releaseUrl
-        || !releaseUrl.startsWith(
-            "https://github.com/praktimarc/"
-            + "kst4contest/releases/tag/"
+        || !releaseUrlPrefixes.some(
+            (prefix) => releaseUrl.startsWith(prefix)
         )
     ) {
         fail(

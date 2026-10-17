@@ -2,7 +2,7 @@ pkgbase = kst4contest
 	pkgdesc = ON4KST Chat Client for VHF/UHF contest operation
 	pkgver = 1.44.0
 	pkgrel = 1
-	url = https://github.com/praktimarc/kst4contest
+	url = https://github.com/HamRadioOnline/kst4contest
 	arch = x86_64
 	license = GPL-3.0-only
 	makedepends = java-environment=21
@@ -11,7 +11,7 @@ pkgbase = kst4contest
 	provides = kst4contest
 	conflicts = kst4contest-bin
 	conflicts = kst4contest-git
-	source = kst4contest-1.44.0.tar.gz::https://github.com/praktimarc/kst4contest/archive/refs/tags/v1.44.0.tar.gz
+	source = kst4contest-1.44.0.tar.gz::https://github.com/HamRadioOnline/kst4contest/archive/refs/tags/v1.44.0.tar.gz
 	sha256sums = e702df24a29e6f914a43934df0095bc4adbd00a9f02df3a632816c832272e914
 
 pkgname = kst4contest

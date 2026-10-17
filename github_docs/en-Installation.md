@@ -28,7 +28,7 @@ KST4Contest automatically adapts the main window to the available area of the pr
 
 ### Java
 
-The ready-made packages from the [GitHub Releases](https://github.com/praktimarc/kst4contest/releases/latest) do not require a separate Java installation. The required runtime is distributed with KST4Contest.
+The ready-made packages from the [GitHub Releases](https://github.com/HamRadioOnline/kst4contest/releases/latest) do not require a separate Java installation. The required runtime is distributed with KST4Contest.
 
 A Java development environment is only required if you want to build KST4Contest from source. For the AUR packages `kst4contest` and `kst4contest-git`, Java 21 and Maven are handled as build dependencies by the package manager.
 
@@ -56,8 +56,8 @@ If a function in this manual is explicitly marked as **Nightly**, it is not nece
 
 The current Stable version is available here:
 
-- [Latest KST4Contest release](https://github.com/praktimarc/kst4contest/releases/latest)
-- [All published releases](https://github.com/praktimarc/kst4contest/releases)
+- [Latest KST4Contest release](https://github.com/HamRadioOnline/kst4contest/releases/latest)
+- [All published releases](https://github.com/HamRadioOnline/kst4contest/releases)
 
 The release page contains the application packages as well as the English and German PDF manuals.
 
@@ -151,7 +151,7 @@ The repository only needs to be added once:
 
 ```bash
 flatpak remote-add --if-not-exists kst4contest \
-https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
+https://hamradioonline.github.io/kst4contest/kst4contest.flatpakrepo
 ```
 
 You can then install the Stable version:
@@ -427,14 +427,14 @@ KST4Contest is not currently signed with a commercial Windows code-signing certi
 
 Check the following first:
 
-- Did the file come from the [official KST4Contest release](https://github.com/praktimarc/kst4contest/releases/latest)?
+- Did the file come from the [official KST4Contest release](https://github.com/HamRadioOnline/kst4contest/releases/latest)?
 - Does the filename match the published release?
 - Was the file downloaded completely?
 - Does the security product report a specific detection name or only a general reputation warning?
 
 A warning alone is neither reliable proof of malware nor automatically a false positive. If the origin of the file is unclear, do not run it or restore it from quarantine.
 
-Some users have reported quarantine messages from Norton 360 in particular. If the warning can be reproduced, please create a [GitHub issue](https://github.com/praktimarc/kst4contest/issues) and include:
+Some users have reported quarantine messages from Norton 360 in particular. If the warning can be reproduced, please create a [GitHub issue](https://github.com/HamRadioOnline/kst4contest/issues) and include:
 
 - the KST4Contest version,
 - the complete filename,
@@ -460,7 +460,7 @@ On older versions the block is expected. Use the **Open** function described und
 
 ### The problem remains
 
-First check whether the problem has already been reported under [GitHub Issues](https://github.com/praktimarc/kst4contest/issues). If it has not, create a new issue containing:
+First check whether the problem has already been reported under [GitHub Issues](https://github.com/HamRadioOnline/kst4contest/issues). If it has not, create a new issue containing:
 
 - the operating system and version,
 - the KST4Contest version,

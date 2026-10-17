@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const REPO = "praktimarc/kst4contest";
+const REPO = "HamRadioOnline/kst4contest";
 const API = `https://api.github.com/repos/${REPO}`;
 const LABEL_MAP = { enhancement: "added", bug: "fixed" };
 

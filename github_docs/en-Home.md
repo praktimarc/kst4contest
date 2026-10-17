@@ -4,7 +4,7 @@
 
 KST4Contest is a desktop client for the [ON4KST Chat](https://www.on4kst.org/chat/login.php), developed for VHF, UHF and SHF contest operation. It brings chat, candidate selection, sked planning, aircraft scatter data and external station software together in a single operating interface.
 
-KST4Contest is developed by **DO5AMF (Marc Fröhlich)**, operator at DM5M and (since May 2025) **DN9APW (Philipp Wagner)**. The source code is publicly available on [GitHub](https://github.com/praktimarc/kst4contest).
+KST4Contest is developed by **DO5AMF (Marc Fröhlich)**, operator at DM5M and (since May 2025) **DN9APW (Philipp Wagner)**. The source code is publicly available on [GitHub](https://github.com/HamRadioOnline/kst4contest).
 
 ---
 
@@ -57,7 +57,7 @@ The currently published Stable version is **v1.42.0**.
 Functions that are only available in a Beta or Nightly build are marked accordingly. If no such note is present, the description applies to the stable release.
 
 - [Download Stable, Beta and Nightly builds](https://kst4contest.hamradioonline.de/download/)
-- [GitHub releases](https://github.com/praktimarc/kst4contest/releases)
+- [GitHub releases](https://github.com/HamRadioOnline/kst4contest/releases)
 - [Version history](en-Changelog)
 
 The stable release is normally the appropriate choice for contest operation. Beta and Nightly builds contain newer fixes and functions, but may still change between builds. They are intended for testing specific changes. Ten minutes before a contest is usually not the ideal time for a first test.
@@ -84,8 +84,8 @@ The stable release is normally the appropriate choice for contest operation. Bet
 ## Contact and support
 
 - **Download:** [Stable, Beta and Nightly builds](https://kst4contest.hamradioonline.de/download/)
-- **Source code:** [praktimarc/kst4contest](https://github.com/praktimarc/kst4contest)
-- **Bug reports and feature requests:** [GitHub Issues](https://github.com/praktimarc/kst4contest/issues)
+- **Source code:** [HamRadioOnline/kst4contest](https://github.com/HamRadioOnline/kst4contest)
+- **Bug reports and feature requests:** [GitHub Issues](https://github.com/HamRadioOnline/kst4contest/issues)
 - **Email:** praktimarc+kst4contest@gmail.com  
   Please use this address only for KST4Contest-related topics.
 

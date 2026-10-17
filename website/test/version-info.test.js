@@ -16,7 +16,7 @@ const VALID_XML =
         <semanticVersion>1.41.1</semanticVersion>
         <adminMessage></adminMessage>
         <majorChanges>Hotfix</majorChanges>
-        <latestVersionPathOnWebserver>https://github.com/praktimarc/kst4contest/releases/tag/v1.41.1</latestVersionPathOnWebserver>
+        <latestVersionPathOnWebserver>https://github.com/HamRadioOnline/kst4contest/releases/tag/v1.41.1</latestVersionPathOnWebserver>
     </latestVersion>
     <needUpdateSinceLastVersion>
         <filename>nothing</filename>
@@ -39,6 +39,22 @@ test("accepts a complete update feed", () => {
     assert.equal(result.semanticVersion, "1.41.1");
     assert.equal(result.changeLogEntries, 1);
 });
+
+test(
+    "accepts a feed published before the move "
+    + "to the HamRadioOnline organisation",
+    () => {
+        const legacyXml = VALID_XML.replace(
+            "github.com/HamRadioOnline/",
+            "github.com/praktimarc/"
+        );
+
+        const result =
+            validateVersionInfo(legacyXml, "v1.41.1");
+
+        assert.equal(result.semanticVersion, "1.41.1");
+    }
+);
 
 test("rejects the former empty fallback", () => {
     assert.throws(

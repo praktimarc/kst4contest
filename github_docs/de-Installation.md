@@ -28,7 +28,7 @@ KST4Contest passt das Hauptfenster automatisch an die verfügbare Fläche des pr
 
 ### Java
 
-Für die fertigen Pakete aus den [GitHub Releases](https://github.com/praktimarc/kst4contest/releases/latest) ist keine separate Java-Installation erforderlich. Die benötigte Laufzeitumgebung wird zusammen mit KST4Contest ausgeliefert.
+Für die fertigen Pakete aus den [GitHub Releases](https://github.com/HamRadioOnline/kst4contest/releases/latest) ist keine separate Java-Installation erforderlich. Die benötigte Laufzeitumgebung wird zusammen mit KST4Contest ausgeliefert.
 
 Eine Java-Entwicklungsumgebung wird nur benötigt, wenn KST4Contest selbst aus dem Quellcode gebaut werden soll. Bei den AUR-Paketen `kst4contest` und `kst4contest-git` werden Java 21 und Maven als Build-Abhängigkeiten durch den Paketmanager berücksichtigt.
 
@@ -56,8 +56,8 @@ Wenn in diesem Manual eine Funktion ausdrücklich mit **Nightly** gekennzeichnet
 
 Die aktuelle Stable-Version ist hier verfügbar:
 
-- [Aktuelles KST4Contest-Release](https://github.com/praktimarc/kst4contest/releases/latest)
-- [Alle veröffentlichten Versionen](https://github.com/praktimarc/kst4contest/releases)
+- [Aktuelles KST4Contest-Release](https://github.com/HamRadioOnline/kst4contest/releases/latest)
+- [Alle veröffentlichten Versionen](https://github.com/HamRadioOnline/kst4contest/releases)
 
 Die Release-Seite enthält die Programmpakete sowie die deutschen und englischen PDF-Handbücher.
 
@@ -151,7 +151,7 @@ Das Repository muss nur einmal hinzugefügt werden:
 
 ```bash
 flatpak remote-add --if-not-exists kst4contest \
-https://praktimarc.github.io/kst4contest/kst4contest.flatpakrepo
+https://hamradioonline.github.io/kst4contest/kst4contest.flatpakrepo
 ```
 
 Anschließend kann die Stable-Version installiert werden:
@@ -427,14 +427,14 @@ KST4Contest ist derzeit nicht mit einem kommerziellen Windows-Code-Signing-Zerti
 
 Prüfe in diesem Fall zuerst:
 
-- Stammt die Datei aus dem [offiziellen KST4Contest-Release](https://github.com/praktimarc/kst4contest/releases/latest)?
+- Stammt die Datei aus dem [offiziellen KST4Contest-Release](https://github.com/HamRadioOnline/kst4contest/releases/latest)?
 - Passt der Dateiname zum veröffentlichten Release?
 - Wurde die Datei vollständig heruntergeladen?
 - Nennt das Sicherheitsprogramm einen konkreten Erkennungsnamen oder nur eine allgemeine Reputationswarnung?
 
 Ein Warnhinweis ist allein weder ein sicherer Beweis für Schadsoftware noch automatisch ein Fehlalarm. Wenn die Herkunft der Datei unklar ist, sollte sie nicht gestartet oder aus der Quarantäne wiederhergestellt werden.
 
-Einige Anwender haben insbesondere Quarantäne-Meldungen von Norton 360 gemeldet. Wenn sich eine Meldung reproduzieren lässt, erstelle bitte einen [GitHub-Issue](https://github.com/praktimarc/kst4contest/issues) und nenne:
+Einige Anwender haben insbesondere Quarantäne-Meldungen von Norton 360 gemeldet. Wenn sich eine Meldung reproduzieren lässt, erstelle bitte einen [GitHub-Issue](https://github.com/HamRadioOnline/kst4contest/issues) und nenne:
 
 - die KST4Contest-Version,
 - den vollständigen Dateinamen,
@@ -460,7 +460,7 @@ Bei älteren Versionen ist die Blockade zu erwarten. Verwende dort die unter [In
 
 ### Das Problem bleibt bestehen
 
-Prüfe zunächst, ob das Problem bereits unter [GitHub Issues](https://github.com/praktimarc/kst4contest/issues) beschrieben wurde. Falls nicht, erstelle einen neuen Issue mit:
+Prüfe zunächst, ob das Problem bereits unter [GitHub Issues](https://github.com/HamRadioOnline/kst4contest/issues) beschrieben wurde. Falls nicht, erstelle einen neuen Issue mit:
 
 - Betriebssystem und Version,
 - verwendeter KST4Contest-Version,
