@@ -219,6 +219,29 @@ class MainMenuRowScreenTest {
         onNodeWithText("Show cluster / stranger QSOs").assertDoesNotExist()
     }
 
+    /**
+     * The menu starts at the bar's bottom edge, like any menu bar's menu. Material3's
+     * DropdownMenu cannot do this: its position provider refuses any y closer than 48 dp
+     * (MenuVerticalMargin) to the window's top edge, and the bar sits exactly there, so
+     * every menu opened with a visible gap hanging below the bar.
+     *
+     * The popup-semantics node is a scene-filling layout that positions the menu inside
+     * itself, so its own bounds say nothing; the first item is measured instead, which
+     * sits [MENU_POPUP_VERTICAL_PADDING] below the menu's top edge.
+     */
+    @Test
+    fun theMenuOpensFlushUnderTheBar() = runComposeUiTest {
+        showRow(onlineState(), RecordingActions())
+
+        onNodeWithText("File").performClick()
+        val firstItem = awaitNode(inPopup("Connect to 144/432 MHz"))
+
+        val rowBottom = onNodeWithTag(rowTag).fetchSemanticsNode().boundsInWindow.bottom
+        val itemTop = firstItem.fetchSemanticsNode().boundsInWindow.top
+        val paddingPx = 8f
+        assertEquals(rowBottom + paddingPx, itemTop, 0.5f, "the menu does not start at the bar's bottom edge")
+    }
+
     /** A second click on an open title closes it again, the way a menu bar behaves. */
     @Test
     fun clickingAnOpenTitleClosesIt() = runComposeUiTest {

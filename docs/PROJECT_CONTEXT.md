@@ -317,6 +317,14 @@ section records only the durable architecture and operational boundaries.
 - **A column's `id` is never translated.** It is what the remembered column widths and order
   are keyed on; translating it would read an operator's stored layout under names that no
   longer match.
+- **The menu row's menus are a hand-rolled popup, not Material3's `DropdownMenu`** (release
+  1.50): M3's position provider refuses any position closer than 48 dp to the window's top
+  edge (`MenuVerticalMargin`), the margin is applied after the `offset` parameter and the
+  provider is not replaceable — so every menu of a bar at the top of the window opened with a
+  visible gap below it. `MenuRowPopupPositionProvider` plus a plain `Popup`/`Surface` in
+  `MenuDefaults` styling opens flush under the bar; outside-click and Escape dismissal come
+  with a focusable skiko popup for free, only the expand animation is gone. The combo boxes
+  keep the stock `DropdownMenu`: they never sit at the window edge.
 
 - **The palette has three sources, and the later one wins role by role** (release 1.50): the
   shipped stylesheet from the classpath, then the profile's own stylesheet file if present,
