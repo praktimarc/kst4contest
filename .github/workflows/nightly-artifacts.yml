@@ -481,7 +481,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-          flatpak --user install -y flathub org.freedesktop.Platform//24.08 org.freedesktop.Sdk//24.08
+          flatpak --user install -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
 
       - name: Build app-image
         run: |
@@ -498,7 +498,7 @@ jobs:
           cat > target/de.x08.KST4Contest.yml << 'EOF'
           app-id: de.x08.KST4Contest
           runtime: org.freedesktop.Platform
-          runtime-version: "24.08"
+          runtime-version: "25.08"
           sdk: org.freedesktop.Sdk
           command: KST4Contest
           finish-args:
@@ -549,7 +549,7 @@ jobs:
       - name: Create flatpakref (nightly)
         run: |
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${REPO_NAME}/"
           GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
           cat > "dist/de.x08.KST4Contest.nightly.flatpakref" << EOF
           [Flatpak Ref]
@@ -616,7 +616,7 @@ jobs:
           flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" .
           # Generate .flatpakrepo with embedded GPG key so users can do remote-add without errors
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${REPO_NAME}/"
           GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
           cat > kst4contest.flatpakrepo << EOF
           [Flatpak Repo]

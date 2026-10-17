@@ -389,6 +389,12 @@ Before implementing planned items, re-check current decisions and obtain a fresh
 
 ## Recent Significant Changes
 
+### 2026-10-17 – Repository moved to the HamRadioOnline organisation
+
+- The GitHub repository moved from `praktimarc/kst4contest` to `HamRadioOnline/kst4contest`. GitHub redirects the old repository, Pages, API and git URLs, so published links and release assets from before the move keep working.
+- The Flatpak OSTree repository (branch `flatpak-repo`, served through GitHub Pages) is reached at `https://hamradioonline.github.io/kst4contest/`; its `kst4contest.flatpakrepo` and flatpakref metadata carry the new URL. Existing Flatpak remotes added under `praktimarc.github.io` keep updating through the Pages redirect.
+- `website/scripts/validate-version-info.js` accepts release URLs from both owners because update feeds published before the move still carry the old one.
+
 ### 2026-08-25 – Durable project context introduced
 
 - Added a persistent technical context layer so future agents/developers can understand architecture, invariants and cross-project dependencies without replaying chat history.

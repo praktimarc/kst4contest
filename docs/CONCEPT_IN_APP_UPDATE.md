@@ -99,7 +99,7 @@ Der Feed wird **von der Website** erzeugt (`website/src/_data/versionInfo.js`, a
         <operatingSystem>linux</operatingSystem>
         <architecture>x86_64</architecture>
         <fileName>KST4Contest-v1.45.0-debian-amd64.deb</fileName>
-        <downloadUrl>https://github.com/praktimarc/kst4contest/releases/download/v1.45.0/…</downloadUrl>
+        <downloadUrl>https://github.com/HamRadioOnline/kst4contest/releases/download/v1.45.0/…</downloadUrl>
         <fileSizeBytes>142335488</fileSizeBytes>
         <sha256>9f2c…</sha256>                      <!-- 64 hex, klein -->
         <signatureState>unsigned</signatureState>    <!-- unsigned | authenticode | apple-notarized | gpg-repo -->
@@ -137,7 +137,7 @@ Der Feed wird **von der Website** erzeugt (`website/src/_data/versionInfo.js`, a
 **Robustheit:** Weil der Server unabhängig vom Release-Workflow baut, kann er einen Feed erzeugen, bevor `SHA256SUMS.txt` am Release hängt. Fehlt `<sha256>`, gilt das Artefakt als **nicht automatisch ladbar** — der Client öffnet nur die Downloadseite. Ein Artefakt ohne Prüfsumme wird nie geladen und nie gestartet. Die bestehende `try/catch`-Klammer in `versionInfo.js` bricht den Website-Build bei einem unvollständigen Feed ab; die neue Sektion darf **nicht** so scharf sein — bei Problemen wird `<updatePackages>` weggelassen, der Rest des Feeds bleibt gültig.
 
 **Mitzuziehen:**
-- `website/scripts/validate-version-info.js` — bekannter `packageType`; `sha256` matcht `^[0-9a-f]{64}$`; `downloadUrl` beginnt mit `https://github.com/praktimarc/kst4contest/releases/download/`; `fileSizeBytes` numerisch > 0. **Zusätzlich neu und wichtig:** `<changeLog>` muss weiterhin exakt die 7 Kinder in der Altreihenfolge haben — das nagelt die Alt-Client-Kompatibilität fest.
+- `website/scripts/validate-version-info.js` — bekannter `packageType`; `sha256` matcht `^[0-9a-f]{64}$`; `downloadUrl` beginnt mit `https://github.com/HamRadioOnline/kst4contest/releases/download/`; `fileSizeBytes` numerisch > 0. **Zusätzlich neu und wichtig:** `<changeLog>` muss weiterhin exakt die 7 Kinder in der Altreihenfolge haben — das nagelt die Alt-Client-Kompatibilität fest.
 - `website/test/version-info.test.js` — Klassifikator, SHA256SUMS-Parsing, „Release ohne Assets".
 
 **Warnung, nicht Teil dieser Umsetzung:** `.github/workflows/test-publish-version-xml.yml` (ungetrackt, nur `workflow_dispatch`) erzeugt mit einem eigenen Python-Generator einen konkurrierenden Feed **ohne** `<semanticVersion>` und lädt ihn per WebDAV hoch. Würde er ausgelöst, fielen alle Clients auf den kaputten Double-Vergleich (`1.41.1` → `1.411`) zurück.
@@ -293,7 +293,7 @@ Nach jeder Stufe eine gezielte Einordnung, kein Voll-Audit (`AGENTS.md`):
 
 ## Offene Punkte
 
-1. **Zweite Feed-Quelle?** Wenn der serverseitige Build hinterherhinkt, sehen Clients einen veralteten Feed. Soll der Client hilfsweise `https://github.com/praktimarc/kst4contest/releases/latest/download/kst4ContestVersionInfo.xml` verwenden?
+1. **Zweite Feed-Quelle?** Wenn der serverseitige Build hinterherhinkt, sehen Clients einen veralteten Feed. Soll der Client hilfsweise `https://github.com/HamRadioOnline/kst4contest/releases/latest/download/kst4ContestVersionInfo.xml` verwenden?
 2. **`test-publish-version-xml.yml`** bleibt vorerst unverändert, ist aber scharf (Feed ohne `<semanticVersion>`). Bei der späteren Umstellung auf GitHub Actions zusammenführen oder entfernen.
 3. **`--app-version` überall setzen** ändert die Paketversion bestehender DEB/RPM-Installationen einmalig von `1.0` auf die echte. Akzeptabel?
 4. **`UpdateChecker.java`** löschen oder als deprecated Fassade behalten? (`module-info.java` exportiert `kst4contest.controller`.)

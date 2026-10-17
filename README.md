@@ -9,8 +9,8 @@ The application is developed by Marc Fröhlich (DO5AMF) and since 2026 Philipp W
 - [Project website](https://kst4contest.hamradioonline.de/)
 - [Download Stable, Beta and Nightly builds](https://kst4contest.hamradioonline.de/download/)
 - [Online manual](https://kst4contest.hamradioonline.de/manual/)
-- [GitHub wiki](https://github.com/praktimarc/kst4contest/wiki)
-- [Issues and bug reports](https://github.com/praktimarc/kst4contest/issues)
+- [GitHub wiki](https://github.com/HamRadioOnline/kst4contest/wiki)
+- [Issues and bug reports](https://github.com/HamRadioOnline/kst4contest/issues)
 - [Development roadmap](https://kst4contest.hamradioonline.de/roadmap/)
 
 ## What KST4Contest does
@@ -47,8 +47,8 @@ Use the central download page to select the appropriate build:
 
 The documentation is available in German and English:
 
-- [German manual](https://github.com/praktimarc/kst4contest/wiki/de-Home)
-- [English manual](https://github.com/praktimarc/kst4contest/wiki/en-Home)
+- [German manual](https://github.com/HamRadioOnline/kst4contest/wiki/de-Home)
+- [English manual](https://github.com/HamRadioOnline/kst4contest/wiki/en-Home)
 - [Online manual](https://kst4contest.hamradioonline.de/manual/)
 
 The Markdown sources used for the wiki and the generated PDF manuals are stored in [`github_docs`](github_docs/).
@@ -83,13 +83,13 @@ Windows:
 
 ### Documentation
 
-[![Publish wiki](https://github.com/praktimarc/kst4contest/actions/workflows/github-wiki.yml/badge.svg)](https://github.com/praktimarc/kst4contest/actions/workflows/github-wiki.yml)
+[![Publish wiki](https://github.com/HamRadioOnline/kst4contest/actions/workflows/github-wiki.yml/badge.svg)](https://github.com/HamRadioOnline/kst4contest/actions/workflows/github-wiki.yml)
 
-[![Docs PDF](https://github.com/praktimarc/kst4contest/actions/workflows/docs-pdf.yml/badge.svg)](https://github.com/praktimarc/kst4contest/actions/workflows/docs-pdf.yml)
+[![Docs PDF](https://github.com/HamRadioOnline/kst4contest/actions/workflows/docs-pdf.yml/badge.svg)](https://github.com/HamRadioOnline/kst4contest/actions/workflows/docs-pdf.yml)
 
 ### Builds
 
-[![Nightly Runtime Artifacts](https://github.com/praktimarc/kst4contest/actions/workflows/nightly-artifacts.yml/badge.svg)](https://github.com/praktimarc/kst4contest/actions/workflows/nightly-artifacts.yml)
+[![Nightly Runtime Artifacts](https://github.com/HamRadioOnline/kst4contest/actions/workflows/nightly-artifacts.yml/badge.svg)](https://github.com/HamRadioOnline/kst4contest/actions/workflows/nightly-artifacts.yml)
 
 ## License
 

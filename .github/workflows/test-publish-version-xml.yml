@@ -30,7 +30,7 @@ jobs:
 
           import os, urllib.request
 
-          REPO = 'praktimarc/kst4contest'
+          REPO = 'HamRadioOnline/kst4contest'
           token = os.environ['GH_TOKEN']
 
           def gh_get(path):

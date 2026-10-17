@@ -5,7 +5,7 @@ date: 2026-07-15
 ---
 ## AUR Packages now live of KST4Contest
 
-We now have uploaded kst4contest as multiple Arch User Repository Packages. This allows yet another integration into Package Managers for easier updating toall Archlinux Users of our software. This one of many more repositories for our linux users to come. It is an continous effort. You can see the progress of making updating KST4Contest for our users easier [here](https://github.com/praktimarc/kst4contest/issues/61).
+We now have uploaded kst4contest as multiple Arch User Repository Packages. This allows yet another integration into Package Managers for easier updating toall Archlinux Users of our software. This one of many more repositories for our linux users to come. It is an continous effort. You can see the progress of making updating KST4Contest for our users easier [here](https://github.com/HamRadioOnline/kst4contest/issues/61).
 
 ### AUR DISCLAIMER
 
