@@ -549,7 +549,7 @@ jobs:
       - name: Create flatpakref (nightly)
         run: |
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${REPO_NAME}/"
           GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
           cat > "dist/de.x08.KST4Contest.nightly.flatpakref" << EOF
           [Flatpak Ref]
@@ -616,7 +616,7 @@ jobs:
           flatpak build-update-repo --gpg-sign="$FLATPAK_GPG_KEY_ID" .
           # Generate .flatpakrepo with embedded GPG key so users can do remote-add without errors
           REPO_NAME="${GITHUB_REPOSITORY#*/}"
-          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER}.github.io/${REPO_NAME}/"
+          PAGES_URL="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${REPO_NAME}/"
           GPG_KEY_B64=$(gpg --export "$FLATPAK_GPG_KEY_ID" | base64 -w 0)
           cat > kst4contest.flatpakrepo << EOF
           [Flatpak Repo]
